@@ -102,7 +102,8 @@ class DocSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: t.space2,
         children: [
-          UiText(name, variant: UiTextVariant.h2, heading: true),
+          // Second-level headings drawn at the h3 size, like the web docs.
+          Semantics(header: true, headingLevel: 2, child: UiText(name, variant: UiTextVariant.h3, heading: false)),
           if (widget != null) Align(alignment: Alignment.centerLeft, child: _Tag(widget!)),
           UiText(summary, color: t.textMuted),
           if (demo != null) ...[SizedBox(height: t.space2), DocDemo(child: demo!)],

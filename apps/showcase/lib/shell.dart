@@ -32,7 +32,11 @@ class ShowcaseShell extends StatefulWidget {
 }
 
 class _ShowcaseShellState extends State<ShowcaseShell> {
-  ShowcasePage _page = showcasePages.first;
+  // On the web build, #/<page-id> opens that page (handy for links and screenshots).
+  late ShowcasePage _page = showcasePages.firstWhere(
+    (p) => Uri.base.fragment == '/${p.id}',
+    orElse: () => showcasePages.first,
+  );
   final _menuOpen = ValueNotifier(false);
 
   void _go(ShowcasePage p) {
