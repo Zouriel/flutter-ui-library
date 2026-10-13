@@ -16,3 +16,4 @@ export '../form_builder/editor/builder_source.dart' show UiFbSourceSettings;
 export '../form_builder/editor/builder_store.dart' show UiFormBuilderController, UiFbBuilderScope, UiFbRefOption, sameForm;
 export '../form_builder/editor/form_builder.dart' show UiFormBuilder, UiFormBuilderState, UiFormBuilderView, UiFormBuilderLayout;
 export '../form_builder/editor/settings_fields.dart' show UiFbSettingsFields, UiFbSettingsPatch;
+export '../form_builder/editor/global_settings_editor.dart' show UiFormGlobalSettingsEditor;
