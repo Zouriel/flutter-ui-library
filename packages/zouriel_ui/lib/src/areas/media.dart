@@ -5,3 +5,8 @@ export '../layout/layout.dart';
 export '../layout/panel_section.dart';
 export '../layout/sidebar_layout.dart';
 export '../layout/splitter.dart';
+export '../behaviors/gestures.dart';
+export '../behaviors/intersect.dart';
+export '../behaviors/misc.dart';
+export '../behaviors/scrolling.dart';
+export '../behaviors/swipe.dart';
