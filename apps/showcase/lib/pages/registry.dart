@@ -4,8 +4,10 @@ import 'package:hugeicons/hugeicons.dart';
 import 'behaviors_page.dart';
 import 'buttons_page.dart';
 import 'data_page.dart';
+import 'design_tools_page.dart';
 import 'feedback_page.dart';
 import 'file_viewer_page.dart';
+import 'form_builder_page.dart';
 import 'forms_page.dart';
 import 'foundation_page.dart';
 import 'fx_page.dart';
@@ -15,6 +17,7 @@ import 'navigation_page.dart';
 import 'overlays_page.dart';
 import 'overview_page.dart';
 import 'typography_page.dart';
+import 'window_page.dart';
 
 /// A showcase page in the side menu, grouped like the web docs.
 class ShowcasePage {
@@ -39,6 +42,9 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('data', 'Components', 'Data display', HugeIcons.strokeRoundedTable01, (_) => const DataPage()),
   ShowcasePage('media', 'Components', 'Media', HugeIcons.strokeRoundedImage01, (_) => const MediaPage()),
   ShowcasePage('file-viewer', 'Flagship', 'File viewer', HugeIcons.strokeRoundedFile02, (_) => const FileViewerPage()),
+  ShowcasePage('form-builder', 'Flagship', 'Form builder', HugeIcons.strokeRoundedTask01, (_) => const FormBuilderPage()),
+  ShowcasePage('window', 'Flagship', 'Window system', HugeIcons.strokeRoundedBrowser, (_) => const WindowPage()),
+  ShowcasePage('design-tools', 'Flagship', 'Design tools', HugeIcons.strokeRoundedPenTool01, (_) => const DesignToolsPage()),
   ShowcasePage('fx', 'Motion', 'Motion & FX', HugeIcons.strokeRoundedMagicWand01, (_) => const FxPage()),
   ShowcasePage('behaviors', 'Motion', 'Behavior directives', HugeIcons.strokeRoundedTouch01, (_) => const BehaviorsPage()),
 ];

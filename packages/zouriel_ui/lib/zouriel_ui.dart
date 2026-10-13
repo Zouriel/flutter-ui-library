@@ -22,3 +22,5 @@ export 'src/areas/overlays.dart';
 export 'src/areas/navdata.dart';
 export 'src/areas/media.dart';
 export 'src/areas/form_engine.dart';
+export 'src/areas/form_renderer.dart';
+export 'src/areas/windows_tools.dart';
