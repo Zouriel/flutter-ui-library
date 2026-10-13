@@ -22,3 +22,7 @@ export '../file_viewer/players.dart';
 export '../file_viewer/seek_bar.dart';
 export '../file_viewer/sources.dart';
 export '../file_viewer/text_viewers.dart';
+export '../fx/backdrops.dart';
+export '../fx/chrome.dart';
+export '../fx/motion.dart';
+export '../fx/rails.dart';
