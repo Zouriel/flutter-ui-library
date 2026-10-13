@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Zouriel">
+  <defs>
+    <linearGradient id="z-g" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#d23045"/>
+      <stop offset="55%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+    <radialGradient id="z-glow" cx="32" cy="34" r="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#f59e0b" stop-opacity="0.55"/>
+      <stop offset="60%"  stop-color="#d23045" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0a0608" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- rounded backdrop -->
+  <rect width="64" height="64" rx="14" fill="#0a0608"/>
+  <rect width="64" height="64" rx="14" fill="url(#z-glow)"/>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" fill="none" stroke="rgba(245,158,11,0.18)" stroke-width="1"/>
+
+  <!-- i: dot + stem -->
+  <circle cx="32" cy="16" r="5.5" fill="url(#z-g)"/>
+  <rect x="26.5" y="26" width="11" height="28" rx="3" fill="url(#z-g)"/>
+</svg>
