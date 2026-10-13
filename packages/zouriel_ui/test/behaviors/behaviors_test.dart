@@ -209,18 +209,18 @@ void main() {
     expect(find.byType(UiRipple), isNot(paints..circle()));
   });
 
-  testWidgets('UiDraggable moves by drag and keys, inside its bounds', (tester) async {
+  testWidgets('UiDragMove moves by drag and keys, inside its bounds', (tester) async {
     var at = Offset.zero;
-    await pumpUi(tester, StatefulBuilder(builder: (context, set) => UiDraggable(
+    await pumpUi(tester, StatefulBuilder(builder: (context, set) => UiDragMove(
       offset: at,
       bounds: const Rect.fromLTWH(0, 0, 200, 100),
       onChanged: (o) => set(() => at = o),
       child: const SizedBox(width: 50, height: 50),
     )));
-    await tester.drag(find.byType(UiDraggable), const Offset(60, 30));
+    await tester.drag(find.byType(UiDragMove), const Offset(60, 30));
     await tester.pump();
     expect(at.dx, greaterThan(30));
-    await tester.drag(find.descendant(of: find.byType(UiDraggable), matching: find.byType(SizedBox)), const Offset(500, 500));
+    await tester.drag(find.descendant(of: find.byType(UiDragMove), matching: find.byType(SizedBox)), const Offset(500, 500));
     await tester.pump();
     expect(at, const Offset(200, 100));
     FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
@@ -248,7 +248,7 @@ void main() {
             child: const UiText('Press me'),
           ),
         ),
-        UiDraggable(
+        UiDragMove(
           offset: const Offset(10, 20),
           onChanged: (_) {},
           child: Container(

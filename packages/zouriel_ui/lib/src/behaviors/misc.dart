@@ -194,8 +194,8 @@ class _RipplePainter extends CustomPainter {
 /// A thin wrapper for moving something by hand: [child] is drawn at [offset] and dragging it (or,
 /// once focused, the arrow keys: 8px, Shift 32px) reports the new offset through [onChanged],
 /// clamped to [bounds] when given. Pair with [UiResizeHandle] for resizable panels.
-class UiDraggable extends StatefulWidget {
-  const UiDraggable({super.key, required this.child, required this.offset, required this.onChanged, this.bounds, this.label = 'Move', this.onDragEnd});
+class UiDragMove extends StatefulWidget {
+  const UiDragMove({super.key, required this.child, required this.offset, required this.onChanged, this.bounds, this.label = 'Move', this.onDragEnd});
 
   final Widget child;
   final Offset offset;
@@ -209,7 +209,7 @@ class UiDraggable extends StatefulWidget {
   final ValueChanged<Offset>? onDragEnd;
 
   @override
-  State<UiDraggable> createState() => _UiDraggableState();
+  State<UiDragMove> createState() => _UiDragMoveState();
 }
 
 class _Move extends Intent {
@@ -217,12 +217,12 @@ class _Move extends Intent {
   final Offset by;
 }
 
-class _UiDraggableState extends State<UiDraggable> {
+class _UiDragMoveState extends State<UiDragMove> {
   late Offset _live = widget.offset;
   bool _focus = false;
 
   @override
-  void didUpdateWidget(UiDraggable old) {
+  void didUpdateWidget(UiDragMove old) {
     super.didUpdateWidget(old);
     _live = widget.offset;
   }

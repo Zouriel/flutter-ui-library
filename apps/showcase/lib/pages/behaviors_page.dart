@@ -203,7 +203,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
         ),
         DocSection(
           name: 'Draggable',
-          widget: 'UiDraggable',
+          widget: 'UiDragMove',
           summary: 'Moves something by hand: the child is drawn at offset, and dragging it (or, focused, the arrow keys: 8px, Shift 32px) reports the new offset, kept inside bounds. Pair with UiResizeHandle for resizable panels.',
           demo: SizedBox(
             height: 140,
@@ -211,7 +211,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
               decoration: BoxDecoration(color: t.surfaceSubtle, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
               child: LayoutBuilder(builder: (context, box) => Align(
                 alignment: Alignment.topLeft,
-                child: UiDraggable(
+                child: UiDragMove(
                   offset: _drag,
                   bounds: Rect.fromLTWH(0, 0, box.maxWidth - 110, box.maxHeight - 48),
                   onChanged: (o) => setState(() => _drag = o),
@@ -226,7 +226,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
               )),
             ),
           ),
-          code: 'UiDraggable(\n  offset: at,\n  bounds: area,\n  onChanged: (o) => setState(() => at = o),\n  child: card,\n)',
+          code: 'UiDragMove(\n  offset: at,\n  bounds: area,\n  onChanged: (o) => setState(() => at = o),\n  child: card,\n)',
           api: const [
             ApiRow('offset / onChanged', 'Offset / ValueChanged<Offset>', 'Where it is drawn.'),
             ApiRow('bounds', 'Rect?', 'Keep the offset inside.'),
