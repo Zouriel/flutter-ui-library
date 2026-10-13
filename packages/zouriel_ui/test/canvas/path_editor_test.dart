@@ -34,6 +34,8 @@ class _HostState extends State<_Host> {
   final key = GlobalKey<UiPathEditorState>();
   int pens = 0;
 
+  void setMode(UiPathEditorMode m) => setState(() => mode = m);
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 400,
@@ -125,7 +127,7 @@ void main() {
       await _tap(tester, _screen(10, 10));
       await _tap(tester, _screen(50, 50));
       final h = _host(tester);
-      h.setState(() => h.mode = UiPathEditorMode.objects);
+      h.setMode(UiPathEditorMode.objects);
       await tester.pump();
       await tester.pump();
       expect(h.items, hasLength(1));
