@@ -184,7 +184,29 @@ Known, deliberate gaps (not reachable from forms the builder makes):
 
 ## Not here yet
 
-- The renderer and builder widgets (and the source picker's search-as-you-type paging controller);
-  they come with the form controls. The engine already exposes what they need
-  (`sourceParams`, `optionSource`, `sourceHasMore`, `instancesOn`, `pageErrors`, `changes`).
+- The builder widgets (a later, tablet phase). The renderer is done: see "Renderer" below.
 - The builder store (undo/redo, selection) lives with the builder UI.
+
+## Renderer (`lib/src/form_builder/renderer/`, `lib/src/form_builder/sources/`)
+
+`UiFormRenderer` (web `ui-form-renderer`), `UiFbFieldView` (`ui-fb-field`) and `UiFbSourcePicker`
+(`ui-fb-source-picker`), exported by `lib/src/areas/form_renderer.dart`.
+
+| Angular | Flutter |
+| --- | --- |
+| `[definition]` | `definition:` a `UiFormDefinition` or its JSON map |
+| `[data]`, `[mode]`, `[validators]`, `[optionSources]`, `[globalSettings]`, `[today]` | same names; `httpSources:` replaces `provideUiFormHttpSources` |
+| `[uploader]` `(file, field) => Promise` | `uploader:` `(UiPickedFile, UiFbField) => Future<UiFbFileValue>` |
+| the browser's file dialog | `filePicker:` a `UiFilePicker` from the app (file_picker / file_selector) |
+| `(submitted)`, `(cancelled)`, `(valueChange)`, `(dirtyChange)` | `onSubmitted`, `onCancelled`, `onValueChanged` (only when the data actually changes), `onDirtyChanged` |
+| `submit()`, `reset()`, `engine()` | `GlobalKey<UiFormRendererState>`: `submit()`, `reset()`, `engine` |
+
+Same JSON: `test/form_renderer/e2e_test.dart` fills the sample form in through the widgets and
+compares the submission with the Angular engine's output in `engine-scholarship.json`, and saves
+the sample answers back unchanged in edit mode.
+
+Mobile differences: the 12-column grid collapses to one column at 560px or less, as on the web;
+`labelPlacement: inside` draws an outlined floating label that rests on the box's border (the web
+moves it inside a taller box); after Continue the page scrolls back to the form's top, and focus
+moves into the first field only with a hardware keyboard (on touch it would pop the keyboard up);
+the error summary's links are underlined on hover/focus rather than at rest (contrast check).

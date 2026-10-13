@@ -854,7 +854,7 @@ File: `form-builder/src/form-renderer.ts`
 - Inputs: `definition`: UiFormDefinition; `data`: Record<string, unknown> | null = null; `mode`: UiFormMode | null = null; `validators`: readonly UiFbValidatorDef[] = []; `optionSources`: readonly UiFbOptionSourceDef[] = []; `globalSettings`: UiFormGlobalSettings | null = null; `uploader`: UiFbUploader | null = null; `showTitle` = true; `showActions` = true; `submitLabel`: string | null = null; `cancelLabel`: string | null = null; `busy` = false; `today`: (() => string) | null = null
 - Outputs: `submitted`: UiFormSubmission; `cancelled`: void; `valueChange`: Record<string, unknown>; `dirtyChange`: boolean
 - Methods: `reset()`, `submit()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `optionLabel` (format.ts)
 - function `formatDate` (format.ts)
@@ -900,7 +900,7 @@ File: `form-builder/src/renderer-field.ts`
 `ui-fb-field` — one field of a `ui-form-renderer`: label, help, control and messages, laid out as the form (or the field) asks. Styles are global but all scoped under `.ui-fbf` so placements can reach into the library controls.  
 - Inputs: `engine`: UiFormEngine; `field`: UiFbField; `row`: string | null = null; `idPrefix` = 'fb'; `uploader`: UiFbUploader | null = null
 - Methods: `focus()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiFbUploader` (renderer-field.ts)
 - const `UI_FB_SCHEMA_VERSION` (schema.ts)
@@ -949,7 +949,7 @@ File: `form-builder/src/source-picker.ts`
 `ui-fb-source-picker` — a searchable dropdown over an option source: type to search, scroll to load the next page, pick one (or several, as chips). Answers are `{ value, label }`. Used by the renderer for sourced fields and by the builder wherever a sourced value is picked (rules, previews).  
 - Inputs: `source`: UiFbOptionSourceDef; `params`: Record<string, unknown>; `multiple` = false; `value`: unknown = null; `placeholder` = 'Search…'; `disabled` = false; `invalid` = false; `inputId` = ''; `ariaLabel` = ''
 - Outputs: `valueChange`: UiFbChoice | UiFbChoice[] | null
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiFbValidatorResult` (validators.ts)
 - interface `UiFbValidatorContext` (validators.ts)
