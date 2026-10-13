@@ -126,6 +126,8 @@ class _UiFbCanvasState extends State<UiFbCanvas> {
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
+                // Tapping the background clears the selection; the form title does the same for screen readers.
+                excludeFromSemantics: true,
                 onTap: () {
                   store.select(null);
                   widget.onPicked?.call(null);
