@@ -1,4 +1,3 @@
-import 'dart:ui' show SemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,7 +89,7 @@ void main() {
     final node = tester.getSemantics(find.bySemanticsLabel('Position'));
     expect(node.getSemanticsData().flagsCollection.isSlider, isTrue);
     expect(node.value, '300');
-    tester.binding.pipelineOwner.semanticsOwner!.performAction(node.id, SemanticsAction.increase);
+    tester.semantics.increase(find.semantics.byLabel('Position'));
     await tester.pump();
     expect(_host(tester).value, 320);
 
