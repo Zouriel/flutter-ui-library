@@ -142,7 +142,9 @@ class _UiOtpInputState extends State<UiOtpInput> {
   }
 
   void _setCell(int i, String ch) {
-    if (_cells[i].text != ch) _cells[i].value = TextEditingValue(text: ch, selection: TextSelection.collapsed(offset: ch.length));
+    if (_cells[i].text != ch) {
+      _cells[i].value = TextEditingValue(text: ch, selection: TextSelection.collapsed(offset: ch.length));
+    }
   }
 
   String _sanitize(String raw) => widget.numeric ? raw.replaceAll(RegExp(r'\D'), '') : raw.replaceAll(RegExp(r'\s'), '');
@@ -229,46 +231,59 @@ class _UiOtpInputState extends State<UiOtpInput> {
     final invalid = uiFieldInvalid(context, widget.invalid);
     final style = context.uiText.code.copyWith(fontSize: t.fontSizeLg, color: t.text, height: 1.2);
     final group = UiFieldScope.maybeOf(context)?.label ?? widget.semanticLabel;
-    return Semantics(
-      container: true,
-      label: group,
-      explicitChildNodes: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: t.space2,
-        children: [
-          for (var i = 0; i < widget.length; i++)
-            SizedBox(
-              // The web cell is md wide and lg tall; on phones 48dp wide so each one is a full target.
-              width: uiTouchPlatform(context) && t.sizeMd < uiMinTouchTarget ? uiMinTouchTarget : t.sizeMd,
-              child: UiFieldFrame(
-                height: t.sizeLg,
-                focused: _nodes[i].hasFocus,
-                invalid: invalid,
-                enabled: widget.enabled,
-                child: UiFieldScope(
-                  // Each cell is named on its own, not by the field label (that names the group).
-                  label: 'Digit ${i + 1}',
-                  child: UiTextEditor(
-                    controller: _cells[i],
-                    focusNode: _nodes[i],
-                    style: style,
-                    textAlign: TextAlign.center,
+    // The web cell is md wide and lg tall; on phones 48dp wide so each one is a full target. In a
+    // narrow space the gaps close up first, then the cells shrink.
+    final preferred = uiTouchPlatform(context) && t.sizeMd < uiMinTouchTarget ? uiMinTouchTarget : t.sizeMd;
+    final n = widget.length;
+    return LayoutBuilder(
+      builder: (context, c) {
+        var gap = t.space2;
+        var cell = preferred;
+        if (c.maxWidth.isFinite && cell * n + gap * (n - 1) > c.maxWidth) {
+          gap = t.space1;
+          cell = ((c.maxWidth - gap * (n - 1)) / n).floorToDouble().clamp(0.0, preferred);
+        }
+        return Semantics(
+          container: true,
+          label: group,
+          explicitChildNodes: true,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: gap,
+            children: [
+              for (var i = 0; i < widget.length; i++)
+                SizedBox(
+                  width: cell,
+                  child: UiFieldFrame(
+                    height: t.sizeLg,
+                    focused: _nodes[i].hasFocus,
+                    invalid: invalid,
                     enabled: widget.enabled,
-                    keyboardType: widget.numeric ? TextInputType.number : TextInputType.text,
-                    autofillHints: i == 0 ? const [AutofillHints.oneTimeCode] : null,
-                    textInputAction: i == widget.length - 1 ? TextInputAction.done : TextInputAction.next,
-                    onChanged: (s) => _onCellChanged(i, s),
-                    onKeyEvent: (_, e) => _onKey(i, e),
-                    selectAllOnFocus: true,
-                    autofocus: widget.autofocus && i == 0,
-                    semanticLabel: 'Digit ${i + 1}',
+                    child: UiFieldScope(
+                      // Each cell is named on its own, not by the field label (that names the group).
+                      label: 'Digit ${i + 1}',
+                      child: UiTextEditor(
+                        controller: _cells[i],
+                        focusNode: _nodes[i],
+                        style: style,
+                        textAlign: TextAlign.center,
+                        enabled: widget.enabled,
+                        keyboardType: widget.numeric ? TextInputType.number : TextInputType.text,
+                        autofillHints: i == 0 ? const [AutofillHints.oneTimeCode] : null,
+                        textInputAction: i == widget.length - 1 ? TextInputAction.done : TextInputAction.next,
+                        onChanged: (s) => _onCellChanged(i, s),
+                        onKeyEvent: (_, e) => _onKey(i, e),
+                        selectAllOnFocus: true,
+                        autofocus: widget.autofocus && i == 0,
+                        semanticLabel: 'Digit ${i + 1}',
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
