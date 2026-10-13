@@ -253,7 +253,7 @@ class UiMultiSelectState extends State<UiMultiSelect> {
                   ),
                 ),
                 if (widget.clearable && widget.value.isNotEmpty && widget.enabled)
-                  UiFieldButton(label: 'Clear all', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
+                  SizedBox(height: rowH, child: UiFieldButton(label: 'Clear all', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2))),
               ]),
             ),
           ),
