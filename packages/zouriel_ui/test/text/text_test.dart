@@ -26,6 +26,15 @@ void main() {
     expect(code.style!.fontFamily, contains('JetBrains Mono'));
   });
 
+  testWidgets('fontFamily uses an app font as is, or a package font with fontPackage', (tester) async {
+    await pumpUi(tester, const Column(children: [
+      UiText('app', fontFamily: 'Georgia'),
+      UiText('pkg', fontFamily: 'Space Grotesk', fontPackage: 'zouriel_ui'),
+    ]));
+    expect(tester.widget<Text>(find.text('app')).style!.fontFamily, 'Georgia');
+    expect(tester.widget<Text>(find.text('pkg')).style!.fontFamily, 'packages/zouriel_ui/Space Grotesk');
+  });
+
   testWidgets('golden: the type scale', (tester) async {
     await expectThemedGolden(tester, 'text_variants', height: 520, (context) => const Column(
       crossAxisAlignment: CrossAxisAlignment.start,

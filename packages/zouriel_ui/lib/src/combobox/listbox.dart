@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
+import '../core/fonts.dart';
 
 /// The style that previews a font: [family] (from [package] when the font is bundled in a package,
 /// e.g. `'zouriel_ui'`), falling back to the theme font for missing glyphs. Null when there's no
@@ -16,32 +17,6 @@ TextStyle? uiFontPreviewStyle(BuildContext context, String? family, {String? pac
   return TextStyle(
     fontFamily: package == null || package.isEmpty ? f : 'packages/$package/$f',
     fontFamilyFallback: [?base],
-  );
-}
-
-/// [base] drawn in [font]'s family (from [uiFontPreviewStyle]). Built as a complete,
-/// non-inheriting style: merging a font from one package onto a style from another would prefix
-/// the family twice.
-TextStyle uiApplyFont(TextStyle base, TextStyle? font) {
-  if (font == null) return base;
-  return TextStyle(
-    inherit: false,
-    color: base.color,
-    backgroundColor: base.backgroundColor,
-    fontSize: base.fontSize,
-    fontWeight: base.fontWeight,
-    fontStyle: base.fontStyle,
-    letterSpacing: base.letterSpacing,
-    wordSpacing: base.wordSpacing,
-    textBaseline: base.textBaseline ?? TextBaseline.alphabetic,
-    height: base.height,
-    leadingDistribution: base.leadingDistribution,
-    decoration: base.decoration ?? TextDecoration.none,
-    decorationColor: base.decorationColor,
-    fontFeatures: base.fontFeatures,
-    fontFamily: font.fontFamily,
-    fontFamilyFallback: font.fontFamilyFallback,
-    overflow: base.overflow,
   );
 }
 

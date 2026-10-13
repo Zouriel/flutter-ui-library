@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../core/fonts.dart';
 import '../../combobox/listbox.dart';
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
@@ -225,14 +226,22 @@ class _UiSelectState extends State<UiSelect> {
           enabled: widget.enabled,
           radius: widget.radius,
           padding: EdgeInsetsDirectional.only(start: t.space3, end: t.space3),
-          child: Row(spacing: t.space2, children: [
-            Expanded(
-              child: ExcludeSemantics(
-                child: Text(shown, maxLines: 1, overflow: TextOverflow.ellipsis, style: chosen == null ? style.copyWith(color: t.textMuted) : style),
+          child: Row(
+            spacing: t.space2,
+            children: [
+              Expanded(
+                child: ExcludeSemantics(
+                  child: Text(
+                    shown,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: chosen == null ? style.copyWith(color: t.textMuted) : style,
+                  ),
+                ),
               ),
-            ),
-            UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
-          ]),
+              UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
+            ],
+          ),
         ),
       ),
     );
@@ -242,20 +251,20 @@ class _UiSelectState extends State<UiSelect> {
       matchAnchorWidth: true,
       onDismiss: _close,
       panelBuilder: (context, anchor) => Focus(
-          focusNode: _listFocus,
-          onKeyEvent: _onListKey,
-          child: UiListboxPanel(
-            semanticLabel: name,
-            maxHeight: 320,
-            activeIndex: _active,
-            onHover: (i) => setState(() => _active = i),
-            onPick: _pick,
-            items: [
-              for (final o in widget.options)
-                UiListItem(label: o.label, disabled: o.disabled, selected: o.value == widget.value, style: _fontOf(o)),
-            ],
-          ),
+        focusNode: _listFocus,
+        onKeyEvent: _onListKey,
+        child: UiListboxPanel(
+          semanticLabel: name,
+          maxHeight: 320,
+          activeIndex: _active,
+          onHover: (i) => setState(() => _active = i),
+          onPick: _pick,
+          items: [
+            for (final o in widget.options)
+              UiListItem(label: o.label, disabled: o.disabled, selected: o.value == widget.value, style: _fontOf(o)),
+          ],
         ),
+      ),
       child: field,
     );
   }

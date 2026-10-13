@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../core/fonts.dart';
 import '../core/icon.dart';
 import '../core/types.dart';
 import '../forms/text/form_field.dart';
@@ -123,7 +124,11 @@ class UiComboboxState extends State<UiCombobox> {
   }
 
   void _setQuery(String text) {
-    if (_query.text != text) _query.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
+    if (_query.text != text)
+      _query.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
   }
 
   List<UiComboboxOption> get _filtered {
@@ -258,9 +263,10 @@ class UiComboboxState extends State<UiCombobox> {
       enabled: widget.enabled,
       radius: widget.radius,
       padding: EdgeInsetsDirectional.only(start: t.space3, end: t.space3),
-      child: Row(children: [
-        Expanded(
-          child: UiTextEditor(
+      child: Row(
+        children: [
+          Expanded(
+            child: UiTextEditor(
               controller: _query,
               focusNode: _focus,
               style: style,
@@ -274,15 +280,17 @@ class UiComboboxState extends State<UiCombobox> {
                 if (_focus.hasFocus) _openPanel();
               },
             ),
-        ),
-        if (showClear) UiFieldButton(label: 'Clear', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
-        SizedBox(width: showClear ? t.space1 : t.space2),
-        AnimatedRotation(
-          turns: _open ? 0.5 : 0,
-          duration: context.uiAnimate ? t.motionFast : Duration.zero,
-          child: UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
-        ),
-      ]),
+          ),
+          if (showClear)
+            UiFieldButton(label: 'Clear', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
+          SizedBox(width: showClear ? t.space1 : t.space2),
+          AnimatedRotation(
+            turns: _open ? 0.5 : 0,
+            duration: context.uiAnimate ? t.motionFast : Duration.zero,
+            child: UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
+          ),
+        ],
+      ),
     );
 
     return UiAnchoredOverlay(
@@ -296,9 +304,7 @@ class UiComboboxState extends State<UiCombobox> {
           activeIndex: _active,
           onHover: (i) => setState(() => _active = i),
           onPick: (i) => _select(items[i]),
-          items: [
-            for (final o in items) UiListItem(label: o.label, selected: o.value == widget.value, style: _fontOf(o)),
-          ],
+          items: [for (final o in items) UiListItem(label: o.label, selected: o.value == widget.value, style: _fontOf(o))],
         ),
       ),
       child: field,

@@ -2,7 +2,7 @@
 library;
 
 export '../combobox/combobox.dart';
-export '../combobox/listbox.dart' show uiFontPreviewStyle, uiApplyFont, UiListboxPanel, UiListItem;
+export '../combobox/listbox.dart' show uiFontPreviewStyle, UiListboxPanel, UiListItem;
 export '../combobox/multi_select.dart';
 export '../datepicker/calendar.dart';
 export '../datepicker/calendar_view.dart';

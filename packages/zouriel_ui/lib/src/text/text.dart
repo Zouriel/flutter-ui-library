@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/fonts.dart';
 import '../theme/theme.dart';
 
 /// Text styles, the web `TextVariant`.
@@ -17,6 +18,7 @@ class UiText extends StatelessWidget {
     this.variant = UiTextVariant.body,
     this.heading,
     this.fontFamily,
+    this.fontPackage,
     this.color,
     this.textAlign,
     this.maxLines,
@@ -29,8 +31,10 @@ class UiText extends StatelessWidget {
   /// Override whether this is announced as a heading (defaults to h1–h6).
   final bool? heading;
 
-  /// Font family override (the web `font` input).
+  /// Font family override (the web `font` input): an app or system font, or a package font
+  /// together with [fontPackage].
   final String? fontFamily;
+  final String? fontPackage;
   final Color? color;
   final TextAlign? textAlign;
   final int? maxLines;
@@ -59,7 +63,8 @@ class UiText extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     var style = styleOf(context, variant);
-    if (fontFamily != null) style = style.copyWith(fontFamily: fontFamily, package: null);
+    // copyWith would keep the theme font's package prefix, so build the font afresh.
+    if (fontFamily != null) style = uiApplyFont(style, TextStyle(fontFamily: fontFamily, package: fontPackage));
     if (color != null) style = style.copyWith(color: color);
     final shown = variant == UiTextVariant.h6 ? text.toUpperCase() : text;
     Widget w = Text(shown, style: style, textAlign: textAlign, maxLines: maxLines, overflow: overflow);

@@ -4,6 +4,7 @@ library;
 export 'src/badge/badge.dart';
 export 'src/button/button.dart';
 export 'src/card/card.dart';
+export 'src/core/fonts.dart';
 export 'src/core/icon.dart';
 export 'src/core/interactive.dart';
 export 'src/core/types.dart';
