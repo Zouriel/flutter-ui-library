@@ -269,7 +269,8 @@ class FbPair extends StatelessWidget {
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth >= 300 ? 2 : 1;
       final w = cols == 2 ? (c.maxWidth - t.space2) / 2 : c.maxWidth;
-      return Wrap(spacing: t.space2, runSpacing: t.space2, children: [for (final ch in children) SizedBox(width: w, child: ch)]);
+      // Bottom-aligned, so boxes line up when one label wraps onto two lines.
+      return Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.end, children: [for (final ch in children) SizedBox(width: w, child: ch)]);
     });
   }
 }
