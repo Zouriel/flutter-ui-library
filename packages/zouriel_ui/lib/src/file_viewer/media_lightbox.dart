@@ -129,8 +129,14 @@ class UiMediaLightbox extends StatefulWidget {
       barrierLabel: label.isEmpty ? 'Media viewer' : label,
       transitionDuration: animate ? t.motionBase : Duration.zero,
       reverseTransitionDuration: animate ? t.motionBase : Duration.zero,
+      // Back closes it with the index too, not with null.
       pageBuilder: (context, _, _) => StatefulBuilder(
-        builder: (context, set) => UiMediaLightbox(
+        builder: (context, set) => PopScope<int>(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) Navigator.of(context).pop(at);
+          },
+          child: UiMediaLightbox(
           items: items,
           index: at,
           label: label,
@@ -142,6 +148,7 @@ class UiMediaLightbox extends StatefulWidget {
             onIndexChanged?.call(i);
           },
           onClose: () => Navigator.of(context).pop(at),
+          ),
         ),
       ),
       // Opacity on the sheet, a slight rise on the content: the sheet's own transform belongs to

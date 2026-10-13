@@ -88,6 +88,7 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(UiMediaLightbox), findsNothing);
+    expect(events.last, 'closed 0', reason: 'back reports the index too');
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Close'));
