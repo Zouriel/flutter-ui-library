@@ -157,6 +157,7 @@ class _UiMenubarState extends State<UiMenubar> {
                   },
                   child: Focus(
                     canRequestFocus: false,
+                    includeSemantics: false,
                     skipTraversal: true,
                     onKeyEvent: (node, e) => _onTopKey(i, e),
                     child: _TopItem(
@@ -364,6 +365,7 @@ class _MenuPanelState extends State<_MenuPanel> {
       label: widget.label,
       child: Focus(
         canRequestFocus: false,
+        includeSemantics: false,
         skipTraversal: true,
         onKeyEvent: _onKey,
         child: Container(

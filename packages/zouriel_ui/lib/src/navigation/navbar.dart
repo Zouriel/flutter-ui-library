@@ -54,7 +54,9 @@ class UiNavbar extends StatelessWidget {
     );
     final top = safeArea ? MediaQuery.paddingOf(context).top : 0.0;
 
-    final brandW = brand == null ? null : DefaultTextStyle.merge(style: brandStyle, child: brand!);
+    final brandW = brand == null
+        ? null
+        : DefaultTextStyle.merge(style: brandStyle, child: IconTheme.merge(data: IconThemeData(color: t.text, size: 20), child: brand!));
     final actionsRow = Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: actions);
 
     Widget content = LayoutBuilder(builder: (context, box) {

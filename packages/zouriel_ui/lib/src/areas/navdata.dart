@@ -16,3 +16,6 @@ export '../navigation/navbar.dart';
 export '../navigation/pagination.dart';
 export '../navigation/side_nav.dart';
 export '../navigation/stepper.dart';
+export '../accordion/accordion.dart';
+export '../list/list.dart';
+export '../tabs/tabs.dart';
