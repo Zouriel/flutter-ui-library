@@ -7,6 +7,31 @@ import '../core/types.dart';
 import '../feedback/spinner.dart';
 import '../theme/theme.dart';
 
+/// Where a button sits in a joined row ([UiButtonGroup], [UiSplitButton]): only the outer corners
+/// stay rounded. Buttons read it from their context; you rarely need it directly.
+class UiButtonJoin extends InheritedWidget {
+  const UiButtonJoin({super.key, required this.first, required this.last, required super.child});
+
+  /// Keeps its start corners.
+  final bool first;
+
+  /// Keeps its end corners.
+  final bool last;
+
+  static UiButtonJoin? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<UiButtonJoin>();
+
+  /// Corners of radius [r], squared where the button meets a neighbour.
+  static BorderRadiusGeometry shape(BuildContext context, double r) {
+    final j = maybeOf(context);
+    if (j == null) return BorderRadius.circular(r);
+    final start = Radius.circular(j.first ? r : 0), end = Radius.circular(j.last ? r : 0);
+    return BorderRadiusDirectional.horizontal(start: start, end: end);
+  }
+
+  @override
+  bool updateShouldNotify(UiButtonJoin old) => old.first != first || old.last != last;
+}
+
 /// Button styles, the web `UiButtonVariant`.
 enum UiButtonVariant { primary, secondary, outline, ghost, link, destructive, brand }
 
@@ -62,7 +87,9 @@ class UiButton extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
-  }) : assert(label != null || child != null, 'Give the button a label or a child.');
+    this.minWidth,
+    this.padding,
+  }) : assert(label != null || child != null || (icon != null && semanticLabel != null), 'Give the button a label, a child, or an icon and a semanticLabel.');
 
   final String? label;
   final Widget? child;
@@ -85,6 +112,12 @@ class UiButton extends StatelessWidget {
   final bool autofocus;
   final String? semanticLabel;
 
+  /// Minimum visual width (e.g. 48 so a narrow joined button needs no touch padding sideways).
+  final double? minWidth;
+
+  /// Horizontal padding instead of the size's default.
+  final double? padding;
+
   @override
   Widget build(BuildContext context) {
     final theme = context.uiTheme;
@@ -95,6 +128,7 @@ class UiButton extends StatelessWidget {
     final fontSize = switch (size) { UiSize.sm => 13.0, UiSize.md => 14.0, UiSize.lg => 15.0 };
     final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6 };
     final r = !rounded ? 0.0 : isBrand ? t.radiusPill : t.radius;
+    final shape = UiButtonJoin.shape(context, r);
 
     return UiInteractive(
       onTap: loading ? null : onPressed,
@@ -117,7 +151,7 @@ class UiButton extends StatelessWidget {
         final content = <Widget>[
           if (loading) UiSpinner(size: fontSize, color: look.fg, decorative: true),
           if (icon != null && !loading) icon!,
-          if (child != null) Flexible(child: child!) else Flexible(child: Text(label!, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          if (child != null) Flexible(child: child!) else if (label != null) Flexible(child: Text(label!, maxLines: 1, overflow: TextOverflow.ellipsis)),
           if (trailingIcon != null) trailingIcon!,
         ];
         final row = IconTheme.merge(
@@ -138,26 +172,26 @@ class UiButton extends StatelessWidget {
         Widget box = AnimatedContainer(
           duration: context.uiAnimate ? t.motionBase : Duration.zero,
           curve: t.easeStandard,
-          constraints: BoxConstraints(minHeight: isLink ? 24 : size.height(t), minWidth: isLink ? 24 : 0),
+          constraints: BoxConstraints(minHeight: isLink ? 24 : size.height(t), minWidth: isLink ? 24 : minWidth ?? 0),
           height: isLink ? null : size.height(t),
-          padding: EdgeInsets.symmetric(horizontal: isLink ? 0 : padX),
+          padding: EdgeInsets.symmetric(horizontal: isLink ? 0 : padding ?? padX),
           decoration: BoxDecoration(
             color: glass && !isBrand && !isLink ? t.glassBg : look.fill,
             gradient: look.gradient,
-            borderRadius: BorderRadius.circular(r),
+            borderRadius: shape,
             border: isBrand || isLink
                 ? null
                 : Border.all(color: glass ? t.glassBorder : (look.border ?? (look.fill == null && variant == UiButtonVariant.ghost ? const Color(0x00000000) : look.fill ?? t.border))),
             boxShadow: shadows,
           ),
           foregroundDecoration: brandWash
-              ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(r))
+              ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
               : null,
           child: Center(widthFactor: 1, heightFactor: 1, child: row),
         );
         if (glass && !isBrand && !isLink) {
           box = ClipRRect(
-            borderRadius: BorderRadius.circular(r),
+            borderRadius: shape,
             child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: box),
           );
         }
@@ -204,6 +238,7 @@ class UiIconButton extends StatelessWidget {
     final rounded = radius ?? theme.config.radius;
     final dim = size.height(t);
     final r = round ? t.radiusPill : rounded ? t.radius : 0.0;
+    final shape = UiButtonJoin.shape(context, r);
     final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 };
     return UiInteractive(
       onTap: onPressed,
@@ -227,12 +262,12 @@ class UiIconButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: glass ? t.glassBg : (look.fill ?? (v == UiButtonVariant.outline || v == UiButtonVariant.ghost ? null : t.surface)),
               gradient: look.gradient,
-              borderRadius: BorderRadius.circular(r),
+              borderRadius: shape,
               border: Border.all(color: glass ? t.glassBorder : transparentBorder ? const Color(0x00000000) : t.border),
               boxShadow: s.focused ? t.focusRing : const [],
             ),
             foregroundDecoration: v == UiButtonVariant.brand && (s.hovered || s.pressed)
-                ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(r))
+                ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
                 : null,
             child: Center(child: IconTheme.merge(data: IconThemeData(color: look.fg, size: iconSize), child: icon)),
           ),
