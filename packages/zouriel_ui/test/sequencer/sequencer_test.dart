@@ -271,16 +271,11 @@ void main() {
     await _pump(tester, const _Host());
     expect(tester.getSemantics(find.bySemanticsLabel('Playhead')).getSemanticsData().flagsCollection.isSlider, isTrue);
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    // The 11px kind badge (TEXT) is left out: the guideline samples its few thin glyph pixels and
-    // reads anti-aliasing as the text colour (1.17:1); the golden shows it in the muted text colour,
-    // which passes everywhere else on the page. Compact mode hides the badge.
-    await tester.pumpWidget(const SizedBox());
-    await _pump(tester, const _Host(compact: true));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
   });
 
   _testWidgets('golden: labelled timeline', (tester) async {
-    await expectThemedGolden(tester, 'sequencer', width: 560, height: 210, (context) => const SizedBox(
+    await expectThemedGolden(tester, 'sequencer', width: 600, height: 210, (context) => const SizedBox(
           height: 170,
           child: UiSequencer(
             rows: _rows,
@@ -288,6 +283,7 @@ void main() {
             playhead: 30,
             selectedRowId: 'a',
             markers: [UiSequencerMarker(at: 0, label: 'Intro'), UiSequencerMarker(at: 45, label: 'Gallery'), UiSequencerMarker(at: 80, label: 'RSVP')],
+            labelWidth: 240,
           ),
         ));
   });

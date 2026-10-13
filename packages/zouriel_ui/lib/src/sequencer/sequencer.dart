@@ -970,7 +970,9 @@ class _UiSequencerState extends State<UiSequencer> {
           ),
           child: Row(spacing: t.space1, children: [
             if (widget.reorderable) _grip(t, touch, row, index),
-            if (row.kind != null && !widget.compact && (!touch || widget.labelWidth >= 200)) Opacity(opacity: row.muted ? 0.5 : 1, child: _KindBadge(row.kind!)),
+            // On touch the toggles are 44px wide: the badge shows only where it leaves the name room.
+            if (row.kind != null && !widget.compact && (!touch || widget.labelWidth >= 240))
+              Opacity(opacity: row.muted ? 0.5 : 1, child: _KindBadge(row.kind!)),
             Expanded(
               child: Opacity(
                 opacity: row.muted ? 0.5 : 1,
@@ -1500,7 +1502,7 @@ class _KindBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: t.space1),
       decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radiusXs)),
-      child: Text(kind.toUpperCase(), style: TextStyle(fontSize: 11, height: 14 / 11, letterSpacing: 11 * 0.04, color: t.textMuted)),
+      child: Text(kind.toUpperCase(), maxLines: 1, overflow: TextOverflow.clip, softWrap: false, style: TextStyle(fontSize: 11, height: 14 / 11, letterSpacing: 11 * 0.04, color: t.textMuted)),
     );
   }
 }

@@ -131,11 +131,23 @@ class UiWindowManager extends ChangeNotifier {
 
   // Windows register while they build; tell listeners after the frame rather than mid-build.
   void _notify() {
+    if (_disposed) return;
     if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
-      SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_disposed) notifyListeners();
+      });
     } else {
       notifyListeners();
     }
+  }
+
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    // Windows closing as their page goes away still unregister after this.
+    _disposed = true;
+    super.dispose();
   }
 }
 

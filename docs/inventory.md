@@ -199,7 +199,7 @@ File: `canvas/src/path-editor.ts`
 - Two-way: `selectedId`: string | null = null; `selectedPoint`: UiPointRef | null = null; `selectedPoints`: UiPointRef[] = []
 - Outputs: `itemsChange`: UiPathItem[]; `pointTap`: UiPointRef; `stroke`: UiInkStroke; `penDetected`: void
 - Methods: `fit()`, `zoomBy(factor: number)`, `selectAllPoints()`, `finishPen(closed: boolean)`, `undoPenPoint()`, `cancelPen()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiPathEditorMode` (path-editor.ts)
 - interface `UiInkStroke` (path-editor.ts)
@@ -247,7 +247,7 @@ File: `canvas/src/path-editor.ts`
 File: `canvas/src/snap.ts`  
 `ui-snap-guides` — draws guide lines from {@link uiSnap} over a positioned stage.  
 - Inputs: `guides`: readonly UiGuide[] = []; `scale` = 1
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiRect` (snap.ts)
 - interface `UiGuide` (snap.ts)
@@ -260,7 +260,7 @@ File: `canvas/src/transform-box.ts`
 - Inputs: `box`: UiBox; `scale` = 1; `pointerScale`: number | null = null; `resizable` = true; `rotatable` = true; `lockAspect` = false; `minSize` = 4; `disabled` = false; `label` = ''; `showSize` = false; `cornersOnly` = false
 - Outputs: `transformStart`: UiTransformMode; `transform`: UiBox; `transformEnd`: UiBox; `activate`: void; `tap`: UiTransformTap
 - Methods: `startPinch(a: { pointerId: number; clientX: number; clientY: )`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiBox` (transform-box.ts)
 - type `UiTransformMode` (transform-box.ts)
@@ -1334,7 +1334,7 @@ File: `sequencer/src/scrubber.ts`
 - Inputs: `length` = 100; `markers`: readonly UiScrubberMarker[] = []; `ticks`: readonly UiScrubberTick[] = []; `lanes`: readonly UiScrubberLane[] = []; `end`: number | null = null; `label` = 'Position'; `valueText` = ''; `minZoom` = 0.02; `maxZoom` = 4
 - Two-way: `value` = 0; `zoom` = 0.25
 - Outputs: `settle`: number; `longPress`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiScrubberMarker` (scrubber.ts)
 - interface `UiScrubberLane` (scrubber.ts)
@@ -1345,7 +1345,7 @@ File: `sequencer/src/sequencer.ts`
 - Inputs: `rows`: readonly UiSequencerRow[] = []; `length` = 100; `markers`: readonly UiSequencerMarker[] = []; `title` = 'Layers'; `emptyText` = 'Nothing here yet'; `labelWidth` = 200; `rowHeight` = 30; `snapPixels` = 6; `keyStep` = 0.01; `endDraggable` = false; `endLabel` = 'Drag to change where it ends'; `reorderable` = true; `maxZoom` = 16; `showLabels` = true; `end`: number | null = null; `compact` = false
 - Two-way: `zoom` = 1; `playhead` = 0; `selectedRowId`: string | null = null; `selectedKeyframeId`: string | null = null
 - Outputs: `rangeChange`: UiSequencerRangeChange; `keyframeChange`: UiSequencerKeyframeChange; `keyframeMenu`: UiSequencerKeyframeRef; `muteToggle`: string; `lockToggle`: string; `scrub`: number
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiSequencerKeyframe` (sequencer.ts)
 - interface `UiSequencerRow` (sequencer.ts)
@@ -1446,7 +1446,7 @@ File: `window/src/draggable.ts`
 - Inputs: `uiDragHandle`: HTMLElement; `uiDraggableDisabled` = false
 - Two-way: `position`: UiDragPosition
 - Outputs: `dragStart`: UiDragEvent; `dragMove`: UiDragEvent; `dragEnd`: UiDragEvent
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiDragPosition` (draggable.ts)
 - interface `UiDragEvent` (draggable.ts)
@@ -1455,7 +1455,7 @@ File: `window/src/resizable.ts`
 `uiResizable` — adds edge/corner resize handles (E, S, SE) to the host and resizes it in place. Emits `(resized)` with the new dimensions. The host should establish its own width/height (e.g. a sized box). Reusable behavior.  
 - Inputs: `minWidth` = 80; `minHeight` = 48; `uiResizableDisabled` = false
 - Outputs: `resized`: UiResizeEvent
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiResizeEdge` (resizable.ts)
 - interface `UiResizeEvent` (resizable.ts)
@@ -1463,7 +1463,7 @@ File: `window/src/resizable.ts`
 File: `window/src/window-manager.ts`  
 `UiWindowManager` — tracks open windows, focus order, and z-index stacking, and exposes bulk operations (minimize all, tile). Each `ui-window` registers itself on init.  
 - Methods: `nextId()`, `register(handle: UiWindowHandle)`, `unregister(id: string)`, `bringToFront(id: string)`, `focus(id: string)`, `dock(id: string, side: UiDockSide)`, `minimizeAll()`, `restoreAll()`, `tile()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiDockSide` (window-manager.ts)
 - interface `UiWindowBounds` (window-manager.ts)
@@ -1475,6 +1475,6 @@ File: `window/src/window.ts`
 - Two-way: `open` = true
 - Outputs: `closed`: void
 - Methods: `dock(side: UiDockSide)`, `restore()`, `setBounds(b: UiWindowBounds)`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
