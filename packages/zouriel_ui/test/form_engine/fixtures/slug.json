@@ -1,0 +1,83 @@
+{
+  "kind": "slug",
+  "slugs": [
+    {
+      "label": "First name (legal)",
+      "expected": "first_name_legal"
+    },
+    {
+      "label": "2nd line",
+      "expected": "f_2nd_line"
+    },
+    {
+      "label": "Café",
+      "expected": "cafe"
+    },
+    {
+      "label": "  Ünïcödé — ÅÆØ  ",
+      "expected": "unicode_a"
+    },
+    {
+      "label": "ﬁle №5 ①",
+      "expected": "file_no5_1"
+    },
+    {
+      "label": "!!!",
+      "expected": "field"
+    },
+    {
+      "label": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "label": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa b",
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "label": "ab______________________________________cd",
+      "expected": "ab_cd"
+    },
+    {
+      "label": "Ｆｕｌｌ　ｗｉｄｔｈ",
+      "expected": "full_width"
+    },
+    {
+      "label": "İstanbul",
+      "expected": "istanbul"
+    },
+    {
+      "label": "Straße",
+      "expected": "stra_e"
+    },
+    {
+      "label": "Nguyễn Văn",
+      "expected": "nguyen_van"
+    }
+  ],
+  "keys": [
+    {
+      "key": "first_name",
+      "expected": true
+    },
+    {
+      "key": "First_2",
+      "expected": true
+    },
+    {
+      "key": "2nd",
+      "expected": false
+    },
+    {
+      "key": "a-b",
+      "expected": false
+    },
+    {
+      "key": "",
+      "expected": false
+    },
+    {
+      "key": "é",
+      "expected": false
+    }
+  ]
+}

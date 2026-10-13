@@ -1,0 +1,280 @@
+{
+  "kind": "describe",
+  "names": {
+    "c": "Country",
+    "age": "Age",
+    "m": "Courses",
+    "d": "Start"
+  },
+  "labels": {
+    "c": {
+      "uk": "UK",
+      "us": "US"
+    }
+  },
+  "conditions": [
+    {
+      "condition": {
+        "match": "all",
+        "conditions": [
+          {
+            "ref": "c",
+            "op": "anyOf",
+            "value": {
+              "const": [
+                "uk",
+                "us"
+              ]
+            }
+          },
+          {
+            "ref": "age",
+            "op": "gte",
+            "value": {
+              "const": 18
+            }
+          }
+        ]
+      },
+      "expected": "“Country” is any of UK or US and “Age” is at least 18"
+    },
+    {
+      "condition": {
+        "match": "any",
+        "conditions": [
+          {
+            "ref": "age",
+            "op": "lt",
+            "value": {
+              "const": 5
+            }
+          },
+          {
+            "match": "all",
+            "conditions": [
+              {
+                "ref": "c",
+                "op": "eq",
+                "value": {
+                  "const": "uk"
+                }
+              },
+              {
+                "ref": "age",
+                "op": "notEmpty"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "“Age” is less than 5 or (“Country” is UK and “Age” is filled in)"
+    },
+    {
+      "condition": {
+        "match": "none",
+        "conditions": [
+          {
+            "ref": "c",
+            "op": "eq",
+            "value": {
+              "const": "us"
+            }
+          },
+          {
+            "ref": "c",
+            "op": "eq"
+          }
+        ]
+      },
+      "expected": "none of these: “Country” is US; “Country” is …"
+    },
+    {
+      "condition": {
+        "ref": "m",
+        "op": "countGte",
+        "value": {
+          "const": 2
+        }
+      },
+      "expected": "“Courses” has at least 2 ticked"
+    },
+    {
+      "condition": {
+        "ref": "d",
+        "op": "between",
+        "value": {
+          "today": -1
+        },
+        "value2": {
+          "today": 7
+        }
+      },
+      "expected": "“Start” is between 1 day ago and 7 days from today"
+    },
+    {
+      "condition": {
+        "ref": "d",
+        "op": "after",
+        "value": {
+          "ref": "c"
+        }
+      },
+      "expected": "“Start” is after “Country”"
+    },
+    {
+      "condition": {
+        "ref": "d",
+        "op": "before",
+        "value": {
+          "today": 0
+        }
+      },
+      "expected": "“Start” is before today"
+    },
+    {
+      "condition": null,
+      "expected": "always"
+    },
+    {
+      "condition": {
+        "match": "any",
+        "conditions": []
+      },
+      "expected": "always"
+    }
+  ],
+  "complete": [
+    {
+      "condition": {
+        "ref": "a",
+        "op": "gt"
+      },
+      "expected": false
+    },
+    {
+      "condition": {
+        "ref": "a",
+        "op": "gt",
+        "value": {
+          "const": 1
+        }
+      },
+      "expected": true
+    },
+    {
+      "condition": {
+        "ref": "",
+        "op": "empty"
+      },
+      "expected": false
+    },
+    {
+      "condition": {
+        "ref": "a",
+        "op": "between",
+        "value": {
+          "const": 1
+        }
+      },
+      "expected": false
+    },
+    {
+      "condition": {
+        "ref": "a",
+        "op": "after",
+        "value": {
+          "today": 0
+        }
+      },
+      "expected": true
+    },
+    {
+      "condition": {
+        "match": "all",
+        "conditions": [
+          {
+            "ref": "a",
+            "op": "notEmpty"
+          },
+          {
+            "ref": "b",
+            "op": "eq",
+            "value": {
+              "ref": ""
+            }
+          }
+        ]
+      },
+      "expected": false
+    }
+  ],
+  "calcs": [
+    {
+      "calc": {
+        "op": "sum",
+        "args": [
+          {
+            "ref": "c"
+          },
+          {
+            "ref": "age"
+          }
+        ]
+      },
+      "expected": "Total of “Country” and “Age”"
+    },
+    {
+      "calc": {
+        "op": "multiply",
+        "args": [
+          {
+            "ref": "age"
+          },
+          {
+            "const": 2
+          },
+          {
+            "calc": {
+              "op": "sum",
+              "args": [
+                {
+                  "ref": "m"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": "Product of “Age”, 2 and (Total of “Courses”)"
+    },
+    {
+      "calc": {
+        "op": "ageYears",
+        "args": [
+          {
+            "ref": "d"
+          }
+        ]
+      },
+      "expected": "Age from “Start”"
+    },
+    {
+      "calc": {
+        "op": "daysBetween",
+        "args": [
+          {
+            "ref": "d"
+          }
+        ]
+      },
+      "expected": "Days from “Start” until today"
+    },
+    {
+      "calc": {
+        "op": "sum",
+        "args": []
+      },
+      "expected": "Not set up yet"
+    }
+  ]
+}

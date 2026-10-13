@@ -1,0 +1,766 @@
+{
+  "kind": "values",
+  "locale": "en-US",
+  "coerce": [
+    {
+      "field": {
+        "kind": "field",
+        "id": "t",
+        "type": "select",
+        "key": "t",
+        "label": "T",
+        "source": {
+          "type": "people"
+        }
+      },
+      "value": {
+        "value": "S100",
+        "label": "Person 1"
+      },
+      "expected": {
+        "value": "S100",
+        "label": "Person 1"
+      }
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "t",
+        "type": "select",
+        "key": "t",
+        "label": "T",
+        "source": {
+          "type": "people"
+        }
+      },
+      "value": "S5",
+      "expected": {
+        "value": "S5",
+        "label": "S5"
+      }
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "t",
+        "type": "select",
+        "key": "t",
+        "label": "T",
+        "options": [
+          {
+            "id": "o0",
+            "value": "a",
+            "label": "A"
+          }
+        ]
+      },
+      "value": {
+        "value": "a",
+        "label": "A"
+      },
+      "expected": "a"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "t",
+        "type": "select",
+        "key": "t",
+        "label": "T",
+        "options": [
+          {
+            "id": "o0",
+            "value": "a",
+            "label": "A"
+          }
+        ]
+      },
+      "value": [
+        "b",
+        "c"
+      ],
+      "expected": "b"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "t",
+        "type": "select",
+        "key": "t",
+        "label": "T",
+        "options": [
+          {
+            "id": "o0",
+            "value": "a",
+            "label": "A"
+          }
+        ]
+      },
+      "value": 7,
+      "expected": "7"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "t",
+        "type": "select",
+        "key": "t",
+        "label": "T"
+      },
+      "value": "",
+      "expected": null
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "m",
+        "type": "multiselect",
+        "key": "m",
+        "label": "M",
+        "source": {
+          "type": "people"
+        }
+      },
+      "value": [
+        {
+          "value": "S100",
+          "label": "Person 1"
+        },
+        "S7",
+        null,
+        ""
+      ],
+      "expected": [
+        {
+          "value": "S100",
+          "label": "Person 1"
+        },
+        {
+          "value": "S7",
+          "label": "S7"
+        }
+      ]
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "m",
+        "type": "checkboxes",
+        "key": "m",
+        "label": "M"
+      },
+      "value": "a",
+      "expected": [
+        "a"
+      ]
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "m",
+        "type": "checkboxes",
+        "key": "m",
+        "label": "M"
+      },
+      "value": null,
+      "expected": []
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "m",
+        "type": "checkboxes",
+        "key": "m",
+        "label": "M"
+      },
+      "value": [
+        {
+          "value": 1,
+          "label": "One"
+        },
+        2
+      ],
+      "expected": [
+        "1",
+        "2"
+      ]
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": " 12 ",
+      "expected": 12
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": "",
+      "expected": null
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": "1e3",
+      "expected": 1000
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": true,
+      "expected": 1
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "slider",
+        "key": "n",
+        "label": "N"
+      },
+      "value": "x",
+      "expected": null
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "b",
+        "type": "toggle",
+        "key": "b",
+        "label": "B"
+      },
+      "value": "true",
+      "expected": true
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "b",
+        "type": "toggle",
+        "key": "b",
+        "label": "B"
+      },
+      "value": 1,
+      "expected": true
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "b",
+        "type": "checkbox",
+        "key": "b",
+        "label": "B"
+      },
+      "value": "yes",
+      "expected": false
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "d",
+        "type": "date",
+        "key": "d",
+        "label": "D"
+      },
+      "value": 20261011,
+      "expected": "20261011"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "x",
+        "type": "text",
+        "key": "x",
+        "label": "X"
+      },
+      "value": [
+        "a",
+        "b"
+      ],
+      "expected": "a, b"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "x",
+        "type": "text",
+        "key": "x",
+        "label": "X"
+      },
+      "value": 2.5,
+      "expected": "2.5"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "x",
+        "type": "text",
+        "key": "x",
+        "label": "X"
+      },
+      "value": null,
+      "expected": null
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "fl",
+        "type": "file",
+        "key": "fl",
+        "label": "FL"
+      },
+      "value": {
+        "name": "a.pdf",
+        "size": 1,
+        "type": "application/pdf"
+      },
+      "expected": [
+        {
+          "name": "a.pdf",
+          "size": 1,
+          "type": "application/pdf"
+        }
+      ]
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "c",
+        "type": "calculated",
+        "key": "c",
+        "label": "C"
+      },
+      "value": "5",
+      "expected": "5"
+    }
+  ],
+  "choices": [
+    {
+      "value": [
+        {
+          "value": "S100",
+          "label": "Person 1"
+        }
+      ],
+      "optionValueOf": [
+        "S100"
+      ],
+      "toChoice": {
+        "value": [
+          {
+            "value": "S100",
+            "label": "Person 1"
+          }
+        ],
+        "label": "[object Object]"
+      }
+    },
+    {
+      "value": {
+        "value": "S100",
+        "label": "Person 1"
+      },
+      "optionValueOf": "S100",
+      "toChoice": {
+        "value": "S100",
+        "label": "Person 1"
+      }
+    },
+    {
+      "value": {
+        "value": 3
+      },
+      "optionValueOf": 3,
+      "toChoice": {
+        "value": 3,
+        "label": "3"
+      }
+    },
+    {
+      "value": "x",
+      "optionValueOf": "x",
+      "toChoice": {
+        "value": "x",
+        "label": "x"
+      }
+    },
+    {
+      "value": "",
+      "optionValueOf": "",
+      "toChoice": null
+    },
+    {
+      "value": null,
+      "optionValueOf": null,
+      "toChoice": null
+    }
+  ],
+  "hasMore": [
+    {
+      "page": {
+        "items": [
+          1,
+          2
+        ],
+        "hasMore": false
+      },
+      "loaded": 2,
+      "pageSize": 2,
+      "expected": false
+    },
+    {
+      "page": {
+        "items": [
+          1,
+          2
+        ],
+        "total": 30
+      },
+      "loaded": 2,
+      "pageSize": 2,
+      "expected": true
+    },
+    {
+      "page": {
+        "items": [
+          1,
+          2
+        ],
+        "total": 2
+      },
+      "loaded": 2,
+      "pageSize": 2,
+      "expected": false
+    },
+    {
+      "page": {
+        "items": [
+          1,
+          2
+        ]
+      },
+      "loaded": 2,
+      "pageSize": 2,
+      "expected": true
+    },
+    {
+      "page": {
+        "items": [
+          1
+        ]
+      },
+      "loaded": 1,
+      "pageSize": 2,
+      "expected": false
+    }
+  ],
+  "format": [
+    {
+      "field": {
+        "kind": "field",
+        "id": "s",
+        "type": "select",
+        "key": "s",
+        "label": "S",
+        "options": [
+          {
+            "id": "o0",
+            "value": "a",
+            "label": "Alpha"
+          }
+        ]
+      },
+      "value": "a",
+      "expected": "Alpha"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "s",
+        "type": "select",
+        "key": "s",
+        "label": "S",
+        "options": [
+          {
+            "id": "o0",
+            "value": "a",
+            "label": "Alpha"
+          }
+        ]
+      },
+      "value": {
+        "value": "S100",
+        "label": "Person 1"
+      },
+      "expected": "Person 1"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "m",
+        "type": "multiselect",
+        "key": "m",
+        "label": "M",
+        "source": {
+          "type": "people"
+        }
+      },
+      "value": [
+        {
+          "value": "S100",
+          "label": "Person 1"
+        },
+        {
+          "value": "S101",
+          "label": "Person 2"
+        }
+      ],
+      "expected": "Person 1, Person 2"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "m",
+        "type": "checkboxes",
+        "key": "m",
+        "label": "M",
+        "options": [
+          {
+            "id": "o0",
+            "value": "a",
+            "label": "Alpha"
+          }
+        ]
+      },
+      "value": "a",
+      "expected": "Alpha"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "b",
+        "type": "toggle",
+        "key": "b",
+        "label": "B"
+      },
+      "value": false,
+      "expected": "No"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "d",
+        "type": "date",
+        "key": "d",
+        "label": "D"
+      },
+      "value": "2026-01-05",
+      "expected": "Jan 5, 2026"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "d",
+        "type": "date",
+        "key": "d",
+        "label": "D"
+      },
+      "value": "5/1/2026",
+      "expected": "5/1/2026"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "r",
+        "type": "rating",
+        "key": "r",
+        "label": "R"
+      },
+      "value": 4,
+      "expected": "4 / 5"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "c",
+        "type": "currency",
+        "key": "c",
+        "label": "C"
+      },
+      "value": -5,
+      "expected": "-$5.00"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "c",
+        "type": "currency",
+        "key": "c",
+        "label": "C",
+        "props": {
+          "decimals": 0,
+          "currency": "gbp"
+        }
+      },
+      "value": 1234.5,
+      "expected": "£1,235"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "c",
+        "type": "currency",
+        "key": "c",
+        "label": "C",
+        "props": {
+          "currency": "NOPE"
+        }
+      },
+      "value": 1.005,
+      "expected": "1.00"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "k",
+        "type": "calculated",
+        "key": "k",
+        "label": "K",
+        "props": {
+          "format": "currency",
+          "currency": "JPY",
+          "decimals": 0
+        }
+      },
+      "value": 1500,
+      "expected": "¥1,500"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N",
+        "props": {
+          "decimals": 2
+        }
+      },
+      "value": 1.005,
+      "expected": "1.01"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": 0.1,
+      "expected": "0.1"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": 1e+21,
+      "expected": "1,000,000,000,000,000,000,000"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N"
+      },
+      "value": 1.2345e-07,
+      "expected": "0.0000001235"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "n",
+        "type": "number",
+        "key": "n",
+        "label": "N",
+        "props": {
+          "decimals": 0
+        }
+      },
+      "value": 999.5,
+      "expected": "1,000"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "x",
+        "type": "text",
+        "key": "x",
+        "label": "X"
+      },
+      "value": "plain",
+      "expected": "plain"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "x",
+        "type": "text",
+        "key": "x",
+        "label": "X"
+      },
+      "value": [
+        "a",
+        "b"
+      ],
+      "expected": "a, b"
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "x",
+        "type": "text",
+        "key": "x",
+        "label": "X"
+      },
+      "value": [],
+      "expected": ""
+    },
+    {
+      "field": {
+        "kind": "field",
+        "id": "h",
+        "type": "hidden",
+        "key": "h",
+        "label": "H"
+      },
+      "value": true,
+      "expected": "true"
+    }
+  ]
+}

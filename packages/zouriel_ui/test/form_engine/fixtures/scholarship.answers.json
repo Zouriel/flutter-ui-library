@@ -1,0 +1,46 @@
+{
+  "full_name": "Aminath Shareef",
+  "email": "aminath.shareef@example.mv",
+  "phone": "+960 777 4021",
+  "date_of_birth": "2004-03-19",
+  "age": 22,
+  "study_status": "part_time",
+  "institution": "Maldives National University",
+  "student_record": {
+    "value": "S240117",
+    "label": "Aminath Shareef"
+  },
+  "has_dependants": true,
+  "dependants": [
+    {
+      "name": "Ibrahim",
+      "relationship": "sibling"
+    }
+  ],
+  "income": {
+    "wages": 1240,
+    "benefits": 180,
+    "total": 1420
+  },
+  "programme": "health",
+  "courses": [
+    {
+      "value": "health-1",
+      "label": "Anatomy"
+    },
+    {
+      "value": "health-5",
+      "label": "Nursing practice I"
+    }
+  ],
+  "statement": "I have worked part time at a community clinic in Hulhumalé for two years while studying, and I want to train as a nurse so I can do more for the patients I meet there. Many of them travel from the islands for care that should be closer to home. With this scholarship I would finish my degree without working nights, and then return to the clinic to help run its community health visits.",
+  "documents": [
+    {
+      "name": "transcript-2026.pdf",
+      "size": 184320,
+      "type": "application/pdf"
+    }
+  ],
+  "consent": true,
+  "submitted_from": "kiosk-3"
+}

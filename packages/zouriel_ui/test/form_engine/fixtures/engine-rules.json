@@ -1,0 +1,2854 @@
+{
+  "kind": "engine",
+  "description": "Engine behaviour: rules, checks, repeats, pages, edit mode and output. Cases mirror engine.spec.ts and edge cases from the other specs.",
+  "cases": [
+    {
+      "name": "shows a field only when its rule holds, and leaves hidden answers out of the data",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "married",
+                "type": "toggle",
+                "key": "married",
+                "label": "MARRIED"
+              },
+              {
+                "kind": "field",
+                "id": "spouse",
+                "type": "text",
+                "key": "spouse",
+                "label": "SPOUSE",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "married",
+                    "op": "isTrue"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "visible": {
+              "spouse": false
+            }
+          }
+        },
+        {
+          "set": "married",
+          "value": true
+        },
+        {
+          "expect": {
+            "visible": {
+              "spouse": true
+            }
+          }
+        },
+        {
+          "set": "spouse",
+          "value": "Sam"
+        },
+        {
+          "expect": {
+            "data": {
+              "married": true,
+              "spouse": "Sam"
+            }
+          }
+        },
+        {
+          "set": "married",
+          "value": false
+        },
+        {
+          "expect": {
+            "data": {
+              "married": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "makes a field required only under a condition; hidden required fields never block",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "kind",
+                "type": "select",
+                "key": "kind",
+                "label": "KIND",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "company",
+                    "label": "Company"
+                  },
+                  {
+                    "id": "o1",
+                    "value": "person",
+                    "label": "Person"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "vat",
+                "type": "text",
+                "key": "vat",
+                "label": "VAT",
+                "required": {
+                  "when": {
+                    "ref": "kind",
+                    "op": "eq",
+                    "value": {
+                      "const": "company"
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "nick",
+                "type": "text",
+                "key": "nick",
+                "label": "NICK",
+                "required": true,
+                "visibility": {
+                  "action": "hide",
+                  "when": {
+                    "ref": "kind",
+                    "op": "eq",
+                    "value": {
+                      "const": "company"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "kind",
+          "value": "company"
+        },
+        {
+          "expect": {
+            "errors": {
+              "vat": [
+                "VAT is required."
+              ],
+              "nick": []
+            },
+            "required": {
+              "vat": true
+            }
+          }
+        },
+        {
+          "set": "kind",
+          "value": "person"
+        },
+        {
+          "expect": {
+            "errors": {
+              "vat": [],
+              "nick": [
+                "NICK is required."
+              ]
+            },
+            "required": {
+              "vat": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "only shows errors after the field is left, or after trying to continue",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "email",
+                "key": "a",
+                "label": "A",
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "errorsShown": {
+              "a": false
+            }
+          }
+        },
+        {
+          "set": "a",
+          "value": "nope"
+        },
+        {
+          "expect": {
+            "errors": {
+              "a": [
+                "Enter an email address like name@example.com."
+              ]
+            },
+            "errorsShown": {
+              "a": false
+            }
+          }
+        },
+        {
+          "touch": "a"
+        },
+        {
+          "expect": {
+            "errorsShown": {
+              "a": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "with validateOn submit, leaving a field shows nothing until Continue",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "required": true
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "b",
+                "label": "B"
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "validateOn": "submit"
+        }
+      },
+      "steps": [
+        {
+          "touch": "a"
+        },
+        {
+          "expect": {
+            "errorsShown": {
+              "a": false
+            }
+          }
+        },
+        {
+          "submit": false
+        },
+        {
+          "expect": {
+            "errorsShown": {
+              "a": true,
+              "b": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "uses custom messages with placeholders",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "code",
+                "type": "text",
+                "key": "code",
+                "label": "CODE",
+                "validators": [
+                  {
+                    "id": "v1",
+                    "type": "minLength",
+                    "params": {
+                      "min": 4
+                    },
+                    "message": "{label} needs {min}+ characters"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "code",
+          "value": "ab"
+        },
+        {
+          "expect": {
+            "errors": {
+              "code": [
+                "CODE needs 4+ characters"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "keeps repeat entries as an array of objects, with per-entry rules and a total",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "items",
+                "key": "items",
+                "repeat": {
+                  "min": 1,
+                  "max": 3
+                },
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "qty",
+                    "type": "number",
+                    "key": "qty",
+                    "label": "QTY"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "price",
+                    "type": "currency",
+                    "key": "price",
+                    "label": "PRICE"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "line",
+                    "type": "calculated",
+                    "key": "line",
+                    "label": "LINE",
+                    "calc": {
+                      "op": "multiply",
+                      "args": [
+                        {
+                          "ref": "qty"
+                        },
+                        {
+                          "ref": "price"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "kind": "field",
+                    "id": "note",
+                    "type": "text",
+                    "key": "note",
+                    "label": "NOTE",
+                    "visibility": {
+                      "action": "show",
+                      "when": {
+                        "ref": "qty",
+                        "op": "gt",
+                        "value": {
+                          "const": 10
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "total",
+                "type": "calculated",
+                "key": "total",
+                "label": "TOTAL",
+                "calc": {
+                  "op": "sum",
+                  "args": [
+                    {
+                      "ref": "line"
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "field",
+                "id": "lines",
+                "type": "calculated",
+                "key": "lines",
+                "label": "LINES",
+                "calc": {
+                  "op": "count",
+                  "args": [
+                    {
+                      "ref": "items"
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "field",
+                "id": "big",
+                "type": "text",
+                "key": "big",
+                "label": "BIG",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "items",
+                    "op": "rowsGte",
+                    "value": {
+                      "const": 3
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "qty@0",
+          "value": 2
+        },
+        {
+          "set": "price@0",
+          "value": 5
+        },
+        {
+          "addRow": "items"
+        },
+        {
+          "set": "qty@1",
+          "value": "20"
+        },
+        {
+          "set": "price@1",
+          "value": 1
+        },
+        {
+          "expect": {
+            "visible": {
+              "note@0": false,
+              "note@1": true,
+              "big": false
+            },
+            "value": {
+              "total": 30,
+              "line@1": 20,
+              "lines": 2
+            },
+            "data": {
+              "items": [
+                {
+                  "qty": 2,
+                  "price": 5,
+                  "line": 10
+                },
+                {
+                  "qty": 20,
+                  "price": 1,
+                  "line": 20,
+                  "note": null
+                }
+              ],
+              "total": 30,
+              "lines": 2
+            },
+            "instanceLabel": {
+              "qty@1": "QTY (Entry 2)"
+            },
+            "dataPath": {
+              "note@1": "items[1].note"
+            }
+          }
+        },
+        {
+          "addRow": "items"
+        },
+        {
+          "expect": {
+            "canAddRow": {
+              "items": false
+            },
+            "rows": {
+              "items": 3
+            },
+            "visible": {
+              "big": true
+            }
+          }
+        },
+        {
+          "moveRow": "items",
+          "index": 0,
+          "delta": 1
+        },
+        {
+          "expect": {
+            "raw": {
+              "qty@0": 20,
+              "qty@1": 2
+            }
+          }
+        },
+        {
+          "removeRow": "items",
+          "index": 2
+        },
+        {
+          "expect": {
+            "rows": {
+              "items": 2
+            },
+            "value": {
+              "total": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "opens saved answers for editing: old keys, unknown keys and untouched hidden answers survive",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "name",
+                "type": "text",
+                "key": "full_name",
+                "label": "NAME",
+                "keyHistory": [
+                  "name"
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "show",
+                "type": "toggle",
+                "key": "show",
+                "label": "SHOW"
+              },
+              {
+                "kind": "field",
+                "id": "secret",
+                "type": "text",
+                "key": "secret",
+                "label": "SECRET",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "show",
+                    "op": "isTrue"
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "gone",
+                "type": "text",
+                "key": "gone",
+                "label": "GONE",
+                "archived": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "mode": "edit",
+            "raw": {
+              "name": "Ada"
+            },
+            "data": {
+              "full_name": "Ada",
+              "show": false,
+              "secret": "kept",
+              "gone": "old",
+              "legacy_field": 42
+            },
+            "dirty": false
+          }
+        },
+        {
+          "set": "show",
+          "value": true
+        },
+        {
+          "expect": {
+            "visible": {
+              "secret": true
+            }
+          }
+        },
+        {
+          "set": "show",
+          "value": false
+        },
+        {
+          "expect": {
+            "dataLacks": [
+              "secret"
+            ],
+            "dirty": true,
+            "changes": [
+              {
+                "path": "secret",
+                "label": "SECRET",
+                "from": "kept",
+                "to": null
+              }
+            ]
+          }
+        }
+      ],
+      "data": {
+        "name": "Ada",
+        "show": false,
+        "secret": "kept",
+        "gone": "old",
+        "legacy_field": 42
+      }
+    },
+    {
+      "name": "lists changes made while editing",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "b",
+                "label": "B"
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "b",
+          "value": 2
+        },
+        {
+          "expect": {
+            "changes": [
+              {
+                "path": "b",
+                "label": "B",
+                "from": 1,
+                "to": 2
+              }
+            ]
+          }
+        }
+      ],
+      "data": {
+        "a": "x",
+        "b": 1
+      }
+    },
+    {
+      "name": "follows page jumps forward and skips the pages in between",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "student",
+                "type": "toggle",
+                "key": "student",
+                "label": "STUDENT"
+              }
+            ],
+            "jumps": [
+              {
+                "id": "j",
+                "when": {
+                  "ref": "student",
+                  "op": "isFalse"
+                },
+                "to": "p3"
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "school",
+                "type": "text",
+                "key": "school",
+                "label": "SCHOOL",
+                "required": true
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "done",
+                "type": "text",
+                "key": "done",
+                "label": "DONE"
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "path": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "next": true
+        },
+        {
+          "expect": {
+            "pageIndex": 2
+          }
+        },
+        {
+          "submit": true
+        },
+        {
+          "back": true
+        },
+        {
+          "set": "student",
+          "value": true
+        },
+        {
+          "expect": {
+            "path": [
+              0,
+              1,
+              2
+            ]
+          }
+        },
+        {
+          "next": true
+        },
+        {
+          "next": false
+        },
+        {
+          "expect": {
+            "pageErrors": {
+              "1": [
+                {
+                  "field": "school",
+                  "label": "SCHOOL",
+                  "message": "SCHOOL is required."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "goTo": 2
+        },
+        {
+          "expect": {
+            "pageIndex": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "a jump to the end skips every later page",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "stop",
+                "type": "checkbox",
+                "key": "stop",
+                "label": "STOP"
+              }
+            ],
+            "jumps": [
+              {
+                "id": "j",
+                "when": {
+                  "ref": "stop",
+                  "op": "isTrue"
+                },
+                "to": "end"
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "visibility": {
+              "action": "hide",
+              "when": {
+                "ref": "stop",
+                "op": "isTrue"
+              }
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "x",
+                "type": "text",
+                "key": "x",
+                "label": "X"
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "path": [
+              0,
+              1
+            ],
+            "isLastPage": false
+          }
+        },
+        {
+          "set": "stop",
+          "value": true
+        },
+        {
+          "expect": {
+            "path": [
+              0
+            ],
+            "isLastPage": true,
+            "data": {
+              "stop": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "sets a value when a condition becomes true, but not on load",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "country",
+                "type": "text",
+                "key": "country",
+                "label": "COUNTRY"
+              },
+              {
+                "kind": "field",
+                "id": "currency",
+                "type": "text",
+                "key": "currency",
+                "label": "CURRENCY",
+                "setValue": [
+                  {
+                    "id": "s",
+                    "when": {
+                      "ref": "country",
+                      "op": "eq",
+                      "value": {
+                        "const": "uk"
+                      }
+                    },
+                    "value": {
+                      "const": "GBP"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "raw": {
+              "currency": "EUR"
+            }
+          }
+        },
+        {
+          "set": "country",
+          "value": "fr"
+        },
+        {
+          "set": "country",
+          "value": "uk"
+        },
+        {
+          "expect": {
+            "raw": {
+              "currency": "GBP"
+            }
+          }
+        }
+      ],
+      "data": {
+        "country": "uk",
+        "currency": "EUR"
+      }
+    },
+    {
+      "name": "a set-value rule can copy another answer, and chains settle",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "b",
+                "label": "B",
+                "setValue": [
+                  {
+                    "id": "s1",
+                    "when": {
+                      "ref": "a",
+                      "op": "notEmpty"
+                    },
+                    "value": {
+                      "ref": "a"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "text",
+                "key": "c",
+                "label": "C",
+                "setValue": [
+                  {
+                    "id": "s2",
+                    "when": {
+                      "ref": "b",
+                      "op": "eq",
+                      "value": {
+                        "const": "go"
+                      }
+                    },
+                    "value": {
+                      "const": "went"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "a",
+          "value": "go"
+        },
+        {
+          "expect": {
+            "raw": {
+              "b": "go",
+              "c": "went"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "submits the form id, revision and data",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "submit": false
+        },
+        {
+          "set": "a",
+          "value": "hi"
+        },
+        {
+          "submit": {
+            "formId": "form1",
+            "revision": 3,
+            "data": {
+              "a": "hi"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "shows only values in view mode and never validates",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "errors": {
+              "a": []
+            },
+            "disabled": {
+              "a": true
+            }
+          }
+        }
+      ],
+      "data": {
+        "a": ""
+      },
+      "mode": "view"
+    },
+    {
+      "name": "the same saved data in edit mode does show the error",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "errors": {
+              "a": [
+                "A is required."
+              ]
+            },
+            "disabled": {
+              "a": false
+            }
+          }
+        }
+      ],
+      "data": {
+        "a": ""
+      }
+    },
+    {
+      "name": "keeps hidden answers when the form says never clear them",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "t",
+                "type": "toggle",
+                "key": "t",
+                "label": "T"
+              },
+              {
+                "kind": "field",
+                "id": "x",
+                "type": "text",
+                "key": "x",
+                "label": "X",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "t",
+                    "op": "isTrue"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "clearHidden": "never"
+        }
+      },
+      "steps": [
+        {
+          "set": "t",
+          "value": true
+        },
+        {
+          "set": "x",
+          "value": "keep me"
+        },
+        {
+          "set": "t",
+          "value": false
+        },
+        {
+          "expect": {
+            "visible": {
+              "x": false
+            },
+            "data": {
+              "t": false,
+              "x": "keep me"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "defaults apply to new forms (and always to hidden values), never over saved answers",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "defaultValue": "hello"
+              },
+              {
+                "kind": "field",
+                "id": "n",
+                "type": "number",
+                "key": "n",
+                "label": "N",
+                "defaultValue": "7"
+              },
+              {
+                "kind": "field",
+                "id": "h",
+                "type": "hidden",
+                "key": "h",
+                "label": "H",
+                "defaultValue": "src-web"
+              },
+              {
+                "kind": "field",
+                "id": "m",
+                "type": "checkboxes",
+                "key": "m",
+                "label": "M",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "x",
+                    "label": "X"
+                  },
+                  {
+                    "id": "o1",
+                    "value": "y",
+                    "label": "Y"
+                  }
+                ],
+                "defaultValue": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "raw": {
+              "a": "hello",
+              "n": 7,
+              "h": "src-web",
+              "m": [
+                "x"
+              ]
+            },
+            "data": {
+              "a": "hello",
+              "n": 7,
+              "h": "src-web",
+              "m": [
+                "x"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "in edit mode, defaults stay out except for hidden values",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "defaultValue": "hello"
+              },
+              {
+                "kind": "field",
+                "id": "h",
+                "type": "hidden",
+                "key": "h",
+                "label": "H",
+                "defaultValue": "src-web"
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "raw": {
+              "a": null,
+              "h": "src-web"
+            },
+            "data": {
+              "other": 1,
+              "a": null,
+              "h": "src-web"
+            }
+          }
+        }
+      ],
+      "data": {
+        "other": 1
+      }
+    },
+    {
+      "name": "a calculated field can be left out of the data; text calculations join answers",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "first",
+                "type": "text",
+                "key": "first",
+                "label": "FIRST"
+              },
+              {
+                "kind": "field",
+                "id": "last",
+                "type": "text",
+                "key": "last",
+                "label": "LAST"
+              },
+              {
+                "kind": "field",
+                "id": "full",
+                "type": "calculated",
+                "key": "full",
+                "label": "FULL",
+                "calc": {
+                  "op": "concat",
+                  "args": [
+                    {
+                      "ref": "first"
+                    },
+                    {
+                      "ref": "last"
+                    }
+                  ]
+                },
+                "props": {
+                  "format": "text"
+                }
+              },
+              {
+                "kind": "field",
+                "id": "tmp",
+                "type": "calculated",
+                "key": "tmp",
+                "label": "TMP",
+                "calc": {
+                  "op": "sum",
+                  "args": [
+                    {
+                      "const": 2
+                    },
+                    {
+                      "const": "3"
+                    }
+                  ]
+                },
+                "props": {
+                  "excludeFromData": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "first",
+          "value": "Ada"
+        },
+        {
+          "set": "last",
+          "value": "Lovelace"
+        },
+        {
+          "expect": {
+            "value": {
+              "full": "Ada Lovelace",
+              "tmp": 5
+            },
+            "data": {
+              "first": "Ada",
+              "last": "Lovelace",
+              "full": "Ada Lovelace"
+            },
+            "display": {
+              "full": "Ada Lovelace"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "groups with a key nest their answers, and a renamed group key still loads",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "address",
+                "keyHistory": [
+                  "addr"
+                ],
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "street",
+                    "type": "text",
+                    "key": "street",
+                    "label": "STREET"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "city",
+                    "type": "text",
+                    "key": "city",
+                    "label": "CITY"
+                  }
+                ]
+              },
+              {
+                "kind": "group",
+                "id": "flat",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "note",
+                    "type": "text",
+                    "key": "note",
+                    "label": "NOTE"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "raw": {
+              "street": "1 Main St"
+            },
+            "data": {
+              "address": {
+                "street": "1 Main St",
+                "zip": "kept",
+                "city": null
+              },
+              "note": "n"
+            },
+            "dataPath": {
+              "street": "address.street",
+              "note": "note"
+            }
+          }
+        }
+      ],
+      "data": {
+        "addr": {
+          "street": "1 Main St",
+          "zip": "kept"
+        },
+        "note": "n"
+      }
+    },
+    {
+      "name": "warnings show but do not block; a check can apply only under a condition",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "pw",
+                "type": "text",
+                "key": "pw",
+                "label": "PW",
+                "validators": [
+                  {
+                    "id": "w",
+                    "type": "minLength",
+                    "params": {
+                      "min": 12
+                    },
+                    "severity": "warning",
+                    "message": "Longer is safer."
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "strict",
+                "type": "toggle",
+                "key": "strict",
+                "label": "STRICT"
+              },
+              {
+                "kind": "field",
+                "id": "code",
+                "type": "text",
+                "key": "code",
+                "label": "CODE",
+                "validators": [
+                  {
+                    "id": "v",
+                    "type": "pattern",
+                    "params": {
+                      "preset": "digits"
+                    },
+                    "when": {
+                      "ref": "strict",
+                      "op": "isTrue"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "pw",
+          "value": "short"
+        },
+        {
+          "set": "code",
+          "value": "ab12"
+        },
+        {
+          "expect": {
+            "warnings": {
+              "pw": [
+                "Longer is safer."
+              ]
+            },
+            "errors": {
+              "pw": [],
+              "code": []
+            },
+            "pageErrors": {
+              "0": []
+            }
+          }
+        },
+        {
+          "set": "strict",
+          "value": true
+        },
+        {
+          "expect": {
+            "errors": {
+              "code": [
+                "CODE contains characters that are not allowed."
+              ]
+            }
+          }
+        },
+        {
+          "submit": false
+        }
+      ]
+    },
+    {
+      "name": "built-in checks: lengths, words, numbers and decimals",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "t",
+                "type": "text",
+                "key": "t",
+                "label": "T",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "maxLength",
+                    "params": {
+                      "max": 3
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "w",
+                "type": "textarea",
+                "key": "w",
+                "label": "W",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "maxWords",
+                    "params": {
+                      "max": 2
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "n",
+                "type": "number",
+                "key": "n",
+                "label": "N",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "min",
+                    "params": {
+                      "min": 5
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "type": "integer"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "number",
+                "key": "d",
+                "label": "D",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "decimalPlaces",
+                    "params": {
+                      "places": 2
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "type": "max",
+                    "params": {
+                      "max": "10"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "t",
+          "value": "abcd"
+        },
+        {
+          "set": "w",
+          "value": " one  two three "
+        },
+        {
+          "set": "n",
+          "value": "2.5"
+        },
+        {
+          "set": "d",
+          "value": 12.345
+        },
+        {
+          "expect": {
+            "errors": {
+              "t": [
+                "T must be 3 characters or fewer."
+              ],
+              "w": [
+                "W must be 2 words or fewer."
+              ],
+              "n": [
+                "N must be 5 or more.",
+                "N must be a whole number."
+              ],
+              "d": [
+                "D can have at most 2 decimal places.",
+                "D must be 10 or less."
+              ]
+            }
+          }
+        },
+        {
+          "set": "n",
+          "value": "abc"
+        },
+        {
+          "expect": {
+            "raw": {
+              "n": null
+            },
+            "errors": {
+              "n": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "built-in checks: dates, ages and times",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "start",
+                "type": "date",
+                "key": "start",
+                "label": "START",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "minDate",
+                    "params": {
+                      "date": "today+7"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "end",
+                "type": "date",
+                "key": "end",
+                "label": "END",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "maxDate",
+                    "params": {
+                      "date": "2026-12-31"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "type": "compareField",
+                    "params": {
+                      "field": "start"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "dob",
+                "type": "date",
+                "key": "dob",
+                "label": "Date of birth",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "ageAtMost",
+                    "params": {
+                      "years": 30
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "at",
+                "type": "time",
+                "key": "at",
+                "label": "AT",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "earliestTime",
+                    "params": {
+                      "time": "09:00"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "type": "latestTime",
+                    "params": {
+                      "time": "17:00"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "start",
+          "value": "2026-10-15"
+        },
+        {
+          "set": "end",
+          "value": "2027-01-02"
+        },
+        {
+          "set": "dob",
+          "value": "1990-01-01"
+        },
+        {
+          "set": "at",
+          "value": "08:30"
+        },
+        {
+          "expect": {
+            "errors": {
+              "start": [
+                "START must be on or after 7 days from today."
+              ],
+              "end": [
+                "END must be on or before 2026-12-31."
+              ],
+              "dob": [
+                "You must be 30 years old or younger."
+              ],
+              "at": [
+                "AT must be 09:00 or later."
+              ]
+            }
+          }
+        },
+        {
+          "set": "end",
+          "value": "2026-10-01"
+        },
+        {
+          "set": "at",
+          "value": "18:00"
+        },
+        {
+          "expect": {
+            "errors": {
+              "end": [
+                "END must be more than “START”."
+              ],
+              "at": [
+                "AT must be 17:00 or earlier."
+              ]
+            }
+          }
+        },
+        {
+          "set": "start",
+          "value": "2026-10-18"
+        },
+        {
+          "set": "end",
+          "value": "2026-10-20"
+        },
+        {
+          "expect": {
+            "errors": {
+              "start": [],
+              "end": []
+            },
+            "display": {
+              "start": "Oct 18, 2026"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "built-in checks: choices, files and matching answers",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "m",
+                "type": "checkboxes",
+                "key": "m",
+                "label": "M",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "a",
+                    "label": "A"
+                  },
+                  {
+                    "id": "o1",
+                    "value": "b",
+                    "label": "B"
+                  },
+                  {
+                    "id": "o2",
+                    "value": "c",
+                    "label": "C"
+                  }
+                ],
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "minSelected",
+                    "params": {
+                      "count": 2
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "type": "maxSelected",
+                    "params": {
+                      "count": 2
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "docs",
+                "type": "file",
+                "key": "docs",
+                "label": "DOCS",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "fileType",
+                    "params": {
+                      "accept": ".pdf, image/*"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "type": "maxFiles",
+                    "params": {
+                      "count": 1
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "email",
+                "type": "email",
+                "key": "email",
+                "label": "EMAIL"
+              },
+              {
+                "kind": "field",
+                "id": "email2",
+                "type": "email",
+                "key": "email2",
+                "label": "Confirm email",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "equalsField",
+                    "params": {
+                      "field": "email"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "site",
+                "type": "url",
+                "key": "site",
+                "label": "SITE"
+              },
+              {
+                "kind": "field",
+                "id": "name",
+                "type": "text",
+                "key": "name",
+                "label": "NAME",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "pattern",
+                    "params": {}
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "caps",
+                "type": "text",
+                "key": "caps",
+                "label": "CAPS",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "pattern",
+                    "params": {
+                      "preset": "uppercase"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "custom",
+                "type": "text",
+                "key": "custom",
+                "label": "CUSTOM",
+                "validators": [
+                  {
+                    "id": "1",
+                    "type": "pattern",
+                    "params": {
+                      "preset": "custom",
+                      "regex": "^[A-Z]{2}\\d{3}$"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "m",
+          "value": [
+            "a"
+          ]
+        },
+        {
+          "set": "docs",
+          "value": [
+            {
+              "name": "cv.docx",
+              "size": 10,
+              "type": "application/msword"
+            },
+            {
+              "name": "photo.png",
+              "size": 10,
+              "type": "image/png"
+            }
+          ]
+        },
+        {
+          "set": "email",
+          "value": "Ana@Example.com"
+        },
+        {
+          "set": "email2",
+          "value": "ana@example.org"
+        },
+        {
+          "set": "site",
+          "value": "not a site"
+        },
+        {
+          "set": "name",
+          "value": "Zoë O'Brien-Smith"
+        },
+        {
+          "set": "caps",
+          "value": "ÉCOLE 42"
+        },
+        {
+          "set": "custom",
+          "value": "ab123"
+        },
+        {
+          "expect": {
+            "errors": {
+              "m": [
+                "Choose at least 2 options for M."
+              ],
+              "docs": [
+                "Upload files of these types: .pdf, image/*.",
+                "Upload no more than 1 files."
+              ],
+              "email2": [
+                "Confirm email must match “EMAIL”."
+              ],
+              "site": [
+                "Enter a web address like example.com."
+              ],
+              "name": [],
+              "caps": [],
+              "custom": [
+                "CUSTOM contains characters that are not allowed."
+              ]
+            },
+            "display": {
+              "m": "A",
+              "docs": "cv.docx, photo.png"
+            }
+          }
+        },
+        {
+          "set": "m",
+          "value": [
+            "a",
+            "b",
+            "c"
+          ]
+        },
+        {
+          "set": "email2",
+          "value": " ana@example.COM "
+        },
+        {
+          "set": "site",
+          "value": "https://example.com/x"
+        },
+        {
+          "set": "name",
+          "value": "R2D2"
+        },
+        {
+          "set": "custom",
+          "value": "AB123"
+        },
+        {
+          "expect": {
+            "errors": {
+              "m": [
+                "Choose no more than 2 options for M."
+              ],
+              "email2": [],
+              "site": [],
+              "name": [
+                "NAME contains characters that are not allowed."
+              ],
+              "custom": []
+            },
+            "display": {
+              "m": "A, B, C"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "required yes/no fields and question labels word their messages",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "terms",
+                "type": "checkbox",
+                "key": "terms",
+                "label": "Terms",
+                "required": true
+              },
+              {
+                "kind": "field",
+                "id": "sw",
+                "type": "toggle",
+                "key": "sw",
+                "label": "Newsletter",
+                "required": true
+              },
+              {
+                "kind": "field",
+                "id": "q",
+                "type": "text",
+                "key": "q",
+                "label": "Are you sure? ",
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "errors": {
+              "terms": [
+                "Terms must be ticked."
+              ],
+              "sw": [
+                "Newsletter is required."
+              ],
+              "q": [
+                "Answer “Are you sure? ”"
+              ]
+            },
+            "data": {
+              "terms": false,
+              "sw": false,
+              "q": null
+            }
+          }
+        },
+        {
+          "set": "terms",
+          "value": "true"
+        },
+        {
+          "expect": {
+            "raw": {
+              "terms": true
+            },
+            "errors": {
+              "terms": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "disabled and read-only fields skip checks; a disabled section disables its fields",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "lock",
+                "type": "toggle",
+                "key": "lock",
+                "label": "LOCK"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "disabled": {
+                  "when": {
+                    "ref": "lock",
+                    "op": "isTrue"
+                  }
+                },
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "inner",
+                    "type": "text",
+                    "key": "inner",
+                    "label": "INNER",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "ro",
+                "type": "text",
+                "key": "ro",
+                "label": "RO",
+                "readOnly": true,
+                "required": true
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "disabled": {
+              "inner": false,
+              "ro": true,
+              "g": false
+            },
+            "errors": {
+              "inner": [
+                "INNER is required."
+              ],
+              "ro": []
+            }
+          }
+        },
+        {
+          "set": "lock",
+          "value": true
+        },
+        {
+          "expect": {
+            "disabled": {
+              "inner": true,
+              "g": true
+            },
+            "errors": {
+              "inner": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a rule can ask whether a section is complete or shown",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Contact",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "phone",
+                    "type": "phone",
+                    "key": "phone",
+                    "label": "PHONE",
+                    "required": true
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "thanks",
+                "type": "text",
+                "key": "thanks",
+                "label": "THANKS",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "g",
+                    "op": "complete"
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "seen",
+                "type": "text",
+                "key": "seen",
+                "label": "SEEN",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "thanks",
+                    "op": "visible"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "visible": {
+              "thanks": false,
+              "seen": false
+            }
+          }
+        },
+        {
+          "set": "phone",
+          "value": "+44 20 7946 0958"
+        },
+        {
+          "expect": {
+            "visible": {
+              "thanks": true,
+              "seen": true
+            }
+          }
+        },
+        {
+          "set": "phone",
+          "value": "abc"
+        },
+        {
+          "expect": {
+            "visible": {
+              "thanks": false
+            },
+            "errors": {
+              "phone": [
+                "Enter a phone number, like +44 20 7946 0958."
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "choices saved by an older form show as no longer offered; numbers keep their format",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "radio",
+                "key": "c",
+                "label": "C",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "a",
+                    "label": "Alpha"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "price",
+                "type": "currency",
+                "key": "price",
+                "label": "PRICE",
+                "props": {
+                  "currency": "EUR",
+                  "decimals": 2
+                }
+              },
+              {
+                "kind": "field",
+                "id": "mvr",
+                "type": "currency",
+                "key": "mvr",
+                "label": "MVR",
+                "props": {
+                  "currency": "MVR",
+                  "decimals": 0
+                }
+              },
+              {
+                "kind": "field",
+                "id": "n",
+                "type": "number",
+                "key": "n",
+                "label": "N",
+                "props": {
+                  "prefix": "#",
+                  "suffix": "kg"
+                }
+              },
+              {
+                "kind": "field",
+                "id": "r",
+                "type": "rating",
+                "key": "r",
+                "label": "R",
+                "props": {
+                  "maxRating": 10
+                }
+              },
+              {
+                "kind": "field",
+                "id": "big",
+                "type": "number",
+                "key": "big",
+                "label": "BIG"
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "display": {
+              "c": "zz (no longer an option)",
+              "price": "€1,234.50",
+              "mvr": "MVR 1,235",
+              "n": "#1,234.5678 kg",
+              "r": "7 / 10",
+              "big": "-12,345,678.9"
+            }
+          }
+        }
+      ],
+      "data": {
+        "c": "zz",
+        "price": 1234.5,
+        "mvr": 1234.5,
+        "n": 1234.5678,
+        "r": 7,
+        "big": -12345678.9
+      }
+    },
+    {
+      "name": "sourced answers keep their label; rules compare the value",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "person",
+                "type": "select",
+                "key": "person",
+                "label": "PERSON",
+                "source": {
+                  "type": "people"
+                }
+              },
+              {
+                "kind": "field",
+                "id": "vip",
+                "type": "text",
+                "key": "vip",
+                "label": "VIP",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "person",
+                    "op": "anyOf",
+                    "value": {
+                      "const": [
+                        "S1",
+                        {
+                          "value": "S2",
+                          "label": "B"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "typed",
+                "type": "select",
+                "key": "typed",
+                "label": "TYPED",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "a",
+                    "label": "A"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "person",
+          "value": "S5"
+        },
+        {
+          "set": "typed",
+          "value": {
+            "value": "a",
+            "label": "A"
+          }
+        },
+        {
+          "expect": {
+            "raw": {
+              "person": {
+                "value": "S5",
+                "label": "S5"
+              },
+              "typed": "a"
+            },
+            "visible": {
+              "vip": false
+            }
+          }
+        },
+        {
+          "set": "person",
+          "value": {
+            "value": "S2",
+            "label": "Bea"
+          }
+        },
+        {
+          "expect": {
+            "visible": {
+              "vip": true
+            },
+            "display": {
+              "person": "Bea"
+            },
+            "sourceParams": {}
+          }
+        }
+      ]
+    },
+    {
+      "name": "a dependent list reads the answer it follows",
+      "today": "2026-10-11",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "form1",
+        "title": "T",
+        "revision": 3,
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "country",
+                "type": "select",
+                "key": "country",
+                "label": "COUNTRY",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "mv",
+                    "label": "Maldives"
+                  },
+                  {
+                    "id": "o1",
+                    "value": "uk",
+                    "label": "UK"
+                  }
+                ]
+              },
+              {
+                "kind": "group",
+                "id": "rows",
+                "key": "rows",
+                "repeat": {
+                  "min": 1
+                },
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "city",
+                    "type": "select",
+                    "key": "city",
+                    "label": "CITY",
+                    "source": {
+                      "type": "cities",
+                      "params": {
+                        "country": {
+                          "ref": "country"
+                        },
+                        "size": {
+                          "const": "big"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        {
+          "set": "country",
+          "value": "mv"
+        },
+        {
+          "expect": {
+            "sourceParams": {
+              "city@0": {
+                "country": "mv",
+                "size": "big"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
