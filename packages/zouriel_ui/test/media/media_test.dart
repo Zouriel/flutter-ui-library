@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -83,7 +82,7 @@ void main() {
       expect(index, 3);
       final node = tester.getSemantics(find.bySemanticsLabel('Carousel'));
       expect(node.value, 'Slide 4 of 4');
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(node.id, SemanticsAction.decrease);
+      tester.semantics.decrease(find.semantics.byLabel('Carousel'));
       await tester.pumpAndSettle();
       expect(index, 2);
       handle.dispose();

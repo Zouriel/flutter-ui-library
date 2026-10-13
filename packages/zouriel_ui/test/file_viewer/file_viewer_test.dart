@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -166,7 +165,7 @@ void main() {
       expect(find.text('Morning'), findsOneWidget);
       final seek = tester.getSemantics(find.bySemanticsLabel('Seek'));
       expect(seek.value, '0:00 of 3:00');
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(seek.id, SemanticsAction.increase);
+      tester.semantics.increase(find.semantics.byLabel('Seek'));
       await tester.pump();
       expect(fake.calls.last, 'seek 1 5');
       await tester.tap(find.bySemanticsLabel('Play'));
@@ -286,7 +285,7 @@ void main() {
         UiImageViewer(image: img, alt: 'Beach', maxHeight: 230, hasNext: true, onNext: () {}),
         const UiVideoPlayer(src: 'clip.mp4', maxHeight: 120),
         const UiAudioPlayer(src: 'a.mp3', title: 'Morning tide'),
-        const UiCodeViewer(language: 'ts', content: "export function greet(name: string) {\n  return `Hello, \${name}!`; // a long line that scrolls sideways\n}"),
+        const UiCodeViewer(language: 'ts', content: 'export function greet(name: string) {\n  return `Hello, \${name}!`; // a long line that scrolls sideways\n}'),
         const UiTextViewer(content: 'Plain text wraps at the edge of the viewer instead of scrolling sideways, like a note.'),
         const UiFileExplorer(root: UiFileNode.dir('project', children: [UiFileNode.dir('src'), UiFileNode.file('logo.png'), UiFileNode.file('notes.pdf'), UiFileNode.file('song.mp3')])),
       ]);

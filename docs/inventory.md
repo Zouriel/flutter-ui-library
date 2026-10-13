@@ -64,7 +64,7 @@ File: `behaviors/src/copy-to-clipboard.ts`
 `uiCopyToClipboard` — copies the bound text to the clipboard on click and exposes a transient `copied` state. Emits `(copied)` / `(copyFailed)`.  
 - Inputs: `uiCopyToClipboard`: string = ''
 - Outputs: `copied`: string; `copyFailed`: unknown
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - const `SWIPE_FRACTION` (gestures.ts)
 - const `SWIPE_MIN` (gestures.ts)
@@ -79,40 +79,40 @@ File: `behaviors/src/infinite-scroll.ts`
 `uiInfiniteScroll` — emits `(scrolledToEnd)` when the host scrolls within `threshold` px of the bottom. Re-arms once scrolled back up.  
 - Inputs: `uiInfiniteScrollThreshold` = 120; `uiInfiniteScrollDisabled` = false
 - Outputs: `scrolledToEnd`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (n/a: no visuals of its own)  - [x] showcase
 
 ### UiIntersect (directive, `[uiIntersect]`)
 File: `behaviors/src/intersect.ts`  
 `uiIntersect` — emits `(intersect)` with visibility as the host enters/leaves the viewport.  
 - Inputs: `uiIntersectRootMargin` = '0px'; `uiIntersectOnce` = false
 - Outputs: `uiIntersect`: boolean
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (n/a: no visuals of its own)  - [x] showcase
 
 ### UiResizeObserver (directive, `[uiResizeObserver]`)
 File: `behaviors/src/resize-observer.ts`  
 `uiResizeObserver` — emits `(uiResizeObserver)` with the host's content-box size on change.  
 - Outputs: `uiResizeObserver`: UiSize2D
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (n/a: no visuals of its own)  - [x] showcase
 
 - interface `UiSize2D` (resize-observer.ts)
 ### UiRipple (directive, `[uiRipple]`)
 File: `behaviors/src/ripple.ts`  
 `uiRipple` — emits a material-style ripple from the pointer position on press.  
 - Inputs: `uiRippleDisabled` = false; `uiRippleColor` = 'currentColor'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSwipe (directive, `[uiSwipe]`)
 File: `behaviors/src/swipe.ts`  
 `uiSwipe` — reports a horizontal swipe across the host, and gets out of the way of everything else the finger might have meant. <h4>Why this listens to touch events and not pointer events</h4> <p>Pointer events are the modern, unified API and they are the wrong tool here. A browser does not promote a touch to a pointer event until it knows the touch is not a gesture, and a swipe IS a gesture — so the promotion never happens. Measured on Chromium, the same finger produces:</p> <pre> tap     pointerdown + touchstart ............ pointerup + touchend swipe   touchstart + touchmove x12 + touchend        (no pointer events at all) </pre> <p>Not a `pointercancel` to react to, not a truncated stream to salvage — nothing. Anything built on pointer events can answer a tap and can never answer a swipe. Touch events, by contrast, are delivered in full and uninterrupted throughout, which is exactly why every swipe library worth the name is built on them. So: touch events carry the finger, and pointer events are kept only for the mouse and the pen, which are never subject to that arbitration.</p> <p>Nothing here calls `preventDefault`, and the host is deliberately left with its normal `touch-action`: the page must still scroll down under exactly the same finger, and a strip that scrolls sideways inside it must keep doing that too — which rules out the usual `touch-action: pan-y`, since a descendant cannot take back a direction an ancestor gave away. The drag is instead measured as it happens, against the shared thresholds in {@link isSwipe}, and answered the moment it qualifies. That reads better anyway: the screen turns under the finger rather than after it.</p> <p>It declines far more often than it fires, and that is the point:</p> <ul> <li><b>A second finger</b> cancels the candidate outright. A pinch is not half a swipe.</li> <li><b>The screen's edges</b> belong to the browser — that is where back and forward live on both iOS and Android, and a page that answered there would fire alongside them.</li> <li><b>Anything scrollable sideways</b> under the finger keeps its own drag: a tab strip, a carousel, a wide table. Reaching the end of one is not permission to leave the page.</li> <li><b>Fields, sliders and editable text</b>, which are dragged for their own reasons.</li> <li><b>The mouse</b>, unless asked for. A mouse drag across a page is a text selection, and whoever has one also has the whole navigation on screen.</li> </ul> <p>Anything else can opt out by marking a subtree `data-no-swipe`.</p>  
 - Inputs: `uiSwipeDisabled` = false; `uiSwipeMouse` = false
 - Outputs: `uiSwipeLeft`: void; `uiSwipeRight`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (n/a: no visuals of its own)  - [x] showcase
 
 ### UiVirtualList (component, `ui-virtual-list`)
 File: `behaviors/src/virtual-list.ts`  
 `ui-virtual-list` — renders only the visible slice of a large list via the CDK virtual scroll. Provide an item template: <ui-virtual-list [items]="rows" [itemSize]="32" height="320px"> <ng-template let-item>{{ item.name }}</ng-template> </ui-virtual-list>  
 - Inputs: `items`: T[] = []; `itemSize` = 32; `height` = '320px'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## button
@@ -469,27 +469,27 @@ File: `feedback/src/result.ts`
 File: `file-viewer/src/audio-player.ts`  
 `ui-audio-player` — themed audio controls (play, scrub, time, volume).  
 - Inputs: `src`: string; `title`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiCodeViewer (component, `ui-code-viewer`)
 File: `file-viewer/src/code-viewer.ts`  
 `ui-code-viewer` — monospace source view with line numbers (content or fetched src).  
 - Inputs: `src`: string; `content`: string; `language` = 'text'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiFileExplorer (component, `ui-file-explorer`)
 File: `file-viewer/src/file-explorer.ts`  
 `ui-file-explorer` — directory browser: breadcrumb path + list view, typed icons, open-into-viewer.  
 - Inputs: `root`: UiFileNode
 - Outputs: `open`: UiFileNode
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiFileNode` (file-explorer.ts)
 ### UiFileViewer (component, `ui-file-viewer`)
 File: `file-viewer/src/file-viewer.ts`  
 `ui-file-viewer` — detects a file's type from `kind`/extension and delegates to the matching sub-renderer. The PDF branch lazy-loads `pdfjs-dist` via `@defer` so it never ships unless a PDF is opened. Unsupported types fall back to metadata + a download link. Embed inline or inside `ui-window`.  
 - Inputs: `src`: string; `name`: string; `kind`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `clampOffset` (gestures.ts)
 ### UiImageViewer (component, `ui-image-viewer`)
@@ -497,7 +497,7 @@ File: `file-viewer/src/image-viewer.ts`
 `ui-image-viewer` — zoom (buttons, wheel, pinch), pan (drag, wheel), fit/reset, and — when the host says there is somewhere to go — swipe between images. <p>Gestures are handled here rather than left to the browser, which is why the stage sets `touch-action: none`: a two-finger pinch that the browser claims first never reaches us, and the page would zoom instead of the image. Owning the gesture is what makes pinch work at all.</p> <p>It follows that navigation has to live here too. A gallery cannot listen for its own swipes over a stage that has already captured the pointer, so the viewer detects the gesture and the host moves: {@link hasPrevious}/{@link hasNext} say what exists, {@link previous}/{@link next} report the intent, and the list itself stays where it belongs — with whoever owns it.</p>  
 - Inputs: `src`: string; `alt` = ''; `kind`: 'image' | 'video' = 'image'; `hasPrevious` = false; `hasNext` = false
 - Outputs: `previous`: void; `next`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiMediaLightbox (component, `ui-media-lightbox`)
 File: `file-viewer/src/media-lightbox.ts`  
@@ -505,7 +505,7 @@ File: `file-viewer/src/media-lightbox.ts`
 - Inputs: `items`: readonly UiMediaItem[] = []; `label` = ''; `actions`: readonly UiMediaAction[] = []
 - Two-way: `index` = 0; `open` = false
 - Outputs: `closed`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiMediaItem` (media-lightbox.ts)
 - interface `UiMediaAction` (media-lightbox.ts)
@@ -513,13 +513,13 @@ File: `file-viewer/src/media-lightbox.ts`
 File: `file-viewer/src/text-viewer.ts`  
 `ui-text-viewer` — displays plain text from a `content` string or a fetched `src` URL.  
 - Inputs: `src`: string; `content`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiVideoPlayer (component, `ui-video-player`)
 File: `file-viewer/src/video-player.ts`  
 `ui-video-player` — native `<video>` with themed controls (play, scrub, time, volume, speed, fullscreen).  
 - Inputs: `src`: string; `poster`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## form
@@ -973,26 +973,26 @@ File: `form-builder/src/source-picker.ts`
 File: `fx/src/cursor.ts`  
 `ui-cursor` — custom cursor: a precise dot plus a lagging ring that grows over interactive elements. Mount once near the app root. Hidden on touch devices and when reduced motion is requested. While it is actually drawing it puts `ui-cursor-on` on `<html>`; hide the native cursor with that, never unconditionally, or users it hides itself from are left with no cursor at all: html.ui-cursor-on, html.ui-cursor-on * { cursor: none; }  
 - Inputs: `interactiveSelector` = 'a
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [ ] Flutter port (not applicable: touch has no cursor; UiMagnetic gives touch feedback instead)  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
 ### UiDriftRow (component, `ui-drift-row`)
 File: `fx/src/drift-row.ts`  
 `ui-drift-row` — a horizontal rail that gently auto-scrolls ("drifts") on its own yet stays fully scrollable, swipeable and draggable by the user. Project any content (cards, media, chips) straight inside: <ui-drift-row [speed]="26" direction="auto" gap="1.4rem"> <article class="card">…</article> <article class="card">…</article> </ui-drift-row> Behaviour: - Drifts toward a random side by default (`direction="auto"`), or a fixed side with `direction="left" | "right"`, ping-ponging at each end. - Pauses the drift while the user hovers, grabs/drags, swipes or wheels the rail, then resumes after `resumeDelay` ms of stillness. - Click-drag to scroll on desktop (a real click still fires if you don't drag); native touch swipe on mobile. - Honors `prefers-reduced-motion`: no auto-drift, but still scrollable. Self-contained — no global CSS required.  
 - Inputs: `speed` = 26; `direction`: UiDriftDirection = 'auto'; `gap` = '1.5rem'; `pauseOnHover` = true; `resumeDelay` = 1800; `fade` = true; `interactive` = true
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiDriftDirection` (drift-row.ts)
 ### UiGlyphField (component, `ui-glyph-field`)
 File: `fx/src/glyph-field.ts`  
 `ui-glyph-field` — animated binary/glyph field rendered to a canvas. A reusable, asset-free take on the portfolio's binary-face background: a grid of flickering glyphs lit by a drifting intensity field, tinted along the brand ramp (ember → blood → rose). Use as a fixed page backdrop (`fixed`) or contained within a positioned parent. Honors `prefers-reduced-motion`.  
 - Inputs: `fixed` = false; `opacity` = 0.55; `chars` = '01'; `cell` = 16; `speed` = 1; `colors`: [string, string, string] = ['#5a2832'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiGrain (component, `ui-grain`)
 File: `fx/src/grain.ts`  
 `ui-grain` — animated film-grain overlay. Mount once near the app root (fixed, non-interactive).  
 - Inputs: `opacity` = 0.06
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiIntroLoader (component, `ui-intro-loader`)
 File: `fx/src/intro-loader.ts`  
@@ -1000,43 +1000,43 @@ File: `fx/src/intro-loader.ts`
 - Inputs: `duration` = 1400
 - Two-way: `open` = true
 - Outputs: `done`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiMagnetic (directive, `[uiMagnetic]`)
 File: `fx/src/magnetic.ts`  
 `uiMagnetic` — the host gently pulls toward the cursor on hover and springs back on leave (a signature "dramatic" micro-interaction). Self-contained; disabled on touch / reduced-motion. <a uiMagnetic [magneticStrength]="0.4">…</a>  
 - Inputs: `magneticStrength` = 0.35; `magneticRadius` = 0
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port (press tilt on touch, hover pull with a mouse)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiMarquee (component, `ui-marquee`)
 File: `fx/src/marquee.ts`  
 `ui-marquee` — infinite horizontal scroller with edge fade; pauses on hover.  
 - Inputs: `items`: string[] = []; `duration` = 38; `gap` = '3rem'; `reverse` = false; `separator` = '✦'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiReveal (directive, `[uiReveal]`)
 File: `fx/src/reveal.ts`  
 `uiReveal` — reveals the host as it scrolls into view (IntersectionObserver). Self-contained (applies its own inline transitions; no global CSS needed). Honors `prefers-reduced-motion`. <div uiReveal>…</div> <div uiReveal="blur" [revealDelay]="120">…</div>  
 - Inputs: `uiReveal`: UiRevealMode = 'up'; `revealDelay` = 0; `revealThreshold` = 0.18; `revealOnce` = true; `duration` = 900
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiRevealMode` (reveal.ts)
 ### UiScrollProgress (component, `ui-scroll-progress`)
 File: `fx/src/scroll-progress.ts`  
 `ui-scroll-progress` — fixed top bar tracking page scroll, using the brand gradient + glow.  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSectionLabel (component, `ui-section-label`)
 File: `fx/src/section-label.ts`  
 `ui-section-label` — editorial mono section marker, e.g. `[ 00 · INDEX ]`.  
 - Inputs: `index`: string = ''; `label`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSplitText (directive, `[uiSplitText]`)
 File: `fx/src/split-text.ts`  
 `uiSplitText` — splits the host's text into per-character spans and animates them in with a stagger (Web Animations API; no global keyframes needed). Best on a single line/heading. Honors `prefers-reduced-motion`. <h1 uiSplitText>Mohamed</h1>  
 - Inputs: `stagger` = 35; `base` = 120; `duration` = 900
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## layout
@@ -1045,26 +1045,26 @@ File: `fx/src/split-text.ts`
 File: `layout/src/aspect-ratio.ts`  
 `ui-aspect-ratio` — constrains projected content to a fixed width:height ratio.  
 - Inputs: `ratio` = '16 / 9'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiContainer (component, `ui-container`)
 File: `layout/src/container.ts`  
 `ui-container` — centered, max-width content wrapper with responsive padding.  
 - Inputs: `size`: 'sm' | 'md' | 'lg' | 'xl' | 'full' = 'lg'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiGrid (component, `ui-grid`)
 File: `layout/src/grid.ts`  
 `ui-grid` — CSS grid with a fixed column count and token-based gap.  
 - Inputs: `columns`: number | string = 12; `min`: string; `gap`: Gap = 4
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiPanelSection (component, `ui-panel-section`)
 File: `layout/src/panel-section.ts`  
 `ui-panel-section` — a compact, collapsible titled group for inspector and settings panels. Unlike an accordion it's built for controls: dense spacing, full-contrast content, and a slot for actions in the header (`[panel-actions]`), such as an Add button.  
 - Inputs: `title`: string; `collapsible` = true; `badge`: string | number | null = null
 - Two-way: `open` = true
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiResizeHandle (component, `ui-resize-handle`)
 File: `layout/src/resize-handle.ts`  
@@ -1072,13 +1072,13 @@ File: `layout/src/resize-handle.ts`
 - Inputs: `min` = 0; `max` = 10000; `snaps`: readonly number[] = []; `edge`: 'top' | 'bottom' | 'left' | 'right' = 'top'; `label` = 'Resize'; `snapDistance` = 28
 - Two-way: `size` = 240
 - Outputs: `resizeEnd`: number
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiScrollArea (component, `ui-scroll-area`)
 File: `layout/src/scroll-area.ts`  
 `ui-scroll-area` — themed, thin-scrollbar scroll container with a fixed max height.  
 - Inputs: `maxHeight` = '240px'; `axis`: 'y' | 'x' | 'both' = 'y'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSidebarLayout (component, `ui-sidebar-layout`)
 File: `layout/src/sidebar-layout.ts`  
@@ -1086,24 +1086,24 @@ File: `layout/src/sidebar-layout.ts`
 - Inputs: `breakpoint` = 860; `sidebarWidth` = '248px'; `mainLandmark` = true
 - Two-way: `open` = false
 - Methods: `toggle()`, `close()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSpacer (component, `ui-spacer`)
 File: `layout/src/spacer.ts`  
 `ui-spacer` — flexible gap that pushes siblings apart inside a flex layout.  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSplitter (component, `ui-splitter`)
 File: `layout/src/splitter.ts`  
 `ui-splitter` — two resizable panes with a draggable divider. Project two elements with `[split-a]` and `[split-b]`. The divider is a separator whose `aria-orientation` is the direction of the line itself: side-by-side panes (`orientation="horizontal"`) are split by a vertical line.  
 - Inputs: `orientation`: 'horizontal' | 'vertical' = 'horizontal'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiStack (component, `ui-stack`)
 File: `layout/src/stack.ts`  
 `ui-stack` — flexbox row/column with token gap and alignment.  
 - Inputs: `direction`: 'row' | 'column' = 'column'; `gap`: Gap = 3; `align`: 'start' | 'center' | 'end' | 'stretch' = 'stretch'; `justify`: 'start' | 'center' | 'end' | 'space-between' = 'start'; `wrap` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## link
@@ -1154,20 +1154,20 @@ File: `media/src/carousel.ts`
 `ui-carousel` — image slideshow with arrows, dots, a finger-following swipe and optional autoplay. Anything projected into it is laid over the slides (a title on a gradient, a counter), and a swipe that starts on it still turns the slide. A swipe here is the carousel's own: touches that start inside it don't reach gesture handlers further up the page, so a page-level swipe between screens never fires from a photo.  
 - Inputs: `slides`: UiCarouselSlide[] = []; `autoplay` = 0; `dots` = true; `arrows` = true
 - Two-way: `index` = 0
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiCarouselSlide` (carousel.ts)
 ### UiDeviceFrame (component, `ui-device-frame`)
 File: `media/src/device-frame.ts`  
 `ui-device-frame` — a phone-shaped frame whose screen is exactly `width` × `height` CSS pixels, scaled to fit the space it's given. What you project renders at true phone size (so a 390px-wide page lays out as it would on a phone) and is scaled down only visually. `scale` is readable from a template reference, for overlays that have to line up with the screen.  
 - Inputs: `width` = 390; `height` = 844; `bezel` = true; `island` = true; `maxScale` = 1
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiGallery (component, `ui-gallery`)
 File: `media/src/gallery.ts`  
 `ui-gallery` — responsive thumbnail grid with a lightbox (prev/next, Esc to close). The lightbox is a modal dialog: Tab stays inside it, and closing returns focus to the thumbnail that opened it.  
 - Inputs: `images`: UiGalleryImage[] = []; `minThumb` = '120px'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiGalleryImage` (gallery.ts)
 ### UiImagePicker (component, `ui-image-picker`)
@@ -1175,7 +1175,7 @@ File: `media/src/image-picker.ts`
 `ui-image-picker` — a grid of image tiles to choose from: search results, stock art, uploads. Tap or Enter picks (`pick`). One tile can show as busy while its choice is being fetched. When `hasMore` is on, scrolling near the end asks for the next page (`more`) — there is no "Load more" button to reach for with a thumb. Thumbnails that fail to load show the label on a plain tile rather than a broken-image glyph. Tiles sit on a faint checkerboard so white or transparent art is visible. With `dragType` set, tiles can be dragged: the item's `id` is the drag data under that type.  
 - Inputs: `items`: UiImagePickerItem[] = []; `busyId`: string | null = null; `loading` = false; `hasMore` = false; `minThumb` = '96px'; `captions` = false; `emptyText` = ''; `dragType`: string | null = null
 - Outputs: `pick`: UiImagePickerItem; `more`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiImagePickerItem` (image-picker.ts)
 
@@ -1308,7 +1308,7 @@ File: `overlay/src/tooltip.ts`
 File: `pdf-viewer/src/pdf-viewer.ts`  
 `ui-pdf-viewer` — renders a PDF with page navigation and zoom. `pdfjs-dist` is loaded via a dynamic import so it ships only when this component is used (its own secondary entry point; pair with `@defer` for full lazy loading). Override `workerSrc` to self-host the worker instead of the CDN default.  
 - Inputs: `src`: string; `workerSrc`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (PDFium does not load under flutter test; check on device)  - [x] showcase
 
 
 ## progress
