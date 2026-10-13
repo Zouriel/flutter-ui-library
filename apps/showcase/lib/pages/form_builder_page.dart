@@ -6,6 +6,7 @@ import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
 import 'form_builder_sample.dart';
+import 'form_editor_sections.dart';
 
 const _json = JsonEncoder.withIndent('  ');
 
@@ -155,6 +156,7 @@ UiFbSourcePicker(source: students, value: picked, onChanged: (v) => setState(() 
             ApiRow('placeholder / enabled / invalid / label', '', 'As on the other fields.'),
           ],
         ),
+        ...formEditorSections(),
         const DocSection(
           name: 'Integrating it',
           widget: 'JSON in, JSON out',

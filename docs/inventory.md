@@ -684,7 +684,7 @@ File: `form/src/token-input.ts`
 File: `form-builder/src/builder-canvas.ts`  
 `ui-fb-canvas` — the form as it's being built: page tabs, then each question as a card (a small preview of how it will look), with sections as drop zones. Selecting a card opens it in the inspector.  
 - Outputs: `addAt`: UiFbDropTarget; `deleteRequest`: FbDeleteRequest; `picked`: string | null; `open`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `FbDeleteRequest` (builder-canvas.ts)
 ### FbValueInput (component, `ui-fb-value`)
@@ -692,14 +692,14 @@ File: `form-builder/src/builder-condition.ts`
 `ui-fb-value` — the right-hand side of a rule, shaped by what's being compared: an option list for choices, a date picker (or "today ± days") for dates, a number box for counts, or another question's answer.  
 - Inputs: `subject`: UiFbRefOption | null = null; `op`: UiFbOperator = 'eq'; `operand`: UiFbOperand | undefined = undefined; `forId`: string | null = null; `label` = 'Value'; `constOnly` = false
 - Outputs: `operandChange`: UiFbOperand
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbConditionEditor (component, `ui-fb-condition`)
 File: `form-builder/src/builder-condition.ts`  
 `ui-fb-condition` — builds "when …" rules as sentences: pick a question, how to compare, and a value. Rules combine with all/any, and one level of nested groups covers "A and (B or C)".  
 - Inputs: `condition`: UiFbCondition | undefined = undefined; `forId`: string | null = null; `nested` = false
 - Outputs: `conditionChange`: UiFbCondition; `removed`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `asGroup` (builder-condition.ts)
 - function `tidy` (builder-condition.ts)
@@ -710,19 +710,19 @@ File: `form-builder/src/builder-condition.ts`
 File: `form-builder/src/builder-editors.ts`  
 `ui-fb-options` — the choices of a dropdown, radio or checkbox field. Stored values follow the labels until the form has answers; after that they're locked (old answers point at them) and removing an option archives it.  
 - Inputs: `field`: UiFbField
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbChecksEditor (component, `ui-fb-checks`)
 File: `form-builder/src/builder-editors.ts`  
 `ui-fb-checks` — whether an answer is needed, and the checks it must pass, each with its own message (shown under the field by default).  
 - Inputs: `field`: UiFbField
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbCalcEditor (component, `ui-fb-calc`)
 File: `form-builder/src/builder-editors.ts`  
 `ui-fb-calc` — how a calculated field works its value out: an operation and its inputs (other answers or fixed numbers).  
 - Inputs: `field`: UiFbField
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - const `FIELD_ICONS` (builder-icons.ts)
 - const `STATIC_ICONS` (builder-icons.ts)
@@ -734,31 +734,31 @@ File: `form-builder/src/builder-inspector.ts`
 `ui-fb-inspector` — settings for whatever is selected: a field, section, text block, page, or (with nothing selected) the form itself.  
 - Inputs: `showHead` = true
 - Outputs: `deleteRequest`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbLogicOverview (component, `ui-fb-logic`)
 File: `form-builder/src/builder-logic.ts`  
 `ui-fb-logic` — every rule in the form, in plain words, grouped by the question or page it belongs to; plus anything that needs fixing.  
 - Outputs: `open`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbPalette (component, `ui-fb-palette`)
 File: `form-builder/src/builder-palette.ts`  
 `ui-fb-palette` — the list of things to add. Click to add (after the selection, or at `target`), or drag onto the canvas.  
 - Inputs: `compact` = false; `target`: UiFbDropTarget | null = null
 - Outputs: `added`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbPreview (component, `ui-fb-preview`)
 File: `form-builder/src/builder-preview.ts`  
 `ui-fb-preview` — fill the form in as people will, on a desktop or phone width, with the saved JSON alongside. Paste saved answers to try editing.  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### FbSourceSettings (component, `ui-fb-source-settings`)
 File: `form-builder/src/builder-source.ts`  
 `ui-fb-source-settings` — where a dropdown or multi-select gets its options from a registered list: which list, its settings (each a fixed value or another question's answer, for lists that depend on each other), and a live preview to try it.  
 - Inputs: `field`: UiFbField
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiFbRefOption` (builder-store.ts)
 - function `sameForm` (builder-store.ts)
@@ -846,7 +846,7 @@ File: `form-builder/src/form-builder.ts`
 - Inputs: `published`: UiFormDefinition | null = null; `submissionCount` = 0; `validators`: readonly UiFbValidatorDef[] = []; `optionSources`: readonly UiFbOptionSourceDef[] = []; `globalSettings`: UiFormGlobalSettings | null = null
 - Two-way: `definition`: UiFormDefinition = createDefinition()
 - Methods: `select(id: string | null)`, `undo()`, `redo()`, `clearHistory()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiFormRenderer (component, `ui-form-renderer`)
 File: `form-builder/src/form-renderer.ts`  
@@ -864,7 +864,7 @@ File: `form-builder/src/global-settings-editor.ts`
 `ui-form-global-settings` — the app's form settings page: the lists every form can search (where to ask, how it pages, how to read the reply, with a test), and what new forms start with. Bind `[(settings)]` and store the JSON; pass it to `ui-form-builder` and `ui-form-renderer` as `globalSettings`. Requests go through the app's hook (`provideUiFormHttpSources`), which adds the login and limits which servers may be called. No secrets are stored here.  
 - Inputs: `usage`: Record<string, number>
 - Two-way: `settings`: UiFormGlobalSettings = createGlobalSettings()
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiFormGlobalSettings` (global-settings.ts)
 - function `createGlobalSettings` (global-settings.ts)
@@ -942,7 +942,7 @@ File: `form-builder/src/renderer-field.ts`
 File: `form-builder/src/settings-fields.ts`  
 `ui-fb-settings-fields` — the form-wide options (where labels and errors go, when problems show, buttons and steps). Used for one form in the builder, and for the defaults of new forms in `ui-form-global-settings`.  
 - Inputs: `settings`: UiFbSettings
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiFbSourcePicker (component, `ui-fb-source-picker`)
 File: `form-builder/src/source-picker.ts`  
