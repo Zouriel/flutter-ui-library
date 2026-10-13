@@ -13,7 +13,6 @@ dependencies:
     sdk: flutter
   http: ^1.6.0
   hugeicons: ^1.2.0
-  http: ^1.6.0
   intl: ^0.20.3
   pdfrx: ^2.6.5
   video_player: ^2.14.1
