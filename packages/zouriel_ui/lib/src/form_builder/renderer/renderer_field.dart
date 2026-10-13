@@ -572,9 +572,15 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           enabled: enabled,
         );
       case UiFbFieldType.checkbox:
-        return UiCheckbox(value: v == true, onChanged: enabled ? _set : null, label: p?.caption ?? f.label, invalid: invalid);
+        return Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: UiCheckbox(value: v == true, onChanged: enabled ? _set : null, label: p?.caption ?? f.label, invalid: invalid),
+        );
       case UiFbFieldType.toggle:
-        return UiSwitch(value: v == true, onChanged: enabled ? _set : null, label: p?.caption ?? 'Yes', semanticLabel: '${f.label}: ${p?.caption ?? 'Yes'}');
+        return Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: UiSwitch(value: v == true, onChanged: enabled ? _set : null, label: p?.caption ?? 'Yes', semanticLabel: '${f.label}: ${p?.caption ?? 'Yes'}'),
+        );
       case UiFbFieldType.rating:
         return UiRating(value: v is num ? v.toInt() : 0, onChanged: enabled ? _set : null, max: (p?.maxRating ?? 5).toInt(), label: f.label);
       case UiFbFieldType.slider:

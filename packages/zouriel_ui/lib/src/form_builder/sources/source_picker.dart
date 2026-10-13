@@ -379,89 +379,98 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
     final single = _single;
     final showClear = !widget.multiple && single != null && widget.enabled;
 
+    final editor = Semantics(
+      expanded: _open,
+      child: UiTextEditor(
+      controller: _text,
+      focusNode: _focus,
+      style: uiFieldTextStyle(context, UiSize.md),
+      placeholder: (!widget.multiple || chosen.isEmpty) ? widget.placeholder : null,
+      enabled: widget.enabled,
+      onChanged: _onText,
+      onKeyEvent: _onKey,
+      semanticLabel: name,
+      onTap: _openPanel,
+      ),
+    );
+    final trailing = <Widget>[
+      if (showClear) UiFieldButton(label: 'Clear', visual: 24, onTap: _clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
+      SizedBox(width: showClear ? t.space1 : t.space2),
+      SizedBox.square(
+        dimension: 14,
+        child: _status == _Status.loading && _open
+            ? UiSpinner(size: 12, decorative: true, color: t.primary)
+            : AnimatedRotation(
+                turns: _open ? 0.5 : 0,
+                duration: context.uiAnimate ? t.motionFast : Duration.zero,
+                child: UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
+              ),
+      ),
+    ];
+
+    // One answer: a single-line box like the combobox. Several: chips that wrap, with the input after them.
+    final Widget frame = !widget.multiple
+        ? UiFieldFrame(
+            height: t.sizeMd,
+            focused: _focus.hasFocus,
+            invalid: uiFieldInvalid(context, widget.invalid),
+            enabled: widget.enabled,
+            padding: EdgeInsetsDirectional.only(start: t.space3, end: t.space3),
+            child: Row(children: [Expanded(child: editor), ...trailing]),
+          )
+        : ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minH),
+            child: UiFieldFrame(
+              focused: _focus.hasFocus,
+              invalid: uiFieldInvalid(context, widget.invalid),
+              enabled: widget.enabled,
+              padding: EdgeInsetsDirectional.only(start: t.space1, end: t.space3, top: touch ? 0 : 2, bottom: touch ? 0 : 2),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: minH - (touch ? 2 : 6)),
+                child: Row(children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: t.space1,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        for (final c in chosen) _SourceChip(label: c['label'] as String, height: rowH, enabled: widget.enabled, onRemove: () => _remove(c)),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: 80, minHeight: rowH),
+                          child: IntrinsicWidth(
+                            child: Padding(
+                              padding: EdgeInsetsDirectional.only(start: t.space2),
+                              child: editor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ...trailing,
+                ]),
+              ),
+            ),
+          );
+
     final field = GestureDetector(
       behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
       onTap: widget.enabled
           ? () {
               _focus.requestFocus();
               _openPanel();
             }
           : null,
-      child: MouseRegion(
-        cursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minH),
-          child: UiFieldFrame(
-            focused: _focus.hasFocus,
-            invalid: uiFieldInvalid(context, widget.invalid),
-            enabled: widget.enabled,
-            padding: EdgeInsetsDirectional.only(start: widget.multiple ? t.space1 : t.space3, end: t.space3, top: touch ? 0 : 2, bottom: touch ? 0 : 2),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: minH - (touch ? 2 : 6)),
-              child: Row(children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: t.space1,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (widget.multiple)
-                        for (final c in chosen) _SourceChip(label: c['label'] as String, height: rowH, enabled: widget.enabled, onRemove: () => _remove(c)),
-                      ConstrainedBox(
-                        constraints: BoxConstraints(minWidth: 80, minHeight: rowH),
-                        child: IntrinsicWidth(
-                          child: Padding(
-                            padding: EdgeInsetsDirectional.only(start: widget.multiple ? t.space2 : 0),
-                            child: Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              widthFactor: 1,
-                              child: UiTextEditor(
-                                controller: _text,
-                                focusNode: _focus,
-                                style: uiFieldTextStyle(context, UiSize.md),
-                                placeholder: (!widget.multiple || chosen.isEmpty) ? widget.placeholder : null,
-                                enabled: widget.enabled,
-                                onChanged: _onText,
-                                onKeyEvent: _onKey,
-                                semanticLabel: name,
-                                onTap: _openPanel,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (showClear)
-                  UiFieldButton(label: 'Clear', visual: 24, onTap: _clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
-                SizedBox(width: showClear ? t.space1 : t.space2),
-                SizedBox.square(
-                  dimension: 14,
-                  child: _status == _Status.loading && _open
-                      ? UiSpinner(size: 12, decorative: true, color: t.primary)
-                      : AnimatedRotation(
-                          turns: _open ? 0.5 : 0,
-                          duration: context.uiAnimate ? t.motionFast : Duration.zero,
-                          child: UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
-                        ),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      ),
+      child: MouseRegion(cursor: widget.enabled ? SystemMouseCursors.text : SystemMouseCursors.forbidden, child: frame),
     );
 
-    return Semantics(
-      expanded: _open,
-      child: UiAnchoredOverlay(
+    return UiAnchoredOverlay(
         controller: _overlay,
         matchAnchorWidth: true,
         onDismiss: _close,
         // Taps in the list count as inside the text field, so they don't blur it before they land.
         panelBuilder: (context, anchor) => TextFieldTapRegion(child: _panel(context, name)),
         child: field,
-      ),
     );
   }
 
@@ -622,11 +631,13 @@ class _SourceChip extends StatelessWidget {
       child: Stack(alignment: AlignmentDirectional.centerStart, children: [
         Padding(
           padding: EdgeInsetsDirectional.only(end: overhang),
-          child: Container(
+          child: Semantics(
+            container: true,
+            child: Container(
             height: 22,
             padding: EdgeInsetsDirectional.only(start: t.space2, end: t.space1),
             decoration: BoxDecoration(
-              color: t.selected,
+              color: uiMix(t.primary, 0.18, t.surface),
               border: Border.all(color: t.primary.withValues(alpha: 0.45)),
               borderRadius: BorderRadius.circular(theme.radius(t.radiusXs)),
             ),
@@ -634,6 +645,7 @@ class _SourceChip extends StatelessWidget {
               Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
               const SizedBox(width: 16),
             ]),
+          ),
           ),
         ),
         PositionedDirectional(
