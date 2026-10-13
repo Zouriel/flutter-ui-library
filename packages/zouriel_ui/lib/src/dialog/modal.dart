@@ -246,10 +246,14 @@ class UiDialogHeader extends StatelessWidget {
 
 /// The small close button in dialog headers (the web `.x`): 26px, 48dp to the touch.
 class UiDialogCloseButton extends StatelessWidget {
-  const UiDialogCloseButton({super.key, required this.onPressed, this.label = 'Close'});
+  const UiDialogCloseButton({super.key, required this.onPressed, this.label = 'Close', this.edgePadding});
 
   final VoidCallback onPressed;
   final String label;
+
+  /// The padding between the button and its container's edge. The button shifts toward the edge
+  /// by at most this much, so its touch area never sticks out of the container (and get clipped).
+  final double? edgePadding;
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +262,7 @@ class UiDialogCloseButton extends StatelessWidget {
     final t = context.ui;
     // The invisible part of the 48dp touch area sticks out too; shift it so the visible box sits
     // where the web's does.
-    final shift = t.space1 + (uiTouchPlatform(context) ? (uiMinTouchTarget - t.sizeSm) / 2 : 0);
+    final shift = math.min(t.space1 + (uiTouchPlatform(context) ? (uiMinTouchTarget - t.sizeSm) / 2 : 0), edgePadding ?? double.infinity);
     return Transform.translate(
       offset: Offset(Directionality.of(context) == TextDirection.ltr ? shift : -shift, 0),
       child: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedCancel01), label: label, size: UiSize.sm, onPressed: onPressed),
