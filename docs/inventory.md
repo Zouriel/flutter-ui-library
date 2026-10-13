@@ -121,7 +121,7 @@ File: `behaviors/src/virtual-list.ts`
 File: `button/src/button-group.ts`  
 `ui-button-group` — visually joins a row of `ui-button`s into a segmented control.  
 - Inputs: `label`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiButton (component, `ui-button`)
 File: `button/src/button.ts`  
@@ -135,14 +135,14 @@ File: `button/src/dropdown-button.ts`
 `ui-dropdown-button` — a button that opens a menu of actions (CDK Overlay).  
 - Inputs: `items`: UiDropdownItem[] = []; `variant`: UiButtonVariant = 'secondary'; `size`: UiSize = 'md'; `disabled` = false; `radius`: boolean = this.config.radius
 - Outputs: `select`: UiDropdownItem
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiDropdownItem` (dropdown-button.ts)
 ### UiFab (component, `ui-fab`)
 File: `button/src/fab.ts`  
 `ui-fab` — floating action button, fixed to a screen corner. `label` is required (a11y).  
 - Inputs: `label`: string; `position`: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = 'bottom-right'; `size`: 'sm' | 'md' = 'md'; `disabled` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiIconButton (component, `ui-icon-button`)
 File: `button/src/icon-button.ts`  
@@ -155,7 +155,7 @@ File: `button/src/segmented.ts`
 `ui-segmented` — a row of mutually exclusive options, e.g. alignment or a preview mode. A radio group underneath: arrow keys move the choice, only the chosen option is in the tab order. Use `[(value)]` or ngModel.  
 - Inputs: `options`: readonly UiSegmentedOption[] = []; `label` = 'Options'; `size`: UiSize = 'md'
 - Two-way: `value`: string | null = null
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiSegmentedOption` (segmented.ts)
 ### UiSplitButton (component, `ui-split-button`)
@@ -163,14 +163,14 @@ File: `button/src/split-button.ts`
 `ui-split-button` — a primary action plus a caret that emits `(menu)` for an attached dropdown. Project the main label as content.  
 - Inputs: `variant`: UiButtonVariant = 'primary'; `size`: UiSize = 'md'; `disabled` = false; `radius`: boolean = this.config.radius
 - Outputs: `action`: void; `menu`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiToggleButton (component, `ui-toggle-button`)
 File: `button/src/toggle-button.ts`  
 `ui-toggle-button` — two-state button (`aria-pressed`). Bind `[(pressed)]`.  
 - Inputs: `size`: UiSize = 'md'; `disabled` = false; `radius`: boolean = this.config.radius
 - Two-way: `pressed` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## canvas
@@ -529,27 +529,27 @@ File: `form/src/anchor-picker.ts`
 `ui-anchor-picker` — the nine-dot grid for choosing a point of a box (a pivot, an alignment), as in Figma and Photoshop. The value is `{x, y}` in fractions of the box (0, 0.5, 1); a value between the dots shows no dot chosen. Arrow keys move the choice; each dot is named for screen readers.  
 - Inputs: `label` = 'Point'
 - Two-way: `value`: UiAnchor | null
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiAnchor` (anchor-picker.ts)
 ### UiCheckboxGroup (component, `ui-checkbox-group`)
 File: `form/src/checkbox-group.ts`  
 `ui-checkbox-group` — multi-select checkbox set (CVA; value is string[]). Set `selectAll` to prepend a master checkbox that ticks or clears every enabled option. It shows an indeterminate state while the selection is partial, and never touches disabled options — the consumer's disabled rules stay authoritative.  
 - Inputs: `options`: UiCheckboxOption[] = []; `label`: string; `orientation`: 'vertical' | 'horizontal' = 'vertical'; `selectAll` = false; `selectAllLabel` = 'Select all'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiCheckboxOption` (checkbox-group.ts)
 ### UiCheckbox (component, `ui-checkbox`)
 File: `form/src/checkbox.ts`  
 `ui-checkbox` — boolean control (CVA) built on a native checkbox for a11y.  
 - Inputs: `invalid` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiChipInput (component, `ui-chip-input`)
 File: `form/src/chip-input.ts`  
 `ui-chip-input` — tokenized text entry (CVA; value is string[]). Enter adds, Backspace removes.  
 - Inputs: `placeholder` = 'Add tag…'; `label`: string; `invalid` = false; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiChoiceGrid (component, `ui-choice-grid`)
 File: `form/src/choice-grid.ts`  
@@ -557,7 +557,7 @@ File: `form/src/choice-grid.ts`
 - Inputs: `options`: readonly UiChoice[] = []; `label` = 'Choices'; `minTile` = '88px'
 - Two-way: `value`: string | null = null
 - Outputs: `picked`: UiChoice
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiChoice` (choice-grid.ts)
 - interface `UiChoiceTileContext` (choice-grid.ts)
@@ -565,7 +565,7 @@ File: `form/src/choice-grid.ts`
 File: `form/src/color-picker.ts`  
 `ui-color-picker` — native color well + hex field + preset swatches (CVA; value is hex).  
 - Inputs: `radius`: boolean = this.config.radius; `swatches`: string[] = ['#1b3d59'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiEditableText (component, `ui-editable-text`)
 File: `form/src/editable-text.ts`  
@@ -578,7 +578,7 @@ File: `form/src/file-upload.ts`
 `ui-file-upload` — drag-and-drop / click dropzone. Emits `(filesSelected)`. Dropped files are checked against `accept` the same way the file dialog filters them; files that don't match go to `(rejected)`.  
 - Inputs: `multiple` = false; `accept`: string; `acceptLabel`: string; `radius` = true; `disabled` = false
 - Outputs: `filesSelected`: File[]; `rejected`: File[]
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `fileMatchesAccept` (file-upload.ts)
 ### UiFormField (component, `ui-form-field`)
@@ -622,14 +622,14 @@ File: `form/src/password-input.ts`
 File: `form/src/radio-group.ts`  
 `ui-radio-group` — single-choice control (CVA). Built on native radio inputs so keyboard interaction and group semantics are handled by the platform.  
 - Inputs: `options`: UiRadioOption[] = []; `label`: string; `orientation`: 'vertical' | 'horizontal' = 'vertical'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiRadioOption` (radio-group.ts)
 ### UiRating (component, `ui-rating`)
 File: `form/src/rating.ts`  
 `ui-rating` — star rating (CVA). A radio group: one tab stop, arrow keys (and Home/End) move the rating, clicking the current star again clears it to 0.  
 - Inputs: `max` = 5; `label` = 'Rating'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSearchInput (component, `ui-search-input`)
 File: `form/src/search-input.ts`  
@@ -648,12 +648,12 @@ File: `form/src/select.ts`
 File: `form/src/slider.ts`  
 `ui-slider` — themed range slider (CVA).  
 - Inputs: `min` = 0; `max` = 100; `step` = 1; `label` = 'Slider'; `showValue` = true
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSwitch (component, `ui-switch`)
 File: `form/src/switch.ts`  
 `ui-switch` — on/off toggle (CVA). Uses role="switch" on a native checkbox.  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTextarea (component, `ui-textarea`)
 File: `form/src/textarea.ts`  
@@ -673,7 +673,7 @@ File: `form/src/token-input.ts`
 - Inputs: `placeholder` = ''; `label` = ''; `multiline` = true; `minHeight`: string | null = null; `radius`: boolean = this.config.radius; `tokenLabel`: (token: string) => string = (t) => t
 - Outputs: `focusChange`: boolean; `tokenClick`: string
 - Methods: `insertToken(token: string)`, `focus()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiTokenRun` (token-input.ts)
 - function `normalizeRuns` (token-input.ts)
