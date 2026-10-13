@@ -380,6 +380,8 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     final floated = _focused || hasValue;
     final dur = context.uiAnimate ? t.motionFast : Duration.zero;
     final steppers = _f.type == UiFbFieldType.number;
+    // On touch the single-line box is centred in a 48dp slot; the floated label sits on its top edge.
+    final boxTop = multiline || !uiTouchPlatform(context) ? 0.0 : math.max(0.0, (uiMinTouchTarget - t.sizeMd) / 2);
     return LayoutBuilder(
       builder: (context, c) => Stack(clipBehavior: Clip.none, children: [
         control,
@@ -389,7 +391,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
               child: AnimatedPadding(
                 duration: dur,
                 curve: t.easeDecelerate,
-                padding: EdgeInsetsDirectional.only(start: t.space3 - (floated ? 4 : 0), end: t.space6, top: multiline && !floated ? t.space2 + 1 : 0),
+                padding: EdgeInsetsDirectional.only(start: t.space3 - (floated ? 4 : 0), end: t.space6, top: multiline && !floated ? t.space2 + 1 : (floated ? boxTop : 0)),
                 child: AnimatedAlign(
                   duration: dur,
                   curve: t.easeDecelerate,
@@ -602,7 +604,11 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           readOnly: true,
           container: true,
           excludeSemantics: true,
-          child: CustomPaint(
+          // Laid out as tall as the other controls (48dp on touch) with the box centred, so rows line up.
+          child: Container(
+            constraints: BoxConstraints(minHeight: uiTouchPlatform(context) ? uiMinTouchTarget : t.sizeMd),
+            alignment: Alignment.center,
+            child: CustomPaint(
             foregroundPainter: _DashedBorder(color: t.border, radius: context.uiTheme.radius()),
             child: Container(
               constraints: BoxConstraints(minHeight: t.sizeMd),
@@ -622,6 +628,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
                 ),
               ]),
             ),
+          ),
           ),
         );
       default:

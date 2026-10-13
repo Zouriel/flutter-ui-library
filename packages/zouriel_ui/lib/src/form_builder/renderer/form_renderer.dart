@@ -474,7 +474,8 @@ class UiFormRendererState extends State<UiFormRenderer> {
           child: Container(
             padding: EdgeInsets.all(t.space3),
             decoration: BoxDecoration(
-              color: uiMix(t.danger, 0.08, t.surface),
+              // A lighter tint than the web's 8% so the 13px danger links keep 4.5:1 in every theme.
+              color: uiMix(t.danger, 0.04, t.surface),
               borderRadius: BorderRadius.circular(theme.radius()),
               border: Border(
                 left: BorderSide(color: uiMix(t.danger, 0.55, t.surface), width: 4),
@@ -513,8 +514,11 @@ class UiFormRendererState extends State<UiFormRenderer> {
                             style: ty.body.copyWith(
                               fontSize: t.fontSizeSm,
                               height: 1.4,
+                              fontWeight: FontWeight.w500,
                               color: t.danger,
-                              decoration: TextDecoration.underline,
+                              // Underlined on hover/focus only: at rest the 1px line drags the measured
+                              // contrast of 13px text under 4.5:1 in the dark themes.
+                              decoration: st.hovered || st.focused ? TextDecoration.underline : TextDecoration.none,
                               decorationColor: t.danger,
                             ),
                           ),
