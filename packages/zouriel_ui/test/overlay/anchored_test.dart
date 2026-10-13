@@ -54,8 +54,13 @@ void main() {
     expect(dismissed, 1);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     expect(dismissed, 2);
-    // Tapping the anchor itself is not "outside".
+  });
+
+  testWidgets('tapping the anchor itself is not "outside"', (tester) async {
+    var dismissed = 0;
+    await open(tester, Alignment.topCenter, onDismiss: () => dismissed++);
+    expect(r(tester, 'panel').overlaps(r(tester, 'anchor')), isFalse);
     await tester.tap(find.byKey(const Key('anchor')));
-    expect(dismissed, 2);
+    expect(dismissed, 0);
   });
 }

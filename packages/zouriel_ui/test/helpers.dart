@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -20,6 +21,9 @@ Future<void> expectThemedGolden(
   double width = 390,
   double height = 300,
 }) async {
+  // Real, soft shadows (flutter_test draws them as hard shapes by default). Reset before the test
+  // ends: the framework checks debug flags before tear-downs run.
+  debugDisableShadows = false;
   tester.view.devicePixelRatio = 2;
   tester.view.physicalSize = Size(width * themes.length, height) * 2;
   addTearDown(tester.view.reset);
@@ -40,5 +44,9 @@ Future<void> expectThemedGolden(
     ),
   ));
   await tester.pump(const Duration(milliseconds: 400));
-  await expectLater(find.byType(Row).first, matchesGoldenFile('goldens/$name.png'));
+  try {
+    await expectLater(find.byType(Row).first, matchesGoldenFile('goldens/$name.png'));
+  } finally {
+    debugDisableShadows = true;
+  }
 }

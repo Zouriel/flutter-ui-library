@@ -219,9 +219,13 @@ class UiIconButton extends StatelessWidget {
     this.glass = false,
     this.radius,
     this.focusNode,
+    this.iconColor,
   });
 
   final Widget icon;
+
+  /// Icon colour override (e.g. muted for a close button); defaults to the variant's text colour.
+  final Color? iconColor;
   final String label;
   final VoidCallback? onPressed;
   final UiButtonVariant variant;
@@ -269,7 +273,7 @@ class UiIconButton extends StatelessWidget {
             foregroundDecoration: v == UiButtonVariant.brand && (s.hovered || s.pressed)
                 ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
                 : null,
-            child: Center(child: IconTheme.merge(data: IconThemeData(color: look.fg, size: iconSize), child: icon)),
+            child: Center(child: IconTheme.merge(data: IconThemeData(color: s.hovered || s.pressed ? look.fg : (iconColor ?? look.fg), size: iconSize), child: icon)),
           ),
         );
       },
