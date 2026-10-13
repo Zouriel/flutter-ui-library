@@ -216,12 +216,12 @@ class ApiTable extends StatelessWidget {
         SizedBox(height: t.space1),
         Container(
           decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radiusSm)),
-          child: Column(children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             for (var i = 0; i < rows.length; i++)
               Container(
                 padding: EdgeInsets.all(t.space3),
                 decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: t.border))),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
                   Wrap(spacing: t.space2, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text(rows[i].name, style: context.uiText.code.copyWith(fontSize: 13, color: t.text, fontWeight: FontWeight.w700)),
                     Text(rows[i].type, style: context.uiText.code.copyWith(fontSize: 12, color: t.primary)),

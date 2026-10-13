@@ -58,9 +58,11 @@ class UiInteractive extends StatefulWidget {
     this.toggled,
     this.selected,
     this.checked,
+    this.mixed,
     this.excludeChildSemantics = false,
     this.cursor = SystemMouseCursors.click,
     this.padTouchTarget = true,
+    this.minTouchSize = const Size(uiMinTouchTarget, uiMinTouchTarget),
     this.pressScale = true,
     this.shortcuts,
     this.actions,
@@ -81,11 +83,18 @@ class UiInteractive extends StatefulWidget {
   final bool? toggled;
   final bool? selected;
   final bool? checked;
+
+  /// Tri-state checkboxes: neither checked nor unchecked.
+  final bool? mixed;
   final bool excludeChildSemantics;
   final MouseCursor cursor;
 
   /// Grow the hit area (not the visual) to [uiMinTouchTarget] on touch platforms.
   final bool padTouchTarget;
+
+  /// The padded hit area. Use `Size(0, 48)` for controls joined edge to edge (segmented, button
+  /// groups) so they grow only vertically and neighbours don't overlap.
+  final Size minTouchSize;
 
   /// Shrink slightly while pressed (the web `--ui-scale-press`).
   final bool pressScale;
@@ -150,15 +159,16 @@ class _UiInteractiveState extends State<UiInteractive> {
         onTap: _enabled && widget.onTap != null ? _activate : null,
         onLongPress: _enabled ? widget.onLongPress : null,
         excludeFromSemantics: true,
-        child: widget.padTouchTarget && uiTouchPlatform(context) ? UiTouchTarget(child: visual) : visual,
+        child: widget.padTouchTarget && uiTouchPlatform(context) ? UiTouchTarget(minSize: widget.minTouchSize, child: visual) : visual,
       ),
     );
 
     // Merge the child's text into this node so the control is one labelled element
     // ("Save, button"), not a button with a separate text node beside it.
+    // Not a container: these properties annotate the merged node itself, so its own flags
+    // (enabled, button, selected) are what assistive tech and guideline checks see.
     return MergeSemantics(
       child: Semantics(
-      container: true,
       button: widget.button,
       enabled: _enabled,
       label: widget.semanticLabel,
@@ -166,6 +176,7 @@ class _UiInteractiveState extends State<UiInteractive> {
       toggled: widget.toggled,
       selected: widget.selected,
       checked: widget.checked,
+      mixed: widget.mixed,
       focusable: _enabled,
       onTap: _enabled && widget.onTap != null ? _activate : null,
       onLongPress: _enabled ? widget.onLongPress : null,
