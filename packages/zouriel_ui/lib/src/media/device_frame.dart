@@ -85,10 +85,13 @@ class _UiDeviceFrameState extends State<UiDeviceFrame> {
             ? BoxDecoration(
                 color: body,
                 borderRadius: BorderRadius.circular(54),
-                border: Border.all(color: t.mediaOnScrim.withValues(alpha: 0.12), width: 2),
                 boxShadow: t.shadow3,
               )
             : BoxDecoration(borderRadius: BorderRadius.circular(context.uiTheme.radius()), boxShadow: t.shadow2),
+        // The rim's inner highlight, drawn on top so it doesn't eat into the screen's size.
+        foregroundDecoration: bezel
+            ? BoxDecoration(borderRadius: BorderRadius.circular(54), border: Border.all(color: t.mediaOnScrim.withValues(alpha: 0.12), width: 2))
+            : null,
         child: Stack(children: [
           screen,
           if (bezel && island)

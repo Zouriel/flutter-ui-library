@@ -12,6 +12,7 @@ export '../behaviors/scrolling.dart';
 export '../behaviors/swipe.dart';
 export '../media/carousel.dart';
 export '../media/device_frame.dart';
+export '../media/gallery.dart';
 export '../media/image_picker.dart';
 export '../file_viewer/file_viewer.dart';
 export '../file_viewer/image_viewer.dart';

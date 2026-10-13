@@ -59,3 +59,13 @@ Future<MemoryImage> testImage(WidgetTester tester, {int w = 64, int h = 48, int 
   });
   return MemoryImage(bytes);
 }
+
+/// [pumpUi] for content that animates forever (a spinner): pumps a few frames instead of settling.
+Future<void> pumpUiFrames(WidgetTester tester, Widget child, {Size size = const Size(390, 844)}) async {
+  tester.view.physicalSize = size * tester.view.devicePixelRatio;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(UiApp(home: Align(alignment: Alignment.topLeft, child: child)));
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
