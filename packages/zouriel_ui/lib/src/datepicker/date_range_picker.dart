@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../core/icon.dart';
+import '../core/interactive.dart';
 import '../theme/theme.dart';
 import 'calendar_view.dart';
 import 'date_names.dart';
@@ -56,7 +57,8 @@ class UiDateRangePicker extends StatelessWidget {
     return Opacity(
       opacity: enabled ? 1 : 0.5,
       child: Container(
-        padding: EdgeInsets.all(t.space3),
+        // Tighter on phones, so seven 48dp days fit a 360dp-wide screen.
+        padding: EdgeInsets.all(uiTouchPlatform(context) ? t.space2 : t.space3),
         decoration: BoxDecoration(
           color: t.surface,
           border: Border.all(color: t.border),

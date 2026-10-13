@@ -308,11 +308,15 @@ class UiCalendarViewState extends State<UiCalendarView> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) => _build(context, c.maxWidth));
+
+  Widget _build(BuildContext context, double maxWidth) {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final touch = uiTouchPlatform(context);
-    final cell = touch ? uiMinTouchTarget : 32.0;
+    // 48dp days on touch screens; narrower only when the space really isn't there.
+    final preferred = touch ? uiMinTouchTarget : 32.0;
+    final cell = maxWidth.isFinite && maxWidth < preferred * 7 ? (maxWidth / 7).floorToDouble() : preferred;
     final width = cell * 7;
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final hoverFill = widget.raised ? t.elevatedHover : t.surfaceHover;
