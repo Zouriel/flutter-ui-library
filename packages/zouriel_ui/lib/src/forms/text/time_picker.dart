@@ -180,7 +180,8 @@ class _UiTimePickerState extends State<UiTimePicker> {
         expanded: _open,
         child: UiFieldFrame(
           height: h,
-          focused: s.focused || _open,
+          focused: s.focused,
+          active: _open,
           invalid: uiFieldInvalid(context, widget.invalid),
           enabled: widget.enabled,
           radius: widget.radius,

@@ -246,7 +246,7 @@ class UiComboboxState extends State<UiCombobox> {
     var style = uiFieldTextStyle(context, widget.size);
     if (widget.fontPreview && chosen != null) {
       final f = _fontOf(chosen);
-      if (f != null) style = style.merge(f);
+      style = uiApplyFont(style, f);
     }
     final showClear = widget.clearable && widget.value != null && widget.enabled;
     final items = _filtered;

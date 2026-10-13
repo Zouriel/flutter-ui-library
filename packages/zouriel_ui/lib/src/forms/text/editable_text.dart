@@ -102,7 +102,7 @@ class _UiEditableTextState extends State<UiEditableText> {
     final label = widget.semanticLabel ?? UiFieldScope.maybeOf(context)?.label;
 
     if (_editing) {
-      return IntrinsicWidth(
+      return Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: IntrinsicWidth(
         child: Container(
           padding: pad,
           constraints: const BoxConstraints(minWidth: 120),
@@ -116,12 +116,13 @@ class _UiEditableTextState extends State<UiEditableText> {
             semanticLabel: label,
           ),
         ),
-      );
+      ));
     }
 
     final touch = uiTouchPlatform(context);
     final empty = widget.value.isEmpty;
-    return UiInteractive(
+    // Inline: it hugs its text at the start of the line, even in a stretching column.
+    return Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: UiInteractive(
       onTap: _edit,
       enabled: widget.enabled,
       focusNode: _viewFocus,
@@ -148,6 +149,6 @@ class _UiEditableTextState extends State<UiEditableText> {
           ),
         ]),
       ),
-    );
+    ));
   }
 }

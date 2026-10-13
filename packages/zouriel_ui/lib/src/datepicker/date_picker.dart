@@ -123,7 +123,8 @@ class _UiDatePickerState extends State<UiDatePicker> {
         expanded: _open,
         child: UiFieldFrame(
           height: h,
-          focused: s.focused || _open,
+          focused: s.focused,
+          active: _open,
           invalid: uiFieldInvalid(context, widget.invalid),
           enabled: widget.enabled,
           radius: widget.radius,

@@ -198,7 +198,7 @@ class _UiSelectState extends State<UiSelect> {
     final h = widget.size.height(t);
     var style = uiFieldTextStyle(context, widget.size);
     final font = chosen != null && widget.fontPreview ? _fontOf(chosen) : null;
-    if (font != null) style = style.merge(font);
+    style = uiApplyFont(style, font);
     final shown = chosen?.label ?? widget.placeholder ?? '';
     final name = widget.label ?? scope?.label;
 
@@ -219,7 +219,8 @@ class _UiSelectState extends State<UiSelect> {
         expanded: _open,
         child: UiFieldFrame(
           height: h,
-          focused: s.focused || _open,
+          focused: s.focused,
+          active: _open,
           invalid: uiFieldInvalid(context, widget.invalid),
           enabled: widget.enabled,
           radius: widget.radius,

@@ -19,6 +19,32 @@ TextStyle? uiFontPreviewStyle(BuildContext context, String? family, {String? pac
   );
 }
 
+/// [base] drawn in [font]'s family (from [uiFontPreviewStyle]). Built as a complete,
+/// non-inheriting style: merging a font from one package onto a style from another would prefix
+/// the family twice.
+TextStyle uiApplyFont(TextStyle base, TextStyle? font) {
+  if (font == null) return base;
+  return TextStyle(
+    inherit: false,
+    color: base.color,
+    backgroundColor: base.backgroundColor,
+    fontSize: base.fontSize,
+    fontWeight: base.fontWeight,
+    fontStyle: base.fontStyle,
+    letterSpacing: base.letterSpacing,
+    wordSpacing: base.wordSpacing,
+    textBaseline: base.textBaseline ?? TextBaseline.alphabetic,
+    height: base.height,
+    leadingDistribution: base.leadingDistribution,
+    decoration: base.decoration ?? TextDecoration.none,
+    decorationColor: base.decorationColor,
+    fontFeatures: base.fontFeatures,
+    fontFamily: font.fontFamily,
+    fontFamilyFallback: font.fontFamilyFallback,
+    overflow: base.overflow,
+  );
+}
+
 /// One row of a listbox panel, as the panel needs it.
 class UiListItem {
   const UiListItem({required this.label, this.disabled = false, this.selected = false, this.style});
@@ -120,8 +146,8 @@ class _UiListboxPanelState extends State<UiListboxPanel> {
               ? t.elevatedHover
               : null;
       var style = rowStyle.copyWith(fontWeight: item.selected && !widget.checkboxes ? FontWeight.w600 : null);
-      if (item.style != null) style = style.merge(item.style);
       if (item.disabled) style = style.copyWith(color: t.textMuted);
+      style = uiApplyFont(style, item.style);
       return KeyedSubtree(
         key: _key(i),
         child: MouseRegion(

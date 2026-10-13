@@ -39,6 +39,7 @@ class UiFieldFrame extends StatelessWidget {
     required this.child,
     this.height,
     this.focused = false,
+    this.active = false,
     this.invalid = false,
     this.enabled = true,
     this.radius,
@@ -50,6 +51,9 @@ class UiFieldFrame extends StatelessWidget {
   final Widget child;
   final double? height;
   final bool focused;
+
+  /// Primary border without the ring: the field's popover is open after a tap.
+  final bool active;
   final bool invalid;
   final bool enabled;
 
@@ -69,7 +73,7 @@ class UiFieldFrame extends StatelessWidget {
     final t = theme.tokens;
     final rounded = radius ?? theme.config.radius;
     final r = rounded ? (borderRadius ?? t.radius) : 0.0;
-    final border = invalid ? t.danger : focused ? t.primary : (borderColor ?? t.controlBorder);
+    final border = invalid ? t.danger : focused || active ? t.primary : (borderColor ?? t.controlBorder);
     final ring = focused ? (invalid ? uiDangerRing(t) : t.focusRing) : const <BoxShadow>[];
     final animate = context.uiAnimate;
     final deco = BoxDecoration(
@@ -443,7 +447,7 @@ class _UiTextEditorState extends State<UiTextEditor> implements TextSelectionGes
                 : null,
             child: _gestures.buildGestureDetector(
               behavior: HitTestBehavior.translucent,
-              child: Align(alignment: AlignmentDirectional.centerStart, child: editable),
+              child: Align(alignment: AlignmentDirectional.centerStart, heightFactor: multiline ? 1 : null, child: editable),
             ),
           )),
         ),
