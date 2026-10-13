@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -162,10 +161,15 @@ class UiAnchorLayout extends SingleChildLayoutDelegate {
       };
       if (start == null) {
         x = anchor.center.dx - childSize.width / 2;
-      } else if (start != rtl) {
-        x = anchor.left;
       } else {
-        x = anchor.right - childSize.width;
+        // Line up with the anchor's start edge; if that runs off screen, try its end edge (the CDK
+        // fallback positions) before shifting.
+        final alignLeft = start != rtl;
+        final left = anchor.left, right = anchor.right - childSize.width;
+        x = alignLeft ? left : right;
+        final fits = x >= area.left && x + childSize.width <= area.right;
+        final other = alignLeft ? right : left;
+        if (!fits && other >= area.left && other + childSize.width <= area.right) x = other;
       }
     } else {
       final rtl = textDirection == TextDirection.rtl;

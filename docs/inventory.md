@@ -307,7 +307,7 @@ File: `command-palette/src/command-palette.ts`
 - Inputs: `commands`: UiCommand[] = []; `placeholder` = 'Type a command or search…'; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
 - Two-way: `open` = false
 - Outputs: `run`: UiCommand
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiCommand` (command-palette.ts)
 
@@ -386,7 +386,7 @@ File: `dialog/src/bottom-sheet.ts`
 - Two-way: `snap` = 0
 - Outputs: `heightChange`: number; `coverChange`: number
 - Methods: `close()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiConfirmDialog (component, `ui-confirm-dialog`)
 File: `dialog/src/confirm-dialog.ts`  
@@ -394,14 +394,14 @@ File: `dialog/src/confirm-dialog.ts`
 - Inputs: `title` = 'Are you sure?'; `message` = ''; `confirmLabel` = 'Confirm'; `cancelLabel` = 'Cancel'; `destructive` = false
 - Two-way: `open` = false
 - Outputs: `confirm`: void; `cancel`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiDrawer (component, `ui-drawer`)
 File: `dialog/src/drawer.ts`  
 `ui-drawer` — edge-anchored sheet. Slides in from `side`, traps focus, locks scroll, and dismisses on Escape / backdrop click.  
 - Inputs: `side`: UiDrawerSide = 'right'; `title`: string; `closeOnBackdrop` = true; `closeOnEscape` = true; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
 - Two-way: `open` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiDrawerSide` (drawer.ts)
 ### UiModal (component, `ui-modal`)
@@ -409,7 +409,7 @@ File: `dialog/src/modal.ts`
 `ui-modal` — centered dialog with backdrop. Traps focus (CDK a11y), locks body scroll while open, closes on Escape / backdrop click, and animates with the shared scale + backdrop-fade animations.  
 - Inputs: `title`: string; `size`: 'sm' | 'md' | 'lg' | 'full' = 'md'; `closeOnBackdrop` = true; `closeOnEscape` = true; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
 - Two-way: `open` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `lockBodyScroll` (overlay-layer.ts)
 - function `unlockBodyScroll` (overlay-layer.ts)
@@ -418,13 +418,13 @@ File: `dialog/src/modal.ts`
 File: `dialog/src/toast.ts`  
 `UiToastService` — enqueue transient notifications. Render once with `<ui-toast-host />` near the app root.  
 - Methods: `show(opts: UiToastOptions)`, `pause(id: number)`, `resume(id: number)`, `act(id: number)`, `dismiss(id: number)`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiToastHost (component, `ui-toast-host`)
 File: `dialog/src/toast.ts`  
 `ui-toast-host` — fixed renderer for queued toasts, in a corner or centred on the top or bottom edge. Toasts slide in from the edge they sit against and slide back out that way.  
 - Inputs: `position`: UiToastPosition = 'bottom-right'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiToastTone` (toast.ts)
 - type `UiToastPosition` (toast.ts)
@@ -1251,26 +1251,26 @@ File: `overlay/src/backdrop.ts`
 `ui-backdrop` — full-viewport scrim behind overlays. Emits `(backdropClick)`. Render conditionally with `@if`; it animates via the shared backdrop fade.  
 - Inputs: `blur` = false
 - Outputs: `backdropClick`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiClickOutside (directive, `[uiClickOutside]`)
 File: `overlay/src/click-outside.ts`  
 `uiClickOutside` — emits when a pointer/focus event occurs outside the host element. Used by popovers, dropdowns, and menus to dismiss on outside click.  
 - Outputs: `uiClickOutside`: PointerEvent
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase  (Flutter: use `TapRegion` directly; the overlays here use it for outside taps)
 
 ### UiContextMenuPanel (component, `ui-context-menu-panel`)
 File: `overlay/src/context-menu.ts`  
 Internal panel rendered in the context-menu overlay.  
 - Methods: `focusFirst()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiContextMenu (directive, `[uiContextMenu]`)
 File: `overlay/src/context-menu.ts`  
 `uiContextMenu` — opens a menu at the pointer on right-click (CDK Overlay). Bind the items and listen to `(contextSelect)`.  
 - Inputs: `uiContextMenu`: UiMenuItem[] = []
 - Outputs: `contextSelect`: UiMenuItem
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiMenu (component, `ui-menu`)
 File: `overlay/src/menu.ts`  
@@ -1278,7 +1278,7 @@ File: `overlay/src/menu.ts`
 - Inputs: `items`: UiMenuItem[] = []; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
 - Two-way: `open` = false
 - Outputs: `select`: UiMenuItem
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiMenuItem` (menu.ts)
 ### UiPopover (component, `ui-popover`)
@@ -1286,19 +1286,19 @@ File: `overlay/src/popover.ts`
 `ui-popover` — click-triggered floating panel anchored to its trigger via the CDK Overlay. Project the trigger with `[popover-trigger]` and the panel body as default content. Dismisses on outside click and Escape. Focus is not moved into the panel; if it is inside when Escape closes it, it goes back to the trigger. The panel is a `role="dialog"` named by `label` when set, and otherwise by the trigger's text (`aria-labelledby`).  
 - Inputs: `placement`: UiPopoverPlacement = 'bottom-start'; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius; `label` = ''
 - Two-way: `open` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiPopoverPlacement` (popover.ts)
 ### UiTooltipPanel (component, `ui-tooltip-panel`)
 File: `overlay/src/tooltip.ts`  
 Internal panel rendered inside the CDK overlay.  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTooltip (directive, `[uiTooltip]`)
 File: `overlay/src/tooltip.ts`  
 `uiTooltip` — accessible hover/focus tooltip backed by the CDK Overlay. Sets `aria-describedby` on the host so screen readers announce it.  
 - Inputs: `uiTooltip`: string; `uiTooltipPosition`: UiTooltipPosition = 'top'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiTooltipPosition` (tooltip.ts)
 
