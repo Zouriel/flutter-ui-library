@@ -94,7 +94,9 @@ class UiFieldFrame extends StatelessWidget {
     if (height == null) {
       result = box(child: Padding(padding: padding, child: child));
     } else {
-      final h = height!;
+      // Large text grows the box rather than clipping it (up to 2x and beyond).
+      final scale = MediaQuery.textScalerOf(context).scale(t.fontSizeMd) / t.fontSizeMd;
+      final h = scale > 1 ? height! * scale : height!;
       final outer = uiTouchPlatform(context) ? math.max(h, uiMinTouchTarget) : h;
       result = SizedBox(
         height: outer,

@@ -130,4 +130,19 @@ void main() {
     expect(find.text('Copy'), findsOneWidget);
     expect(find.text('Cut'), findsOneWidget);
   });
+
+  testWidgets('200% text grows the field instead of clipping', (tester) async {
+    tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(
+      builder: (context, child) => MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(2)), child: child!),
+      home: const Align(alignment: Alignment.topLeft, child: SizedBox(width: 300, child: UiInput(value: 'Large text', semanticLabel: 'Name'))),
+    ));
+    await tester.pumpAndSettle();
+    final box = tester.getRect(find.descendant(of: find.byType(UiFieldFrame), matching: find.byType(AnimatedContainer)).first);
+    final text = tester.getRect(find.byType(EditableText));
+    expect(box.height, 60);
+    expect(box.top, lessThanOrEqualTo(text.top));
+    expect(box.bottom, greaterThanOrEqualTo(text.bottom));
+  });
 }
