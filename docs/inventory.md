@@ -288,7 +288,7 @@ File: `combobox/src/combobox.ts`
 `ui-combobox` — filterable autocomplete (CVA). Type to filter; Arrow keys + Enter to choose; Escape to close. Backed by the CDK Overlay (WAI-ARIA combobox). With `clearable` (the default) a chosen value can be removed: the Clear button next to the chevron, or emptying the text and leaving the field, sets the value to null.  
 - Inputs: `options`: UiComboboxOption[] = []; `placeholder` = 'Search…'; `label`: string; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius; `clearable` = true
 - Methods: `clear()`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiComboboxOption` (combobox.ts)
 ### UiMultiSelect (component, `ui-multi-select`)
@@ -296,7 +296,7 @@ File: `combobox/src/multi-select.ts`
 `ui-multi-select` — choose several options; selections shown as chips (CVA; value is string[]). Type to filter; Arrow keys + Enter toggle the active option; Backspace in an empty field removes the last chip; Escape closes. With `clearable` (the default) a Clear all button at the end of the field empties the selection.  
 - Inputs: `options`: UiComboboxOption[] = []; `placeholder` = 'Select…'; `label`: string; `invalid` = false; `radius`: boolean = this.config.radius; `size`: UiSize = 'md'; `clearable` = true
 - Methods: `clear(e?: Event)`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## command-palette
@@ -357,7 +357,7 @@ File: `data/src/tree.ts`
 File: `datepicker/src/calendar.ts`  
 `ui-calendar` — inline month calendar (CVA; value is an ISO `YYYY-MM-DD` string).  
 - Inputs: `min`: string | null = null; `max`: string | null = null
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - const `MONTHS` (date-names.ts)
 - const `MONTHS_SHORT` (date-names.ts)
@@ -368,12 +368,12 @@ File: `datepicker/src/calendar.ts`
 File: `datepicker/src/date-picker.ts`  
 `ui-date-picker` — calendar popover (CVA; value is an ISO `YYYY-MM-DD` string). Backed by the CDK Overlay; closes on outside click / Escape. Keyboard: Enter, Space or ArrowDown on the field opens it with focus on the chosen day (or today). Arrow keys move by day and week (crossing months), PageUp/PageDown by month, Home/End to the month's ends; Enter picks. The month and year grids (opened from the heading) work the same way: one tab stop, Arrow keys move (Up/Down by a row of three), Home/End to the first/last cell, PageUp/PageDown by a year (month grid) or a page of 12 years (year grid), Enter or Space picks; opening a grid focuses the month or year in view. Tab stays inside the popover; Escape closes it and returns to the field.  
 - Inputs: `placeholder` = 'Select a date'; `size`: UiSize = 'md'; `radius`: boolean = this.config.radius; `min`: string | null = null; `max`: string | null = null
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiDateRangePicker (component, `ui-date-range-picker`)
 File: `datepicker/src/date-range-picker.ts`  
 `ui-date-range-picker` — inline range selection (CVA; value is `{ start, end }` ISO strings).  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiDateRange` (date-range-picker.ts)
 
@@ -571,7 +571,7 @@ File: `form/src/color-picker.ts`
 File: `form/src/editable-text.ts`  
 `ui-editable-text` — click-to-edit inline text (CVA). Enter commits, Escape cancels.  
 - Inputs: `placeholder` = 'Empty'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiFileUpload (component, `ui-file-upload`)
 File: `form/src/file-upload.ts`  
@@ -585,38 +585,38 @@ File: `form/src/file-upload.ts`
 File: `form/src/form-field.ts`  
 `ui-form-field` — label + hint + error wrapper for any control. The projected control is wrapped by a `<label>`, and the label's `for` is pointed at the control's own text field (given an id if it has none). Without that, a wrapping label names its first labelable element, which in `ui-chip-input` or `ui-multi-select` is the first chip's remove button. A custom control can pick its labelable element (input, select, textarea, button) with a `data-ui-field-control` attribute.  
 - Inputs: `label`: string; `hint`: string; `error`: string; `required` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiInput (component, `ui-input`)
 File: `form/src/input.ts`  
 `ui-input` — single-line text field. Implements ControlValueAccessor so it works with template-driven, reactive, and Signal Forms.  
 - Inputs: `type`: 'text' | 'email' | 'url' | 'tel' | 'password' | 'search' = 'text'; `placeholder` = ''; `inputmode`: string; `autocomplete`: string; `name`: string; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiNumberLabel (directive, `[uiNumberLabel]`)
 File: `form/src/number-input.ts`  
 An icon to show in place of a `ui-number-input`'s text label: `<svg uiNumberLabel …/>` inside the input. It works like the label (drag it to scrub); keep `label` or `ariaLabel` set for screen readers.  
 - Inputs: `min`: number; `max`: number; `step` = 1; `placeholder` = ''; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius; `label` = ''; `ariaLabel` = ''; `suffix` = ''; `precision`: number | null = null; `steppers` = true
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase  (as UiNumberInput.labelIcon)
 
 ### UiNumberInput (component, `ui-number-input`)
 File: `form/src/number-input.ts`  
 `ui-number-input` — numeric field with stepper buttons (CVA).  
 - Inputs: `min`: number; `max`: number; `step` = 1; `placeholder` = ''; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius; `label` = ''; `ariaLabel` = ''; `suffix` = ''; `precision`: number | null = null; `steppers` = true
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiOtpInput (component, `ui-otp-input`)
 File: `form/src/otp-input.ts`  
 `ui-otp-input` — fixed-length one-time-code entry (CVA; value is a string). The value keeps every character in its cell's position: an empty cell before a filled one is a space, and empty cells at the end are dropped. So `1`,`2`,empty,`4` reads `"12 4"`, writing `"12 4"` back fills the same cells, and an untouched control is `''`. It also validates itself: a value that is not empty but has fewer than `length` filled cells (a code still being typed, or one with a hole) gives the error `{ otpIncomplete: { filled, length } }`. An empty value is valid, so add `Validators.required` to make the code mandatory.  
 - Inputs: `length` = 6; `numeric` = true; `invalid` = false
 - Methods: `validate(control: AbstractControl)`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiPasswordInput (component, `ui-password-input`)
 File: `form/src/password-input.ts`  
 `ui-password-input` — password field with show/hide toggle (CVA).  
 - Inputs: `placeholder` = ''; `size`: UiSize = 'md'; `autocomplete`: string = 'current-password'; `name`: string; `invalid` = false; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiRadioGroup (component, `ui-radio-group`)
 File: `form/src/radio-group.ts`  
@@ -635,13 +635,13 @@ File: `form/src/rating.ts`
 File: `form/src/search-input.ts`  
 `ui-search-input` — search field with icon and clear button (CVA).  
 - Inputs: `placeholder` = 'Search…'; `label`: string; `size`: UiSize = 'md'; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSelect (component, `ui-select`)
 File: `form/src/select.ts`  
 `ui-select` — single-choice dropdown (CVA) built on a native `<select>` for full keyboard/screen-reader support. For rich filtering use combobox instead.  
 - Inputs: `options`: UiSelectOption[] = []; `placeholder`: string; `label`: string; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiSelectOption` (select.ts)
 ### UiSlider (component, `ui-slider`)
@@ -659,13 +659,13 @@ File: `form/src/switch.ts`
 File: `form/src/textarea.ts`  
 `ui-textarea` — multi-line text field (CVA). `autosize` makes it grow with what is typed, from `rows` lines up to `maxRows`, and takes away the drag handle: a comment box people resize by hand is a box that was the wrong size.  
 - Inputs: `placeholder` = ''; `rows` = 4; `autocomplete`: string; `name`: string; `invalid` = false; `radius`: boolean = this.config.radius; `autosize` = false; `maxRows` = 8
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTimePicker (component, `ui-time-picker`)
 File: `form/src/time-picker.ts`  
 `ui-time-picker` — time field (CVA; value is `HH:MM`), built on a native time input.  
 - Inputs: `size`: UiSize = 'md'; `step` = 60; `invalid` = false; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTokenInput (component, `ui-token-input`)
 File: `form/src/token-input.ts`  
