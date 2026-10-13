@@ -29,7 +29,8 @@ class UiMenubarMenu {
 /// [onSelect] reports the chosen item.
 ///
 /// Narrower than [breakpoint] (a phone) the bar becomes a single overflow button for an app bar's
-/// actions: it opens one panel with every menu as a titled group.
+/// actions: it opens one panel with every menu as a titled group. The width is the space it is given,
+/// or the screen's when that is unbounded (inside a `Row`).
 ///
 /// Keyboard, as on the web: Left/Right move between the top items (and between open menus); Down,
 /// Enter or Space open a menu and focus its first item; inside a menu Up/Down, Home and End move,
@@ -124,7 +125,9 @@ class _UiMenubarState extends State<UiMenubar> {
     _sync();
     final t = context.ui;
     return LayoutBuilder(builder: (context, box) {
-      if (box.maxWidth < widget.breakpoint) return _buildOverflow(context);
+      // In a Row (an app bar's actions) the width is unbounded: decide by the screen instead.
+      final width = box.maxWidth.isFinite ? box.maxWidth : MediaQuery.sizeOf(context).width;
+      if (width < widget.breakpoint) return _buildOverflow(context);
       return Semantics(
         container: true,
         explicitChildNodes: true,

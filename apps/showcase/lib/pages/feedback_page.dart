@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
+import 'navdata_sections.dart';
 
 class FeedbackPage extends StatefulWidget {
   const FeedbackPage({super.key});
@@ -20,7 +21,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
     return DocPage(
       eyebrow: 'Components',
       title: 'Feedback & status',
-      lead: 'Alerts, progress, spinners and skeletons: telling people what is happening.',
+      lead: 'Alerts, progress, meters, spinners, skeletons, empty states and results: telling people what is happening.',
       children: [
         DocSection(
           name: 'Alert',
@@ -105,6 +106,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
             ApiRow('width / height', 'double?', 'Size; text height follows the font size.'),
           ],
         ),
+        ...navdataFeedbackSections(),
       ],
     );
   }

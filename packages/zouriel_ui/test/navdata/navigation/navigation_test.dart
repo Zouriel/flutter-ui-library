@@ -313,6 +313,16 @@ void main() {
       expect(chosen, ['undo']);
     });
 
+    testWidgets('in an app bar row (unbounded width) it follows the screen width', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpUi(tester, Row(mainAxisSize: MainAxisSize.min, children: [UiMenubar(menus: _menus, onSelect: (_) {})]));
+      expect(find.text('File'), findsNothing);
+      expect(find.bySemanticsLabel('Menu'), findsOneWidget);
+      await pumpUi(tester, Row(mainAxisSize: MainAxisSize.min, children: [UiMenubar(menus: _menus, onSelect: (_) {})]), size: const Size(900, 600));
+      expect(find.text('File'), findsOneWidget);
+      handle.dispose();
+    });
+
     testWidgets('on a phone it is one overflow button with every menu as a group', (tester) async {
       final handle = tester.ensureSemantics();
       final chosen = <String>[];

@@ -8,14 +8,14 @@ Generated from the Angular source by `tool/angular_inventory.py` (re-run to refr
 File: `accordion/src/accordion.ts`  
 `ui-accordion-item` — a titled, collapsible panel. Use inside `ui-accordion`.  
 - Inputs: `title`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiAccordion (component, `ui-accordion`)
 File: `accordion/src/accordion.ts`  
 `ui-accordion` — groups `ui-accordion-item`s. Single-open unless `multiple`.  
 - Inputs: `multiple` = false
 - Methods: `toggle(item: UiAccordionItem)`
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## alert
@@ -278,7 +278,7 @@ File: `card/src/card.ts`
 File: `card/src/stat-card.ts`  
 `ui-stat-card` — KPI tile: label, value, optional delta + icon slot.  
 - Inputs: `label` = ''; `value`: string | number = ''; `delta`: string | number; `trend`: 'up' | 'down' = 'up'; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## combobox
@@ -317,27 +317,27 @@ File: `command-palette/src/command-palette.ts`
 File: `data/src/code-block.ts`  
 `ui-code-block` — monospace code panel with language label and copy button.  
 - Inputs: `code` = ''; `language` = 'text'; `radius` = true
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiDescriptionList (component, `ui-description-list`)
 File: `data/src/description-list.ts`  
 `ui-description-list` — key/value pairs (a semantic `<dl>`).  
 - Inputs: `items`: UiDescriptionItem[] = []; `layout`: 'stacked' | 'row' = 'row'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiDescriptionItem` (description-list.ts)
 ### UiTimeline (component, `ui-timeline`)
 File: `data/src/timeline.ts`  
 `ui-timeline` — vertical sequence of events with connector line.  
 - Inputs: `items`: UiTimelineItem[] = []
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiTimelineItem` (timeline.ts)
 ### UiTreeTable (component, `ui-tree-table`)
 File: `data/src/tree-table.ts`  
 `ui-tree-table` — hierarchical table; the first column is an expandable tree.  
 - Inputs: `rows`: UiTreeTableRow[] = []; `columns`: UiTreeTableColumn[] = []; `firstHeader` = 'Name'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiTreeTableColumn` (tree-table.ts)
 - interface `UiTreeTableRow` (tree-table.ts)
@@ -347,7 +347,7 @@ File: `data/src/tree.ts`
 - Inputs: `nodes`: UiTreeNode[] = []; `label` = ''
 - Two-way: `selected`: string | null = null
 - Outputs: `nodeSelect`: UiTreeNode
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiTreeNode` (tree.ts)
 
@@ -447,7 +447,7 @@ File: `divider/src/divider.ts`
 File: `feedback/src/empty-state.ts`  
 `ui-empty-state` — placeholder for empty content. Slots: `[empty-icon]`, `[empty-actions]`.  
 - Inputs: `heading` = 'Nothing here yet'; `description`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiLoadingOverlay (component, `ui-loading-overlay`)
 File: `feedback/src/loading-overlay.ts`  
@@ -459,7 +459,7 @@ File: `feedback/src/loading-overlay.ts`
 File: `feedback/src/result.ts`  
 `ui-result` — full-page outcome state (success / error / 404 / 500).  
 - Inputs: `status`: UiResultStatus = 'info'; `title` = ''; `subtitle`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiResultStatus` (result.ts)
 
@@ -1122,13 +1122,13 @@ File: `link/src/inline-code.ts`
 ### UiKbd (component, `ui-kbd`)
 File: `link/src/kbd.ts`  
 `ui-kbd` — keyboard key hint.  
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiLink (component, `ui-link`)
 File: `link/src/link.ts`  
 `ui-link` — themed anchor. External links get safe rel + a visual marker.  
 - Inputs: `href`: string; `external` = false; `tone`: 'primary' | 'muted' | 'plain' = 'primary'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## list
@@ -1137,14 +1137,14 @@ File: `link/src/link.ts`
 File: `list/src/list.ts`  
 `ui-list` — semantic list container. Project `ui-list-item` children.  
 - Inputs: `bordered` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiListItem (component, `ui-list-item`)
 File: `list/src/list.ts`  
 `ui-list-item` — a row in `ui-list`. Optional `[item-leading]` / `[item-trailing]` slots.  
 - Inputs: `interactive` = false; `selected` = false; `disabled` = false
 - Outputs: `activate`: void
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## media
@@ -1185,7 +1185,7 @@ File: `media/src/image-picker.ts`
 File: `navigation/src/anchor-nav.ts`  
 `ui-anchor-nav` — scrollspy navigation: highlights the section in view and scrolls to it on click. The sections are looked up by id once, just after init; sections added later are not watched.  
 - Inputs: `items`: UiAnchorItem[] = []; `offset` = 80
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiAnchorItem` (anchor-nav.ts)
 ### UiBottomNav (component, `ui-bottom-nav`)
@@ -1193,7 +1193,7 @@ File: `navigation/src/bottom-nav.ts`
 `ui-bottom-nav` — mobile-style bottom navigation bar (glass-capable). A `<nav>` of buttons; the active one carries `aria-current="page"`. (It used to claim `role="tablist"` without tab panels or arrow-key handling, which told screen readers it was something it was not.)  
 - Inputs: `items`: UiBottomNavItem[] = []; `label`: string; `glass`: boolean = this.config.glass; `iconSize`: number = 22
 - Two-way: `active`: string = ''
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiBottomNavItem` (bottom-nav.ts)
 ### UiBreadcrumbs (component, `ui-breadcrumbs`)
@@ -1201,7 +1201,7 @@ File: `navigation/src/breadcrumbs.ts`
 `ui-breadcrumbs` — hierarchical trail. Emits `(navigate)` for items without href.  
 - Inputs: `items`: UiBreadcrumb[] = []; `separator` = '/'
 - Outputs: `navigate`: UiBreadcrumb
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiBreadcrumb` (breadcrumbs.ts)
 ### UiMenubar (component, `ui-menubar`)
@@ -1209,7 +1209,7 @@ File: `navigation/src/menubar.ts`
 `ui-menubar` — application-style horizontal menu bar with dropdown menus (one open at a time). <p>Keyboard: ArrowLeft/Right move between the top items (and between open menus); ArrowDown, Enter or Space open a menu and focus its first item; inside a menu ArrowUp/Down, Home and End move between items, Escape closes it and returns focus to its top item, and Tab closes it.</p>  
 - Inputs: `menus`: UiMenubarMenu[] = []
 - Outputs: `select`: UiMenubarItem
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiMenubarItem` (menubar.ts)
 - interface `UiMenubarMenu` (menubar.ts)
@@ -1217,14 +1217,14 @@ File: `navigation/src/menubar.ts`
 File: `navigation/src/navbar.ts`  
 `ui-navbar` — top navigation surface (glass-capable). Slots: `[navbar-brand]`, default (center/links), `[navbar-actions]`.  
 - Inputs: `sticky` = false; `label`: string; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiPagination (component, `ui-pagination`)
 File: `navigation/src/pagination.ts`  
 `ui-pagination` — page navigation with truncation and prev/next.  
 - Inputs: `total` = 1; `siblings` = 1; `label` = 'Pagination'
 - Two-way: `page` = 1
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSideNav (component, `ui-side-nav`)
 File: `navigation/src/side-nav.ts`  
@@ -1232,7 +1232,7 @@ File: `navigation/src/side-nav.ts`
 - Inputs: `groups`: UiSideNavGroup[] = []; `label` = 'Sidebar'
 - Two-way: `active`: string = ''
 - Outputs: `navigate`: UiSideNavItem
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiSideNavItem` (side-nav.ts)
 - interface `UiSideNavGroup` (side-nav.ts)
@@ -1240,7 +1240,7 @@ File: `navigation/src/side-nav.ts`
 File: `navigation/src/stepper.ts`  
 `ui-stepper` — horizontal progress through ordered steps.  
 - Inputs: `steps`: UiStep[] = []; `active` = 0
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiStep` (stepper.ts)
 
@@ -1317,7 +1317,7 @@ File: `pdf-viewer/src/pdf-viewer.ts`
 File: `progress/src/meter.ts`  
 `ui-meter` — a measurement against a budget, e.g. file size against a limit. Unlike a progress bar it isn't a task finishing: it turns warning past `warnAt` and danger past `dangerAt`, and says so in its text, so the colour is never the only signal.  
 - Inputs: `value` = 0; `max` = 100; `warnAt`: number | null = null; `dangerAt`: number | null = null; `label` = ''; `valueText` = ''; `warnText` = 'Getting large'; `dangerText` = 'Over the limit'
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiProgressBar (component, `ui-progress-bar`)
 File: `progress/src/progress-bar.ts`  
@@ -1390,7 +1390,7 @@ File: `table/src/table.ts`
 `ui-table` — accessible data table with click-to-sort headers and optional row selection. Pass `columns` + `data`; listen to `(selectionChange)`. (Virtual scroll / CDK table integration is a planned extension.)  
 - Inputs: `columns`: UiColumn<T>[] = []; `data`: T[] = []; `selectable` = false; `actions`: UiRowAction<T>[] = []; `emptyText` = 'No data'; `radius`: boolean = this.config.radius
 - Outputs: `selectionChange`: T[]
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiColumn` (table.ts)
 - interface `UiRowAction` (table.ts)
@@ -1401,14 +1401,14 @@ File: `table/src/table.ts`
 File: `tabs/src/tabs.ts`  
 `ui-tab` — a single tab + its panel. Provide a `label` and project the panel content. Inactive panels stay in the DOM but are hidden (`[hidden]`). An optional HugeIcons `icon` draws before the label. With `iconOnly` the label is not shown, but it is still the tab's accessible name and its tooltip, so a screen reader and a hovering mouse both get the words the icon stands for.  
 - Inputs: `label`: string; `disabled` = false; `icon`: IconSvgObject | undefined = undefined; `iconOnly` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTabs (component, `ui-tabs`)
 File: `tabs/src/tabs.ts`  
 `ui-tabs` — WAI-ARIA tabs. Wraps `ui-tab` children; renders a tablist with roving tabindex and Arrow/Home/End keyboard navigation.  
 - Inputs: `label`: string = 'Tabs'
 - Two-way: `selectedIndex` = 0
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
 ## text

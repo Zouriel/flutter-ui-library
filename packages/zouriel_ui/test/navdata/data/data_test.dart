@@ -196,10 +196,15 @@ void main() {
     testWidgets('a screen reader can expand and collapse a row', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, const _Host());
-      final id = tester.getSemantics(_row('docs')).id;
-      tester.binding.pipelineOwner.semanticsOwner!.performAction(id, SemanticsAction.expand);
+      final node = tester.getSemantics(_row('docs'));
+      node.owner!.performAction(node.id, SemanticsAction.expand);
       await tester.pump();
       expect(find.text('guide.md'), findsOneWidget);
+      final open = tester.getSemantics(_row('docs'));
+      expect(open.getSemanticsData().hasAction(SemanticsAction.collapse), isTrue);
+      open.owner!.performAction(open.id, SemanticsAction.collapse);
+      await tester.pump();
+      expect(find.text('guide.md'), findsNothing);
       handle.dispose();
     });
   });
