@@ -1,2 +1,28 @@
 /// Exports for the media area (owned by that area's port; see docs/CONVENTIONS.md).
 library;
+
+export '../layout/layout.dart';
+export '../layout/panel_section.dart';
+export '../layout/sidebar_layout.dart';
+export '../layout/splitter.dart';
+export '../behaviors/gestures.dart';
+export '../behaviors/intersect.dart';
+export '../behaviors/misc.dart';
+export '../behaviors/scrolling.dart';
+export '../behaviors/swipe.dart';
+export '../media/carousel.dart';
+export '../media/device_frame.dart';
+export '../media/gallery.dart';
+export '../media/image_picker.dart';
+export '../file_viewer/file_viewer.dart';
+export '../file_viewer/image_viewer.dart';
+export '../file_viewer/media_lightbox.dart';
+export '../file_viewer/pdf_viewer.dart';
+export '../file_viewer/players.dart';
+export '../file_viewer/seek_bar.dart';
+export '../file_viewer/sources.dart';
+export '../file_viewer/text_viewers.dart';
+export '../fx/backdrops.dart';
+export '../fx/chrome.dart';
+export '../fx/motion.dart';
+export '../fx/rails.dart';

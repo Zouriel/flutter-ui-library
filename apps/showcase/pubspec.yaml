@@ -26,3 +26,4 @@ flutter:
   uses-material-design: false
   assets:
     - assets/logo.svg
+    - assets/demo/
