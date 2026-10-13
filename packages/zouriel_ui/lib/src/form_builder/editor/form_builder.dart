@@ -616,10 +616,11 @@ class _TopBar extends StatelessWidget {
       decoration: BoxDecoration(color: t.surface, border: Border(bottom: BorderSide(color: t.borderSubtle))),
       child: narrow
           ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
-              Row(children: [
+              // The tools keep their natural width (up to most of the row); the title takes the rest.
+              LayoutBuilder(builder: (context, box) => Row(children: [
                 Expanded(child: Align(alignment: Alignment.centerLeft, child: titleButton)),
-                Flexible(flex: 2, child: Align(alignment: Alignment.centerRight, child: tools)),
-              ]),
+                ConstrainedBox(constraints: BoxConstraints(maxWidth: box.maxWidth * 0.72), child: tools),
+              ])),
               views,
             ])
           : Row(spacing: t.space3, children: [

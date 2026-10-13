@@ -135,9 +135,8 @@ class FbChip extends StatelessWidget {
         child: Container(
           height: 18,
           padding: const EdgeInsets.symmetric(horizontal: 6),
-          alignment: Alignment.center,
           decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(t.radiusXs)),
-          child: Text(text, maxLines: 1, style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: fg, height: 1)),
+          child: Center(widthFactor: 1, child: Text(text, maxLines: 1, style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: fg, height: 1))),
         ),
       ),
     );

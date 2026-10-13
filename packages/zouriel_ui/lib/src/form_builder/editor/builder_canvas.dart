@@ -892,6 +892,7 @@ class _PageHead extends StatelessWidget {
             excludeChildSemantics: true,
             pressScale: false,
             builder: (context, s) => Container(
+              width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: 4),
               decoration: BoxDecoration(boxShadow: s.focused ? t.focusRing : null, borderRadius: BorderRadius.circular(t.radius)),
               child: Wrap(spacing: t.space2, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -950,6 +951,7 @@ class _PageTabs extends StatelessWidget {
             role: SemanticsRole.tabBar,
             label: 'Pages',
             container: true,
+            explicitChildNodes: true,
             child: Row(crossAxisAlignment: CrossAxisAlignment.end, spacing: 2, children: [
               for (var i = 0; i < pages.length; i++)
                 KeyedSubtree(
@@ -996,8 +998,8 @@ class _Tab extends StatelessWidget {
       onTap: onTap,
       button: !isTab,
       selected: isTab ? on : null,
-      semanticLabel: semantic ?? (hasRules ? '$label, has rules' : label),
-      excludeChildSemantics: true,
+      semanticLabel: semantic,
+      excludeChildSemantics: semantic != null,
       pressScale: false,
       minTouchSize: const Size(0, uiMinTouchTarget),
       builder: (context, s) => Semantics(
@@ -1029,7 +1031,7 @@ class _Tab extends StatelessWidget {
                 ),
               ),
             ),
-            if (hasRules) Container(width: 6, height: 6, decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle)),
+            if (hasRules) Semantics(label: 'has rules', child: Container(width: 6, height: 6, decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle))),
           ]),
         ),
       ),

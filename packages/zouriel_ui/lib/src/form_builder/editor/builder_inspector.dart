@@ -196,14 +196,15 @@ class _Tabs extends StatelessWidget {
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.borderSubtle))),
       child: Semantics(
         role: SemanticsRole.tabBar,
+        container: true,
+        explicitChildNodes: true,
+        label: 'Settings sections',
         child: Row(spacing: 2, children: [
           for (final (id, label, count) in tabs)
             UiInteractive(
               onTap: () => onChanged(id),
               button: false,
               selected: id == value,
-              semanticLabel: count > 0 ? '$label, $count' : label,
-              excludeChildSemantics: true,
               pressScale: false,
               minTouchSize: const Size(0, uiMinTouchTarget),
               builder: (context, s) {
