@@ -29,7 +29,7 @@ bool _usEnglish(String? locale) {
 const Map<String, String> _usCurrencySymbols = {
   'USD': r'$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'INR': '₹', 'CAD': r'CA$', 'AUD': r'A$', 'CNY': 'CN¥', 'ILS': '₪', //
   'KRW': '₩', 'VND': '₫', 'NZD': r'NZ$', 'HKD': r'HK$', 'MXN': r'MX$', 'BRL': r'R$', 'TWD': r'NT$', 'PHP': '₱',
-  'XAF': 'FCFA ', 'XOF': 'F CFA ', 'XCD': r'EC$', 'XPF': 'CFPF ',
+  'XAF': 'FCFA\u00a0', 'XOF': 'F\u202fCFA\u00a0', 'XCD': r'EC$', 'XPF': 'CFPF\u00a0',
 };
 
 /// The decimal digits of |x| as V8 prints them (shortest round-trip), with the position of the point.
@@ -113,7 +113,7 @@ String _formatNumber(num n, UiFbField field, String? locale) {
     if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(code) || d < 0 || d > 100) return n.toDouble().toStringAsFixed(d.clamp(0, 100));
     final upper = code.toUpperCase();
     if (_usEnglish(locale)) {
-      final symbol = _usCurrencySymbols[upper] ?? '$upper ';
+      final symbol = _usCurrencySymbols[upper] ?? '$upper\u00a0';
       final body = _usDecimal(n.toDouble().abs(), d, d);
       return '${n < 0 ? '-' : ''}$symbol$body';
     }

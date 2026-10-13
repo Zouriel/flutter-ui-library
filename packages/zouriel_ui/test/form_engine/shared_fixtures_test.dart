@@ -348,7 +348,7 @@ void definitionHelpers() {
         final el = indexDefinition(d)[c['id']]!.element;
         final json = {
           'key': el is UiFbField ? el.key : (el as UiFbGroup).key,
-          if ((el is UiFbField ? el.keyHistory : (el as UiFbGroup).keyHistory) case final h?) 'keyHistory': h,
+          'keyHistory': ?(el is UiFbField ? el.keyHistory : (el as UiFbGroup).keyHistory),
         };
         expectJson(json, c['expected'], jsonEncode(c['steps']));
       }

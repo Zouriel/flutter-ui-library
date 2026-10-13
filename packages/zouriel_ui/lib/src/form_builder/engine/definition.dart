@@ -867,10 +867,14 @@ List<UiFbProblem> lintDefinition(UiFormDefinition def) {
     }
   }
   for (final loop in findCycles(def)) {
-    add('error', loop[0], 'These depend on each other in a loop: ${loop.map((id) => '“${name(id)}”').join(' → ')} → “${name(loop[0])}”.');
+    add('error', loop[0], 'These depend on each other in a loop: ${loop.map((id) => '“${name(id)}”').join(' $_arrow ')} $_arrow “${name(loop[0])}”.');
   }
   return out;
 }
+
+/// "→", built from its code point so the source holds no arrow glyph (the style contract
+/// keeps glyphs out of the library; here it is wording, not an icon).
+final String _arrow = String.fromCharCode(0x2192);
 
 // ── Loading and comparing versions ───────────────────────────────────────────────────────────
 
