@@ -276,7 +276,7 @@ class UiMultiSelectState extends State<UiMultiSelect> {
             setState(() => _active = i);
             _toggle(items[i].value);
           },
-          items: [for (final o in items) UiListItem(label: o.label, selected: widget.value.contains(o.value))],
+          items: [for (final o in items) UiListboxItem(label: o.label, selected: widget.value.contains(o.value))],
         ),
       ),
       child: field,

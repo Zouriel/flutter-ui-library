@@ -21,8 +21,8 @@ TextStyle? uiFontPreviewStyle(BuildContext context, String? family, {String? pac
 }
 
 /// One row of a listbox panel, as the panel needs it.
-class UiListItem {
-  const UiListItem({required this.label, this.disabled = false, this.selected = false, this.style});
+class UiListboxItem {
+  const UiListboxItem({required this.label, this.disabled = false, this.selected = false, this.style});
   final String label;
   final bool disabled;
   final bool selected;
@@ -48,7 +48,7 @@ class UiListboxPanel extends StatefulWidget {
     this.emptyText = 'No results',
   });
 
-  final List<UiListItem> items;
+  final List<UiListboxItem> items;
   final int activeIndex;
   final ValueChanged<int> onPick;
   final ValueChanged<int>? onHover;

@@ -304,7 +304,7 @@ class UiComboboxState extends State<UiCombobox> {
           activeIndex: _active,
           onHover: (i) => setState(() => _active = i),
           onPick: (i) => _select(items[i]),
-          items: [for (final o in items) UiListItem(label: o.label, selected: o.value == widget.value, style: _fontOf(o))],
+          items: [for (final o in items) UiListboxItem(label: o.label, selected: o.value == widget.value, style: _fontOf(o))],
         ),
       ),
       child: field,

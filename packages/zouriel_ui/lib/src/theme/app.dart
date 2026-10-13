@@ -69,7 +69,11 @@ class UiApp extends StatelessWidget {
           builder: (context, child) {
             Widget content = ColoredBox(
               color: t.tokens.bg,
-              child: DefaultTextStyle(style: t.typography.body, child: child ?? const SizedBox.shrink()),
+              // Icons default to the theme's text colour (black would vanish on dark themes).
+              child: IconTheme(
+                data: IconThemeData(color: t.tokens.text, size: 20),
+                child: DefaultTextStyle(style: t.typography.body, child: child ?? const SizedBox.shrink()),
+              ),
             );
             if (builder != null) content = builder!(context, content);
             return ScrollConfiguration(behavior: const UiScrollBehavior(), child: content);

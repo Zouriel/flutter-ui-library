@@ -209,7 +209,10 @@ class UiThemeScope extends StatelessWidget {
   Widget build(BuildContext context) {
     final parent = UiTheme.of(context);
     final data = UiThemeData(name: theme, config: parent.config);
-    Widget content = DefaultTextStyle(style: data.typography.body, child: child);
+    Widget content = IconTheme(
+      data: IconThemeData(color: data.tokens.text, size: 20),
+      child: DefaultTextStyle(style: data.typography.body, child: child),
+    );
     if (paintBackground) content = ColoredBox(color: data.tokens.bg, child: content);
     return UiTheme(data: data, child: content);
   }

@@ -261,7 +261,7 @@ class _UiSelectState extends State<UiSelect> {
           onPick: _pick,
           items: [
             for (final o in widget.options)
-              UiListItem(label: o.label, disabled: o.disabled, selected: o.value == widget.value, style: _fontOf(o)),
+              UiListboxItem(label: o.label, disabled: o.disabled, selected: o.value == widget.value, style: _fontOf(o)),
           ],
         ),
       ),
