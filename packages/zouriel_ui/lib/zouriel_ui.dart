@@ -24,3 +24,4 @@ export 'src/areas/media.dart';
 export 'src/areas/form_engine.dart';
 export 'src/areas/form_renderer.dart';
 export 'src/areas/windows_tools.dart';
+export 'src/areas/form_editor.dart';
