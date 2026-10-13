@@ -8,7 +8,6 @@ import '../../button/segmented.dart';
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
-import '../../forms/choice/switch.dart';
 import '../../forms/text/inputs.dart';
 import '../../forms/text/number_input.dart';
 import '../../forms/text/select.dart';
@@ -568,7 +567,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
                       onChanged: (v) => _patchParam(i, {'kind': v}),
                     ),
                   ),
-                  UiSwitch(value: c.params![i].required, label: 'Needed before searching', onChanged: (v) => _patchParam(i, {'required': v ? true : null})),
+                  FbSwitch(value: c.params![i].required, label: 'Needed before searching', onChanged: (v) => _patchParam(i, {'required': v ? true : null})),
                   FbIconButton(
                     icon: HugeIcons.strokeRoundedDelete02,
                     label: 'Remove setting ${c.params![i].label.isNotEmpty ? c.params![i].label : c.params![i].key}',

@@ -7,7 +7,6 @@ import '../../button/button.dart';
 import '../../button/segmented.dart';
 import '../../core/icon.dart';
 import '../../core/types.dart';
-import '../../forms/choice/switch.dart';
 import '../../forms/text/inputs.dart';
 import '../../theme/theme.dart';
 import '../engine/engine.dart' show UiFormMode;
@@ -129,7 +128,7 @@ class _UiFbPreviewState extends State<UiFbPreview> {
                 icon: const UiIcon(HugeIcons.strokeRoundedRefresh),
                 onPressed: () => setState(_restart),
               ),
-              UiSwitch(value: _showData, label: 'Show saved data', onChanged: (v) => setState(() => _showData = v)),
+              FbSwitch(value: _showData, label: 'Show saved data', onChanged: (v) => setState(() => _showData = v)),
             ]),
             if (_mode != UiFormMode.create) ...[
               SizedBox(height: t.space3),

@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/types.dart';
-import '../../forms/choice/switch.dart';
 import '../../forms/text/inputs.dart';
 import '../../forms/text/select.dart';
 import '../../theme/theme.dart';
@@ -70,7 +69,7 @@ class UiFbSettingsFields extends StatelessWidget {
             const [('blur', 'When someone leaves a question'), ('submit', 'Only when they continue or submit')],
             (st, v) => st.validateOn = v,
           ),
-          UiSwitch(value: s.errorSummary != false, label: 'List all problems at the top', onChanged: (v) => onPatch((st) => st.errorSummary = v ? null : false)),
+          FbSwitch(value: s.errorSummary != false, label: 'List all problems at the top', onChanged: (v) => onPatch((st) => st.errorSummary = v ? null : false)),
           FbSetting(
             label: 'Answers to hidden questions',
             hint: 'Saved answers that were already hidden when someone opened the form are always kept.',
@@ -84,7 +83,7 @@ class UiFbSettingsFields extends StatelessWidget {
           ),
         ]),
         FbSection(title: 'Buttons and steps', children: [
-          UiSwitch(value: s.showProgress != false, label: 'Show progress on multi-page forms', onChanged: (v) => onPatch((st) => st.showProgress = v ? null : false)),
+          FbSwitch(value: s.showProgress != false, label: 'Show progress on multi-page forms', onChanged: (v) => onPatch((st) => st.showProgress = v ? null : false)),
           FbPair(children: [
             input('Submit button', s.submitLabel, 'Submit', 'sl', (st, v) => st.submitLabel = v),
             input('Next button', s.nextLabel, 'Continue', 'nl', (st, v) => st.nextLabel = v),

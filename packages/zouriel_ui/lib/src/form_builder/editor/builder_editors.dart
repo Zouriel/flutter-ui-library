@@ -8,7 +8,6 @@ import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
 import '../../datepicker/date_picker.dart';
-import '../../forms/choice/switch.dart';
 import '../../forms/text/inputs.dart';
 import '../../forms/text/number_input.dart';
 import '../../forms/text/select.dart';
@@ -192,7 +191,7 @@ class _UiFbOptionsEditorState extends State<UiFbOptionsEditor> {
         Wrap(spacing: t.space3, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           FbLink(label: 'Add option', icon: HugeIcons.strokeRoundedAdd01, onTap: () => addAt(opts.length)),
           FbLink(label: _pasting ? 'Close the list box' : 'Paste a list', onTap: () => setState(() => _pasting = !_pasting)),
-          UiSwitch(value: _showValues, label: 'Show saved values', onChanged: (v) => setState(() => _showValues = v)),
+          FbSwitch(value: _showValues, label: 'Show saved values', onChanged: (v) => setState(() => _showValues = v)),
         ]),
         if (_pasting)
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
@@ -557,12 +556,12 @@ class _CheckBox extends StatelessWidget {
             onChanged: (v) => onPatch((r) => r.message = v.isEmpty ? null : v, merge: 'msg'),
           ),
         ),
-        UiSwitch(
+        FbSwitch(
           value: rule.when != null,
           label: 'Only check sometimes',
           onChanged: (on) => onPatch((r) => r.when = on ? fbEmptyCondition() : null),
         ),
-        UiSwitch(
+        FbSwitch(
           value: rule.severity == 'warning',
           label: 'Warn but allow submitting',
           onChanged: (on) => onPatch((r) => r.severity = on ? 'warning' : null),

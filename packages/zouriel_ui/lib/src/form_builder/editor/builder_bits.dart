@@ -5,6 +5,7 @@ import '../../button/button.dart';
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
+import '../../forms/choice/switch.dart';
 import '../../theme/theme.dart';
 import '../engine/schema.dart';
 
@@ -325,4 +326,16 @@ class FbRowHead extends StatelessWidget {
       if (onRemove != null) FbIconButton(icon: HugeIcons.strokeRoundedCancel01, label: removeLabel ?? 'Remove', danger: true, onPressed: onRemove),
     ]);
   }
+}
+
+/// A switch that sits at the start of its row (a [UiSwitch] alone centres itself in the width it gets).
+class FbSwitch extends StatelessWidget {
+  const FbSwitch({super.key, required this.value, required this.label, required this.onChanged});
+  final bool value;
+  final String label;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) =>
+      Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, child: UiSwitch(value: value, label: label, onChanged: onChanged));
 }

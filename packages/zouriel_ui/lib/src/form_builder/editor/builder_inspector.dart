@@ -8,7 +8,6 @@ import '../../button/segmented.dart';
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
-import '../../forms/choice/switch.dart';
 import '../../forms/text/inputs.dart';
 import '../../forms/text/number_input.dart';
 import '../../forms/text/select.dart';
@@ -651,7 +650,7 @@ class _FieldPanel extends StatelessWidget {
         return [num_('Number of stars', 'maxRating', p?.maxRating ?? 5, min: 2, max: 10)];
       case 'file':
         return [
-          UiSwitch(value: p?.multiple == true, label: 'Allow several files', onChanged: (v) => prop('multiple', v ? true : null)),
+          FbSwitch(value: p?.multiple == true, label: 'Allow several files', onChanged: (v) => prop('multiple', v ? true : null)),
           FbSetting(
             label: 'Accepted files',
             hint: 'Leave empty to accept any file. Add a “File types” check to enforce it.',
@@ -663,7 +662,7 @@ class _FieldPanel extends StatelessWidget {
       case 'radio':
         return [orient()];
       case 'checkboxes':
-        return [orient(), UiSwitch(value: p?.selectAll == true, label: 'Offer “Select all”', onChanged: (v) => prop('selectAll', v ? true : null))];
+        return [orient(), FbSwitch(value: p?.selectAll == true, label: 'Offer “Select all”', onChanged: (v) => prop('selectAll', v ? true : null))];
       case 'calculated':
         final format = p?.format ?? 'number';
         return [
@@ -682,7 +681,7 @@ class _FieldPanel extends StatelessWidget {
             text('Currency code', 'currency', p?.currency ?? 'USD', 'USD', map: (v) => v.toUpperCase())
           else if (format != 'text')
             FbPair(children: [text('Before it', 'prefix', p?.prefix, 'e.g. #'), text('After it', 'suffix', p?.suffix, 'e.g. years')]),
-          UiSwitch(value: p?.excludeFromData == true, label: 'Show it, but don’t save it', onChanged: (v) => prop('excludeFromData', v ? true : null)),
+          FbSwitch(value: p?.excludeFromData == true, label: 'Show it, but don’t save it', onChanged: (v) => prop('excludeFromData', v ? true : null)),
         ];
     }
     return const [];
@@ -880,7 +879,7 @@ class _GroupPanel extends StatelessWidget {
         child: _segmented<String>('Width', g.layout?.width ?? 'full', _widths, (v) => store.updateGroup(g.id, (x) => x.layout = v == 'full' ? null : UiFbLayout(width: v))),
       ),
       FbSection(title: 'Repeating', children: [
-        UiSwitch(
+        FbSwitch(
           value: rep != null,
           label: 'People can add this section more than once',
           onChanged: nested != null
@@ -927,7 +926,7 @@ class _GroupPanel extends StatelessWidget {
         ],
       ]),
       FbSection(title: 'Saved data', children: [
-        UiSwitch(
+        FbSwitch(
           value: (g.key ?? '').isNotEmpty,
           label: 'Keep its answers together',
           onChanged: rep != null
