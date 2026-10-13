@@ -10,3 +10,4 @@ export '../dialog/confirm.dart';
 export '../dialog/drawer.dart';
 export '../dialog/modal.dart';
 export '../dialog/route.dart';
+export '../dialog/bottom_sheet.dart';
