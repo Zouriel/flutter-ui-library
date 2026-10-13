@@ -6,21 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
+import '../choice/host.dart';
 import '../helpers.dart';
 
-class Host<T> extends StatefulWidget {
-  const Host({super.key, required this.initial, required this.builder});
-  final T initial;
-  final Widget Function(T value, ValueChanged<T> set) builder;
-  @override
-  State<Host<T>> createState() => _HostState<T>();
-}
-
-class _HostState<T> extends State<Host<T>> {
-  late T v = widget.initial;
-  @override
-  Widget build(BuildContext context) => widget.builder(v, (n) => setState(() => v = n));
-}
 
 const _align = [
   UiSegmentedOption(value: 'left', label: 'Left'),
