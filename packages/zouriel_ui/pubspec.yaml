@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   hugeicons: ^1.2.0
+  http: ^1.6.0
   intl: ^0.20.3
 
 dev_dependencies:

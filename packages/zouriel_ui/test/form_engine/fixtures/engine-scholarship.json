@@ -1,0 +1,1004 @@
+{
+  "kind": "engine",
+  "description": "The showcase sample form (form-builder.sample.ts) driven through create, edit and view.",
+  "definitionFile": "scholarship.definition.json",
+  "cases": [
+    {
+      "name": "filling in the scholarship form from scratch",
+      "today": "2026-10-13",
+      "steps": [
+        {
+          "expect": {
+            "path": [
+              0,
+              2
+            ],
+            "pageIndex": 0,
+            "step": 0,
+            "isLastPage": false,
+            "rows": {
+              "g_deps": 1
+            },
+            "visible": {
+              "p_household": false,
+              "f_inst": true,
+              "f_record": true,
+              "g_deps": false,
+              "f_dep_name@0": false
+            },
+            "required": {
+              "f_name": true,
+              "f_pref": false,
+              "f_docs": false,
+              "f_consent": true
+            },
+            "value": {
+              "f_age": null,
+              "f_total": null
+            },
+            "errorsShown": {
+              "f_name": false
+            },
+            "pageErrors": {
+              "0": [
+                {
+                  "field": "f_name",
+                  "label": "Full name",
+                  "message": "Full name is required."
+                },
+                {
+                  "field": "f_email",
+                  "label": "Email address",
+                  "message": "Email address is required."
+                },
+                {
+                  "field": "f_dob",
+                  "label": "Date of birth",
+                  "message": "Date of birth is required."
+                },
+                {
+                  "field": "f_status",
+                  "label": "Are you studying at the moment?",
+                  "message": "Answer “Are you studying at the moment?”"
+                },
+                {
+                  "field": "f_inst",
+                  "label": "School or university",
+                  "message": "School or university is required."
+                }
+              ],
+              "1": [],
+              "2": [
+                {
+                  "field": "f_prog",
+                  "label": "Programme",
+                  "message": "Programme is required."
+                },
+                {
+                  "field": "f_statement",
+                  "label": "Personal statement",
+                  "message": "Personal statement is required."
+                },
+                {
+                  "field": "f_consent",
+                  "label": "Declaration",
+                  "message": "You must confirm the declaration to apply."
+                }
+              ]
+            },
+            "data": {
+              "full_name": null,
+              "preferred_name": null,
+              "email": null,
+              "phone": null,
+              "date_of_birth": null,
+              "age": null,
+              "study_status": null,
+              "institution": null,
+              "student_record": null,
+              "has_dependants": false,
+              "programme": null,
+              "courses": null,
+              "statement": null,
+              "documents": null,
+              "consent": false
+            },
+            "dirty": false
+          }
+        },
+        {
+          "next": false
+        },
+        {
+          "expect": {
+            "pageIndex": 0,
+            "errorsShown": {
+              "f_name": true,
+              "f_prog": false
+            }
+          }
+        },
+        {
+          "set": "f_name",
+          "value": "Aminath Shareef"
+        },
+        {
+          "set": "f_email",
+          "value": "not-an-email"
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_name": [],
+              "f_email": [
+                "Enter an email address like name@example.com."
+              ]
+            },
+            "dirty": true
+          }
+        },
+        {
+          "set": "f_email",
+          "value": "aminath@example.mv"
+        },
+        {
+          "set": "f_phone",
+          "value": "12"
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_email": [],
+              "f_phone": [
+                "Enter a phone number, like +44 20 7946 0958."
+              ]
+            }
+          }
+        },
+        {
+          "set": "f_phone",
+          "value": "+960 777 4021"
+        },
+        {
+          "set": "f_dob",
+          "value": "2012-01-01"
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_phone": [],
+              "f_dob": [
+                "Applicants must be 16 or older."
+              ]
+            },
+            "value": {
+              "f_age": 14
+            },
+            "display": {
+              "f_age": "14 years"
+            }
+          }
+        },
+        {
+          "set": "f_dob",
+          "value": "2004-10-14"
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_dob": []
+            },
+            "value": {
+              "f_age": 21
+            },
+            "display": {
+              "f_dob": "Oct 14, 2004",
+              "f_age": "21 years"
+            }
+          }
+        },
+        {
+          "set": "f_status",
+          "value": "not_studying"
+        },
+        {
+          "expect": {
+            "visible": {
+              "f_inst": false,
+              "f_record": false
+            },
+            "errors": {
+              "f_inst": []
+            },
+            "pageErrors": {
+              "0": []
+            },
+            "display": {
+              "f_status": "Not studying"
+            }
+          }
+        },
+        {
+          "next": true
+        },
+        {
+          "expect": {
+            "pageIndex": 2,
+            "step": 1,
+            "isLastPage": true
+          }
+        },
+        {
+          "back": true
+        },
+        {
+          "set": "f_dep",
+          "value": true
+        },
+        {
+          "expect": {
+            "path": [
+              0,
+              1,
+              2
+            ],
+            "visible": {
+              "p_household": true,
+              "g_deps": true,
+              "f_dep_name@0": true,
+              "f_dep_other@0": false
+            },
+            "display": {
+              "f_dep": "Yes"
+            }
+          }
+        },
+        {
+          "next": true
+        },
+        {
+          "expect": {
+            "pageIndex": 1,
+            "step": 1,
+            "isLastPage": false,
+            "pageErrors": {
+              "1": [
+                {
+                  "field": "f_dep_name@0",
+                  "label": "Name (Dependant 1)",
+                  "message": "Name is required."
+                },
+                {
+                  "field": "f_dep_rel@0",
+                  "label": "Relationship (Dependant 1)",
+                  "message": "Relationship is required."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "next": false
+        },
+        {
+          "set": "f_dep_name@0",
+          "value": "Ibrahim"
+        },
+        {
+          "set": "f_dep_rel@0",
+          "value": "other"
+        },
+        {
+          "expect": {
+            "visible": {
+              "f_dep_other@0": true
+            },
+            "pageErrors": {
+              "1": [
+                {
+                  "field": "f_dep_other@0",
+                  "label": "How are you related? (Dependant 1)",
+                  "message": "Answer “How are you related?”"
+                }
+              ]
+            },
+            "dataPath": {
+              "f_dep_other@0": "dependants[0].relationship_other"
+            }
+          }
+        },
+        {
+          "set": "f_dep_rel@0",
+          "value": "sibling"
+        },
+        {
+          "addRow": "g_deps"
+        },
+        {
+          "expect": {
+            "rows": {
+              "g_deps": 2
+            },
+            "canRemoveRow": {
+              "g_deps": true
+            },
+            "pageErrors": {
+              "1": [
+                {
+                  "field": "f_dep_name@1",
+                  "label": "Name (Dependant 2)",
+                  "message": "Name is required."
+                },
+                {
+                  "field": "f_dep_rel@1",
+                  "label": "Relationship (Dependant 2)",
+                  "message": "Relationship is required."
+                }
+              ]
+            },
+            "dataPath": {
+              "f_dep_name@1": "dependants[1].name"
+            }
+          }
+        },
+        {
+          "removeRow": "g_deps",
+          "index": 1
+        },
+        {
+          "expect": {
+            "rows": {
+              "g_deps": 1
+            },
+            "canRemoveRow": {
+              "g_deps": false
+            },
+            "canAddRow": {
+              "g_deps": true
+            },
+            "pageErrors": {
+              "1": []
+            }
+          }
+        },
+        {
+          "set": "f_wages",
+          "value": "1240.5"
+        },
+        {
+          "set": "f_benefits",
+          "value": 180
+        },
+        {
+          "expect": {
+            "raw": {
+              "f_wages": 1240.5
+            },
+            "value": {
+              "f_total": 1420.5
+            },
+            "display": {
+              "f_total": "$1,420.50",
+              "f_wages": "$1,240.50",
+              "f_dep_rel@0": "Sibling"
+            }
+          }
+        },
+        {
+          "next": true
+        },
+        {
+          "set": "f_prog",
+          "value": "health"
+        },
+        {
+          "expect": {
+            "pageIndex": 2,
+            "required": {
+              "f_docs": true
+            },
+            "errors": {
+              "f_docs": [
+                "Supporting documents is required."
+              ]
+            },
+            "display": {
+              "f_prog": "Health and medicine"
+            }
+          }
+        },
+        {
+          "set": "f_statement",
+          "value": "Too short"
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_statement": [
+                "Personal statement must be at least 50 words."
+              ]
+            }
+          }
+        },
+        {
+          "set": "f_statement",
+          "value": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word"
+        },
+        {
+          "set": "f_docs",
+          "value": [
+            {
+              "name": "big.pdf",
+              "size": 6291456,
+              "type": "application/pdf"
+            }
+          ]
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_statement": [],
+              "f_docs": [
+                "Each file must be 5 MB or smaller."
+              ]
+            }
+          }
+        },
+        {
+          "set": "f_docs",
+          "value": [
+            {
+              "name": "transcript.pdf",
+              "size": 184320,
+              "type": "application/pdf"
+            }
+          ]
+        },
+        {
+          "set": "f_courses",
+          "value": [
+            {
+              "value": "health-1",
+              "label": "Anatomy"
+            },
+            "health-9"
+          ]
+        },
+        {
+          "expect": {
+            "errors": {
+              "f_docs": []
+            },
+            "display": {
+              "f_docs": "transcript.pdf",
+              "f_courses": "Anatomy, health-9"
+            },
+            "value": {
+              "f_courses": [
+                {
+                  "value": "health-1",
+                  "label": "Anatomy"
+                },
+                {
+                  "value": "health-9",
+                  "label": "health-9"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "submit": false
+        },
+        {
+          "expect": {
+            "pageIndex": 2,
+            "errorsShown": {
+              "f_consent": true,
+              "f_name": true
+            },
+            "errors": {
+              "f_consent": [
+                "You must confirm the declaration to apply."
+              ]
+            }
+          }
+        },
+        {
+          "set": "f_consent",
+          "value": true
+        },
+        {
+          "submit": true
+        },
+        {
+          "expect": {
+            "data": {
+              "full_name": "Aminath Shareef",
+              "preferred_name": null,
+              "email": "aminath@example.mv",
+              "phone": "+960 777 4021",
+              "date_of_birth": "2004-10-14",
+              "age": 21,
+              "study_status": "not_studying",
+              "has_dependants": true,
+              "dependants": [
+                {
+                  "name": "Ibrahim",
+                  "relationship": "sibling"
+                }
+              ],
+              "income": {
+                "wages": 1240.5,
+                "benefits": 180,
+                "total": 1420.5
+              },
+              "programme": "health",
+              "courses": [
+                {
+                  "value": "health-1",
+                  "label": "Anatomy"
+                },
+                {
+                  "value": "health-9",
+                  "label": "health-9"
+                }
+              ],
+              "statement": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
+              "documents": [
+                {
+                  "name": "transcript.pdf",
+                  "size": 184320,
+                  "type": "application/pdf"
+                }
+              ],
+              "consent": true
+            },
+            "dirty": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "editing saved answers: everything loads, nothing is lost, changes are listed",
+      "today": "2026-10-13",
+      "dataFile": "scholarship.answers.json",
+      "steps": [
+        {
+          "expect": {
+            "mode": "edit",
+            "path": [
+              0,
+              1,
+              2
+            ],
+            "rows": {
+              "g_deps": 1
+            },
+            "value": {
+              "f_age": 22,
+              "f_total": 1420,
+              "f_record": {
+                "value": "S240117",
+                "label": "Aminath Shareef"
+              }
+            },
+            "pageErrors": {
+              "0": [],
+              "1": [],
+              "2": []
+            },
+            "display": {
+              "f_record": "Aminath Shareef",
+              "f_courses": "Anatomy, Nursing practice I",
+              "f_dob": "Mar 19, 2004",
+              "f_total": "$1,420.00",
+              "f_wages": "$1,240.00",
+              "f_status": "Part time",
+              "f_dep": "Yes",
+              "f_dep_rel@0": "Sibling",
+              "f_age": "22 years",
+              "f_docs": "transcript-2026.pdf",
+              "f_consent": "Yes",
+              "f_pref": "",
+              "f_phone": "+960 777 4021"
+            },
+            "data": {
+              "full_name": "Aminath Shareef",
+              "email": "aminath.shareef@example.mv",
+              "phone": "+960 777 4021",
+              "date_of_birth": "2004-03-19",
+              "age": 22,
+              "study_status": "part_time",
+              "institution": "Maldives National University",
+              "student_record": {
+                "value": "S240117",
+                "label": "Aminath Shareef"
+              },
+              "has_dependants": true,
+              "dependants": [
+                {
+                  "name": "Ibrahim",
+                  "relationship": "sibling"
+                }
+              ],
+              "income": {
+                "wages": 1240,
+                "benefits": 180,
+                "total": 1420
+              },
+              "programme": "health",
+              "courses": [
+                {
+                  "value": "health-1",
+                  "label": "Anatomy"
+                },
+                {
+                  "value": "health-5",
+                  "label": "Nursing practice I"
+                }
+              ],
+              "statement": "I have worked part time at a community clinic in Hulhumalé for two years while studying, and I want to train as a nurse so I can do more for the patients I meet there. Many of them travel from the islands for care that should be closer to home. With this scholarship I would finish my degree without working nights, and then return to the clinic to help run its community health visits.",
+              "documents": [
+                {
+                  "name": "transcript-2026.pdf",
+                  "size": 184320,
+                  "type": "application/pdf"
+                }
+              ],
+              "consent": true,
+              "submitted_from": "kiosk-3",
+              "preferred_name": null
+            },
+            "dirty": false,
+            "changes": []
+          }
+        },
+        {
+          "set": "f_status",
+          "value": "not_studying"
+        },
+        {
+          "expect": {
+            "changes": [
+              {
+                "path": "study_status",
+                "label": "Are you studying at the moment?",
+                "from": "part_time",
+                "to": "not_studying"
+              },
+              {
+                "path": "institution",
+                "label": "School or university",
+                "from": "Maldives National University",
+                "to": null
+              },
+              {
+                "path": "student_record",
+                "label": "Your student record",
+                "from": {
+                  "value": "S240117",
+                  "label": "Aminath Shareef"
+                },
+                "to": null
+              }
+            ],
+            "dirty": true
+          }
+        },
+        {
+          "set": "f_status",
+          "value": "part_time"
+        },
+        {
+          "expect": {
+            "changes": [],
+            "dirty": false,
+            "data": {
+              "full_name": "Aminath Shareef",
+              "email": "aminath.shareef@example.mv",
+              "phone": "+960 777 4021",
+              "date_of_birth": "2004-03-19",
+              "age": 22,
+              "study_status": "part_time",
+              "institution": "Maldives National University",
+              "student_record": {
+                "value": "S240117",
+                "label": "Aminath Shareef"
+              },
+              "has_dependants": true,
+              "dependants": [
+                {
+                  "name": "Ibrahim",
+                  "relationship": "sibling"
+                }
+              ],
+              "income": {
+                "wages": 1240,
+                "benefits": 180,
+                "total": 1420
+              },
+              "programme": "health",
+              "courses": [
+                {
+                  "value": "health-1",
+                  "label": "Anatomy"
+                },
+                {
+                  "value": "health-5",
+                  "label": "Nursing practice I"
+                }
+              ],
+              "statement": "I have worked part time at a community clinic in Hulhumalé for two years while studying, and I want to train as a nurse so I can do more for the patients I meet there. Many of them travel from the islands for care that should be closer to home. With this scholarship I would finish my degree without working nights, and then return to the clinic to help run its community health visits.",
+              "documents": [
+                {
+                  "name": "transcript-2026.pdf",
+                  "size": 184320,
+                  "type": "application/pdf"
+                }
+              ],
+              "consent": true,
+              "submitted_from": "kiosk-3",
+              "preferred_name": null
+            }
+          }
+        },
+        {
+          "set": "f_dep",
+          "value": false
+        },
+        {
+          "expect": {
+            "path": [
+              0,
+              2
+            ],
+            "visible": {
+              "g_deps": false,
+              "f_dep_name@0": false
+            },
+            "changes": [
+              {
+                "path": "has_dependants",
+                "label": "Do you support any dependants?",
+                "from": true,
+                "to": false
+              },
+              {
+                "path": "dependants[0].name",
+                "label": "Name (Dependant 1)",
+                "from": "Ibrahim",
+                "to": null
+              },
+              {
+                "path": "dependants[0].relationship",
+                "label": "Relationship (Dependant 1)",
+                "from": "sibling",
+                "to": null
+              },
+              {
+                "path": "income.wages",
+                "label": "Wages",
+                "from": 1240,
+                "to": null
+              },
+              {
+                "path": "income.benefits",
+                "label": "Benefits",
+                "from": 180,
+                "to": null
+              }
+            ]
+          }
+        },
+        {
+          "expect": {
+            "dataLacks": [
+              "dependants",
+              "income"
+            ],
+            "dataHas": {
+              "has_dependants": false,
+              "submitted_from": "kiosk-3"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "an answer hidden since it was saved is kept until the person sees it",
+      "today": "2026-10-13",
+      "data": {
+        "full_name": "Aminath Shareef",
+        "email": "aminath.shareef@example.mv",
+        "phone": "+960 777 4021",
+        "date_of_birth": "2004-03-19",
+        "age": 22,
+        "study_status": "not_studying",
+        "institution": "Old University",
+        "student_record": {
+          "value": "S240117",
+          "label": "Aminath Shareef"
+        },
+        "has_dependants": true,
+        "dependants": [
+          {
+            "name": "Ibrahim",
+            "relationship": "sibling"
+          }
+        ],
+        "income": {
+          "wages": 1240,
+          "benefits": 180,
+          "total": 1420
+        },
+        "programme": "health",
+        "courses": [
+          {
+            "value": "health-1",
+            "label": "Anatomy"
+          },
+          {
+            "value": "health-5",
+            "label": "Nursing practice I"
+          }
+        ],
+        "statement": "I have worked part time at a community clinic in Hulhumalé for two years while studying, and I want to train as a nurse so I can do more for the patients I meet there. Many of them travel from the islands for care that should be closer to home. With this scholarship I would finish my degree without working nights, and then return to the clinic to help run its community health visits.",
+        "documents": [
+          {
+            "name": "transcript-2026.pdf",
+            "size": 184320,
+            "type": "application/pdf"
+          }
+        ],
+        "consent": true,
+        "submitted_from": "kiosk-3"
+      },
+      "steps": [
+        {
+          "expect": {
+            "visible": {
+              "f_inst": false
+            },
+            "dataHas": {
+              "institution": "Old University",
+              "student_record": {
+                "value": "S240117",
+                "label": "Aminath Shareef"
+              }
+            },
+            "changes": []
+          }
+        },
+        {
+          "set": "f_status",
+          "value": "full_time"
+        },
+        {
+          "expect": {
+            "visible": {
+              "f_inst": true
+            },
+            "dataHas": {
+              "institution": "Old University"
+            }
+          }
+        },
+        {
+          "set": "f_status",
+          "value": "not_studying"
+        },
+        {
+          "expect": {
+            "dataLacks": [
+              "institution",
+              "student_record"
+            ],
+            "changes": [
+              {
+                "path": "institution",
+                "label": "School or university",
+                "from": "Old University",
+                "to": null
+              },
+              {
+                "path": "student_record",
+                "label": "Your student record",
+                "from": {
+                  "value": "S240117",
+                  "label": "Aminath Shareef"
+                },
+                "to": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "view mode shows saved answers and never validates or changes",
+      "today": "2026-10-13",
+      "mode": "view",
+      "dataFile": "scholarship.answers.json",
+      "steps": [
+        {
+          "set": "f_name",
+          "value": "Someone else"
+        },
+        {
+          "expect": {
+            "mode": "view",
+            "raw": {
+              "f_name": "Aminath Shareef"
+            },
+            "disabled": {
+              "f_name": true,
+              "f_dep_name@0": true
+            },
+            "errors": {
+              "f_name": []
+            },
+            "errorsShown": {
+              "f_name": false
+            },
+            "canAddRow": {
+              "g_deps": false
+            },
+            "data": {
+              "full_name": "Aminath Shareef",
+              "email": "aminath.shareef@example.mv",
+              "phone": "+960 777 4021",
+              "date_of_birth": "2004-03-19",
+              "age": 22,
+              "study_status": "part_time",
+              "institution": "Maldives National University",
+              "student_record": {
+                "value": "S240117",
+                "label": "Aminath Shareef"
+              },
+              "has_dependants": true,
+              "dependants": [
+                {
+                  "name": "Ibrahim",
+                  "relationship": "sibling"
+                }
+              ],
+              "income": {
+                "wages": 1240,
+                "benefits": 180,
+                "total": 1420
+              },
+              "programme": "health",
+              "courses": [
+                {
+                  "value": "health-1",
+                  "label": "Anatomy"
+                },
+                {
+                  "value": "health-5",
+                  "label": "Nursing practice I"
+                }
+              ],
+              "statement": "I have worked part time at a community clinic in Hulhumalé for two years while studying, and I want to train as a nurse so I can do more for the patients I meet there. Many of them travel from the islands for care that should be closer to home. With this scholarship I would finish my degree without working nights, and then return to the clinic to help run its community health visits.",
+              "documents": [
+                {
+                  "name": "transcript-2026.pdf",
+                  "size": 184320,
+                  "type": "application/pdf"
+                }
+              ],
+              "consent": true,
+              "submitted_from": "kiosk-3",
+              "preferred_name": null
+            },
+            "pageErrors": {
+              "0": [],
+              "1": [],
+              "2": []
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

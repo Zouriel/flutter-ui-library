@@ -1,0 +1,594 @@
+{
+  "kind": "http",
+  "sourceUrl": [
+    {
+      "config": {
+        "type": "users",
+        "label": "Users",
+        "url": "https://dummy.test/users/search",
+        "paging": "offset",
+        "pageParam": "skip",
+        "pageSizeParam": "limit",
+        "pageSize": 2,
+        "itemsPath": "users",
+        "valueField": "id",
+        "labelField": "{firstName} {lastName}",
+        "descriptionField": "email",
+        "totalPath": "total"
+      },
+      "query": "ami",
+      "page": 3,
+      "pageSize": 2,
+      "params": {},
+      "expected": "https://dummy.test/users/search?q=ami&skip=4&limit=2"
+    },
+    {
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name"
+      },
+      "query": "",
+      "page": 1,
+      "pageSize": 20,
+      "params": {
+        "faculty": "health"
+      },
+      "expected": "https://api.test/courses?page=0&pageSize=20&faculty=health"
+    },
+    {
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 1,
+        "valueField": "id",
+        "labelField": "name",
+        "searchParam": "term",
+        "pageSizeParam": ""
+      },
+      "query": "Malé & co",
+      "page": 2,
+      "pageSize": 10,
+      "params": {
+        "ids": [
+          1,
+          "b"
+        ],
+        "empty": "",
+        "none": null,
+        "n": 0
+      },
+      "expected": "https://api.test/courses?term=Mal%C3%A9+%26+co&page=2&ids=1%2Cb&n=0"
+    },
+    {
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://API.test:443/x?page=9&keep=a+b&page=8#frag",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name"
+      },
+      "query": "q",
+      "page": 1,
+      "pageSize": 5,
+      "params": {},
+      "expected": "https://api.test/x?page=0&keep=a+b&q=q&pageSize=5#frag"
+    },
+    {
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name"
+      },
+      "query": "",
+      "page": 1,
+      "pageSize": 5,
+      "params": {},
+      "expected": "https://api.test/?page=0&pageSize=5"
+    },
+    {
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "http://api.test:8080/a b/",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name"
+      },
+      "query": "~*-._!",
+      "page": 1,
+      "pageSize": 5,
+      "params": {},
+      "expected": "http://api.test:8080/a%20b/?q=%7E*-._%21&page=0&pageSize=5"
+    }
+  ],
+  "readSourceReply": [
+    {
+      "name": "items, combined labels and totals",
+      "config": {
+        "type": "users",
+        "label": "Users",
+        "url": "https://dummy.test/users/search",
+        "paging": "offset",
+        "pageParam": "skip",
+        "pageSizeParam": "limit",
+        "pageSize": 2,
+        "itemsPath": "users",
+        "valueField": "id",
+        "labelField": "{firstName} {lastName}",
+        "descriptionField": "email",
+        "totalPath": "total"
+      },
+      "reply": {
+        "users": [
+          {
+            "id": 1,
+            "firstName": "Aminath",
+            "lastName": "Shareef",
+            "email": "a@x.mv"
+          },
+          {
+            "id": 2,
+            "firstName": "Ali",
+            "lastName": "Zahir",
+            "email": "z@x.mv"
+          }
+        ],
+        "total": 30
+      },
+      "pageSize": 2,
+      "expected": {
+        "items": [
+          {
+            "value": 1,
+            "label": "Aminath Shareef",
+            "description": "a@x.mv"
+          },
+          {
+            "value": 2,
+            "label": "Ali Zahir",
+            "description": "z@x.mv"
+          }
+        ],
+        "total": 30,
+        "hasMore": null
+      }
+    },
+    {
+      "name": "a short page is the last",
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "meta.name",
+        "descriptionField": "{code} ({meta.kind})"
+      },
+      "reply": [
+        {
+          "id": "a1",
+          "meta": {
+            "name": "Anatomy",
+            "kind": "core"
+          },
+          "code": "AN1"
+        },
+        {
+          "id": "",
+          "meta": {}
+        },
+        {
+          "id": true,
+          "meta": {
+            "name": null
+          }
+        }
+      ],
+      "pageSize": 20,
+      "expected": {
+        "items": [
+          {
+            "value": "a1",
+            "label": "Anatomy",
+            "description": "AN1 (core)"
+          },
+          {
+            "value": "true",
+            "label": "true",
+            "description": "()"
+          }
+        ],
+        "total": null,
+        "hasMore": false
+      }
+    },
+    {
+      "name": "hasMore and total read from the reply",
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name",
+        "itemsPath": "data.items",
+        "totalPath": "data.count",
+        "hasMorePath": "data.more"
+      },
+      "reply": {
+        "data": {
+          "items": [
+            {
+              "id": 5,
+              "name": "Five"
+            }
+          ],
+          "count": "12",
+          "more": 1
+        }
+      },
+      "pageSize": 1,
+      "expected": {
+        "items": [
+          {
+            "value": 5,
+            "label": "Five"
+          }
+        ],
+        "total": 12,
+        "hasMore": true
+      }
+    },
+    {
+      "name": "a total that is not a number is left out",
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name",
+        "totalPath": "nope",
+        "hasMorePath": "more"
+      },
+      "reply": [
+        {
+          "id": 1,
+          "name": "One"
+        }
+      ],
+      "pageSize": 1,
+      "expected": {
+        "items": [
+          {
+            "value": 1,
+            "label": "One"
+          }
+        ],
+        "total": null,
+        "hasMore": null
+      }
+    },
+    {
+      "name": "no list where the setup says",
+      "config": {
+        "type": "users",
+        "label": "Users",
+        "url": "https://dummy.test/users/search",
+        "paging": "offset",
+        "pageParam": "skip",
+        "pageSizeParam": "limit",
+        "pageSize": 2,
+        "itemsPath": "data",
+        "valueField": "id",
+        "labelField": "{firstName} {lastName}",
+        "descriptionField": "email",
+        "totalPath": "total"
+      },
+      "reply": {
+        "users": [
+          {
+            "id": 1,
+            "firstName": "Aminath",
+            "lastName": "Shareef",
+            "email": "a@x.mv"
+          },
+          {
+            "id": 2,
+            "firstName": "Ali",
+            "lastName": "Zahir",
+            "email": "z@x.mv"
+          }
+        ],
+        "total": 30
+      },
+      "pageSize": 2,
+      "error": "No list at “data” in the reply (it has: users, total)."
+    },
+    {
+      "name": "the reply is not a list",
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name"
+      },
+      "reply": {
+        "results": [],
+        "count": 0
+      },
+      "pageSize": 2,
+      "error": "The reply isn’t a list; the list may be under one of: results, count."
+    },
+    {
+      "name": "the reply is not a list or an object",
+      "config": {
+        "type": "c",
+        "label": "C",
+        "url": "https://api.test/courses",
+        "firstPage": 0,
+        "valueField": "id",
+        "labelField": "name"
+      },
+      "reply": "oops",
+      "pageSize": 2,
+      "error": "The reply isn’t a list."
+    },
+    {
+      "name": "no value field in the items",
+      "config": {
+        "type": "users",
+        "label": "Users",
+        "url": "https://dummy.test/users/search",
+        "paging": "offset",
+        "pageParam": "skip",
+        "pageSizeParam": "limit",
+        "pageSize": 2,
+        "itemsPath": "users",
+        "valueField": "uuid",
+        "labelField": "{firstName} {lastName}",
+        "descriptionField": "email",
+        "totalPath": "total"
+      },
+      "reply": {
+        "users": [
+          {
+            "id": 1,
+            "firstName": "Aminath",
+            "lastName": "Shareef",
+            "email": "a@x.mv"
+          },
+          {
+            "id": 2,
+            "firstName": "Ali",
+            "lastName": "Zahir",
+            "email": "z@x.mv"
+          }
+        ],
+        "total": 30
+      },
+      "pageSize": 2,
+      "error": "No “uuid” field in the items."
+    }
+  ],
+  "fillPattern": [
+    {
+      "obj": {
+        "a": {
+          "b": "deep"
+        }
+      },
+      "pattern": "a.b",
+      "expected": "deep"
+    },
+    {
+      "obj": {
+        "a": {
+          "b": "deep"
+        }
+      },
+      "pattern": " a.b ",
+      "expected": "deep"
+    },
+    {
+      "obj": {
+        "first": "Ana",
+        "last": null,
+        "tags": [
+          "x",
+          "y"
+        ],
+        "n": 2.5
+      },
+      "pattern": "{ first }  {last} {tags} #{n}",
+      "expected": "Ana [\"x\",\"y\"] #2.5"
+    },
+    {
+      "obj": {
+        "a": 1
+      },
+      "pattern": "",
+      "expected": ""
+    },
+    {
+      "obj": {
+        "a": {
+          "b": 1
+        }
+      },
+      "pattern": "a",
+      "expected": "{\"b\":1}"
+    },
+    {
+      "obj": [
+        "zero",
+        "one"
+      ],
+      "pattern": "1",
+      "expected": "one"
+    }
+  ],
+  "originAllowed": [
+    {
+      "url": "https://dummy.test/x",
+      "allowed": [
+        "https://dummy.test"
+      ],
+      "expected": true
+    },
+    {
+      "url": "https://dummy.test/x",
+      "allowed": [
+        "https://dummy.test/"
+      ],
+      "expected": true
+    },
+    {
+      "url": "https://evil.test/x",
+      "allowed": [
+        "https://dummy.test"
+      ],
+      "expected": false
+    },
+    {
+      "url": "https://dummy.test:8443/x",
+      "allowed": [
+        "https://dummy.test"
+      ],
+      "expected": false
+    },
+    {
+      "url": "ftp://dummy.test/x",
+      "allowed": [
+        "ftp://dummy.test"
+      ],
+      "expected": false
+    },
+    {
+      "url": "https://DUMMY.test:443/x",
+      "allowed": [
+        "https://dummy.test"
+      ],
+      "expected": true
+    }
+  ],
+  "originOf": [
+    {
+      "url": "https://a.test:443/x?y",
+      "expected": "https://a.test"
+    },
+    {
+      "url": "http://a.test:8080",
+      "expected": "http://a.test:8080"
+    },
+    {
+      "url": "mailto:x@y.z",
+      "expected": ""
+    }
+  ],
+  "search": {
+    "config": {
+      "type": "users",
+      "label": "Users",
+      "url": "https://dummy.test/users/search",
+      "paging": "offset",
+      "pageParam": "skip",
+      "pageSizeParam": "limit",
+      "pageSize": 2,
+      "itemsPath": "users",
+      "valueField": "id",
+      "labelField": "{firstName} {lastName}",
+      "descriptionField": "email",
+      "totalPath": "total"
+    },
+    "allowed": [
+      "https://dummy.test"
+    ],
+    "reply": {
+      "users": [
+        {
+          "id": 1,
+          "firstName": "Aminath",
+          "lastName": "Shareef",
+          "email": "a@x.mv"
+        },
+        {
+          "id": 2,
+          "firstName": "Ali",
+          "lastName": "Zahir",
+          "email": "z@x.mv"
+        }
+      ],
+      "total": 30
+    },
+    "expectedUrls": [
+      "https://dummy.test/users/search?skip=0&limit=2"
+    ],
+    "expectedLabels": [
+      "Aminath Shareef",
+      "Ali Zahir"
+    ],
+    "blockedUrl": "https://evil.test/users",
+    "blockedError": "This app doesn’t allow lists from https://evil.test."
+  },
+  "globalSettings": {
+    "settings": {
+      "version": 1,
+      "sources": [
+        {
+          "type": "users",
+          "label": "Users",
+          "url": "https://dummy.test/users/search",
+          "paging": "offset",
+          "pageParam": "skip",
+          "pageSizeParam": "limit",
+          "pageSize": 2,
+          "itemsPath": "users",
+          "valueField": "id",
+          "labelField": "{firstName} {lastName}",
+          "descriptionField": "email",
+          "totalPath": "total"
+        },
+        {
+          "type": "",
+          "label": "Users",
+          "url": "",
+          "paging": "offset",
+          "pageParam": "skip",
+          "pageSizeParam": "limit",
+          "pageSize": 2,
+          "itemsPath": "users",
+          "valueField": "id",
+          "labelField": "{firstName} {lastName}",
+          "descriptionField": "email",
+          "totalPath": "total"
+        },
+        {
+          "type": "c",
+          "label": "C",
+          "url": "",
+          "firstPage": 0,
+          "valueField": "id",
+          "labelField": "name"
+        }
+      ],
+      "defaults": {
+        "labelPlacement": "inside"
+      }
+    },
+    "expectedTypes": [
+      "users"
+    ]
+  }
+}

@@ -1,0 +1,3023 @@
+{
+  "kind": "definition",
+  "lint": [
+    {
+      "name": "a clean form has no problems",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "keys, labels, options and calculations",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "dup",
+                "label": "One"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "dup",
+                "label": "Two"
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "text",
+                "key": "9bad",
+                "label": ""
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "text",
+                "key": "",
+                "label": "No key"
+              },
+              {
+                "kind": "field",
+                "id": "e",
+                "type": "select",
+                "key": "e",
+                "label": "Pick",
+                "options": [
+                  {
+                    "id": "o1",
+                    "value": "x",
+                    "label": "X",
+                    "archived": true
+                  },
+                  {
+                    "id": "o2",
+                    "value": "x",
+                    "label": "X2",
+                    "archived": true
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "s",
+                "type": "select",
+                "key": "s",
+                "label": "Sourced",
+                "source": {
+                  "type": "people"
+                }
+              },
+              {
+                "kind": "field",
+                "id": "k",
+                "type": "calculated",
+                "key": "k",
+                "label": "Total",
+                "calc": {
+                  "op": "sum",
+                  "args": []
+                }
+              },
+              {
+                "kind": "field",
+                "id": "h",
+                "type": "hidden",
+                "key": "h",
+                "label": ""
+              },
+              {
+                "kind": "group",
+                "id": "r",
+                "title": "Rows",
+                "repeat": {
+                  "min": 3,
+                  "max": 2
+                },
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "in",
+                    "type": "text",
+                    "key": "dup",
+                    "label": "Inner"
+                  }
+                ]
+              },
+              {
+                "kind": "group",
+                "id": "g2",
+                "key": "dup",
+                "elements": []
+              },
+              {
+                "kind": "field",
+                "id": "z",
+                "type": "text",
+                "key": "dup",
+                "label": "Archived",
+                "archived": true
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "severity": "error",
+          "targetId": "b",
+          "message": "“Two” and “One” both store their answer as “dup”."
+        },
+        {
+          "severity": "error",
+          "targetId": "c",
+          "message": "The data key “9bad” may only use letters, numbers and _ and must start with a letter."
+        },
+        {
+          "severity": "warning",
+          "targetId": "c",
+          "message": "A short text field has no label."
+        },
+        {
+          "severity": "error",
+          "targetId": "d",
+          "message": "“No key” needs a data key."
+        },
+        {
+          "severity": "error",
+          "targetId": "e",
+          "message": "“Pick” has no options to choose from."
+        },
+        {
+          "severity": "error",
+          "targetId": "e",
+          "message": "“Pick” has two options stored as “x”."
+        },
+        {
+          "severity": "warning",
+          "targetId": "k",
+          "message": "“Total” doesn’t use any answers yet."
+        },
+        {
+          "severity": "error",
+          "targetId": "r",
+          "message": "The repeating section “Rows” needs a data key to store its entries under."
+        },
+        {
+          "severity": "error",
+          "targetId": "r",
+          "message": "“Rows” allows at most 2 entries but needs at least 3."
+        },
+        {
+          "severity": "error",
+          "targetId": "in",
+          "message": "“Inner” and “One” both store their answer as “dup”."
+        },
+        {
+          "severity": "error",
+          "targetId": "g2",
+          "message": "“Section” and “One” both store their answer as “dup”."
+        }
+      ]
+    },
+    {
+      "name": "rules on deleted or archived questions, jumps backwards, loops",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "gone",
+                    "op": "notEmpty"
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "b",
+                "label": "B",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "old",
+                    "op": "notEmpty"
+                  }
+                },
+                "validators": [
+                  {
+                    "id": "v",
+                    "type": "minLength",
+                    "when": {
+                      "ref": "nope",
+                      "op": "empty"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "old",
+                "type": "text",
+                "key": "old",
+                "label": "Old",
+                "archived": true
+              },
+              {
+                "kind": "field",
+                "id": "x",
+                "type": "text",
+                "key": "x",
+                "label": "X",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "y",
+                    "op": "visible"
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "y",
+                "type": "text",
+                "key": "y",
+                "label": "Y",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "x",
+                    "op": "visible"
+                  }
+                }
+              }
+            ],
+            "jumps": [
+              {
+                "id": "j1",
+                "when": {
+                  "ref": "a",
+                  "op": "empty"
+                },
+                "to": "p9"
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "elements": [],
+            "title": "Second",
+            "jumps": [
+              {
+                "id": "j2",
+                "when": {
+                  "ref": "a",
+                  "op": "empty"
+                },
+                "to": "p1"
+              },
+              {
+                "id": "j3",
+                "when": {
+                  "ref": "a",
+                  "op": "empty"
+                },
+                "to": "end"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "severity": "error",
+          "targetId": "a",
+          "message": "A rule on “A” refers to a question that was deleted."
+        },
+        {
+          "severity": "warning",
+          "targetId": "b",
+          "message": "A rule on “B” uses “Old”, which is archived."
+        },
+        {
+          "severity": "error",
+          "targetId": "b",
+          "message": "A rule on “B” refers to a question that was deleted."
+        },
+        {
+          "severity": "error",
+          "targetId": "p1",
+          "message": "A jump after “Page 1” goes to a page that was deleted."
+        },
+        {
+          "severity": "error",
+          "targetId": "p2",
+          "message": "A jump after “Second” goes back to “Page 1”. Jumps can only go forward."
+        },
+        {
+          "severity": "error",
+          "targetId": "x",
+          "message": "These depend on each other in a loop: “X” → “Y” → “X”."
+        }
+      ]
+    },
+    {
+      "name": "the sample form is clean",
+      "definitionFile": "scholarship.definition.json",
+      "expected": []
+    }
+  ],
+  "cycles": [
+    {
+      "name": "\"show when the section is complete\" is not a loop",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "b",
+                "label": "B",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "g",
+                    "op": "complete"
+                  }
+                }
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "c",
+                    "label": "C"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "two fields shown by each other",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "b",
+                    "op": "visible"
+                  }
+                }
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "b",
+                "label": "B",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "a",
+                    "op": "visible"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        [
+          "a",
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "calculations that read each other",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "calculated",
+                "key": "a",
+                "label": "A",
+                "calc": {
+                  "op": "sum",
+                  "args": [
+                    {
+                      "ref": "b"
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "calculated",
+                "key": "b",
+                "label": "B",
+                "calc": {
+                  "op": "sum",
+                  "args": [
+                    {
+                      "calc": {
+                        "op": "sum",
+                        "args": [
+                          {
+                            "ref": "a"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        [
+          "a",
+          "b"
+        ]
+      ]
+    },
+    {
+      "name": "a field required by its own answer",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "required": {
+                  "when": {
+                    "ref": "a",
+                    "op": "notEmpty"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "a field shown by its own answer",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "a",
+                    "op": "visible"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        [
+          "a"
+        ]
+      ]
+    }
+  ],
+  "references": {
+    "definition": {
+      "schemaVersion": 1,
+      "id": "f",
+      "title": "T",
+      "pages": [
+        {
+          "id": "p1",
+          "elements": [
+            {
+              "kind": "field",
+              "id": "a",
+              "type": "select",
+              "key": "a",
+              "label": "A",
+              "options": [
+                {
+                  "id": "o0",
+                  "value": "x",
+                  "label": "X"
+                }
+              ]
+            },
+            {
+              "kind": "field",
+              "id": "b",
+              "type": "text",
+              "key": "b",
+              "label": "B",
+              "visibility": {
+                "action": "show",
+                "when": {
+                  "match": "all",
+                  "conditions": [
+                    {
+                      "ref": "a",
+                      "op": "notEmpty"
+                    }
+                  ]
+                }
+              },
+              "required": {
+                "when": {
+                  "ref": "a",
+                  "op": "eq",
+                  "value": {
+                    "const": "x"
+                  }
+                }
+              },
+              "setValue": [
+                {
+                  "id": "s1",
+                  "when": {
+                    "ref": "c",
+                    "op": "notEmpty"
+                  },
+                  "value": {
+                    "ref": "a"
+                  }
+                }
+              ],
+              "validators": [
+                {
+                  "id": "v1",
+                  "type": "equalsField",
+                  "params": {
+                    "field": "a"
+                  }
+                },
+                {
+                  "id": "v2",
+                  "type": "minLength",
+                  "params": {
+                    "min": 2
+                  },
+                  "when": {
+                    "ref": "a",
+                    "op": "empty"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "field",
+              "id": "c",
+              "type": "calculated",
+              "key": "c",
+              "label": "C",
+              "calc": {
+                "op": "sum",
+                "args": [
+                  {
+                    "ref": "a"
+                  },
+                  {
+                    "calc": {
+                      "op": "max",
+                      "args": [
+                        {
+                          "ref": "a"
+                        },
+                        {
+                          "const": 1
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "kind": "field",
+              "id": "d",
+              "type": "select",
+              "key": "d",
+              "label": "D",
+              "source": {
+                "type": "cities",
+                "params": {
+                  "country": {
+                    "ref": "a"
+                  },
+                  "size": {
+                    "const": "big"
+                  }
+                }
+              },
+              "disabled": {
+                "when": {
+                  "ref": "a",
+                  "op": "empty"
+                }
+              }
+            },
+            {
+              "kind": "group",
+              "id": "g",
+              "elements": [
+                {
+                  "kind": "field",
+                  "id": "e",
+                  "type": "text",
+                  "key": "e",
+                  "label": "E",
+                  "visibility": {
+                    "action": "show",
+                    "when": {
+                      "ref": "a",
+                      "op": "notEmpty"
+                    }
+                  }
+                },
+                {
+                  "kind": "field",
+                  "id": "f2",
+                  "type": "text",
+                  "key": "f2",
+                  "label": "F2",
+                  "visibility": {
+                    "action": "show",
+                    "when": {
+                      "ref": "e",
+                      "op": "notEmpty"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "field",
+              "id": "h",
+              "type": "text",
+              "key": "h",
+              "label": "H",
+              "visibility": {
+                "action": "show",
+                "when": {
+                  "ref": "e",
+                  "op": "notEmpty"
+                }
+              }
+            }
+          ],
+          "visibility": {
+            "action": "show",
+            "when": {
+              "ref": "a",
+              "op": "notEmpty"
+            }
+          },
+          "jumps": [
+            {
+              "id": "j",
+              "when": {
+                "ref": "a",
+                "op": "eq",
+                "value": {
+                  "const": "x"
+                }
+              },
+              "to": "p2"
+            }
+          ]
+        },
+        {
+          "id": "p2",
+          "elements": [
+            {
+              "kind": "field",
+              "id": "end",
+              "type": "text",
+              "key": "end",
+              "label": "END",
+              "visibility": {
+                "action": "show",
+                "when": {
+                  "ref": "d",
+                  "op": "empty"
+                }
+              }
+            }
+          ],
+          "jumps": [
+            {
+              "id": "j2",
+              "when": {
+                "ref": "a",
+                "op": "empty"
+              },
+              "to": "end"
+            }
+          ]
+        }
+      ]
+    },
+    "referencesTo": {
+      "a": [
+        {
+          "ownerId": "p1",
+          "kind": "visibility"
+        },
+        {
+          "ownerId": "p1",
+          "kind": "jump"
+        },
+        {
+          "ownerId": "p2",
+          "kind": "jump"
+        },
+        {
+          "ownerId": "b",
+          "kind": "visibility"
+        },
+        {
+          "ownerId": "b",
+          "kind": "required"
+        },
+        {
+          "ownerId": "b",
+          "kind": "setValue"
+        },
+        {
+          "ownerId": "b",
+          "kind": "validator"
+        },
+        {
+          "ownerId": "c",
+          "kind": "calc"
+        },
+        {
+          "ownerId": "d",
+          "kind": "disabled"
+        },
+        {
+          "ownerId": "d",
+          "kind": "source"
+        },
+        {
+          "ownerId": "e",
+          "kind": "visibility"
+        }
+      ],
+      "p2": [
+        {
+          "ownerId": "p1",
+          "kind": "jump"
+        }
+      ],
+      "e": [
+        {
+          "ownerId": "f2",
+          "kind": "visibility"
+        },
+        {
+          "ownerId": "h",
+          "kind": "visibility"
+        }
+      ]
+    },
+    "externalReferences": {
+      "g": [
+        {
+          "ownerId": "h",
+          "kind": "visibility"
+        }
+      ]
+    },
+    "subtreeIds": {
+      "g": [
+        "g",
+        "e",
+        "f2"
+      ],
+      "p2": [
+        "p2",
+        "end"
+      ],
+      "nope": []
+    }
+  },
+  "removeReferences": [
+    {
+      "name": "everything that mentioned a deleted question goes",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "select",
+                "key": "a",
+                "label": "A",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "x",
+                    "label": "X"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "b",
+                "label": "B",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "match": "all",
+                    "conditions": [
+                      {
+                        "ref": "a",
+                        "op": "notEmpty"
+                      }
+                    ]
+                  }
+                },
+                "required": {
+                  "when": {
+                    "ref": "a",
+                    "op": "eq",
+                    "value": {
+                      "const": "x"
+                    }
+                  }
+                },
+                "setValue": [
+                  {
+                    "id": "s1",
+                    "when": {
+                      "ref": "c",
+                      "op": "notEmpty"
+                    },
+                    "value": {
+                      "ref": "a"
+                    }
+                  }
+                ],
+                "validators": [
+                  {
+                    "id": "v1",
+                    "type": "equalsField",
+                    "params": {
+                      "field": "a"
+                    }
+                  },
+                  {
+                    "id": "v2",
+                    "type": "minLength",
+                    "params": {
+                      "min": 2
+                    },
+                    "when": {
+                      "ref": "a",
+                      "op": "empty"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "calculated",
+                "key": "c",
+                "label": "C",
+                "calc": {
+                  "op": "sum",
+                  "args": [
+                    {
+                      "ref": "a"
+                    },
+                    {
+                      "calc": {
+                        "op": "max",
+                        "args": [
+                          {
+                            "ref": "a"
+                          },
+                          {
+                            "const": 1
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "select",
+                "key": "d",
+                "label": "D",
+                "source": {
+                  "type": "cities",
+                  "params": {
+                    "country": {
+                      "ref": "a"
+                    },
+                    "size": {
+                      "const": "big"
+                    }
+                  }
+                },
+                "disabled": {
+                  "when": {
+                    "ref": "a",
+                    "op": "empty"
+                  }
+                }
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "e",
+                    "type": "text",
+                    "key": "e",
+                    "label": "E",
+                    "visibility": {
+                      "action": "show",
+                      "when": {
+                        "ref": "a",
+                        "op": "notEmpty"
+                      }
+                    }
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "type": "text",
+                    "key": "f2",
+                    "label": "F2",
+                    "visibility": {
+                      "action": "show",
+                      "when": {
+                        "ref": "e",
+                        "op": "notEmpty"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "h",
+                "type": "text",
+                "key": "h",
+                "label": "H",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "e",
+                    "op": "notEmpty"
+                  }
+                }
+              }
+            ],
+            "visibility": {
+              "action": "show",
+              "when": {
+                "ref": "a",
+                "op": "notEmpty"
+              }
+            },
+            "jumps": [
+              {
+                "id": "j",
+                "when": {
+                  "ref": "a",
+                  "op": "eq",
+                  "value": {
+                    "const": "x"
+                  }
+                },
+                "to": "p2"
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "end",
+                "type": "text",
+                "key": "end",
+                "label": "END",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "d",
+                    "op": "empty"
+                  }
+                }
+              }
+            ],
+            "jumps": [
+              {
+                "id": "j2",
+                "when": {
+                  "ref": "a",
+                  "op": "empty"
+                },
+                "to": "end"
+              }
+            ]
+          }
+        ]
+      },
+      "ids": [
+        "a"
+      ],
+      "expected": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "select",
+                "key": "a",
+                "label": "A",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "x",
+                    "label": "X"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "b",
+                "label": "B",
+                "setValue": [],
+                "validators": [
+                  {
+                    "id": "v2",
+                    "type": "minLength",
+                    "params": {
+                      "min": 2
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "calculated",
+                "key": "c",
+                "label": "C",
+                "calc": {
+                  "op": "sum",
+                  "args": [
+                    {
+                      "calc": {
+                        "op": "max",
+                        "args": [
+                          {
+                            "const": 1
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "select",
+                "key": "d",
+                "label": "D",
+                "source": {
+                  "type": "cities",
+                  "params": {
+                    "size": {
+                      "const": "big"
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "e",
+                    "type": "text",
+                    "key": "e",
+                    "label": "E"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "type": "text",
+                    "key": "f2",
+                    "label": "F2",
+                    "visibility": {
+                      "action": "show",
+                      "when": {
+                        "ref": "e",
+                        "op": "notEmpty"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "h",
+                "type": "text",
+                "key": "h",
+                "label": "H",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "e",
+                    "op": "notEmpty"
+                  }
+                }
+              }
+            ],
+            "jumps": []
+          },
+          {
+            "id": "p2",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "end",
+                "type": "text",
+                "key": "end",
+                "label": "END",
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "d",
+                    "op": "empty"
+                  }
+                }
+              }
+            ],
+            "jumps": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "a field without a source filter still gets an empty params map",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "x",
+                "type": "select",
+                "key": "x",
+                "label": "X",
+                "source": {
+                  "type": "people"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "ids": [
+        "zzz"
+      ],
+      "expected": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "x",
+                "type": "select",
+                "key": "x",
+                "label": "X",
+                "source": {
+                  "type": "people",
+                  "params": {}
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "migrate": [
+    {
+      "raw": {
+        "id": "x",
+        "pages": [
+          {
+            "id": "p",
+            "title": "P"
+          }
+        ],
+        "custom": {
+          "keep": true
+        }
+      },
+      "expected": {
+        "schemaVersion": 1,
+        "id": "x",
+        "title": "Untitled form",
+        "settings": {},
+        "pages": [
+          {
+            "id": "p",
+            "title": "P",
+            "elements": []
+          }
+        ],
+        "custom": {
+          "keep": true
+        }
+      }
+    },
+    {
+      "raw": {
+        "schemaVersion": 0,
+        "id": "y",
+        "title": "Old",
+        "settings": {
+          "validateOn": "submit"
+        },
+        "revision": 2,
+        "pages": [
+          {
+            "id": "p",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "schemaVersion": 1,
+        "id": "y",
+        "title": "Old",
+        "settings": {
+          "validateOn": "submit"
+        },
+        "revision": 2,
+        "pages": [
+          {
+            "id": "p",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "a",
+                "label": "A"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "migrateGenerated": [
+    {
+      "raw": null,
+      "pages": 1
+    },
+    {
+      "raw": {
+        "title": "Empty",
+        "pages": []
+      },
+      "pages": 1
+    },
+    {
+      "raw": {
+        "pages": [
+          {
+            "elements": []
+          }
+        ]
+      },
+      "pages": 1
+    }
+  ],
+  "roundtrip": [
+    {
+      "name": "the sample form",
+      "definitionFile": "scholarship.definition.json"
+    },
+    {
+      "name": "every shape the schema has",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "all",
+        "title": "All",
+        "description": "d",
+        "revision": 9,
+        "futureKey": [
+          1,
+          {
+            "a": null
+          }
+        ],
+        "settings": {
+          "labelPlacement": "inside",
+          "errorPlacement": "inside",
+          "validateOn": "submit",
+          "clearHidden": "never",
+          "errorSummary": false,
+          "requiredMarker": "optional",
+          "submitLabel": "Send",
+          "nextLabel": "On",
+          "backLabel": "Off",
+          "showProgress": false,
+          "theme": "dark"
+        },
+        "pages": [
+          {
+            "id": "p1",
+            "title": "One",
+            "description": "first",
+            "visibility": {
+              "action": "hide",
+              "when": {
+                "match": "none",
+                "conditions": []
+              }
+            },
+            "jumps": [
+              {
+                "id": "j",
+                "when": {
+                  "ref": "a",
+                  "op": "between",
+                  "value": {
+                    "today": -3
+                  },
+                  "value2": {
+                    "const": null
+                  }
+                },
+                "to": "end"
+              }
+            ],
+            "elements": [
+              {
+                "kind": "static",
+                "id": "s1",
+                "type": "heading",
+                "text": "Hi",
+                "layout": {
+                  "width": "half"
+                },
+                "archived": false
+              },
+              {
+                "kind": "static",
+                "id": "s2",
+                "type": "divider"
+              },
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "date",
+                "key": "a",
+                "keyHistory": [
+                  "b"
+                ],
+                "label": "A",
+                "help": "h",
+                "placeholder": "p",
+                "defaultValue": null,
+                "readOnly": false,
+                "required": false,
+                "requiredMessage": "m",
+                "disabled": {
+                  "when": {
+                    "ref": "x",
+                    "op": "isTrue"
+                  }
+                },
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "x",
+                    "op": "anyOf",
+                    "value": {
+                      "const": [
+                        "1",
+                        2
+                      ]
+                    }
+                  }
+                },
+                "options": [
+                  {
+                    "id": "o",
+                    "value": "v",
+                    "label": "L",
+                    "archived": true,
+                    "color": "red"
+                  }
+                ],
+                "source": {
+                  "type": "people",
+                  "params": {
+                    "q": {
+                      "ref": "x"
+                    },
+                    "n": {
+                      "const": 5
+                    }
+                  }
+                },
+                "props": {
+                  "min": 0,
+                  "max": 10.5,
+                  "step": 0.5,
+                  "decimals": 1,
+                  "currency": "EUR",
+                  "prefix": "<",
+                  "suffix": ">",
+                  "rows": 3,
+                  "maxRows": 9,
+                  "maxRating": 7,
+                  "orientation": "horizontal",
+                  "selectAll": true,
+                  "multiple": true,
+                  "accept": ".pdf",
+                  "autocomplete": "bday",
+                  "caption": "c",
+                  "format": "text",
+                  "excludeFromData": true,
+                  "mask": "9999"
+                },
+                "validators": [
+                  {
+                    "id": "v",
+                    "type": "minDate",
+                    "params": {
+                      "date": "today"
+                    },
+                    "message": "msg",
+                    "when": {
+                      "ref": "x",
+                      "op": "notEmpty"
+                    },
+                    "severity": "warning"
+                  }
+                ],
+                "calc": {
+                  "op": "concat",
+                  "args": [
+                    {
+                      "ref": "x"
+                    },
+                    {
+                      "const": "y"
+                    },
+                    {
+                      "calc": {
+                        "op": "count",
+                        "args": []
+                      },
+                      "note": 1
+                    }
+                  ],
+                  "decimals": 0
+                },
+                "setValue": [
+                  {
+                    "id": "s",
+                    "when": {
+                      "ref": "x",
+                      "op": "isTrue"
+                    },
+                    "value": {
+                      "today": 0
+                    }
+                  }
+                ],
+                "layout": {
+                  "width": "third",
+                  "labelPlacement": "left",
+                  "errorPlacement": "below"
+                },
+                "archived": false,
+                "x-extra": "kept"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "G",
+                "description": "D",
+                "key": "g",
+                "keyHistory": [],
+                "columns": 3,
+                "repeat": {
+                  "min": 0,
+                  "max": 4,
+                  "addLabel": "Add",
+                  "itemLabel": "Item {n}"
+                },
+                "visibility": {
+                  "action": "show",
+                  "when": {
+                    "ref": "a",
+                    "op": "empty",
+                    "value": {}
+                  }
+                },
+                "disabled": true,
+                "layout": {
+                  "width": "full"
+                },
+                "elements": [],
+                "archived": true
+              },
+              {
+                "kind": "field",
+                "id": "x",
+                "type": "toggle",
+                "key": "x",
+                "label": "X",
+                "defaultValue": {
+                  "nested": [
+                    true
+                  ]
+                },
+                "required": {
+                  "when": {
+                    "match": "any",
+                    "conditions": [
+                      {
+                        "ref": "a",
+                        "op": "empty"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "uniqueKey": [
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "first_name",
+      "id": null,
+      "expected": "first_name_2"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "first_name",
+      "id": "a",
+      "expected": "first_name"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "age_2",
+      "id": null,
+      "expected": "age_2"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "Age",
+      "id": null,
+      "expected": "Age"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "inside",
+      "id": null,
+      "expected": "inside_2"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "x",
+                "label": "A"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "text",
+                "key": "x_2",
+                "label": "B"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "g",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "x",
+                    "label": "C"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "x_2",
+      "id": null,
+      "expected": "x_3"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "g",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "x",
+                    "label": "C"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "x",
+      "id": "c",
+      "expected": "x"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "g",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "x",
+                    "label": "C"
+                  },
+                  {
+                    "kind": "field",
+                    "id": "d",
+                    "type": "text",
+                    "key": "y",
+                    "label": "D"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "x",
+      "id": "d",
+      "expected": "x_2"
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "base": "1 weird key!",
+      "id": null,
+      "expected": "f_1_weird_key"
+    }
+  ],
+  "renameKey": [
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        [
+          "a",
+          "given_name"
+        ],
+        [
+          "a",
+          "forename"
+        ]
+      ],
+      "id": "a",
+      "expected": {
+        "key": "forename",
+        "keyHistory": [
+          "first_name",
+          "given_name"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        [
+          "a",
+          "given_name"
+        ],
+        [
+          "a",
+          "first_name"
+        ]
+      ],
+      "id": "a",
+      "expected": {
+        "key": "first_name",
+        "keyHistory": [
+          "given_name"
+        ]
+      }
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        [
+          "a",
+          "first_name"
+        ]
+      ],
+      "id": "a",
+      "expected": {
+        "key": "first_name"
+      }
+    },
+    {
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "steps": [
+        [
+          "g",
+          "sec"
+        ]
+      ],
+      "id": "g",
+      "expected": {
+        "key": "sec"
+      }
+    }
+  ],
+  "move": [
+    {
+      "name": "into a group",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "id": "a",
+      "target": {
+        "containerId": "g",
+        "index": 0
+      },
+      "expected": {
+        "p1": [
+          "b",
+          "g"
+        ],
+        "g": [
+          "a",
+          "c"
+        ]
+      }
+    },
+    {
+      "name": "later in the same list, adjusting for its own removal",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "id": "a",
+      "target": {
+        "containerId": "p1",
+        "index": 2
+      },
+      "expected": {
+        "p1": [
+          "b",
+          "a",
+          "g"
+        ],
+        "g": [
+          "c"
+        ]
+      }
+    },
+    {
+      "name": "to the end",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "id": "a",
+      "target": {
+        "containerId": "p1",
+        "index": 99
+      },
+      "expected": {
+        "p1": [
+          "b",
+          "g",
+          "a"
+        ],
+        "g": [
+          "c"
+        ]
+      }
+    },
+    {
+      "name": "onto itself changes nothing",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "id": "a",
+      "target": {
+        "containerId": "p1",
+        "index": 1
+      },
+      "unchanged": true
+    },
+    {
+      "name": "a group never goes into itself",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "title": "Section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "text",
+                    "key": "inside",
+                    "label": "Inside"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "id": "g",
+      "target": {
+        "containerId": "g",
+        "index": 0
+      },
+      "unchanged": true
+    },
+    {
+      "name": "a repeat never goes into a repeat",
+      "definition": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "r1",
+                "key": "r1",
+                "repeat": {},
+                "elements": []
+              },
+              {
+                "kind": "group",
+                "id": "r2",
+                "key": "r2",
+                "repeat": {},
+                "elements": []
+              }
+            ]
+          }
+        ]
+      },
+      "id": "r2",
+      "target": {
+        "containerId": "r1",
+        "index": 0
+      },
+      "unchanged": true
+    }
+  ],
+  "diff": [
+    {
+      "before": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "first_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "number",
+                "key": "age",
+                "label": "Age"
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "select",
+                "key": "c",
+                "label": "Colour",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "r",
+                    "label": "Red"
+                  },
+                  {
+                    "id": "o1",
+                    "value": "g",
+                    "label": "Green"
+                  },
+                  {
+                    "id": "o2",
+                    "value": "b",
+                    "label": "Blue"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "text",
+                "key": "d",
+                "label": "Done",
+                "archived": true
+              },
+              {
+                "kind": "field",
+                "id": "e",
+                "type": "text",
+                "key": "e",
+                "label": "Email"
+              },
+              {
+                "kind": "field",
+                "id": "s",
+                "type": "select",
+                "key": "s",
+                "label": "Student",
+                "options": []
+              },
+              {
+                "kind": "field",
+                "id": "t",
+                "type": "select",
+                "key": "t",
+                "label": "Teacher",
+                "source": {
+                  "type": "people"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "schemaVersion": 1,
+        "id": "f",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "given_name",
+                "label": "First name"
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "radio",
+                "key": "c",
+                "label": "Colour",
+                "options": [
+                  {
+                    "id": "o0",
+                    "value": "r",
+                    "label": "Red"
+                  },
+                  {
+                    "id": "o1",
+                    "value": "g",
+                    "label": "Green",
+                    "archived": true
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "text",
+                "key": "d",
+                "label": "Done"
+              },
+              {
+                "kind": "field",
+                "id": "e",
+                "type": "number",
+                "key": "e",
+                "label": "Email",
+                "required": true
+              },
+              {
+                "kind": "field",
+                "id": "s",
+                "type": "select",
+                "key": "s",
+                "label": "Student",
+                "options": [],
+                "source": {
+                  "type": "people"
+                }
+              },
+              {
+                "kind": "field",
+                "id": "t",
+                "type": "select",
+                "key": "t",
+                "label": "Teacher",
+                "source": {
+                  "type": "people",
+                  "params": {
+                    "x": {
+                      "const": 1
+                    }
+                  }
+                }
+              },
+              {
+                "kind": "static",
+                "id": "n",
+                "type": "paragraph",
+                "text": "New words"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "added": [
+          "n"
+        ],
+        "removed": [
+          "b"
+        ],
+        "archived": [],
+        "restored": [
+          "d"
+        ],
+        "renamedKeys": [
+          {
+            "id": "a",
+            "from": "first_name",
+            "to": "given_name"
+          }
+        ],
+        "typeChanged": [
+          {
+            "id": "c",
+            "from": "select",
+            "to": "radio",
+            "compatible": true
+          },
+          {
+            "id": "e",
+            "from": "text",
+            "to": "number",
+            "compatible": false
+          }
+        ],
+        "optionsRemoved": [
+          {
+            "id": "c",
+            "values": [
+              "g",
+              "b"
+            ]
+          }
+        ],
+        "rulesChanged": [
+          "e"
+        ],
+        "summary": [
+          "Renamed the data key of “First name” from “first_name” to “given_name”",
+          "Changed “Colour” from Dropdown to Single choice",
+          "Removed 2 options from “Colour”",
+          "Restored “Done”",
+          "Changed “Email” from Short text to Number. Older answers may not show correctly",
+          "Changed the rules of “Email”",
+          "“Student” now takes its options from a data source",
+          "Changed the data source settings of “Teacher”",
+          "Added “New words”",
+          "Deleted “Age”"
+        ]
+      }
+    }
+  ],
+  "operatorsFor": {
+    "text": [
+      "eq",
+      "neq",
+      "contains",
+      "notContains",
+      "startsWith",
+      "endsWith",
+      "notEmpty",
+      "empty"
+    ],
+    "repeat": [
+      "rowsGte",
+      "rowsLte",
+      "complete",
+      "incomplete",
+      "visible",
+      "hidden"
+    ],
+    "boolean": [
+      "isTrue",
+      "isFalse"
+    ]
+  },
+  "validatorsFor": [
+    {
+      "type": "text",
+      "expected": [
+        "email",
+        "url",
+        "phone",
+        "minLength",
+        "maxLength",
+        "minWords",
+        "maxWords",
+        "pattern",
+        "equalsField"
+      ]
+    },
+    {
+      "type": "email",
+      "expected": [
+        "email",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "equalsField"
+      ]
+    },
+    {
+      "type": "number",
+      "expected": [
+        "min",
+        "max",
+        "integer",
+        "decimalPlaces",
+        "equalsField",
+        "compareField"
+      ]
+    },
+    {
+      "type": "calculated",
+      "format": "text",
+      "expected": [
+        "minLength",
+        "maxLength",
+        "pattern",
+        "equalsField"
+      ]
+    },
+    {
+      "type": "calculated",
+      "expected": [
+        "min",
+        "max",
+        "integer",
+        "decimalPlaces",
+        "equalsField",
+        "compareField"
+      ]
+    },
+    {
+      "type": "checkboxes",
+      "expected": [
+        "minSelected",
+        "maxSelected"
+      ]
+    },
+    {
+      "type": "file",
+      "expected": [
+        "fileType",
+        "maxFileSize",
+        "maxFiles"
+      ]
+    },
+    {
+      "type": "hidden",
+      "expected": []
+    }
+  ],
+  "createDefinition": {
+    "title": "New",
+    "defaults": {
+      "labelPlacement": "inside",
+      "validateOn": "submit"
+    },
+    "expectedSettings": {
+      "labelPlacement": "inside",
+      "validateOn": "submit"
+    }
+  },
+  "typesCompatible": [
+    [
+      "text",
+      "email",
+      true
+    ],
+    [
+      "select",
+      "radio",
+      true
+    ],
+    [
+      "select",
+      "multiselect",
+      false
+    ],
+    [
+      "number",
+      "rating",
+      true
+    ],
+    [
+      "date",
+      "time",
+      false
+    ]
+  ]
+}
