@@ -1,0 +1,5 @@
+import 'package:zouriel_ui/zouriel_ui.dart';
+
+void main() {
+  runApp(UiApp(home: UiFileViewer(src: 'assets/report.pdf')));
+}
