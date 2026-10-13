@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
+import 'navdata_sections.dart';
 
 class DataPage extends StatefulWidget {
   const DataPage({super.key});
@@ -21,7 +22,7 @@ class _DataPageState extends State<DataPage> {
     return DocPage(
       eyebrow: 'Components',
       title: 'Data display',
-      lead: 'Badges, chips, avatars, cards and dividers.',
+      lead: 'Badges, chips, avatars, cards, dividers, tables, lists, trees, timelines and more.',
       children: [
         DocSection(
           name: 'Badge',
@@ -139,6 +140,7 @@ class _DataPageState extends State<DataPage> {
           ]),
           code: "UiDivider()\nUiDivider(label: 'or')\nUiDivider(axis: Axis.vertical)",
         ),
+        ...navdataDataSections(),
       ],
     );
   }

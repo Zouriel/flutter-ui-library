@@ -1,0 +1,205 @@
+import 'dart:math' as math;
+
+import 'package:flutter/widgets.dart';
+
+import '../theme/theme.dart';
+
+/// One step of a [UiStepper].
+@immutable
+class UiStep {
+  const UiStep({required this.label, this.description});
+  final String label;
+  final String? description;
+}
+
+/// `ui-stepper`: progress through ordered steps. Steps before [active] are done (a filled marker with
+/// a check that draws itself in), [active] is current, the rest are to do.
+///
+/// Horizontal when the labels fit, otherwise vertical (markers in a column joined by a line), so no
+/// label is ever cut or hidden on a phone. Each step is read as "Step 2 of 4, Shipping, current".
+class UiStepper extends StatelessWidget {
+  const UiStepper({super.key, required this.steps, this.active = 0, this.axis});
+
+  final List<UiStep> steps;
+  final int active;
+
+  /// Force a direction; by default horizontal when it fits.
+  final Axis? axis;
+
+  static const double _marker = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final label = context.uiText.body.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, height: 1.35);
+    final desc = context.uiText.caption.copyWith(height: 1.35);
+    final scale = MediaQuery.textScalerOf(context);
+
+    double textWidth(UiStep s) {
+      double w(String v, TextStyle st) {
+        final p = TextPainter(text: TextSpan(text: v, style: st), textDirection: TextDirection.ltr, textScaler: scale, maxLines: 1)..layout();
+        final r = p.width;
+        p.dispose();
+        return r;
+      }
+
+      return math.max(w(s.label, label), s.description == null ? 0 : w(s.description!, desc));
+    }
+
+    return LayoutBuilder(builder: (context, box) {
+      var horizontal = axis != Axis.vertical;
+      if (axis == null && box.maxWidth.isFinite) {
+        var need = 0.0;
+        for (var i = 0; i < steps.length; i++) {
+          need += _marker + t.space2 + textWidth(steps[i]);
+          if (i < steps.length - 1) need += t.space2 + t.space4 + t.space2; // gap + min bar + margins
+        }
+        horizontal = need <= box.maxWidth;
+      }
+
+      Widget text(int i) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(steps[i].label, style: label.copyWith(color: t.text)),
+              if (steps[i].description != null) Text(steps[i].description!, style: desc),
+            ],
+          );
+
+      Widget step(int i, Widget child) {
+        final state = i < active ? 'completed' : i == active ? 'current' : 'not started';
+        return Semantics(
+          container: true,
+          label: 'Step ${i + 1} of ${steps.length}, ${steps[i].label}${steps[i].description == null ? '' : ', ${steps[i].description}'}, $state',
+          selected: i == active,
+          child: ExcludeSemantics(child: child),
+        );
+      }
+
+      if (horizontal) {
+        return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          for (var i = 0; i < steps.length; i++)
+            if (i < steps.length - 1)
+              Expanded(
+                child: step(i, Row(children: [
+                  _Marker(index: i, active: active),
+                  SizedBox(width: t.space2),
+                  text(i),
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      constraints: BoxConstraints(minWidth: t.space4),
+                      margin: EdgeInsets.symmetric(horizontal: t.space2),
+                      color: i < active ? t.primary : t.border,
+                    ),
+                  ),
+                ])),
+              )
+            else
+              step(i, Row(mainAxisSize: MainAxisSize.min, children: [_Marker(index: i, active: active), SizedBox(width: t.space2), text(i)])),
+        ]);
+      }
+
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (var i = 0; i < steps.length; i++)
+          step(
+            i,
+            IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Column(children: [
+                  _Marker(index: i, active: active),
+                  if (i < steps.length - 1)
+                    Expanded(
+                      child: Container(
+                        width: 1,
+                        constraints: BoxConstraints(minHeight: t.space4),
+                        margin: EdgeInsets.symmetric(vertical: t.space1),
+                        color: i < active ? t.primary : t.border,
+                      ),
+                    ),
+                ]),
+                SizedBox(width: t.space3),
+                Expanded(
+                  child: Padding(
+                    // Centre the first line on the marker; leave room before the next step.
+                    padding: EdgeInsets.only(top: (_marker - label.fontSize! * 1.35) / 2, bottom: i < steps.length - 1 ? t.space3 : 0),
+                    child: text(i),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+      ]);
+    });
+  }
+}
+
+class _Marker extends StatelessWidget {
+  const _Marker({required this.index, required this.active});
+  final int index;
+  final int active;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final done = index < active;
+    final current = index == active;
+    return AnimatedContainer(
+      duration: context.uiAnimate ? t.motionBase : Duration.zero,
+      curve: t.easeStandard,
+      width: UiStepper._marker,
+      height: UiStepper._marker,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done ? t.primary : t.surface,
+        border: Border.all(color: done ? t.primary : current ? t.primary : t.border),
+      ),
+      alignment: Alignment.center,
+      child: done
+          ? TweenAnimationBuilder<double>(
+              tween: Tween(begin: context.uiAnimate ? 0 : 1, end: 1),
+              duration: context.uiAnimate ? t.motionSlow : Duration.zero,
+              curve: t.easeDecelerate,
+              builder: (context, p, _) => CustomPaint(size: const Size.square(14), painter: _CheckPainter(t.primaryContrast, p)),
+            )
+          : Text(
+              '${index + 1}',
+              style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w600, height: 1, color: current ? t.primary : t.textMuted),
+            ),
+    );
+  }
+}
+
+/// The web stepper's check (`M5 12.5l4.5 4.5L19 7` on a 24 grid), drawn up to [progress].
+class _CheckPainter extends CustomPainter {
+  _CheckPainter(this.color, this.progress);
+  final Color color;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 24);
+    final full = Path()
+      ..moveTo(5, 12.5)
+      ..lineTo(9.5, 17)
+      ..lineTo(19, 7);
+    final partial = Path();
+    var remaining = 0.0;
+    for (final m in full.computeMetrics()) {
+      remaining = m.length * progress;
+      partial.addPath(m.extractPath(0, remaining), Offset.zero);
+    }
+    canvas.drawPath(
+      partial,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CheckPainter old) => old.color != color || old.progress != progress;
+}
