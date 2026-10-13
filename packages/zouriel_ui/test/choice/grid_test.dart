@@ -81,9 +81,9 @@ void main() {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, SizedBox(width: 360, child: UiChoiceGrid<String>(label: 'Effects', options: _presets, value: 'spin', onChanged: (_) {})));
       expect(tester.getSemantics(find.bySemanticsLabel('Effects')).getSemanticsData().role, SemanticsRole.radioGroup);
-      expect(tester.getSemantics(find.text('Spin')), containsSemantics(isChecked: true, isInMutuallyExclusiveGroup: true));
-      expect(tester.getSemantics(find.text('Fade')), containsSemantics(isChecked: false, isInMutuallyExclusiveGroup: true));
-      expect(tester.getSemantics(find.text('Loops')), containsSemantics(isHeader: true));
+      expect(tester.getSemantics(find.text('Spin')), isSemantics(isChecked: true, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(find.text('Fade')), isSemantics(isChecked: false, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(find.text('Loops')), isSemantics(isHeader: true));
       handle.dispose();
     });
   });
@@ -93,7 +93,7 @@ void main() {
       final handle = tester.ensureSemantics();
       UiAnchor? last;
       await pumpUi(tester, Host<UiAnchor?>(initial: null, builder: (v, set) => UiAnchorPicker(value: v, onChanged: (n) { last = n; set(n); })));
-      expect(tester.getSemantics(find.bySemanticsLabel('Centre')), containsSemantics(isChecked: true, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Centre')), isSemantics(isChecked: true, isInMutuallyExclusiveGroup: true));
       await tester.tap(find.bySemanticsLabel('Top right'));
       await tester.pump();
       expect(last, const UiAnchor(1, 0));
@@ -106,7 +106,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
       await tester.pump();
       expect(last, const UiAnchor(0.5, 0.5));
-      expect(tester.getSemantics(find.bySemanticsLabel('Centre')), containsSemantics(isFocused: true, isChecked: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Centre')), isSemantics(isFocused: true, isChecked: true));
       handle.dispose();
     });
 
@@ -114,11 +114,11 @@ void main() {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, UiAnchorPicker(value: const UiAnchor(0.3, 0.7), onChanged: (_) {}));
       for (final n in ['Top left', 'Centre', 'Bottom right']) {
-        expect(tester.getSemantics(find.bySemanticsLabel(n)), containsSemantics(isChecked: false));
+        expect(tester.getSemantics(find.bySemanticsLabel(n)), isSemantics(isChecked: false));
       }
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
-      expect(tester.getSemantics(find.bySemanticsLabel('Centre')), containsSemantics(isFocused: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Centre')), isSemantics(isFocused: true));
       handle.dispose();
     });
 

@@ -42,9 +42,9 @@ void main() {
         UiCheckbox(value: false, label: 'Off', onChanged: (_) {}),
         UiCheckbox(value: null, label: 'Some', onChanged: (_) {}),
       ]));
-      expect(tester.getSemantics(find.text('On')), containsSemantics(label: 'On', hasCheckedState: true, isChecked: true, isFocusable: true, hasTapAction: true));
-      expect(tester.getSemantics(find.text('Off')), containsSemantics(label: 'Off', hasCheckedState: true, isChecked: false));
-      expect(tester.getSemantics(find.text('Some')), containsSemantics(label: 'Some', isCheckStateMixed: true));
+      expect(tester.getSemantics(find.text('On')), isSemantics(label: 'On', hasCheckedState: true, isChecked: true, isFocusable: true, hasTapAction: true));
+      expect(tester.getSemantics(find.text('Off')), isSemantics(label: 'Off', hasCheckedState: true, isChecked: false));
+      expect(tester.getSemantics(find.text('Some')), isSemantics(label: 'Some', isCheckStateMixed: true));
       handle.dispose();
     });
 
@@ -83,11 +83,11 @@ void main() {
         options: opts, value: v, selectAll: true, label: 'Channels', onChanged: (n) { last = n; set(n); })));
       await tester.tap(find.text('Email'));
       await tester.pumpAndSettle();
-      expect(tester.getSemantics(find.text('Select all')), containsSemantics(isCheckStateMixed: true));
+      expect(tester.getSemantics(find.text('Select all')), isSemantics(isCheckStateMixed: true));
       await tester.tap(find.text('Select all'));
       await tester.pumpAndSettle();
       expect(last, unorderedEquals(['fax', 'email', 'sms']));
-      expect(tester.getSemantics(find.text('Select all')), containsSemantics(isChecked: true));
+      expect(tester.getSemantics(find.text('Select all')), isSemantics(isChecked: true));
       await tester.tap(find.text('Select all'));
       await tester.pumpAndSettle();
       expect(last, ['fax'], reason: 'the disabled option keeps its state');
@@ -142,9 +142,9 @@ void main() {
       await pumpUi(tester, UiRadioGroup<String>(options: opts, value: 'l', label: 'Size', onChanged: (_) {}));
       expect(find.bySemanticsLabel('Size'), findsOneWidget);
       expect(tester.getSemantics(find.bySemanticsLabel('Size')).getSemanticsData().role, SemanticsRole.radioGroup);
-      expect(tester.getSemantics(find.text('Large')), containsSemantics(isInMutuallyExclusiveGroup: true, isChecked: true));
-      expect(tester.getSemantics(find.text('Small')), containsSemantics(isInMutuallyExclusiveGroup: true, isChecked: false));
-      expect(tester.getSemantics(find.text('Medium')), containsSemantics(isEnabled: false));
+      expect(tester.getSemantics(find.text('Large')), isSemantics(isInMutuallyExclusiveGroup: true, isChecked: true));
+      expect(tester.getSemantics(find.text('Small')), isSemantics(isInMutuallyExclusiveGroup: true, isChecked: false));
+      expect(tester.getSemantics(find.text('Medium')), isSemantics(isEnabled: false));
       handle.dispose();
     });
   });
@@ -157,7 +157,7 @@ void main() {
       await tester.tap(find.text('Wi-Fi'));
       await tester.pumpAndSettle();
       expect(last, isTrue);
-      expect(tester.getSemantics(find.text('Wi-Fi')), containsSemantics(hasToggledState: true, isToggled: true, label: 'Wi-Fi'));
+      expect(tester.getSemantics(find.text('Wi-Fi')), isSemantics(hasToggledState: true, isToggled: true, label: 'Wi-Fi'));
       handle.dispose();
     });
 
@@ -214,7 +214,7 @@ void main() {
       var v = 10.0;
       await pumpUi(tester, SizedBox(width: 300, child: UiSlider(value: v, label: 'Volume', onChanged: (n) => v = n)));
       final node = tester.getSemantics(find.bySemanticsLabel('Volume'));
-      expect(node, containsSemantics(isSlider: true, value: '10', increasedValue: '11', decreasedValue: '9', hasIncreaseAction: true, hasDecreaseAction: true));
+      expect(node, isSemantics(isSlider: true, value: '10', increasedValue: '11', decreasedValue: '9', hasIncreaseAction: true, hasDecreaseAction: true));
       tester.semantics.performAction(find.semantics.byLabel('Volume'), SemanticsAction.increase);
       expect(v, 11);
       handle.dispose();
@@ -251,7 +251,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.home);
       await tester.pump();
       expect(last, 1);
-      expect(tester.getSemantics(find.bySemanticsLabel('1 of 5')), containsSemantics(isChecked: true, isInMutuallyExclusiveGroup: true, isFocused: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('1 of 5')), isSemantics(isChecked: true, isInMutuallyExclusiveGroup: true, isFocused: true));
       handle.dispose();
     });
 

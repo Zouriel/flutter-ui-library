@@ -54,11 +54,11 @@ void main() {
       final handle = tester.ensureSemantics();
       String? last;
       await pumpUi(tester, Host<String>(initial: '#1b3d59', builder: (v, set) => UiColorPicker(value: v, onChanged: (n) { last = n; set(n); })));
-      expect(tester.getSemantics(find.bySemanticsLabel('#1b3d59')), containsSemantics(isSelected: true, isButton: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('#1b3d59')), isSemantics(isSelected: true, isButton: true));
       await tester.tap(find.bySemanticsLabel('#a83a3f'));
       await tester.pump();
       expect(last, '#a83a3f');
-      expect(tester.getSemantics(find.bySemanticsLabel('#a83a3f')), containsSemantics(isSelected: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('#a83a3f')), isSemantics(isSelected: true));
       expect(tester.widget<EditableText>(_hexField()).controller.text, '#a83a3f', reason: 'the field follows outside changes');
       handle.dispose();
     });

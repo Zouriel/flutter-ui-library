@@ -57,8 +57,8 @@ void main() {
         onChanged: (_) {},
       ));
       expect(tester.getSemantics(find.bySemanticsLabel('Alignment')).getSemanticsData().role, SemanticsRole.radioGroup);
-      expect(tester.getSemantics(find.bySemanticsLabel('Align left')), containsSemantics(isChecked: true, isInMutuallyExclusiveGroup: true));
-      expect(tester.getSemantics(find.bySemanticsLabel('Align right')), containsSemantics(isChecked: false, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Align left')), isSemantics(isChecked: true, isInMutuallyExclusiveGroup: true));
+      expect(tester.getSemantics(find.bySemanticsLabel('Align right')), isSemantics(isChecked: false, isInMutuallyExclusiveGroup: true));
       expect(find.text('L'), findsOneWidget);
       handle.dispose();
     });
@@ -79,7 +79,7 @@ void main() {
       await tester.tap(find.text('Bold'));
       await tester.pumpAndSettle();
       expect(last, isTrue);
-      expect(tester.getSemantics(find.text('Bold')), containsSemantics(isButton: true, hasToggledState: true, isToggled: true));
+      expect(tester.getSemantics(find.text('Bold')), isSemantics(isButton: true, hasToggledState: true, isToggled: true));
       await tester.tap(find.text('Bold'));
       expect(last, isFalse);
       handle.dispose();
@@ -212,10 +212,10 @@ void main() {
     testWidgets('semantics: expanded trigger, a menu of menu items', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, UiDropdownButton<String>(label: 'Actions', items: _items, onSelected: (_) {}));
-      expect(tester.getSemantics(find.text('Actions')), containsSemantics(isButton: true, hasExpandedState: true, isExpanded: false));
+      expect(tester.getSemantics(find.text('Actions')), isSemantics(isButton: true, hasExpandedState: true, isExpanded: false));
       await tester.tap(find.text('Actions'));
       await tester.pumpAndSettle();
-      expect(tester.getSemantics(find.text('Actions')), containsSemantics(hasExpandedState: true, isExpanded: true));
+      expect(tester.getSemantics(find.text('Actions')), isSemantics(hasExpandedState: true, isExpanded: true));
       expect(tester.getSemantics(find.text('Share')).getSemanticsData().role, SemanticsRole.menuItem);
       handle.dispose();
     });
