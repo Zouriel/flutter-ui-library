@@ -356,7 +356,12 @@ class UiFormBuilderState extends State<UiFormBuilder> {
       child: Focus(
         focusNode: _root,
         onKeyEvent: _onKey,
-        child: LayoutBuilder(builder: (context, box) {
+        // Keys reach the builder once someone has touched it, so undo/redo work straight away.
+        child: Listener(
+          onPointerDown: (_) {
+            if (!_root.hasFocus) _root.requestFocus();
+          },
+          child: LayoutBuilder(builder: (context, box) {
           final w = box.maxWidth;
           _layout = w >= 1100 ? UiFormBuilderLayout.wide : (w >= 720 ? UiFormBuilderLayout.medium : UiFormBuilderLayout.narrow);
           final narrow = _layout == UiFormBuilderLayout.narrow;
@@ -422,6 +427,7 @@ class UiFormBuilderState extends State<UiFormBuilder> {
             ]),
           );
         }),
+        ),
       ),
     );
   }
