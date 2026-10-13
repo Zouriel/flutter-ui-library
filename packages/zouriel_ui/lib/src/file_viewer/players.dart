@@ -57,7 +57,7 @@ mixin _PlayerHost<W extends StatefulWidget> on State<W> {
   }
 
   bool get hasError => initError != null || player.value.hasError;
-  String get errorText => player.value.errorDescription ?? 'This file could not be played.';
+  String get errorText => 'This file could not be played.';
 
   Duration get buffered {
     final ranges = player.value.buffered;
@@ -202,7 +202,7 @@ class _Controls extends StatelessWidget {
     final p = host.player;
     final v = p.value;
     final ready = v.isInitialized && !host.hasError;
-    final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
+    final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
     String rate(double r) => '${r == r.roundToDouble() ? r.toInt() : r}×';
     return Container(
       padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),
@@ -381,7 +381,7 @@ class _UiAudioPlayerState extends State<UiAudioPlayer> with _PlayerHost<UiAudioP
     final t = context.ui;
     final v = player.value;
     final ready = v.isInitialized && !hasError;
-    final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
+    final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),
       decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(context.uiTheme.radius())),

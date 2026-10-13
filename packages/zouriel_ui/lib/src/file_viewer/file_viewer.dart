@@ -255,13 +255,16 @@ class _Crumb extends StatelessWidget {
         height: t.sizeSm,
         constraints: const BoxConstraints(maxWidth: 200),
         padding: EdgeInsets.symmetric(horizontal: t.space1),
-        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: s.hovered || s.pressed ? t.elevatedHover : null,
           borderRadius: BorderRadius.circular(t.radiusXs),
           boxShadow: uiFocusRing(t, show: s.focused),
         ),
-        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.caption.copyWith(color: current || s.hovered ? t.text : t.textMuted)),
+        // Hugs the name (an aligned Container would stretch to its max width).
+        child: Center(
+          widthFactor: 1,
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.caption.copyWith(color: current || s.hovered ? t.text : t.textMuted)),
+        ),
       ),
     );
   }

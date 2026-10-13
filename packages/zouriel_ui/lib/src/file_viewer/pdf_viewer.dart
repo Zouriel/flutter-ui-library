@@ -20,11 +20,14 @@ import 'sources.dart';
 /// Rendered by PDFium through `pdfrx`, drawn sharp at the current zoom. If the file can't be
 /// loaded the error shows in place of the page.
 class UiPdfViewer extends StatefulWidget {
-  const UiPdfViewer({super.key, this.src, this.data, this.initialPage = 1, this.onPageChanged, this.maxHeight})
-    : assert(src != null || data != null, 'Give the viewer a src or data.');
+  const UiPdfViewer({super.key, this.src, this.data, this.documentRef, this.initialPage = 1, this.onPageChanged, this.maxHeight})
+    : assert(src != null || data != null || documentRef != null, 'Give the viewer a src, data or documentRef.');
 
   final String? src;
   final Uint8List? data;
+
+  /// Any other pdfrx source (a custom loader, a password-protected file); overrides [src] and [data].
+  final PdfDocumentRef? documentRef;
   final int initialPage;
   final ValueChanged<int>? onPageChanged;
 
@@ -49,7 +52,7 @@ class UiPdfViewer extends StatefulWidget {
 class _UiPdfViewerState extends State<UiPdfViewer> {
   late int _page = widget.initialPage;
   final TransformationController _view = TransformationController();
-  late PdfDocumentRef _ref = UiPdfViewer.refFor(src: widget.src, data: widget.data);
+  late PdfDocumentRef _ref = widget.documentRef ?? UiPdfViewer.refFor(src: widget.src, data: widget.data);
   Size _stage = Size.zero;
 
   double get _scale => _view.value.getMaxScaleOnAxis();
@@ -63,8 +66,8 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
   @override
   void didUpdateWidget(UiPdfViewer old) {
     super.didUpdateWidget(old);
-    if (old.src != widget.src || old.data != widget.data) {
-      _ref = UiPdfViewer.refFor(src: widget.src, data: widget.data);
+    if (old.src != widget.src || old.data != widget.data || old.documentRef != widget.documentRef) {
+      _ref = widget.documentRef ?? UiPdfViewer.refFor(src: widget.src, data: widget.data);
       _page = widget.initialPage;
       _view.value = Matrix4.identity();
     }
@@ -143,7 +146,7 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
     final t = context.ui;
     final pages = doc?.pages.length ?? 0;
     final page = pages == 0 ? null : doc!.pages[(_page.clamp(1, pages)) - 1];
-    final mono = context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
+    final mono = context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
     final touch = uiTouchPlatform(context);
 
     {

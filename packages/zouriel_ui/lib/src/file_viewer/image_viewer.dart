@@ -266,8 +266,8 @@ class _UiImageViewerState extends State<UiImageViewer> {
                     child: Image(
                       image: widget.image,
                       fit: BoxFit.contain,
-                      semanticLabel: widget.alt.isEmpty ? null : widget.alt,
-                      excludeFromSemantics: widget.alt.isEmpty,
+                      // Named by the stage's own semantics node.
+                      excludeFromSemantics: true,
                       gaplessPlayback: true,
                       errorBuilder: (context, _, _) => Center(child: UiIcon(HugeIcons.strokeRoundedImage01, size: 32, color: t.textMuted)),
                     ),
@@ -322,7 +322,7 @@ class _UiImageViewerState extends State<UiImageViewer> {
         btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', _zoom <= _minZoom ? null : () => _setZoom(_zoom - 0.25)),
         ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 42),
-          child: Text(pct, textAlign: TextAlign.center, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
+          child: Text(pct, textAlign: TextAlign.center, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
         ),
         btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', _zoom >= _maxZoom ? null : () => _setZoom(_zoom + 0.25)),
         UiButton(label: 'Fit', semanticLabel: 'Reset view', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _reset),

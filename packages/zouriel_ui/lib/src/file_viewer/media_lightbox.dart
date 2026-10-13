@@ -609,10 +609,10 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
             ),
           ),
           Wrap(spacing: t.space2, runSpacing: t.space2, alignment: WrapAlignment.end, children: [
-            if (_zoomed) _Glass(label: '${(_zoom * 100).round()}% · Fit', semanticLabel: 'Reset zoom', onTap: _resetView),
+            if (_zoomed) _Glass(key: const ValueKey('zoom'), label: '${(_zoom * 100).round()}% · Fit', semanticLabel: 'Reset zoom', onTap: _resetView),
             for (final a in visibleActions)
-              _Glass(label: a.label, danger: a.danger, onTap: () => widget.onAction?.call(a.id, item!, widget.index)),
-            _Glass(icon: HugeIcons.strokeRoundedCancel01, semanticLabel: 'Close', onTap: _close),
+              _Glass(key: ValueKey('action:${a.id}'), label: a.label, danger: a.danger, onTap: () => widget.onAction?.call(a.id, item!, widget.index)),
+            _Glass(key: const ValueKey('close'), icon: HugeIcons.strokeRoundedCancel01, semanticLabel: 'Close', onTap: _close),
           ]),
         ]),
       ),
@@ -774,7 +774,7 @@ class _Scrim extends StatelessWidget {
 /// The one glass treatment for everything floating over the picture: pills with a [label], circles
 /// with an [icon].
 class _Glass extends StatelessWidget {
-  const _Glass({this.icon, this.label, this.semanticLabel, this.onTap, this.danger = false, this.size = 38});
+  const _Glass({super.key, this.icon, this.label, this.semanticLabel, this.onTap, this.danger = false, this.size = 38});
   final UiIconData? icon;
   final String? label;
   final String? semanticLabel;
@@ -802,10 +802,12 @@ class _Glass extends StatelessWidget {
             borderRadius: shape,
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
-              child: AnimatedContainer(
-                duration: context.uiAnimate ? t.motionBase : Duration.zero,
+              // Sized outside the animation: a pill and a circle must never tween between each other.
+              child: SizedBox(
                 height: circle ? size : t.sizeLg,
                 width: circle ? size : null,
+                child: AnimatedContainer(
+                duration: context.uiAnimate ? t.motionBase : Duration.zero,
                 padding: circle ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: t.space4),
                 decoration: BoxDecoration(
                   color: fill,
@@ -817,6 +819,7 @@ class _Glass extends StatelessWidget {
                 child: label != null
                     ? Text(label!, style: context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
                     : UiIcon(icon!, size: size > 40 ? 22 : 19, strokeWidth: 1.9, color: fg),
+              ),
               ),
             ),
           ),
@@ -894,7 +897,8 @@ class _StripTile extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(t.radiusSm),
             child: Stack(fit: StackFit.expand, children: [
-              if (still != null) Image(image: still, fit: BoxFit.cover, excludeFromSemantics: true),
+              if (still != null)
+                Image(image: still, fit: BoxFit.cover, excludeFromSemantics: true, errorBuilder: (context, _, _) => const SizedBox.expand()),
               if (item.isVideo)
                 ColoredBox(color: t.mediaScrim.withValues(alpha: 0.28), child: Center(child: UiIcon(HugeIcons.strokeRoundedPlay, size: 16, color: t.mediaOnScrim))),
             ]),
