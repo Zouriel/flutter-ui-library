@@ -29,7 +29,7 @@ dependencies:
     git:
       url: https://github.com/Zouriel/flutter-ui-library.git
       path: packages/zouriel_ui
-      ref: v0.22.1   # a release tag; versions match the Angular @zouriel/ui
+      ref: v0.22.2   # a release tag; versions match the Angular @zouriel/ui
 ```
 
 ```dart
