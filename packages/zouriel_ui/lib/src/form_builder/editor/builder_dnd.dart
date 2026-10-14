@@ -218,18 +218,7 @@ class FbDnd extends ChangeNotifier {
       for (final c in _children(listId))
         ?_rectOf(itemKey(c.id)),
     ];
-    var index = items.length;
-    for (var i = 0; i < items.length; i++) {
-      final r = items[i];
-      if (g.dy < r.top) {
-        index = i;
-        break;
-      }
-      if (g.dy <= r.bottom && g.dx < r.left + r.width / 2) {
-        index = i;
-        break;
-      }
-    }
+    final index = fbDropIndex(items, g);
     final line = _toLocalRect(_lineFor(items, index, listRect));
     final valid = canDrop(def, el, listId) && !(movingId != null && isInside(def, listId, movingId));
     _drop = FbDropState(target: UiFbDropTarget(containerId: listId, index: index), valid: valid, line: line, over: listId);
@@ -311,4 +300,22 @@ class FbDragSource extends StatelessWidget {
     };
     return RawGestureDetector(gestures: gestures, behavior: HitTestBehavior.opaque, child: child);
   }
+}
+
+/// Where a drop at [at] goes among a list's cards (in order): before the first card the pointer is
+/// above, or over. Over a card that shares its row with others, its left half means "before it";
+/// over a card alone on its row (every card on a phone), its top half does. Halving by x there
+/// would put a card dragged by its grip, at the left edge, back where it started.
+int fbDropIndex(List<Rect> boxes, Offset at) {
+  for (var i = 0; i < boxes.length; i++) {
+    final r = boxes[i];
+    if (at.dy < r.top) return i;
+    if (at.dy > r.bottom) continue;
+    var shared = false;
+    for (var j = 0; j < boxes.length; j++) {
+      if (j != i && boxes[j].top < r.bottom - 1 && boxes[j].bottom > r.top + 1) shared = true;
+    }
+    if (shared ? at.dx < r.left + r.width / 2 : at.dy < r.top + r.height / 2) return i;
+  }
+  return boxes.length;
 }

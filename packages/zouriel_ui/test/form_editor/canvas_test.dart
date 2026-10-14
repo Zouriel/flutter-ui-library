@@ -141,8 +141,8 @@ void main() {
     final (c, _) = await pumpCanvas(tester, def);
     await dragGrip(tester, 'First', tester.getBottomLeft(find.text('Inside')) + const Offset(40, 14));
     expect(ids(c), ['g']);
-    // Over the left half of a card means "before it".
-    expect([for (final e in c.index['g']!.asGroup!.elements) e.id], ['a', 'in']);
+    // Low on a card that is alone on its row means "after it" (see fbDropIndex).
+    expect([for (final e in c.index['g']!.asGroup!.elements) e.id], ['in', 'a']);
     // A section can't be dropped into itself: it stays where it is.
     await dragGrip(tester, 'Box', tester.getCenter(find.text('Inside')));
     expect(ids(c), ['g']);

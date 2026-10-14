@@ -74,7 +74,9 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
       ]),
     );
 
-    final body = Column(children: [bar, Expanded(child: page)]);
+    // Stretch, so every page gets the full width: a page that is a Stack of positioned layers (the
+    // window system) has nothing to size itself by and would otherwise collapse to zero width.
+    final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [bar, Expanded(child: page)]);
     if (wide) {
       return Row(children: [
         SizedBox(width: 280, child: _Menu(current: _page, onPick: _go)),
