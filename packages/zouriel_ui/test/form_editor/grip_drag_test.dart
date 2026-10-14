@@ -1,4 +1,4 @@
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:ui' show GestureSettings, PointerDeviceKind;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -13,6 +13,9 @@ Future<ValueNotifier<UiFormDefinition>> pumpFull(WidgetTester tester, {required 
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
   addTearDown(tester.view.reset);
+  // A real Android phone reports its touch slop (about 8dp); scroll views use it, and so must the
+  // grip, or the list claims every drag first. Tests default to 18 for everything, hiding that.
+  tester.view.gestureSettings = GestureSettings(physicalTouchSlop: 8 * tester.view.devicePixelRatio);
   final def = ValueNotifier(three());
   Widget builder() => ValueListenableBuilder(
         valueListenable: def,

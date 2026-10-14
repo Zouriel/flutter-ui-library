@@ -290,12 +290,19 @@ class FbDragSource extends StatelessWidget {
       if (delay == null)
         ImmediateMultiDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<ImmediateMultiDragGestureRecognizer>(
           () => ImmediateMultiDragGestureRecognizer(),
-          (r) => r.onStart = onStart,
+          // The grip only drags, so it claims the finger at the first pixel of movement. With the
+          // default slop (18) a scroll view using the phone's own slop (about 8) takes every drag
+          // first, and the grip never moves anything on a real device.
+          (r) => r
+            ..onStart = onStart
+            ..gestureSettings = const DeviceGestureSettings(touchSlop: 1),
         )
       else
         DelayedMultiDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<DelayedMultiDragGestureRecognizer>(
           () => DelayedMultiDragGestureRecognizer(delay: delay!),
-          (r) => r.onStart = onStart,
+          (r) => r
+            ..onStart = onStart
+            ..gestureSettings = MediaQuery.maybeGestureSettingsOf(context),
         ),
     };
     return RawGestureDetector(gestures: gestures, behavior: HitTestBehavior.opaque, child: child);

@@ -1318,10 +1318,14 @@ class _UiSequencerState extends State<UiSequencer> {
     GestureDragEndCallback? onDragEnd,
     GestureDragCancelCallback? onDragCancel,
   }) {
+    // The device's own slop, as GestureDetector applies it: hand-built recognizers default to 18,
+    // so on a phone (about 8) the scroll view around would claim every drag first.
+    final settings = MediaQuery.maybeGestureSettingsOf(context);
     final gestures = <Type, GestureRecognizerFactory>{};
     if (onTapDown != null || onTapUp != null || onSecondaryTapUp != null) {
       gestures[TapGestureRecognizer] = GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(TapGestureRecognizer.new, (r) {
         r
+          ..gestureSettings = settings
           ..onTapDown = onTapDown
           ..onTapUp = onTapUp
           ..onSecondaryTapUp = onSecondaryTapUp;
@@ -1332,6 +1336,7 @@ class _UiSequencerState extends State<UiSequencer> {
         () => LongPressGestureRecognizer(duration: longPress ?? kLongPressTimeout),
         (r) {
           r
+            ..gestureSettings = settings
             ..onLongPressStart = onLongPressStart
             ..onLongPressMoveUpdate = onLongPressMoveUpdate
             ..onLongPressEnd = onLongPressEnd;
@@ -1341,6 +1346,7 @@ class _UiSequencerState extends State<UiSequencer> {
     if (onDragStart != null) {
       void setup(DragGestureRecognizer r) {
         r
+          ..gestureSettings = settings
           ..dragStartBehavior = DragStartBehavior.down
           ..onStart = onDragStart
           ..onUpdate = onDragUpdate
