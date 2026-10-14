@@ -11,7 +11,7 @@ import '../../core/interactive.dart';
 import '../../core/types.dart';
 import '../../dialog/bottom_sheet.dart';
 import '../../dialog/modal.dart';
-import '../../dialog/toast.dart';
+import '../../dialog/snackbar.dart';
 import '../../theme/theme.dart';
 import '../engine/definition.dart';
 import '../engine/global_settings.dart';
@@ -409,16 +409,13 @@ class UiFormBuilderState extends State<UiFormBuilder> {
                   right: t.space4,
                   bottom: (narrow ? 76 : t.space4) + MediaQuery.paddingOf(context).bottom,
                   child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: UiToastView(
-                        toast: UiToast(id: 0, message: _toast!, action: UiToastAction(label: 'Undo', run: () {})),
-                        onAction: () {
-                          controller.undo();
-                          setState(() => _toast = null);
-                        },
-                        onDismiss: () => setState(() => _toast = null),
-                      ),
+                    child: UiSnackbar(
+                      message: _toast!,
+                      actionLabel: 'Undo',
+                      onAction: () {
+                        controller.undo();
+                        setState(() => _toast = null);
+                      },
                     ),
                   ),
                 ),

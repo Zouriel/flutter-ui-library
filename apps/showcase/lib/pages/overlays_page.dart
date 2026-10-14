@@ -31,6 +31,7 @@ class OverlaysPage extends StatefulWidget {
 
 class _OverlaysPageState extends State<OverlaysPage> {
   final UiToastController _toasts = UiToastController();
+  final UiSnackbarController _snacks = UiSnackbarController();
   final OverlayPortalController _toastLayer = OverlayPortalController();
   UiToastPosition _toastPos = UiToastPosition.bottomRight;
   String _menuChoice = 'nothing yet';
@@ -52,6 +53,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
   @override
   void dispose() {
     _toasts.dispose();
+    _snacks.dispose();
     super.dispose();
   }
 
@@ -432,7 +434,7 @@ if (ok == true) delete();''',
         DocSection(
           name: 'Toast',
           widget: 'UiToastController · UiToastHost',
-          summary: 'Transient notifications. Create a UiToastController, put one UiToastHost near the app root (UiApp.builder) so toasts float over every route, then call show(message) or info/success/warning/danger(message, title:) from anywhere; UiToastController.of(context) finds it. Each returns an id; dismiss(id) removes it. Toasts stack at the host\'s position (a corner, or centred on the top or bottom edge), newest last, slide in from that side and back out toward it, can be swiped away sideways, and leave on their own after duration (4 s by default; zero keeps them). The countdown pauses while a finger, the pointer or focus is on a toast and resumes with the time left, at least one more second. Each toast is a live region, so screen readers announce it.',
+          summary: 'Transient notifications. Create a UiToastController, put one UiToastHost near the app root (UiApp.builder) so toasts float over every route, then call show(message) or info/success/warning/danger(message, title:) from anywhere; UiToastController.of(context) finds it. Each returns an id; dismiss(id) removes it. Toasts stack at the host\'s position (a corner, or centred on the top or bottom edge), newest last, slide in from that side and back out toward it, can be swiped away sideways, and leave on their own after duration (4 s by default; zero keeps them). The countdown pauses while a finger, the pointer or focus is on a toast and resumes with the time left, at least one more second. Each toast is a live region, so screen readers announce it. For a quick note about something the person just did, like Deleted with Undo, use the snackbar below.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
             row([
               UiButton(label: 'Success', variant: UiButtonVariant.secondary, onPressed: () => _toasts.success('Changes saved', title: 'Success')),
@@ -481,6 +483,55 @@ toasts.show('Layer deleted', action: UiToastAction(label: 'Undo', run: undo));''
 UiToastAction({required String label, required VoidCallback run})''',
         ),
         DocSection(
+          name: 'Snackbar',
+          widget: 'UiSnackbarController · UiSnackbarHost · UiSnackbar',
+          summary: 'A short note about something the person just did, with at most one action: Deleted with Undo, Grouped, Keyframe added. It is a compact inverted bar centred at the bottom of the screen, the one the form builder uses. Only one shows at a time; a new one replaces it. Put one UiSnackbarHost near the app root (UiApp.builder) and call show(message) on its controller; UiSnackbarController.of(context) finds it. It leaves after 4 s, or 10 s when it has an action so there is time to reach Undo, and holds while a finger, the pointer or focus is on it. offset lifts it above a bottom bar; it also stays above the keyboard. On touch it is one touch target (48dp) tall. Each notice is a live region, so screen readers announce it. Use toasts instead for messages that should stack or carry a tone, such as errors. Editors that place it themselves (the form builder does) can use the bare UiSnackbar.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            row([
+              UiButton(label: 'Simple', variant: UiButtonVariant.secondary, onPressed: () => _snacks.show('Grouped')),
+              UiButton(
+                label: 'Deleted, with Undo',
+                variant: UiButtonVariant.outline,
+                onPressed: () => _snacks.show('Deleted “Title”', action: UiSnackbarAction(label: 'Undo', run: () => _snacks.show('Restored “Title”'))),
+              ),
+              UiButton(
+                label: 'With a title',
+                variant: UiButtonVariant.ghost,
+                onPressed: () => _snacks.show('Move or delete that keyframe to trim further.', title: 'Stopped at a keyframe'),
+              ),
+            ]),
+            UiSnackbar(message: 'Deleted “Title”', actionLabel: 'Undo', onAction: () {}),
+          ]),
+          code: '''final snackbar = UiSnackbarController();
+
+UiApp(
+  builder: (context, child) => UiSnackbarHost(controller: snackbar, offset: dockHeight, child: child!),
+  home: HomePage(),
+);
+
+snackbar.show('Grouped');
+snackbar.show('Deleted “Title”', action: UiSnackbarAction(label: 'Undo', run: store.undo));
+
+// or just the bar, positioned by you:
+UiSnackbar(message: 'Deleted “Title”', actionLabel: 'Undo', onAction: undo)''',
+          api: const [
+            ApiRow('host: controller', 'UiSnackbarController', 'The notice it shows.'),
+            ApiRow('host: offset', 'double', 'Extra space below it, e.g. a bottom bar\'s height. The safe area and keyboard are added for you.', def: '0'),
+            ApiRow('host: child', 'Widget?', 'What it floats over. Without it the host is just the layer.'),
+            ApiRow('UiSnackbar: message / title', 'String / String?', 'The text, with an optional bold first line.'),
+            ApiRow('UiSnackbar: actionLabel / onAction', 'String? / VoidCallback?', 'Shows the link-style action button.'),
+          ],
+          callbacks: const [
+            ApiRow('show(message, {title, action, duration})', 'int', 'Show a notice, replacing any current one; returns its id. duration defaults to 4 s, or 10 s with an action; zero keeps it.'),
+            ApiRow('dismiss([id])', 'void', 'Hide it; with an id, only if that notice is still the one showing.'),
+            ApiRow('act()', 'void', 'Dismiss and run the action. The action button calls this.'),
+            ApiRow('pause() / resume()', 'void', 'Hold or restart the countdown. The host calls these for fingers, hover and focus.'),
+            ApiRow('current', 'UiSnack?', 'The notice showing now (listen to the controller).'),
+            ApiRow('UiSnackbarController.of(context)', 'static', 'The controller of the nearest host.'),
+          ],
+          shapes: 'UiSnackbarAction({required String label, required VoidCallback run})',
+        ),
+        DocSection(
           name: 'Command palette',
           widget: 'showUiCommandPalette · UiCommand',
           summary: 'A search-and-run list of commands. On a phone it is a full-screen search page with the keyboard up; on a tablet or desktop the web\'s centred dialog near the top. Typing filters by case-insensitive substring over label, group and keywords. ArrowUp/Down move the highlight while the field keeps focus, Enter (or the keyboard\'s search key) runs it, and so does a tap; running closes it. Escape, the back button, the back arrow or a backdrop tap close it. Focus is trapped while it is open and goes back where it was afterwards. It binds no shortcut of its own: open it from a button, or from a Ctrl/Cmd+K handler on hardware keyboards.',
@@ -517,7 +568,10 @@ if (command != null) run(command.value);''',
 
     return OverlayPortal(
       controller: _toastLayer,
-      overlayChildBuilder: (context) => UiToastHost(controller: _toasts, position: _toastPos),
+      overlayChildBuilder: (context) => Stack(children: [
+        Positioned.fill(child: UiToastHost(controller: _toasts, position: _toastPos)),
+        Positioned.fill(child: UiSnackbarHost(controller: _snacks)),
+      ]),
       child: page,
     );
   }

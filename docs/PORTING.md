@@ -92,7 +92,7 @@ Respect `MediaQuery.disableAnimations` (reduced motion), text scaling up to 200%
   card, stat card, accordion, list, table, tree, tree table, timeline, description list, code block,
   progress bar/circle, meter, spinner, skeleton, divider, text, link, kbd, tabs, stepper, pagination,
   breadcrumbs, bottom nav, side nav (as drawer content), navbar (app bar), anchor nav, tooltip,
-  popover, menu, modal, drawer, bottom sheet, confirm dialog, toasts, backdrop, empty state, result,
+  popover, menu, modal, drawer, bottom sheet, confirm dialog, toasts, snackbar, backdrop, empty state, result,
   carousel, gallery, image picker, file viewers (image/video/audio/text/code/PDF), FX (reveal,
   marquee, split text, drift, glyph field, grain, intro loader, scroll progress, magnetic → press
   tilt), theme service/provider, config.

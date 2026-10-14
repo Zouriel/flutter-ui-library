@@ -432,6 +432,29 @@ File: `dialog/src/toast.ts`
 - interface `UiToastAction` (toast.ts)
 - interface `UiToast` (toast.ts)
 
+### UiSnackbar (component, `ui-snackbar`)
+File: `dialog/src/snackbar.ts`  
+`ui-snackbar` — the notice itself: a compact inverted bar with a message and an optional link-style action ("Deleted “Name” · Undo"). Flutter: `UiSnackbar`.  
+- Inputs: `message`: string (required); `title`: string; `actionLabel`: string
+- Outputs: `action`: void
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSnackbarService (injectable)
+File: `dialog/src/snackbar.ts`  
+`UiSnackbarService` — one short notice at a time; a new one replaces the current one. Flutter: `UiSnackbarController`.  
+- Methods: `show(opts | message)`, `dismiss(id?)`, `act()`, `pause()`, `resume()`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSnackbarHost (component, `ui-snackbar-host`)
+File: `dialog/src/snackbar.ts`  
+`ui-snackbar-host` — renders the service's notice centred at the bottom of the screen.  
+- Inputs: `offset` = 0
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- interface `UiSnackbarOptions` (snackbar.ts)
+- interface `UiSnackbarAction` (snackbar.ts)
+- interface `UiSnack` (snackbar.ts)
+
 ## divider
 
 ### UiDivider (component, `ui-divider`)
