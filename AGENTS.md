@@ -17,6 +17,14 @@ the Angular library in the same task:
 Only skip the Angular side when the change has no meaning there (e.g. a touch-only Android
 behaviour), and say so and why in your report. A change made in only one library is not done.
 
+## Releasing
+
+Both libraries share one version number. For a release: bump `projects/ui/package.json` in Angular and
+`packages/zouriel_ui/pubspec.yaml` in Flutter to the same version, commit both, then:
+
+- Angular: `ng build ui`, `npm publish` from `dist/ui` (GitHub Packages, `@zouriel` scope), tag `vX.Y.Z`, push the tag.
+- Flutter: tag `vX.Y.Z` and push it; apps pin it with `ref: vX.Y.Z` in their git dependency.
+
 ## Rules for this repo
 
 - Read `docs/CONVENTIONS.md` before adding or changing a component; record decisions in `docs/PORTING.md`
