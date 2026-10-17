@@ -66,29 +66,46 @@ class UiWorkflowTasksDrawer extends StatefulWidget {
   State<UiWorkflowTasksDrawer> createState() => UiWorkflowTasksDrawerState();
 }
 
-class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> {
+/// How many open tasks one count asks for; overdue ones beyond this aren't seen.
+const int _countTake = 100;
+
+class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with WidgetsBindingObserver {
   int _count = 0;
   int _overdue = 0;
+
+  /// More tasks are open than one count looks at, so the overdue number is "at least".
+  bool _capped = false;
   int _seq = 0;
   Timer? _timer;
   bool _shown = false;
-  BuildContext? _drawerContext;
+
+  /// The drawer's own route, so closing it never pops something else on top.
+  Route<void>? _drawerRoute;
+
+  /// Whether the app is in view: polling pauses while it is in the background.
+  bool _visible = true;
 
   /// Open tasks for the signed-in person.
   int get count => _count;
 
-  /// How many of them are overdue.
+  /// How many of them are overdue (at least that many when more are open than one count reads).
   int get overdue => _overdue;
+
+  /// The overdue number as shown: "100+" when only the first page was looked at.
+  String get overdueText => '$_overdue${_capped ? '+' : ''}';
 
   /// Whether the drawer is showing.
   bool get isOpen => _shown;
 
   /// What a screen reader says after the label: ", 2 open, 1 overdue" or ", none open".
-  String get countText => _count > 0 ? ', $_count open${_overdue > 0 ? ', $_overdue overdue' : ''}' : ', none open';
+  String get countText => _count > 0 ? ', $_count open${_overdue > 0 ? ', $overdueText overdue' : ''}' : ', none open';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final now = WidgetsBinding.instance.lifecycleState;
+    _visible = now == null || _inView(now);
     refresh();
     _startTimer();
     if (widget.open == true) WidgetsBinding.instance.addPostFrameCallback((_) => show());
@@ -108,15 +125,31 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _seq++;
     super.dispose();
   }
 
+  static bool _inView(AppLifecycleState s) => s == AppLifecycleState.resumed || s == AppLifecycleState.inactive;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final visible = _inView(state);
+    if (visible == _visible) return;
+    _visible = visible;
+    _startTimer();
+    // Back in view: the count may be stale, so refresh now rather than at the next tick.
+    if (visible) refresh();
+  }
+
+  /// Whether the count is polled now (it is not while the app is in the background).
+  bool get polling => _timer != null;
+
   void _startTimer() {
     _timer?.cancel();
     final s = widget.refreshSeconds;
-    _timer = s > 0 ? Timer.periodic(Duration(seconds: s), (_) => refresh()) : null;
+    _timer = s > 0 && _visible ? Timer.periodic(Duration(seconds: s), (_) => refresh()) : null;
   }
 
   /// Reloads the count (also run on open, close and after a decision).
@@ -125,11 +158,12 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> {
     if (api == null) return;
     final n = ++_seq;
     try {
-      final page = await api.tasks(const UiWfTaskQuery(scope: 'mine', status: ['open'], take: 100));
+      final page = await api.tasks(const UiWfTaskQuery(scope: 'mine', status: ['open'], take: _countTake));
       if (!mounted || n != _seq) return;
       setState(() {
         _count = page.total;
         _overdue = page.items.where((t) => t.overdue).length;
+        _capped = page.total > page.items.length;
       });
     } catch (_) {
       // Not signed in or offline: keep the last count rather than flashing zero.
@@ -147,7 +181,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> {
       side: widget.side,
       title: widget.label,
       builder: (ctx) {
-        _drawerContext = ctx;
+        _drawerRoute = ModalRoute.of(ctx);
         return UiWorkflowTasks(
           api: widget.api,
           pageSize: widget.pageSize,
@@ -158,17 +192,23 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> {
         );
       },
     );
-    _drawerContext = null;
+    _drawerRoute = null;
     if (!mounted) return;
     setState(() => _shown = false);
     widget.onOpenChanged?.call(false);
     refresh();
   }
 
-  /// Closes the drawer if it is open.
+  /// Closes the drawer if it is open: its own route, even when something else (a decision dialog)
+  /// is on top of it.
   void hide() {
-    final ctx = _drawerContext;
-    if (_shown && ctx != null && ctx.mounted) Navigator.of(ctx).maybePop();
+    final route = _drawerRoute;
+    if (!_shown || route == null || !route.isActive) return;
+    if (route.isCurrent) {
+      route.navigator?.pop();
+    } else {
+      route.navigator?.removeRoute(route);
+    }
   }
 
   @override

@@ -239,7 +239,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     // Whether this person may edit; an API without me() (or an error) leaves editing on, and the
     // server still decides. Settings (webhook connections) are only for editors, so they wait for
     // the answer, and so does the engine check.
-    final canEdit = await Future.sync(api.me).then((me) => me.canEdit).catchError((Object _) => true);
+    final canEdit = await Future.sync(api.me).then((me) => me?.canEdit ?? true).catchError((Object _) => true);
     if (!mounted || !identical(api, controller.api)) return;
     setState(() {
       _mayEdit = canEdit;

@@ -27,25 +27,48 @@ UiWorkflowHttpApi          // connects the widgets to the engine's REST API
   your app reports an event. They run a tree of steps: approvals and tasks for people, waits,
   branches, switches, parallel paths, loops over related records, go-back loops, record updates,
   variables, new records ("Create record"), notifications, webhooks, your own actions and other
-  workflows.
+  workflows. "Create record" doesn't offer a field a lifecycle controls (when this workflow or a
+  published lifecycle is on that kind of record: the new record starts in its first state), says
+  so when the app no longer offers the chosen kind, and later steps read the new id as text.
 - **Lifecycles** own a status field: its states and the transitions between them, who may make each
   move, checks, a form, a confirmation, automatic moves on a timer, and steps to run on each move,
   on entering or leaving a state, or when a record stays too long.
   **Applies to** (`lifecycle.appliesWhen`, in the lifecycle settings) limits a lifecycle to some
   records, read from their own fields: a "Passport application" lifecycle for applications whose
   type is Passport, another for visas, and one with no condition for everything else.
+  With no condition it covers every record that no other lifecycle on the field covers.
   A lifecycle can also let chosen people **reset** a record (`lifecycle.reset`): its open tasks and
   runs stop, it goes back to the starting state (or another you pick), and the reset's own steps run,
   which can change the record, related records and each item of a list. The builder sets it up under
   "Starting over"; `UiWorkflowRecordPanel` and `UiWorkflowPanel` show the button to those allowed
   (`record.reset`, `api.resetRecord`).
+  "Offer it" (`reset.states`) limits it to some states: from a state you pick onwards (that state
+  and every state after it, final states included: `wfStatesFrom(def, stateId)`), with a checklist
+  to adjust. Without it the reset is offered in every state where it would change something.
   The reset dialog lists what the workflow did since the record last started over
   (`api.resetPreview`): fields it changed on this or other records, records it created, actions,
-  messages and webhooks, all ticked. People untick anything that should stay; the ticked ids go to
-  `resetRecord(..., undo: [...])`, which deletes created records, puts fields back and undoes app
-  actions when the app supports it. Items changed again since start unticked, and sent messages
-  can't be taken back. An API that can't list them throws `UnimplementedError` from
-  `resetPreview`, and the dialog then only confirms.
+  messages and webhooks. Everything that can be undone is ticked, except items someone changed
+  again since, which start unticked; sent messages and webhooks can't be taken back. People untick
+  anything that should stay; the ticked ids go to `resetRecord(..., undo: [...])`, which deletes
+  created records, puts fields back and undoes app actions when the app supports it. The reset
+  can't be confirmed until the list has arrived; an empty list says "Nothing the workflow did needs
+  taking back." If someone changed what the workflow did in the meantime, the engine refuses with
+  `resetChanged` and the dialog reads the list again, keeping the person's ticks for the items still
+  listed. `UiWorkflowHttpApi.resetPreview` always asks the engine (`GET /records/{entity}/{id}/reset`);
+  when that call fails, the dialog says the list couldn't be read and the reset leaves those things
+  as they are. A custom API that can't list them throws `UnimplementedError` from `resetPreview`,
+  and the dialog then only confirms.
+- **Remarks** on negative actions: rejecting an approval, a task's red buttons, red moves (e.g.
+  Reject, Withdraw) and Start over all offer a remarks box. Each move has a Remarks setting
+  (`transition.comment`: default, not asked, optional or required; the default is optional for red
+  moves and not asked otherwise), the reset has one (`reset.comment`, optional by default), and
+  approvals and tasks say when remarks are required (`requireComment`: optional, required to reject
+  or for red buttons, always). A required remark left empty stops the move ("Add remarks to explain
+  this.") or the decision. Remarks are sent trimmed (`applyTransition(..., comment:)`,
+  `resetRecord(..., comment:)`, `decide(..., comment:)`), show in the history ("Reject: Review →
+  Draft (“Missing transcript”)"), go into the audit log, and steps can use them as "Remarks"
+  (`trigger.comment`). `wfRemarksFor`, `wfCommentRequired` and `wfRemarksLabel` give the same
+  answers the widgets use.
 
 Every start, step, decision and move is written to a hash-chained audit log.
 
@@ -74,7 +97,16 @@ put a `UiWorkflowClock(now: () => engineNow(), child: ...)` above them, ideally 
 navigator so dialogs see it too (the web `UI_WORKFLOW_CLOCK`).
 
 Implement `UiWorkflowApi` yourself to talk to an engine some other way (the showcase uses an
-in-memory one, `apps/showcase/lib/pages/workflow_demo_api.dart`).
+in-memory one, `apps/showcase/lib/pages/workflow_demo_api.dart`). It has the same calls as the REST
+client; a few are optional or only needed by some widgets:
+
+- `resetPreview` (optional): lists what a reset would take back. Throw `UnimplementedError` when
+  there is no such list; the reset dialog then only asks for confirmation.
+- `updatePermissions`: needed by `UiWorkflowPermissions` to save.
+- `me` (optional): who is signed in and what they may do. `UiWorkflowApi.me()` has a default that
+  answers null ("not known"); a class that `extends UiWorkflowApi` can leave it out, and one that
+  `implements` it can return null. Without an answer the builder and the permissions page offer
+  editing and the server decides, showing its answer if it refuses.
 
 ## The builder
 
@@ -162,6 +194,14 @@ survive a round trip, and every helper returns a new definition, keeping untouch
   padding and chevron need it to show "minutes" whole. On touch the amount has no steppers (48-wide
   touch steppers don't fit a 64–96 box; a number keyboard takes their place).
 - Autosized text areas refit to their width with no extra code (Flutter lays text out per width).
+- `me` is optional through a default method on `UiWorkflowApi` that answers null (Dart has no
+  optional interface members); `extends UiWorkflowApi` inherits it.
+- The tasks drawer pauses polling on `AppLifecycleState` (the app in the background), the web on
+  the page's visibility.
+- In the reset list a warning is read with its checkbox through the checkbox's semantic label (the
+  web adds visually hidden text inside the label).
+- "Create record" says the kind is unknown only once the registry has loaded (the web also says it
+  while there is no registry yet).
 
 ## My tasks drawer (UiWorkflowTasksDrawer)
 
@@ -171,9 +211,14 @@ A "My tasks" button for an app's header. It shows how many tasks are open for th
 
 - The badge is primary, danger when any open task is overdue, absent at 0, and reads `99+` above 99.
 - Screen readers hear the label and the count: "My tasks, 3 open, 1 overdue" or "My tasks, none open".
+- One count reads at most 100 open tasks. When more are open, the overdue number is "at least":
+  screen readers hear "My tasks, 250 open, 100+ overdue".
 - The count refreshes on start, when the API changes, when the drawer opens and closes, after a
-  decision in the drawer, and every `refreshSeconds`. A slower, older answer never overwrites a newer
-  one, and an error keeps the last count instead of showing 0.
+  decision in the drawer, and every `refreshSeconds` while the app is in the foreground. Polling
+  pauses while it is in the background (`AppLifecycleState` hidden or paused, the web's hidden page)
+  and counts again as soon as it comes back. A slower, older answer never overwrites a newer one,
+  and an error keeps the last count instead of showing 0.
+- `hide()` closes the drawer's own route, even when a dialog (a decision) is open on top of it.
 
 ```dart
 // In the app bar.
@@ -190,7 +235,7 @@ UiWorkflowTasksDrawer(
 // Or through a GlobalKey.
 final drawer = GlobalKey<UiWorkflowTasksDrawerState>();
 UiWorkflowTasksDrawer(key: drawer, api: api);
-drawer.currentState!.show();     // also hide() and refresh(); isOpen, count, overdue
+drawer.currentState!.show();     // also hide() and refresh(); isOpen, count, overdue, polling
 ```
 
 | Option | Type | Default | |
@@ -203,7 +248,7 @@ drawer.currentState!.show();     // also hide() and refresh(); isOpen, count, ov
 | `size` | `UiSize` | `sm` | The button's size. |
 | `variant` | `UiButtonVariant` | `outline` | The button's look. |
 | `showButton` | `bool` | `true` | Off when the app opens the drawer from its own control. |
-| `refreshSeconds` | `int` | `60` | How often the count refreshes; 0 only on start, open, close and decisions. |
+| `refreshSeconds` | `int` | `60` | How often the count refreshes while the app is in the foreground; 0 only on start, open, close and decisions. |
 | `pageSize` | `int` | `25` | Tasks per page in the inbox. |
 | `onDecided` | `ValueChanged<UiWfTask>?` | | After a task was decided in the drawer. |
 
@@ -218,19 +263,33 @@ or task. Each row is edited with the builder's assignees editor. Saving publishe
 the current one plus only those changes, so admins can change people without opening the builder.
 
 - `permissionRows(def)` lists the rows in reading order:
-  - lifecycle moves, except automatic ones (detail "From → To"; "Any state" for `from: '*'`);
+  - lifecycle moves, except hidden ones, which are never offered to anyone (detail "From → To";
+    "Any state" for `from: '*'`). Automatic moves stay: the engine still offers them by hand, early,
+    to the people in their `who`;
   - the reset (node `reset`, detail "Back to <state>");
   - a manual trigger (node `trigger`, label "“<label>” button");
   - approval and task steps (node = step id, detail = the step type's label).
+- An empty "who" says what it means for each kind of row (`emptyWhoText(kind)`): a start button,
+  "Anyone who can see the record."; a move, "Nobody by hand: only automatically, or from other
+  workflows."; the reset, "Nobody."; a step, "Nobody yet." (in the editor: "add the people who
+  decide", since the engine refuses an approval or task nobody can decide).
 - Changed rows are marked with a bar on the left, and screen readers hear "Changed". Setting a row
-  back to the published value is no longer a change.
-- Each workflow's footer has a note ("Why", kept with the version), Undo and "Save N changes".
+  back to the published value is no longer a change, in any order (`sameWho`: chip order and key
+  order don't count).
+- Each workflow's footer has a note ("Why", kept with the version), Undo (which also clears the
+  note) and "Save N changes".
+  - An approval or task left with nobody can't be saved: the footer says "Add someone to “…”".
   - Only one save runs at a time, across all workflows.
+  - Before saving, the page checks that the published version is still the one it loaded. If
+    someone else published since, it says so and offers Reload instead of overwriting their change.
   - After saving, the definition is reloaded, "Saved: version N is now in use." shows, and `onSaved`
-    fires.
+    fires. Once published, the changes are never offered again: if the reload fails, the rows show
+    what was saved and the note asks to reload for the latest.
   - A refusal from the server shows under the footer and keeps the changes.
-- The search field filters by workflow title (all its rows) or by a row's label or detail.
+- The search field (the library's `UiSearchInput`) filters by workflow title (all its rows) or by a
+  row's label or detail; rows with unsaved edits always stay, so every counted change is visible.
 - Rows stack (label above editor) below 560 wide.
+- Without an API the page says "No workflow API is connected" rather than "nothing is published".
 
 ```dart
 UiWorkflowPermissions(api: api, onSaved: (summary) => refresh())
@@ -241,7 +300,7 @@ for (final row in permissionRows(def)) print('${row.label}: ${row.detail}');
 
 | Option | Type | |
 | --- | --- | --- |
-| `api` | `UiWorkflowApi?` | Loads `definitions()`, `schema()`, `me()` and each `definition(id)`; saves with `updatePermissions`. |
+| `api` | `UiWorkflowApi?` | Loads `definitions()`, `schema()`, `me()` and each `definition(id)`; saves with `updatePermissions`. `me` is optional: without an answer, editing is offered and the server decides. |
 | `onSaved` | `ValueChanged<UiWfDefinitionSummary>?` | After a workflow's permissions were saved (the new version's summary). |
 
 Saving calls
@@ -256,6 +315,7 @@ which the HTTP client sends as `POST /definitions/{id}/permissions`:
 publishes a new version and applies the same changes to the draft, if there is one.
 
 Read-only: when `me().canPublish` is false, every row shows its people as a sentence (for example
-"Head of office") instead of an editor, and the page says "You can see who may do what; changing it
+"Ana Lee and Head of office", with people named, looked up once each with `api.user`) instead of an
+editor, and the page says "You can see who may do what; changing it
 needs the right to publish workflows." There are no Save buttons. If `me()` fails, editing is offered
 and the server's answer decides.

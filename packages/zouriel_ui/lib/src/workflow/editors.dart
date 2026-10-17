@@ -470,33 +470,52 @@ class _PersonChip extends StatelessWidget {
   final String label;
   final VoidCallback onRemove;
 
+  /// The tinted chip's key, for tests that measure it.
+  static const backgroundKey = ValueKey('wf-person-chip');
+
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    // The tinted chip stays 24px tall; on touch the cross's padded 48px target sets the row's height
-    // (the chip is drawn behind it), so removing someone is a full-size tap without a bigger chip.
+    // The tinted chip is 24px tall and as wide as its label and cross on every device. On touch the
+    // remove target is a 48px square centred on the cross: it sets the row's height and reaches 13px
+    // past the chip's end, while the chip itself keeps its look.
+    final touch = uiTouchPlatform(context);
+    final target = touch ? uiMinTouchTarget : 22.0;
+    final spill = (target - 22) / 2;
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 24),
-      child: Stack(children: [
-        Positioned.fill(
-          child: Center(
+      constraints: BoxConstraints(minHeight: touch ? uiMinTouchTarget : 24),
+      child: Stack(alignment: AlignmentDirectional.centerStart, children: [
+        Padding(
+          padding: EdgeInsetsDirectional.only(end: spill),
+          child: DecoratedBox(
+            key: backgroundKey,
+            decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(t.radiusXs)),
             child: SizedBox(
               height: 24,
-              width: double.infinity,
-              child: DecoratedBox(decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(t.radiusXs))),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: 7),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.text))),
+                  // Room for the cross, which the remove target below draws.
+                  const SizedBox(width: 22, height: 22),
+                ]),
+              ),
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(left: 7),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.text))),
-            UiInteractive(
-              onTap: onRemove,
-              semanticLabel: 'Remove $label',
-              excludeChildSemantics: true,
-              pressScale: false,
-              builder: (context, s) => Container(
+        PositionedDirectional(
+          end: 0,
+          top: 0,
+          bottom: 0,
+          width: target,
+          child: UiInteractive(
+            onTap: onRemove,
+            semanticLabel: 'Remove $label',
+            excludeChildSemantics: true,
+            pressScale: false,
+            padTouchTarget: false,
+            builder: (context, s) => Center(
+              child: Container(
                 width: 22,
                 height: 22,
                 alignment: Alignment.center,
@@ -508,7 +527,7 @@ class _PersonChip extends StatelessWidget {
                 child: UiIcon(WfIcons.cancel01, size: 11, strokeWidth: 2, color: s.hovered ? t.danger : t.textMuted),
               ),
             ),
-          ]),
+          ),
         ),
       ]),
     );

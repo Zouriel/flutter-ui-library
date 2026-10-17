@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -162,30 +163,60 @@ class FakeWorkflowApi extends Fake implements UiWorkflowApi {
     UiWfAuditEntry.fromJson({'seq': 1, 'at': DateTime.now().toUtc().toIso8601String(), 'actorType': 'system', 'category': 'lifecycle', 'action': 'created', 'after': '{"state":"draft"}'}),
   ]);
 
+  /// The remarks sent with the last move.
+  String? lastApplyComment;
+
   @override
-  Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input}) => _do('apply:$key', () {
+  Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input, String? comment}) => _do('apply:$key', () {
+    lastApplyComment = comment;
     final t = (recordJson['transitions'] as List).cast<Map>().firstWhere((x) => x['key'] == key);
     recordJson = {...recordJson, 'state': t['to'], 'stateLabel': t['toLabel'], 'stateTone': t['tone'], 'transitions': <Object?>[], 'tasks': <Object?>[]};
     return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
   });
 
-  /// The input and the ids taken back of the last reset.
+  /// The input, the ids taken back and the remarks of the last reset.
   UiJson? lastResetInput;
   List<String>? lastResetUndo;
+  String? lastResetComment;
 
   /// What [resetPreview] lists; null: the API can't list it.
   List<Map<String, Object?>>? resetItems;
 
-  @override
-  Future<UiWfResetPreview> resetPreview(String entity, String id) => _do('resetPreview', () {
-    if (resetItems == null) throw UnimplementedError();
-    return UiWfResetPreview.fromJson({'reset': recordJson['reset'], 'items': resetItems});
-  });
+  /// When set, [resetPreview] answers only once it completes (to hold the list open).
+  Completer<void>? previewGate;
+
+  /// Errors the next resets throw, in order (e.g. a `resetChanged` conflict).
+  final List<Object> resetFailures = [];
+
+  /// When set, [resetRecord] answers only once it completes.
+  Completer<void>? resetGate;
 
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo}) => _do('reset', () {
+  Future<UiWfResetPreview> resetPreview(String entity, String id) async {
+    calls.add('resetPreview');
+    final e = failNext;
+    if (e != null) {
+      failNext = null;
+      throw e;
+    }
+    final items = resetItems;
+    final gate = previewGate;
+    if (gate != null) await gate.future;
+    if (items == null) throw UnimplementedError();
+    return UiWfResetPreview.fromJson({'reset': recordJson['reset'], 'items': items});
+  }
+
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment}) async {
+    await resetGate?.future;
+    return _resetNow(input, undo, comment);
+  }
+
+  Future<UiWfRecord> _resetNow(UiJson? input, List<String>? undo, String? comment) => _do('reset', () {
     lastResetInput = input;
     lastResetUndo = undo;
+    lastResetComment = comment;
+    if (resetFailures.isNotEmpty) throw resetFailures.removeAt(0);
     recordJson = {...recordJson, 'state': 'draft', 'stateLabel': 'Draft', 'stateTone': 'neutral', 'tasks': <Object?>[], 'reset': null};
     return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
   });

@@ -89,6 +89,9 @@ class UiWorkflowStateBadge extends StatelessWidget {
 
 class _DecideState extends ChangeNotifier {
   String comment = '';
+
+  /// Set when a decision that needs remarks was made without them.
+  bool commentMissing = false;
   String delegateTo = '';
   String delegateName = '';
   String peopleQuery = '';
@@ -138,6 +141,13 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
     if (st.busy) return;
     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
     if (task.form != null && formKey.currentState?.submit() == null) return;
+    if (wfCommentRequired(task, outcome) && st.comment.trim().isEmpty) {
+      st.set(() {
+        st.commentMissing = true;
+        st.error = 'Add remarks to explain “${outcomeLabel(outcome)}”.';
+      });
+      return;
+    }
     st.set(() {
       st.busy = true;
       st.error = '';
@@ -176,7 +186,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       listenable: st,
       builder: (ctx, _) {
         final t = ctx.ui;
-        final rc = task.requireComment;
+        final remarks = wfRemarksLabel(task);
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
           if (task.entityTitle != null) Text(task.entityTitle!, style: _body(ctx, size: 14, weight: FontWeight.w600)),
           if (task.instructions != null) Text(task.instructions!, style: _body(ctx, size: 14, height: 1.5)),
@@ -201,8 +211,18 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
           if (task.form != null)
             UiFormRenderer(key: formKey, definition: task.form!, showActions: false, showTitle: false, onValueChanged: (v) => st.answers = v),
           FbSetting(
-            label: 'Comment${rc == 'always' ? ' (required)' : rc == 'reject' ? ' (required to reject)' : ''}',
-            child: UiTextarea(value: st.comment, rows: 2, autosize: true, semanticLabel: 'Comment', onChanged: (v) => st.comment = v),
+            label: remarks,
+            child: UiTextarea(
+              value: st.comment,
+              rows: 2,
+              autosize: true,
+              semanticLabel: remarks,
+              invalid: st.commentMissing,
+              onChanged: (v) {
+                st.comment = v;
+                if (st.commentMissing) st.set(() => st.commentMissing = false);
+              },
+            ),
           ),
           if (task.allowDelegation) ...[
             Align(
@@ -497,17 +517,113 @@ class WfRecordActions extends StatefulWidget {
   State<WfRecordActions> createState() => _WfRecordActionsState();
 }
 
+/// What the record actions' confirmation is for.
+enum _ActionKind { move, reset, manual }
+
+/// A move, reset or manual start waiting for its confirmation (the web `WfPendingAction`), with
+/// whether remarks are asked.
+class _PendingAction {
+  const _PendingAction(this.option, this.kind, this.remarks);
+  final UiWfTransitionOption option;
+  final _ActionKind kind;
+  final UiWfRemarks remarks;
+}
+
+/// Everything the open confirmation holds; it is dropped when the dialog closes, and writes after
+/// that are ignored (an answer can arrive after the dialog was closed).
+class _ActionDialog extends ChangeNotifier {
+  _ActionDialog(this.pending);
+  final _PendingAction pending;
+  bool busy = false;
+  String error = '';
+  UiJson input = {};
+
+  /// The person's remarks on the move or reset (spec §6 remarks).
+  String remark = '';
+
+  /// Set when a required remark was left empty on confirm.
+  bool remarkMissing = false;
+
+  /// The reset's list of what the workflow did, and which of it to take back.
+  List<UiWfResetItem> items = const [];
+  Set<String> chosen = const {};
+  bool loading = false;
+
+  /// The list has been read (it may be empty).
+  bool loaded = false;
+  String listError = '';
+
+  bool _disposed = false;
+  bool get disposed => _disposed;
+
+  void set(VoidCallback f) {
+    if (_disposed) return;
+    f();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
 class _WfRecordActionsState extends State<WfRecordActions> {
   bool _busy = false;
   String _error = '';
 
+  /// The open confirmation and its route, if any.
+  _ActionDialog? _dialog;
+  Route<void>? _dialogRoute;
+
+  /// Bumped per reset-list request and when the dialog closes, so a late answer is dropped.
+  int _resetSeq = 0;
+
+  @override
+  void didUpdateWidget(WfRecordActions oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A dialog belongs to the record it was opened for: switching records closes it.
+    if (oldWidget.entity != widget.entity || oldWidget.entityId != widget.entityId) _closeDialog(later: true);
+  }
+
+  @override
+  void dispose() {
+    // Nothing is left to confirm for once these actions are gone.
+    _closeDialog(later: true);
+    super.dispose();
+  }
+
+  /// Closes the confirmation (if open) and forgets everything it held, the reset's list included.
+  /// [later]: after this frame (from a build or a dispose, when the navigator can't change).
+  void _closeDialog({bool later = false}) {
+    _resetSeq++;
+    final route = _dialogRoute;
+    if (route == null) return;
+    void close() {
+      if (!route.isActive) return;
+      if (route.isCurrent) {
+        route.navigator?.pop();
+      } else {
+        route.navigator?.removeRoute(route);
+      }
+    }
+
+    if (later) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => close());
+    } else {
+      close();
+    }
+  }
+
   void _start(UiWfTransitionOption t) {
     if (_busy) return;
-    if (t.form == null && t.confirm == null) {
+    final p = _PendingAction(t, _ActionKind.move, wfRemarksFor(t));
+    if (t.form == null && t.confirm == null && p.remarks == UiWfRemarks.none) {
       _apply(t.key, const {}, null);
       return;
     }
-    _confirm(t, manual: false);
+    _confirm(p);
   }
 
   void _startManual(UiWfManualOption m) {
@@ -516,121 +632,196 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       _runManual(m.key, const {}, null);
       return;
     }
-    _confirm(UiWfTransitionOption(key: m.key, label: m.label, tone: 'primary', form: m.form), manual: true);
+    _confirm(_PendingAction(UiWfTransitionOption(key: m.key, label: m.label, tone: 'primary', form: m.form), _ActionKind.manual, UiWfRemarks.none));
   }
 
-  /// The confirmation (or form) before a move or a manual start.
   /// Starting over: always confirmed (it stops work in progress), with the reset's form when it has one.
   void _startReset(UiWfResetOption rs) {
     if (_busy) return;
-    _confirm(
+    final d = _confirm(_PendingAction(
       UiWfTransitionOption(key: '', label: rs.label, to: rs.to, toLabel: rs.toLabel, tone: 'danger',
           confirm: rs.confirm ?? 'Start over from “${rs.toLabel}”? Open tasks and runs stop.', form: rs.form),
-      manual: false,
-      reset: true,
-    );
+      _ActionKind.reset,
+      rs.comment ?? UiWfRemarks.optional,
+    ));
+    _loadResetItems(d);
   }
 
-  void _confirm(UiWfTransitionOption p, {required bool manual, bool reset = false}) {
-    final err = ValueNotifier<String>('');
-    final busy = ValueNotifier<bool>(false);
-    // The reset list: which of the workflow's changes to take back, and a nudge to read it again.
-    final chosen = ValueNotifier<Set<String>>({});
-    final reload = ValueNotifier<int>(0);
+  /// Reads what the workflow did, ticking what the engine suggests (everything that can be undone
+  /// and wasn't changed since). With [keepChoices], items still listed keep the person's ticks.
+  Future<void> _loadResetItems(_ActionDialog d, {bool keepChoices = false}) async {
     final api = widget.api;
-    var input = <String, Object?>{};
+    final seq = ++_resetSeq;
+    final beforeItems = {for (final i in d.items) i.id};
+    final beforeChosen = d.chosen;
+    d.set(() {
+      d.items = const [];
+      d.chosen = const {};
+      d.listError = '';
+      d.loaded = false;
+    });
+    if (api == null) return;
+    d.set(() => d.loading = true);
+    try {
+      final preview = await api.resetPreview(widget.entity, widget.entityId);
+      // The dialog may have been closed, or the list asked for again, while this one was on its way.
+      if (seq != _resetSeq) return;
+      d.set(() {
+        d.items = preview.items;
+        d.chosen = {
+          for (final i in preview.items)
+            if (i.undoable && (keepChoices && beforeItems.contains(i.id) ? beforeChosen.contains(i.id) : i.selected)) i.id,
+        };
+        d.loaded = true;
+      });
+    } on UnimplementedError {
+      // This API can't list it: the reset only confirms.
+    } catch (_) {
+      if (seq == _resetSeq) d.set(() => d.listError = "What the workflow did couldn't be listed, so the reset will leave it as it is.");
+    } finally {
+      if (seq == _resetSeq) d.set(() => d.loading = false);
+    }
+  }
+
+  /// The confirmation (or form, or remarks) before a move, a reset or a manual start.
+  _ActionDialog _confirm(_PendingAction p) {
+    _closeDialog();
+    final d = _ActionDialog(p);
+    final o = p.option;
+    final reset = p.kind == _ActionKind.reset;
     final formKey = GlobalKey<UiFormRendererState>();
+    _dialog = d;
+
+    Future<void> confirm(BuildContext ctx) async {
+      // A double tap must not apply the move twice; nor may the reset go before its list arrives.
+      if (d.busy || d.loading) return;
+      // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
+      if (o.form != null && formKey.currentState?.submit() == null) return;
+      if (p.remarks == UiWfRemarks.required && d.remark.trim().isEmpty) {
+        d.set(() {
+          d.remarkMissing = true;
+          d.error = 'Add remarks to explain this.';
+        });
+        return;
+      }
+      d.set(() => d.busy = true);
+      final ok = switch (p.kind) {
+        _ActionKind.reset => await _reset(d),
+        _ActionKind.manual => await _runManual(o.key, d.input, d),
+        _ActionKind.move => await _apply(o.key, d.input, d),
+      };
+      d.set(() => d.busy = false);
+      if (ok && identical(_dialog, d)) _closeDialog();
+    }
+
     showUiModal<void>(
       context: context,
-      title: p.label,
-      // The reset's list of what the workflow did needs the room.
+      title: o.label,
+      // A reset's list of what the workflow did needs the room.
       size: reset ? UiModalSize.lg : UiModalSize.md,
-      builder: (ctx) => ValueListenableBuilder(
-        valueListenable: err,
-        builder: (ctx, e, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
-          if (p.confirm != null) Text(p.confirm!, style: _body(ctx, size: 14)),
-          if (p.form != null)
-            UiFormRenderer(key: formKey, definition: p.form!, showActions: false, showTitle: false, onValueChanged: (v) => input = v)
-          else if (p.confirm == null)
-            Text('Move this record to “${p.toLabel}”?', style: _body(ctx, size: 14)),
-          if (reset && api != null)
-            _WfResetUndoList(api: api, entity: widget.entity, entityId: widget.entityId, chosen: chosen, reload: reload, busy: busy),
-          if (e.isNotEmpty) WfNote(e),
-        ]),
-      ),
-      footerBuilder: (ctx) => ValueListenableBuilder(
-        valueListenable: busy,
-        builder: (ctx, b, _) => Row(children: [
-          UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop()),
+      builder: (ctx) {
+        _dialogRoute = ModalRoute.of(ctx);
+        return ListenableBuilder(
+          listenable: d,
+          builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+            if (o.confirm != null) Text(o.confirm!, style: _body(ctx, size: 14)),
+            if (o.form != null)
+              UiFormRenderer(key: formKey, definition: o.form!, showActions: false, showTitle: false, onValueChanged: (v) => d.input = v)
+            else if (o.confirm == null)
+              Text('Move this record to “${o.toLabel}”?', style: _body(ctx, size: 14)),
+            if (p.remarks != UiWfRemarks.none)
+              FbSetting(
+                label: 'Remarks${p.remarks == UiWfRemarks.required ? ' (required)' : ' (optional)'}',
+                child: UiTextarea(
+                  value: d.remark,
+                  rows: 2,
+                  autosize: true,
+                  invalid: d.remarkMissing,
+                  semanticLabel: 'Remarks',
+                  onChanged: (v) {
+                    d.remark = v;
+                    if (d.remarkMissing) d.set(() => d.remarkMissing = false);
+                  },
+                ),
+              ),
+            if (reset) _WfResetUndoList(dialog: d),
+            if (d.error.isNotEmpty) WfNote(d.error),
+          ]),
+        );
+      },
+      footerBuilder: (ctx) => ListenableBuilder(
+        listenable: d,
+        builder: (ctx, _) => Row(children: [
+          UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: d.busy ? null : () => Navigator.of(ctx).pop()),
           const Spacer(),
           UiButton(
-            label: p.label,
-            variant: p.tone == 'danger' ? UiButtonVariant.destructive : UiButtonVariant.primary,
-            onPressed: b
-                ? null
-                : () async {
-                    // A double tap must not apply the move twice.
-                    if (busy.value) return;
-                    // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
-                    if (p.form != null && formKey.currentState?.submit() == null) return;
-                    busy.value = true;
-                    final ok = reset ? await _reset(input, err, chosen.value.toList(), reload) : manual ? await _runManual(p.key, input, err) : await _apply(p.key, input, err);
-                    busy.value = false;
-                    if (ok && ctx.mounted) Navigator.of(ctx).pop();
-                  },
+            label: o.label,
+            variant: o.tone == 'danger' ? UiButtonVariant.destructive : UiButtonVariant.primary,
+            // Not before the reset's list arrives: confirming then would take back nothing.
+            onPressed: d.busy || d.loading ? null : () => confirm(ctx),
           ),
         ]),
       ),
     ).whenComplete(() {
-      err.dispose();
-      busy.dispose();
-      chosen.dispose();
-      reload.dispose();
+      if (identical(_dialog, d)) {
+        _dialog = null;
+        _dialogRoute = null;
+        _resetSeq++;
+      }
+      d.dispose();
     });
+    return d;
   }
 
-  Future<bool> _apply(String key, UiJson input, ValueNotifier<String>? err) async {
+  /// Shows [msg] in the dialog while it is open, else under the buttons (it may have been closed).
+  void _fail(_ActionDialog? d, String msg) {
+    if (d != null && !d.disposed) {
+      d.set(() => d.error = msg);
+    } else if (mounted) {
+      setState(() => _error = msg);
+    }
+  }
+
+  Future<bool> _apply(String key, UiJson input, _ActionDialog? d) async {
     final api = widget.api;
     if (api == null || _busy) return false;
     setState(() => _busy = true);
     try {
-      final r = await api.applyTransition(widget.entity, widget.entityId, key, input: input);
+      final remark = d != null && d.pending.remarks != UiWfRemarks.none && d.remark.trim().isNotEmpty ? d.remark.trim() : null;
+      final r = await api.applyTransition(widget.entity, widget.entityId, key, input: input, comment: remark);
       if (mounted) setState(() => _error = '');
       await widget.onChanged?.call(r);
       return true;
     } catch (e) {
-      final msg = _errorText(e, 'That did not work.');
-      if (err != null) {
-        err.value = msg;
-      } else if (mounted) {
-        setState(() => _error = msg);
-      }
+      _fail(d, _errorText(e, 'That did not work.'));
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<bool> _reset(UiJson input, ValueNotifier<String> err, List<String> undo, ValueNotifier<int> reload) async {
+  Future<bool> _reset(_ActionDialog d) async {
     final api = widget.api;
-    if (api == null) return false;
+    if (api == null || _busy) return false;
     setState(() => _busy = true);
     try {
-      final r = await api.resetRecord(widget.entity, widget.entityId, input: input, undo: undo.isEmpty ? null : undo);
+      final undo = [for (final i in d.items) if (d.chosen.contains(i.id)) i.id];
+      final remark = d.remark.trim();
+      final r = await api.resetRecord(widget.entity, widget.entityId, input: d.input, undo: undo.isEmpty ? null : undo, comment: remark.isEmpty ? null : remark);
       if (mounted) setState(() => _error = '');
       await widget.onChanged?.call(r);
       return true;
     } catch (e) {
-      err.value = _errorText(e, 'The workflow could not be reset.');
-      // Someone else changed what the workflow did meanwhile: show the list as it is now.
-      if (e is UiWfApiError && e.code == 'resetChanged') reload.value++;
+      _fail(d, _errorText(e, 'The workflow could not be reset.'));
+      // Someone else changed what the workflow did meanwhile: show the list as it is now, keeping the person's ticks.
+      if (!d.disposed && e is UiWfApiError && e.code == 'resetChanged') _loadResetItems(d, keepChoices: true);
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<bool> _runManual(String key, UiJson input, ValueNotifier<String>? err) async {
+  Future<bool> _runManual(String key, UiJson input, _ActionDialog? d) async {
     final api = widget.api;
     if (api == null || _busy) return false;
     setState(() => _busy = true);
@@ -640,12 +831,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       await widget.onReload?.call();
       return true;
     } catch (e) {
-      final msg = _errorText(e, 'That did not work.');
-      if (err != null) {
-        err.value = msg;
-      } else if (mounted) {
-        setState(() => _error = msg);
-      }
+      _fail(d, _errorText(e, 'That did not work.'));
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -941,7 +1127,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
     final api = widget.api;
     if (api == null || widget.canIntervene != null) return;
     Future.sync(api.me).then((me) {
-      if (mounted) setState(() => _allowed = me.canIntervene);
+      if (mounted) setState(() => _allowed = me?.canIntervene ?? false);
     }).catchError((Object _) {
       if (mounted) setState(() => _allowed = false);
     });
@@ -1476,77 +1662,30 @@ class _AuditRow extends StatelessWidget {
 
 /// What the workflow did since the record last started over, for the reset to take back (spec §6
 /// reset list): ticked as the engine suggests, changed-since items unticked, and things that can't be
-/// undone (sent messages) locked with the reason. Shows nothing when the API can't list it.
-class _WfResetUndoList extends StatefulWidget {
-  const _WfResetUndoList({required this.api, required this.entity, required this.entityId, required this.chosen, required this.reload, required this.busy});
-  final UiWorkflowApi api;
-  final String entity;
-  final String entityId;
-
-  /// The ticked item ids, read when the reset is confirmed.
-  final ValueNotifier<Set<String>> chosen;
-
-  /// Bumped to read the list again.
-  final ValueListenable<int> reload;
-  final ValueListenable<bool> busy;
-
-  @override
-  State<_WfResetUndoList> createState() => _WfResetUndoListState();
-}
-
-class _WfResetUndoListState extends State<_WfResetUndoList> {
-  List<UiWfResetItem> _items = const [];
-  bool _loading = true;
-  String _error = '';
-
-  @override
-  void initState() {
-    super.initState();
-    widget.reload.addListener(_load);
-    _load();
-  }
-
-  @override
-  void dispose() {
-    widget.reload.removeListener(_load);
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = '';
-    });
-    try {
-      final preview = await widget.api.resetPreview(widget.entity, widget.entityId);
-      if (!mounted) return;
-      widget.chosen.value = {for (final i in preview.items) if (i.undoable && i.selected) i.id};
-      setState(() => _items = preview.items);
-    } on UnimplementedError {
-      if (mounted) setState(() => _items = const []);
-    } catch (_) {
-      if (mounted) setState(() => _error = "What the workflow did couldn't be listed, so the reset will leave it as it is.");
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
+/// undone (sent messages) locked with the reason. The record actions load it into [dialog]; this
+/// only shows it. Shows nothing when the API can't list it.
+class _WfResetUndoList extends StatelessWidget {
+  const _WfResetUndoList({required this.dialog});
+  final _ActionDialog dialog;
 
   static String _kindLabel(String kind) =>
       const {'field': 'Field', 'created': 'New record', 'action': 'Action', 'message': 'Message', 'webhook': 'Webhook'}[kind] ?? wfHumanize(kind);
 
-  void _choose(String id, bool on) => widget.chosen.value = on ? {...widget.chosen.value, id} : ({...widget.chosen.value}..remove(id));
-
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    if (_loading) return Text('Looking up what the workflow did…', style: _body(context, size: 12, color: t.textMuted));
-    if (_items.isEmpty) return _error.isEmpty ? const SizedBox.shrink() : Text(_error, style: _body(context, size: 12, color: t.textMuted));
-    final undoable = [for (final i in _items) if (i.undoable) i.id];
-    return ListenableBuilder(
-      listenable: Listenable.merge([widget.chosen, widget.busy]),
-      builder: (context, _) {
-        final chosen = widget.chosen.value;
-        final busy = widget.busy.value;
+    final d = dialog;
+    final hint = _body(context, size: 12, color: t.textMuted);
+    if (d.loading) return Text('Looking up what the workflow did…', style: hint);
+    if (d.listError.isNotEmpty) return Text(d.listError, style: hint);
+    if (d.loaded && d.items.isEmpty) return Text('Nothing the workflow did needs taking back.', style: hint);
+    if (d.items.isEmpty) return const SizedBox.shrink();
+    final undoable = [for (final i in d.items) if (i.undoable) i.id];
+    void choose(String id, bool on) => d.set(() => d.chosen = on ? {...d.chosen, id} : ({...d.chosen}..remove(id)));
+    return Builder(
+      builder: (context) {
+        final chosen = d.chosen;
+        final busy = d.busy;
         final all = chosen.length >= undoable.length;
         return Container(
           padding: EdgeInsets.only(top: t.space3),
@@ -1559,12 +1698,12 @@ class _WfResetUndoListState extends State<_WfResetUndoList> {
                   label: all ? 'Select none' : 'Select all',
                   size: UiSize.sm,
                   variant: UiButtonVariant.ghost,
-                  onPressed: busy ? null : () => widget.chosen.value = all ? {} : undoable.toSet(),
+                  onPressed: busy ? null : () => d.set(() => d.chosen = all ? {} : undoable.toSet()),
                 ),
             ]),
             Text('What the workflow did since the record last started over. Untick anything that should stay; the workflow carries on either way.',
                 style: _body(context, size: 12, color: t.textMuted, height: 1.35)),
-            for (final it in _items)
+            for (final it in d.items)
               Container(
                 padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
                 decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
@@ -1574,8 +1713,12 @@ class _WfResetUndoListState extends State<_WfResetUndoList> {
                     alignment: AlignmentDirectional.centerStart,
                     child: UiCheckbox(
                       value: chosen.contains(it.id),
-                      onChanged: it.undoable && !busy ? (v) => _choose(it.id, v) : null,
-                      child: Text(it.title, style: _body(context, size: 13.5, weight: FontWeight.w600)),
+                      onChanged: it.undoable && !busy ? (v) => choose(it.id, v) : null,
+                      // Read with the box, so screen readers hear why it is unticked or locked.
+                      semanticLabel: it.warning == null ? it.title : '${it.title}. ${it.warning}',
+                      child: ExcludeSemantics(
+                        child: Text(it.title, style: _body(context, size: 13.5, weight: FontWeight.w600, color: it.undoable ? null : t.textMuted)),
+                      ),
                     ),
                   ),
                   Padding(
@@ -1588,7 +1731,7 @@ class _WfResetUndoListState extends State<_WfResetUndoList> {
                   if (it.warning != null)
                     Padding(
                       padding: const EdgeInsets.only(left: 26),
-                      child: Text(it.warning!, style: _body(context, size: 12, color: it.undoable ? t.warning : t.textMuted, height: 1.4)),
+                      child: ExcludeSemantics(child: Text(it.warning!, style: _body(context, size: 12, color: it.undoable ? t.warning : t.textMuted, height: 1.4))),
                     ),
                 ]),
               ),

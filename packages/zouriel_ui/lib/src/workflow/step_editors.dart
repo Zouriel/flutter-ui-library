@@ -210,14 +210,15 @@ class _WfStepEditorState extends State<WfStepEditor> {
           ]),
           const FbHint('Anyone: the first approval wins. Everyone: one rejection rejects it.'),
           field(
-            'Comment required',
+            'Remarks',
             WfSelect(
-              label: 'Comment required',
+              label: 'Remarks',
               value: a.requireComment == null || a.requireComment == 'never' ? 'never' : a.requireComment,
-              options: const [(value: 'never', label: 'Never'), (value: 'reject', label: 'When rejecting'), (value: 'always', label: 'Always')],
+              options: const [(value: 'never', label: 'Optional'), (value: 'reject', label: 'Required to reject'), (value: 'always', label: 'Always required')],
               onChanged: (v) => patch({'requireComment': v}),
             ),
           ),
+          const FbHint('People can always add remarks; they show in the history and later steps can read them.'),
         ];
       case 'task':
         final tk = UiWfTaskStep.of(step);
@@ -240,6 +241,17 @@ class _WfStepEditorState extends State<WfStepEditor> {
                 }),
             ]),
           ),
+          field(
+            'Remarks',
+            WfSelect(
+              label: 'Remarks',
+              value: tk.requireComment == null || tk.requireComment == 'never' ? 'never' : tk.requireComment,
+              options: const [(value: 'never', label: 'Optional'), (value: 'reject', label: 'Required for red buttons'), (value: 'always', label: 'Always required')],
+              onChanged: (v) => patch({'requireComment': v}),
+            ),
+          ),
+          if (tk.requireComment == 'reject' && !outs.any((o) => o.tone == 'danger'))
+            const FbHint('No button is red yet: colour the negative ones “danger” so they ask for remarks.'),
         ];
       case 'branch':
         final b = UiWfBranchStep.of(step);
@@ -437,7 +449,16 @@ class _WfStepEditorState extends State<WfStepEditor> {
       case 'createRecord':
         final cr = UiWfCreateRecordStep.of(step);
         final kind = cr.entity.isEmpty ? null : cr.entity;
-        final settable = [for (final f in entityOf(reg, kind)?.fields ?? const <UiWfFieldDescriptor>[]) if (f.settable) f];
+        // A new record's lifecycle-controlled field starts in its first state, so it isn't offered
+        // when this workflow or a published lifecycle controls a field of that kind of record.
+        final lifecycleOn = kind != null &&
+            ((store.def.kind == 'lifecycle' && store.def.entity == kind) || store.others.any((o) => o.kind == 'lifecycle' && o.entity == kind && o.version > 0));
+        final settable = [
+          for (final f in entityOf(reg, kind)?.fields ?? const <UiWfFieldDescriptor>[])
+            if (f.settable && !(f.lifecycle && lifecycleOn)) f,
+        ];
+        // The chosen kind is not in the registry any more (once the registry is known).
+        final unknownKind = kind != null && reg != null && entityOf(reg, kind) == null;
         final values = cr.values;
         return [
           field(
@@ -469,7 +490,9 @@ class _WfStepEditorState extends State<WfStepEditor> {
                 ),
                 remove: del('Remove', () => patch({'values': [...values]..removeAt(i)})),
               ),
-            if (settable.isNotEmpty)
+            if (unknownKind)
+              const FbHint('The app no longer offers this kind of record; choose another.')
+            else if (settable.isNotEmpty)
               link('Set a field', () => patch({'values': [...values, {'field': '', 'value': {'const': null}}]}))
             else
               const FbHint('The app hasn’t allowed workflows to set any field of this kind of record.'),

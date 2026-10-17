@@ -106,7 +106,7 @@ void main() {
       await tester.tap(find.text('Finance sign-off'));
       await tester.pumpAndSettle();
       expect(find.text('Check the amount.'), findsOneWidget);
-      expect(find.text('Comment (required to reject)'), findsOneWidget);
+      expect(find.text('Remarks (required to reject)'), findsOneWidget);
       await tester.enterText(find.byType(EditableText).first, 'Looks right');
       await tester.pump();
       await tester.tap(button('Approve').last);
@@ -165,10 +165,29 @@ void main() {
       await pumpPage(tester, UiWorkflowTasks(api: api, onDecided: (t) => decided = t));
       await tester.tap(find.text('Task 1'));
       await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).first, 'Missing transcript');
+      await tester.pump();
       await tester.tap(button('Reject'));
       await tester.pumpAndSettle();
       expect(decided?.outcome, 'rejected');
+      expect(api.calls, contains('decide:t1:rejected:Missing transcript'));
       expect(find.text('Task 1'), findsNothing);
+    });
+
+    testWidgets('rejecting without the remarks it requires sends nothing and says why', (tester) async {
+      final api = FakeWorkflowApi();
+      await pumpPage(tester, UiWorkflowTasks(api: api));
+      await tester.tap(find.text('Task 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Remarks (required to reject)'), findsOneWidget);
+      await tester.tap(button('Reject'));
+      await tester.pumpAndSettle();
+      expect(api.calls.where((c) => c.startsWith('decide:')), isEmpty);
+      expect(find.text('Add remarks to explain “Reject”.'), findsOneWidget);
+      // Approving needs none.
+      await tester.tap(button('Approve'));
+      await tester.pumpAndSettle();
+      expect(api.calls.where((c) => c.startsWith('decide:')).single, startsWith('decide:t1:approved'));
     });
   });
 

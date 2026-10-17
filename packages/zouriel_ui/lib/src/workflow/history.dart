@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'api.dart';
 import 'bits.dart';
 import 'json.dart';
+import 'schema.dart' show UiWfRemarks;
 
 // How the runtime widgets word history and outcomes (the web `runtime-shared.ts`): shared by the
 // record panel and the workflow panel.
@@ -70,14 +71,17 @@ String wfDescribeHistory(UiWfAuditEntry h, String Function(Object? key) stateLab
       return 'Started in ${stateLabel(after['state'])}';
     case 'lifecycle.transitioned':
       final name = s(data['label'] ?? data['transition']);
-      return '${name.isEmpty ? 'Moved' : name}: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}';
+      final remark = s(data['comment']);
+      return '${name.isEmpty ? 'Moved' : name}: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}${remark.isEmpty ? '' : ' (“$remark”)'}';
     case 'lifecycle.autoTransitioned':
       return 'Moved automatically: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}';
     case 'lifecycle.autoSkipped':
       return 'An automatic move was skipped';
     case 'lifecycle.reset':
       final input = data['input'] is Map ? wfMap(data['input']) : const <String, Object?>{};
-      final why = s(input['reason'] ?? input.values.whereType<String>().firstOrNull);
+      // The person's remarks, else the reset form's reason.
+      final remark = s(data['comment']);
+      final why = remark.isNotEmpty ? remark : s(input['reason'] ?? input.values.whereType<String>().firstOrNull);
       final name = s(data['label']);
       final undone = data['undone'] is List ? (data['undone'] as List).length : 0;
       final took = undone == 0 ? '' : ', took back $undone thing${undone == 1 ? '' : 's'} the workflow did';
@@ -175,6 +179,29 @@ String wfActorLabel(UiWfAuditEntry e, [String? Function(String key)? workflowTit
   if (e.actorType == 'system') return 'System';
   return e.actorId ?? wfHumanize(e.actorType);
 }
+
+/// Whether deciding [outcome] needs remarks (spec §7): always, or for a negative outcome when the
+/// step asks for them on rejecting (an approval's "rejected", a task's red outcomes).
+bool wfCommentRequired(UiWfTask t, String outcome) {
+  if (t.requireComment == 'always') return true;
+  if (t.requireComment != 'reject') return false;
+  return outcome == 'rejected' || t.outcomes.any((o) => o.key == outcome && o.tone == 'danger');
+}
+
+/// How the remarks box is labelled: what it is required for, else optional.
+String wfRemarksLabel(UiWfTask t) {
+  if (t.requireComment == 'always') return 'Remarks (required)';
+  if (t.requireComment == 'reject') {
+    final negative = [for (final o in t.outcomes) if (wfCommentRequired(t, o.key)) o.label];
+    if (negative.isNotEmpty) {
+      return 'Remarks (required to ${negative.length == 1 && negative.first.isNotEmpty ? negative.first.toLowerCase() : 'choose ${negative.join(' or ')}'})';
+    }
+  }
+  return 'Remarks (optional)';
+}
+
+/// Whether a move asks for remarks: its setting, else optional for red moves (older engines send none).
+UiWfRemarks wfRemarksFor(UiWfTransitionOption t) => t.comment ?? (t.tone == 'danger' ? UiWfRemarks.optional : UiWfRemarks.none);
 
 /// Whether a finished step ended by running out of time (an approval or task, or a wait, that timed out).
 bool wfStepTimedOut(Object? output) => output is Map && (output['outcome'] == 'timedOut' || output['timedOut'] == true);

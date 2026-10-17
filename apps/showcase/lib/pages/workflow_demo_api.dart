@@ -112,6 +112,24 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   late Map<String, Map<String, Object?>> _defs;
   late Map<String, Object?> _record;
+
+  /// The application's own fields that the demo workflow changes (and a reset can put back).
+  late Map<String, Object?> _fields;
+
+  /// The documents that exist (the workflow creates the review checklist; a reset can delete it).
+  late List<String> _documents;
+
+  /// The ids of what the workflow did since the application last started over (the reset list).
+  late List<String> _done;
+
+  /// The application's reviewer, as the demo workflow last set it (null once a reset put it back).
+  String? get reviewer => _fields['reviewer'] as String?;
+
+  /// The programme's budget, which the workflow reserved from.
+  int get budget => _fields['budget']! as int;
+
+  /// Whether the review checklist the workflow created still exists.
+  bool get hasChecklist => _documents.contains('d9');
   late List<Map<String, Object?>> _tasks;
   late List<Map<String, Object?>> _audit;
   late Map<String, Object?> _run;
@@ -142,6 +160,9 @@ class DemoWorkflowApi implements UiWorkflowApi {
         {'key': 'approved', 'label': 'Approved', 'category': 'terminal', 'tone': 'success'}, {'key': 'rejected', 'label': 'Rejected', 'category': 'terminal', 'tone': 'danger'},
       ],
     };
+    _fields = {'reviewer': 'Rana Ibrahim', 'budget': 42000};
+    _documents = ['d9'];
+    _done = ['field:application:1:reviewer', 'created:document:d9', 'field:programme:p1:budget', 'message:m1'];
     _tasks = [
       _task('t1', 'Finance sign-off', 'approval', due: const Duration(days: 2)),
       _task('t2', 'Check the transcript', 'task', due: const Duration(hours: -5), overdue: true),
@@ -587,29 +608,53 @@ class DemoWorkflowApi implements UiWorkflowApi {
     ],
   };
 
-  /// What the demo workflow did since the application last started over, for the reset list.
-  List<Map<String, Object?>> _resetItems() => [
-        if (_record['state'] != 'draft')
-          {'id': 'field:application:a1:reviewer', 'kind': 'field', 'title': 'Reviewer of Application “${_record['title'] ?? 'Bursary'}”: back to nobody',
-            'detail': 'Now Rana Ibrahim', 'workflow': 'Scholarship review', 'step': 'Assign the reviewer', 'undoable': true, 'selected': true},
-        if (_record['state'] != 'draft')
-          {'id': 'created:document:d9', 'kind': 'created', 'title': 'Delete Document “Review checklist”', 'detail': 'Created by the workflow',
-            'workflow': 'Scholarship review', 'step': 'Open a checklist', 'undoable': true, 'selected': true},
-        {'id': 'field:programme:p1:budget', 'kind': 'field', 'title': 'Budget of Programme “Engineering”: back to 50,000', 'detail': 'Now 42,000',
-          'workflow': 'Scholarship review', 'step': 'Reserve the amount', 'undoable': true, 'selected': false,
-          'warning': 'Changed again since the workflow set it to 45,200; ticking it overwrites that.'},
-        {'id': 'message:m1', 'kind': 'message', 'title': 'Message “We received your application” to Ali Hassan', 'detail': null,
-          'workflow': 'Scholarship review', 'step': 'Thank the applicant', 'undoable': false, 'selected': false, 'warning': "Already sent; it can't be taken back."},
-      ];
+  /// What the demo workflow did since the application last started over, for the reset list: only
+  /// what is still listed in [_done], so a reset empties it until the application moves on again.
+  List<Map<String, Object?>> _resetItems() {
+    final all = <String, Map<String, Object?>>{
+      'field:application:1:reviewer': {'kind': 'field', 'title': 'Reviewer of Application “${_record['title'] ?? 'Bursary'}”: back to nobody',
+        'detail': 'Now ${_fields['reviewer'] ?? 'nobody'}', 'workflow': 'Scholarship review', 'step': 'Assign the reviewer', 'undoable': true, 'selected': true},
+      'created:document:d9': {'kind': 'created', 'title': 'Delete Document “Review checklist”', 'detail': 'Created by the workflow',
+        'workflow': 'Scholarship review', 'step': 'Open a checklist', 'undoable': true, 'selected': true},
+      'field:programme:p1:budget': {'kind': 'field', 'title': 'Budget of Programme “Engineering”: back to 50,000', 'detail': 'Now ${_money(budget)}',
+        'workflow': 'Scholarship review', 'step': 'Reserve the amount', 'undoable': true, 'selected': false,
+        'warning': 'Changed again since the workflow set it to 45,200; ticking it overwrites that.'},
+      'message:m1': {'kind': 'message', 'title': 'Message “We received your application” to Ali Rasheed', 'detail': null,
+        'workflow': 'Scholarship review', 'step': 'Thank the applicant', 'undoable': false, 'selected': false, 'warning': "Already sent; it can't be taken back."},
+    };
+    return [for (final id in _done) if (all[id] case final item?) {'id': id, ...item}];
+  }
+
+  static String _money(int n) => n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ',');
+
+  /// Takes back one thing the workflow did (a field put back, a created record deleted).
+  void _takeBack(String id) {
+    switch (id) {
+      case 'field:application:1:reviewer':
+        _fields['reviewer'] = null;
+      case 'created:document:d9':
+        _documents.remove('d9');
+      case 'field:programme:p1:budget':
+        _fields['budget'] = 50000;
+    }
+  }
 
   @override
   Future<UiWfResetPreview> resetPreview(String entity, String id) => _later(() => UiWfResetPreview.fromJson({'reset': _recordNow().reset?.json, 'items': _resetItems()}));
 
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo}) => _later(() {
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment}) => _later(() {
     final before = _record['state'];
-    // Read before the state moves: the list depends on it.
-    final undone = [for (final i in _resetItems()) if (undo?.contains(i['id']) ?? false) i['title']];
+    final items = _resetItems();
+    if (undo?.any((u) => !items.any((i) => i['id'] == u)) ?? false) {
+      throw const UiWfApiError(409, 'resetChanged', 'What the workflow did has changed; check the list again.');
+    }
+    final undone = [for (final i in items) if (undo?.contains(i['id']) ?? false) i['title']];
+    for (final u in undo ?? const <String>[]) {
+      _takeBack(u);
+    }
+    // Starting over: from here the list holds only what the workflow does next.
+    _done = [];
     for (final task in _tasks) {
       if (task['status'] == 'open') task['status'] = 'cancelled';
     }
@@ -618,7 +663,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
     _record['stateTone'] = 'neutral';
     _record['stateEnteredAt'] = _now();
     _record['transitions'] = _transitionsFrom('draft');
-    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}, 'undone': undone}, actor: 'Hana Ibrahim');
+    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}, 'undone': undone, 'comment': ?comment}, actor: 'Hana Ibrahim');
     return _recordNow();
   });
 
@@ -630,7 +675,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
       _later(() => [for (final a in _audit.where((a) => a['category'] == 'lifecycle' || a['category'] == 'task').take(take)) UiWfAuditEntry.fromJson(a)]);
 
   @override
-  Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input}) => _later(() {
+  Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input, String? comment}) => _later(() {
     final options = (_record['transitions'] as List).cast<Map<String, Object?>>();
     final t = options.where((x) => x['key'] == key).firstOrNull;
     if (t == null) throw const UiWfApiError(403, 'notAllowed', 'That move isn’t possible from here.');
@@ -640,7 +685,13 @@ class DemoWorkflowApi implements UiWorkflowApi {
     _record['stateTone'] = (_record['states'] as List).cast<Map>().firstWhere((s) => s['key'] == t['to'])['tone'];
     _record['stateEnteredAt'] = _now();
     _record['transitions'] = _transitionsFrom(t['to'] as String);
-    _log('lifecycle', 'transitioned', before: {'state': before}, after: {'state': t['to']}, data: {'transition': key, 'label': t['label']}, actor: 'Hana Ibrahim');
+    _log('lifecycle', 'transitioned', before: {'state': before}, after: {'state': t['to']}, data: {'transition': key, 'label': t['label'], 'comment': ?comment}, actor: 'Hana Ibrahim');
+    if (before == 'draft' && t['to'] == 'review') {
+      // The workflow assigns a reviewer and opens a checklist again, which a later reset can take back.
+      _fields['reviewer'] = 'Rana Ibrahim';
+      if (!_documents.contains('d9')) _documents.add('d9');
+      _done = ['field:application:1:reviewer', 'created:document:d9', ..._done.where((d) => !d.startsWith('field:application:1:reviewer') && d != 'created:document:d9')];
+    }
     if (t['to'] == 'approved' || t['to'] == 'rejected') {
       for (final task in _tasks) {
         if (task['status'] == 'open') task['status'] = 'cancelled';

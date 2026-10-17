@@ -301,7 +301,8 @@ extension type const UiWfHumanStep._(UiJson json) implements UiWfStep {
   UiWfTemplate? get instructions => json.containsKey('instructions') ? UiWfTemplate.fromJson(json['instructions']) : null;
   bool get allowDelegation => json['allowDelegation'] == true;
 
-  /// `never`, `reject` (approvals) or `always`.
+  /// When a remark is required: `never` (it is always offered), `reject` (an approval's "rejected",
+  /// a task's red outcomes) or `always`.
   String? get requireComment => wfStrOrNull(json['requireComment']);
 }
 
@@ -506,8 +507,23 @@ extension type const UiWfTransition._(UiJson json) implements Object {
   String? get confirm => wfStrOrNull(json['confirm']);
   String? get tone => wfStrOrNull(json['tone']);
   bool get hidden => json['hidden'] == true;
+
+  /// Remarks people give when they make this move (spec §6). Null: optional for red (`danger`)
+  /// moves, not asked otherwise. Automatic moves never need one.
+  UiWfRemarks? get comment => UiWfRemarks.parse(json['comment']);
   UiWfTransition patch(UiJson p) => UiWfTransition._(wfPatch(json, p));
   UiJson toJson() => json;
+}
+
+/// Whether people are asked for remarks (the web `UiWfRemarks`): [none] (not asked), [optional] or
+/// [required]. Stored by [name].
+enum UiWfRemarks {
+  none,
+  optional,
+  required;
+
+  /// The value stored in a definition or sent by the engine; null when absent or unknown.
+  static UiWfRemarks? parse(Object? v) => values.where((r) => r.name == v).firstOrNull;
 }
 
 extension type const UiWfLifecycle._(UiJson json) implements Object {
@@ -558,6 +574,12 @@ extension type const UiWfLifecycleReset._(UiJson json) implements Object {
   bool get runExitEnter => json['runExitEnter'] == true;
   bool get cancelAutomations => json['cancelAutomations'] != false;
   List<UiWfStep>? get steps => wfListOrNull(json['steps'], UiWfStep.fromJson);
+
+  /// Remarks people give when they reset (null: optional); steps read them as `trigger.comment`.
+  UiWfRemarks? get comment => UiWfRemarks.parse(json['comment']);
+
+  /// The state ids it is offered in; null = every state (it is never offered when it would change nothing).
+  List<String>? get states => wfStringsOrNull(json['states']);
   UiWfLifecycleReset patch(UiJson p) => UiWfLifecycleReset._(wfPatch(json, p));
   UiJson toJson() => json;
 }

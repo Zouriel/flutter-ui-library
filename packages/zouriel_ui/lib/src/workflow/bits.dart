@@ -118,8 +118,12 @@ class WfStack extends StatelessWidget {
 
 /// A tinted box for an error (the web `.wf-error`) or a warning (`.wf-warn`).
 class WfNote extends StatelessWidget {
-  const WfNote(this.text, {super.key, this.warning = false, this.alert = true});
+  const WfNote(this.text, {super.key, this.warning = false, this.alert = true}) : child = null;
+
+  /// The same box around other content (e.g. a message with a button).
+  const WfNote.custom({super.key, required Widget this.child, this.warning = false, this.alert = true}) : text = '';
   final String text;
+  final Widget? child;
   final bool warning;
 
   /// Announced as it appears.
@@ -138,7 +142,10 @@ class WfNote extends StatelessWidget {
           borderRadius: BorderRadius.circular(t.radiusXs),
           border: Border.all(color: c.withValues(alpha: warning ? 0.35 : 0.32)),
         ),
-        child: Text(text, style: context.uiText.body.copyWith(fontSize: 12, height: 1.4, color: t.text)),
+        child: DefaultTextStyle.merge(
+          style: context.uiText.body.copyWith(fontSize: 12, height: 1.4, color: t.text),
+          child: child ?? Text(text),
+        ),
       ),
     );
   }

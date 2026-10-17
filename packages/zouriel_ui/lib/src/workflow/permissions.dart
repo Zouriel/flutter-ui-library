@@ -26,6 +26,8 @@ class UiWfPermissionRow {
   /// Where it is: "Submitted [wfArrow] Under review", "Approval"…
   final String detail;
   final List<UiWfAssignee> who;
+
+  UiWfPermissionRow withWho(List<UiWfAssignee> who) => UiWfPermissionRow(node: node, kind: kind, label: label, detail: detail, who: who);
 }
 
 /// Every "who" a published workflow has, in reading order (moves, reset, start button, then steps).
@@ -35,8 +37,9 @@ List<UiWfPermissionRow> permissionRows(UiWorkflowDefinition def) {
   if (lc != null) {
     String state(String id) => lc.states.where((s) => s.id == id).firstOrNull?.label ?? id;
     for (final t in lc.transitions) {
-      // Automatic moves happen on their own: nobody is asked.
-      if (t.auto != null) continue;
+      // Hidden moves are never offered to anyone. Automatic ones are still offered to the people in
+      // their `who` (who may make them early, by hand), so they stay.
+      if (t.hidden) continue;
       final from = t.fromAny ? 'Any state' : t.from.map(state).join(', ');
       rows.add(UiWfPermissionRow(node: t.id, kind: 'transition', label: t.label, detail: '$from $wfArrow ${state(t.to)}', who: t.who ?? const []));
     }
@@ -60,8 +63,40 @@ List<UiWfPermissionRow> permissionRows(UiWorkflowDefinition def) {
   return rows;
 }
 
+/// What an empty "who" means for each kind of row (the builder's wording). [editing]: the text an
+/// editor shows, which for a step says what to do about it.
+String emptyWhoText(String kind, {bool editing = false}) => switch (kind) {
+  'trigger' => 'Anyone who can see the record.',
+  'transition' => 'Nobody by hand: only automatically, or from other workflows.',
+  'reset' => 'Nobody.',
+  // The engine refuses an approval or task nobody can decide.
+  _ => editing ? 'Nobody yet: add the people who decide. A step without people can’t be saved.' : 'Nobody yet.',
+};
+
+/// Whether two "who" lists name the same people, in any order (and any key order).
+bool sameWho(List<UiWfAssignee> a, List<UiWfAssignee> b) {
+  if (a.length != b.length) return false;
+  List<String> key(List<UiWfAssignee> x) => [for (final w in x) _canonical(w.json)]..sort();
+  final ka = key(a), kb = key(b);
+  for (var i = 0; i < ka.length; i++) {
+    if (ka[i] != kb[i]) return false;
+  }
+  return true;
+}
+
+String _canonical(Object? v) {
+  if (v is List) return '[${v.map(_canonical).join(',')}]';
+  if (v is Map) {
+    final keys = [for (final e in v.entries) if (e.value != null) '${e.key}']..sort();
+    return '{${keys.map((k) => '${jsonEncode(k)}:${_canonical(v[k])}').join(',')}}';
+  }
+  return jsonEncode(v);
+}
+
 class _Workflow {
-  _Workflow(this.summary, this.def, UiWorkflowRegistry? registry) : rows = permissionRows(def), tokens = tokensAt(def, registry);
+  _Workflow(this.summary, this.def, UiWorkflowRegistry? registry, [List<UiWfPermissionRow>? rows])
+    : rows = rows ?? permissionRows(def),
+      tokens = tokensAt(def, registry);
   _Workflow._only(_Workflow of, this.rows) : summary = of.summary, def = of.def, tokens = of.tokens;
   final UiWfDefinitionSummary summary;
   final UiWorkflowDefinition def;
@@ -70,8 +105,6 @@ class _Workflow {
 }
 
 String _errorText(Object e, String fallback) => e is UiWfApiError ? e.message : fallback;
-
-String _whoKey(List<UiWfAssignee> who) => jsonEncode([for (final a in who) a.json]);
 
 /// `ui-workflow-permissions`: who may do what in every published workflow, on one settings page:
 /// who may make each lifecycle move, start a record over, press a start button, and decide each
@@ -104,10 +137,17 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
   final Map<String, String> _errors = {};
   final Map<String, String> _saved = {};
 
+  /// Conflicting saves: the published version changed since the page loaded it.
+  final Set<String> _conflicts = {};
+
+  /// People's names by user id, for the read-only rows (the editors look their own up).
+  final Map<String, String> _userNames = {};
+  final Set<String> _askedUsers = {};
+
   /// Bumped per workflow when its note is cleared, so the field starts empty.
   final Map<String, int> _noteGen = {};
 
-  /// The workflow being saved (one at a time).
+  /// The workflow being saved or reloaded (one at a time).
   String? _busy;
 
   @override
@@ -119,8 +159,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
   @override
   void didUpdateWidget(UiWorkflowPermissions oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final old = oldWidget;
-    if (old.api != widget.api) load();
+    if (oldWidget.api != widget.api) load();
   }
 
   /// Loads every published workflow (again).
@@ -157,8 +196,10 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
         // Without /me the server still decides; offer editing and show its answer if it refuses.
         _canEdit = me?.canPublish ?? true;
         _workflows = list;
+        _conflicts.clear();
         _loading = false;
       });
+      if (!_canEdit) _lookUpNames(api, [for (final w in list) ...w.rows]);
     } catch (e) {
       if (!mounted || n != _loadSeq) return;
       setState(() {
@@ -168,15 +209,35 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     }
   }
 
+  /// Finds the names of people named directly (once per id; failures keep showing the id).
+  void _lookUpNames(UiWorkflowApi api, List<UiWfPermissionRow> rows) {
+    for (final r in rows) {
+      for (final a in r.who) {
+        if (a.kind != 'user' || _askedUsers.contains(a.value)) continue;
+        final id = a.value;
+        _askedUsers.add(id);
+        Future.sync(() => api.user(id)).then((u) {
+          if (u != null && mounted) setState(() => _userNames[id] = u.name);
+        }).catchError((Object _) {
+          _askedUsers.remove(id);
+        });
+      }
+    }
+  }
+
   List<_Workflow> get _shown {
     final q = _query.trim().toLowerCase();
     final all = _workflows.where((w) => w.rows.isNotEmpty);
     if (q.isEmpty) return all.toList();
+    // Rows with unsaved edits always stay, so "Save N changes" never counts rows nobody can see.
     return [
       for (final w in all)
         if (w.summary.title.toLowerCase().contains(q))
           w
-        else if (w.rows.where((r) => '${r.label} ${r.detail}'.toLowerCase().contains(q)).toList() case final rows when rows.isNotEmpty)
+        else if ([
+          for (final r in w.rows)
+            if ((_edits[w.summary.id]?.containsKey(r.node) ?? false) || '${r.label} ${r.detail}'.toLowerCase().contains(q)) r,
+        ] case final rows when rows.isNotEmpty)
           _Workflow._only(w, rows),
     ];
   }
@@ -185,8 +246,17 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
   bool _isChanged(_Workflow w, UiWfPermissionRow r) => _edits[w.summary.id]?.containsKey(r.node) ?? false;
   int _changeCount(_Workflow w) => _edits[w.summary.id]?.length ?? 0;
 
+  /// Why this workflow's changes can't be saved yet (an approval or task left with nobody), or ''.
+  String _blocked(_Workflow w) {
+    final pending = _edits[w.summary.id] ?? const {};
+    final empty = [for (final r in w.rows) if (r.kind == 'step' && (pending[r.node]?.isEmpty ?? false)) r];
+    if (empty.isEmpty) return '';
+    return 'Add someone to ${empty.map((r) => '“${r.label}”').join(', ')}: an approval or task needs at least one person to decide it.';
+  }
+
   String _describe(_Workflow w, UiWfPermissionRow r) {
-    final text = describeAssignees(r.who, UiWfDescribeContext(registry: _registry, def: w.def, tokens: w.tokens));
+    if (r.who.isEmpty) return emptyWhoText(r.kind);
+    final text = describeAssignees(r.who, UiWfDescribeContext(registry: _registry, def: w.def, tokens: w.tokens, userName: (id) => _userNames[id]));
     return text.isEmpty ? text : text[0].toUpperCase() + text.substring(1);
   }
 
@@ -194,8 +264,8 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     final id = w.summary.id;
     setState(() {
       final mine = _edits.putIfAbsent(id, () => {});
-      // Back to what is published: not a change any more.
-      if (_whoKey(who) == _whoKey(r.who)) {
+      // Back to what is published (in any order): not a change any more.
+      if (sameWho(who, r.who)) {
         mine.remove(r.node);
       } else {
         mine[r.node] = who;
@@ -205,38 +275,105 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     });
   }
 
+  void _clearNote(String id) {
+    _notes[id] = '';
+    _noteGen[id] = (_noteGen[id] ?? 0) + 1;
+  }
+
   void _discard(_Workflow w) => setState(() {
-        _edits[w.summary.id] = {};
-        _errors[w.summary.id] = '';
+        final id = w.summary.id;
+        _edits[id] = {};
+        _clearNote(id);
+        _errors[id] = '';
       });
+
+  void _replace(String id, UiWfDefinitionSummary summary, UiWorkflowDefinition def, [List<UiWfPermissionRow>? rows]) {
+    final next = _Workflow(summary, def, _registry, rows);
+    _workflows = [for (final x in _workflows) x.summary.id == id ? next : x];
+    final api = widget.api;
+    if (api != null && !_canEdit) _lookUpNames(api, next.rows);
+  }
+
+  /// After a conflict: loads this workflow's published version again and drops the edits made on the old one.
+  Future<void> _reloadOne(_Workflow w) async {
+    final api = widget.api;
+    final id = w.summary.id;
+    if (api == null || _busy != null) return;
+    setState(() => _busy = id);
+    try {
+      final d = await api.definition(id);
+      if (!mounted) return;
+      setState(() {
+        _replace(id, d.summary, d.published ?? w.def);
+        _edits[id] = {};
+        _conflicts.remove(id);
+        _errors[id] = '';
+        _saved[id] = 'Reloaded: version ${d.summary.version} is in use.';
+      });
+    } catch (e) {
+      if (mounted) setState(() => _errors[id] = _errorText(e, 'Could not reload this workflow.'));
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
 
   /// Publishes one workflow's changes as a new version.
   Future<void> _save(_Workflow w) async {
     final api = widget.api;
     final id = w.summary.id;
-    final pending = _edits[id] ?? const {};
-    if (api == null || _busy != null || pending.isEmpty) return;
+    final pending = Map.of(_edits[id] ?? const <String, List<UiWfAssignee>>{});
+    if (api == null || _busy != null || pending.isEmpty || _blocked(w).isNotEmpty || _conflicts.contains(id)) return;
     final changes = [for (final e in pending.entries) (node: e.key, who: e.value)];
     final note = _notes[id]?.trim() ?? '';
     setState(() {
       _busy = id;
       _errors[id] = '';
     });
+    final UiWfDefinitionSummary summary;
     try {
-      final summary = await api.updatePermissions(id, changes, note: note.isEmpty ? null : note);
+      // Someone else may have published since this page loaded: saving would quietly undo their change.
+      final now = await api.definition(id);
+      if (now.summary.version != w.summary.version || now.published == null) {
+        if (mounted) {
+          setState(() {
+            _conflicts.add(id);
+            _busy = null;
+          });
+        }
+        return;
+      }
+      summary = await api.updatePermissions(id, changes, note: note.isEmpty ? null : note);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errors[id] = _errorText(e, 'Saving failed.');
+          _busy = null;
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    // Published: from here on nothing may offer to save these changes again.
+    setState(() {
+      _edits[id] = {};
+      _clearNote(id);
+    });
+    widget.onSaved?.call(summary);
+    try {
       final d = await api.definition(id);
       if (!mounted) return;
-      final def = d.published ?? w.def;
       setState(() {
-        _workflows = [for (final x in _workflows) x.summary.id == id ? _Workflow(summary, def, _registry) : x];
-        _edits[id] = {};
-        _notes[id] = '';
-        _noteGen[id] = (_noteGen[id] ?? 0) + 1;
+        _replace(id, summary, d.published ?? w.def);
         _saved[id] = 'Saved: version ${summary.version} is now in use.';
       });
-      widget.onSaved?.call(summary);
-    } catch (e) {
-      if (mounted) setState(() => _errors[id] = _errorText(e, 'Saving failed.'));
+    } catch (_) {
+      // Show what was saved from the edits themselves; the definition catches up on the next load.
+      if (!mounted) return;
+      final full = _workflows.firstWhere((x) => x.summary.id == id, orElse: () => w);
+      setState(() {
+        _replace(id, summary, full.def, [for (final r in full.rows) pending.containsKey(r.node) ? r.withWho(pending[r.node]!) : r]);
+        _saved[id] = 'Saved: version ${summary.version} is now in use. The page couldn’t load it again; reload to see the latest.';
+      });
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -250,12 +387,11 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
       Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 320),
-          child: UiInput(
+          child: UiSearchInput(
             size: UiSize.sm,
-            type: UiInputType.search,
             value: _query,
             placeholder: 'Find a workflow or step',
-            semanticLabel: 'Find a workflow or step',
+            label: 'Find a workflow or step',
             onChanged: (v) => setState(() => _query = v),
           ),
         ),
@@ -265,6 +401,8 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
         const FbHint('Loading…')
       else if (_loadError.isNotEmpty)
         WfNote(_loadError)
+      else if (widget.api == null)
+        const FbHint('No workflow API is connected: pass api (e.g. a UiWorkflowHttpApi) to UiWorkflowPermissions.')
       else if (shown.isEmpty)
         FbHint(_query.trim().isNotEmpty ? 'Nothing matches.' : 'No published workflow asks anyone for anything yet.')
       else
@@ -278,6 +416,8 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     final n = _changeCount(w);
     final saved = _saved[id] ?? '';
     final error = _errors[id] ?? '';
+    final blocked = n > 0 ? _blocked(w) : '';
+    final conflict = _conflicts.contains(id);
     final divider = BorderSide(color: t.borderSubtle);
     return Container(
       key: ValueKey('perm-$id'),
@@ -303,7 +443,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
             for (var i = 0; i < w.rows.length; i++) _row(context, w, w.rows[i], first: i == 0, stacked: stacked),
           ]);
         }),
-        if (_canEdit && (n > 0 || saved.isNotEmpty || error.isNotEmpty))
+        if (_canEdit && (n > 0 || saved.isNotEmpty || error.isNotEmpty || conflict))
           Container(
             padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
             decoration: BoxDecoration(border: Border(top: divider)),
@@ -320,7 +460,12 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
                   );
                   final buttons = [
                     UiButton(label: 'Undo', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: _busy == id ? null : () => _discard(w)),
-                    UiButton(label: 'Save $n change${n == 1 ? '' : 's'}', size: UiSize.sm, loading: _busy == id, onPressed: _busy != null ? null : () => _save(w)),
+                    UiButton(
+                      label: 'Save $n change${n == 1 ? '' : 's'}',
+                      size: UiSize.sm,
+                      loading: _busy == id,
+                      onPressed: _busy != null || blocked.isNotEmpty || conflict ? null : () => _save(w),
+                    ),
                   ];
                   if (box.maxWidth < 420) {
                     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
@@ -332,6 +477,14 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
                 })
               else if (saved.isNotEmpty)
                 Semantics(liveRegion: true, child: FbHint(saved)),
+              if (blocked.isNotEmpty) WfNote(blocked),
+              if (conflict)
+                WfNote.custom(
+                  child: Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    const Text('Someone changed these permissions since you opened the page. Reload to see their version, then make your changes again.'),
+                    UiButton(label: 'Reload', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _busy == id ? null : () => _reloadOne(w)),
+                  ]),
+                ),
               if (error.isNotEmpty) WfNote(error),
             ]),
           ),
@@ -354,10 +507,10 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
             tokens: w.tokens,
             api: widget.api,
             label: r.label,
-            emptyText: 'Nobody yet.',
+            emptyText: emptyWhoText(r.kind, editing: true),
             onChanged: (v) => _edit(w, r, v),
           )
-        : Text(_describe(w, r), style: context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary));
+        : Text(_describe(w, r), style: context.uiText.body.copyWith(fontSize: 13, color: r.who.isEmpty ? t.textMuted : t.textSecondary));
     return Semantics(
       container: true,
       value: changed ? 'Changed' : null,

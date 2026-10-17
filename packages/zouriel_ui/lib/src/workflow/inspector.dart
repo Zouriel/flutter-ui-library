@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
+import '../forms/choice/checkbox.dart';
 import '../forms/text/inputs.dart';
 import '../forms/text/number_input.dart';
 import '../forms/text/time_picker.dart';
@@ -239,14 +240,15 @@ const List<WfOption> _varTypes = [
   (value: 'date', label: 'Date'), (value: 'user', label: 'Person'), (value: 'json', label: 'Anything'),
 ];
 
-/// The workflow's own settings: name, record type, variables, who looks after it (the web
-/// `ui-wf-workflow-editor`).
-/// "Applies to" reads only the record's own fields, never the one the lifecycle controls (spec §6).
+/// The tokens "Applies to" offers: only the record's own fields, never its id or the field the
+/// lifecycle controls (spec §6).
 List<UiWfToken> wfOwnFieldTokens(List<UiWfToken> tokens, String controlled) => [
       for (final t in tokens)
         if (RegExp(r'^entity\.[^.]+$').hasMatch(t.path) && t.path != 'entity.id' && t.path != 'entity.$controlled') t,
     ];
 
+/// The workflow's own settings: name, record type, variables, who looks after it (the web
+/// `ui-wf-workflow-editor`).
 class WfWorkflowEditor extends StatelessWidget {
   const WfWorkflowEditor({super.key});
 
@@ -340,10 +342,10 @@ class WfWorkflowEditor extends StatelessWidget {
           WfConditionEditor(
             value: lc.appliesWhen,
             tokens: wfOwnFieldTokens(store.tokens(const UiWfAt.list('root', 0)), lc.field),
-            emptyText: 'Every ${(store.entity?.label ?? 'record').toLowerCase()}.',
+            emptyText: 'Every ${(store.entity?.label ?? 'record').toLowerCase()} that no other lifecycle on this field covers.',
             onChanged: (c) => patch({'lifecycle': lc.patch({'appliesWhen': c.conditions.isNotEmpty ? c.json : null}).json}, 'appliesWhen'),
           ),
-          const FbHint('Only records that meet these get this lifecycle, e.g. applications whose type is Passport. Pick fields that are set when the record is created: a record keeps its lifecycle if they change later. Another lifecycle on the same field can cover the rest.'),
+          const FbHint('Only records that meet these get this lifecycle, e.g. only those whose type is Passport. Pick fields that are set when the record is created: a record keeps its lifecycle if they change later. Another lifecycle on the same field can cover the rest.'),
         ]),
       ] else
         FbSetting(
@@ -554,6 +556,21 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
           child: UiInput(size: UiSize.sm, value: tr.confirm ?? '', placeholder: 'e.g. Approve this application?', semanticLabel: 'Confirmation message', onChanged: (v) => patch({'confirm': v.isEmpty ? null : v}, 'confirm')),
         ),
         FbSetting(label: 'Button colour', child: WfSelect(label: 'Button colour', value: tr.tone ?? 'neutral', options: _transitionTones, onChanged: (v) => patch({'tone': v == 'neutral' ? null : v}))),
+        FbSetting(
+          label: 'Remarks',
+          child: WfSelect(
+            label: 'Remarks',
+            value: tr.comment?.name ?? '',
+            options: [
+              (value: '', label: 'Default (${tr.tone == 'danger' ? 'optional, as it is red' : 'not asked'})'),
+              (value: 'none', label: 'Not asked'),
+              (value: 'optional', label: 'Optional'),
+              (value: 'required', label: 'Required'),
+            ],
+            onChanged: (v) => patch({'comment': v.isEmpty ? null : v}),
+          ),
+        ),
+        const FbHint('People explain the move in a few words; it shows in the history and steps can use it (“Remarks”). Moves that happen by themselves never ask.'),
       ]),
       WfSection(title: 'Happens by itself', children: [
         WfSelect(
@@ -571,10 +588,8 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
   }
 }
 
-/// The settings panel: settings for whatever is selected, with a short header and its problems
-/// (the web `ui-wf-inspector`).
 /// The lifecycle's reset (the web `ui-wf-reset-editor`): who may start a record over, back to which
-/// state, what it asks, and what else stops.
+/// state, in which states it is offered, what it asks, and what else stops.
 class WfResetEditor extends StatelessWidget {
   const WfResetEditor({super.key});
 
@@ -605,6 +620,55 @@ class WfResetEditor extends StatelessWidget {
           onChanged: (v) => patch({'to': v.isEmpty ? null : v}),
         ),
       ),
+      WfSection(title: 'Offer it', children: [
+        WfSelect(
+          label: 'Offer it',
+          value: r.states != null ? 'some' : '',
+          options: const [(value: '', label: 'In every state'), (value: 'some', label: 'From a state onwards')],
+          onChanged: (m) {
+            if (m != 'some') {
+              patch({'states': null});
+              return;
+            }
+            // Start from the first state after the start, the usual choice.
+            final lc = store.def.lifecycle!;
+            final initial = {for (final x in lc.states) if (x.category == 'initial') x.id};
+            final first = lc.transitions.where((t) => !t.fromAny && t.from.any(initial.contains)).firstOrNull?.to ?? lc.states.firstOrNull?.id;
+            patch({'states': first == null ? <String>[] : wfStatesFrom(store.def, first)});
+          },
+        ),
+        if (r.states case final ticked?) ...[
+          FbSetting(
+            label: 'From',
+            child: WfSelect(
+              label: 'From',
+              value: _fromState(store.def, ticked),
+              placeholder: 'Choose a state…',
+              options: [for (final x in states) (value: x.id, label: x.label)],
+              onChanged: (id) {
+                if (id.isNotEmpty) patch({'states': wfStatesFrom(store.def, id)});
+              },
+            ),
+          ),
+          Semantics(
+            container: true,
+            label: 'States it is offered in',
+            child: Wrap(spacing: context.ui.space4, runSpacing: context.ui.space2, children: [
+              for (final x in states)
+                UiCheckbox(
+                  value: ticked.contains(x.id),
+                  label: x.label,
+                  onChanged: (on) {
+                    final rest = ticked.where((id) => id != x.id);
+                    final next = {...rest, if (on) x.id};
+                    patch({'states': [for (final y in states) if (next.contains(y.id)) y.id]});
+                  },
+                ),
+            ]),
+          ),
+          if (ticked.isEmpty) const FbHint('Tick at least one state, or nobody can start a record over.'),
+        ],
+      ]),
       WfSection(title: 'Who can reset', children: [
         WfAssigneesEditor(
           value: r.who,
@@ -621,6 +685,15 @@ class WfResetEditor extends StatelessWidget {
           label: 'Confirmation message',
           child: UiInput(size: UiSize.sm, value: r.confirm ?? '', placeholder: 'e.g. Start this application over?', semanticLabel: 'Confirmation message', onChanged: (v) => patch({'confirm': v.isEmpty ? null : v}, 'confirm')),
         ),
+        FbSetting(
+          label: 'Remarks',
+          child: WfSelect(
+            label: 'Remarks',
+            value: r.comment?.name ?? '',
+            options: const [(value: '', label: 'Optional (default)'), (value: 'required', label: 'Required'), (value: 'none', label: 'Not asked')],
+            onChanged: (v) => patch({'comment': v.isEmpty ? null : v}),
+          ),
+        ),
       ]),
       WfSection(title: 'What else happens', children: [
         FbSwitch(value: r.cancelAutomations, label: 'Also stop other workflows running about the record', onChanged: (on) => patch({'cancelAutomations': on ? null : false})),
@@ -630,6 +703,18 @@ class WfResetEditor extends StatelessWidget {
   }
 }
 
+/// The state whose "onwards" set is exactly what is ticked, if any (so the From picker shows it).
+String _fromState(UiWorkflowDefinition def, List<String> ticked) {
+  if (ticked.isEmpty) return '';
+  final want = ({...ticked}.toList()..sort()).join(',');
+  for (final x in def.lifecycle?.states ?? const <UiWfState>[]) {
+    if ((wfStatesFrom(def, x.id).toList()..sort()).join(',') == want) return x.id;
+  }
+  return '';
+}
+
+/// The settings panel: settings for whatever is selected, with a short header and its problems
+/// (the web `ui-wf-inspector`).
 class WfInspector extends StatelessWidget {
   const WfInspector({super.key, this.showHead = true, this.onDeleteRequest, this.scrollController});
 

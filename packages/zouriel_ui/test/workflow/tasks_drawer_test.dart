@@ -28,7 +28,8 @@ class _TasksApi extends Fake implements UiWorkflowApi {
     final e = failNext;
     failNext = null;
     final g = gate;
-    final snapshot = List.of(open);
+    // Like the engine: at most `take` items, with the full count.
+    final snapshot = open.take(q.take ?? open.length).toList();
     final n = total ?? snapshot.length;
     if (g != null) await g.future;
     if (e != null) throw e;
@@ -199,5 +200,55 @@ void main() {
     await _pump(tester, UiWorkflowTasksDrawer(api: _TasksApi([_task('a')]), refreshSeconds: 0));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     h.dispose();
+  });
+
+  testWidgets('says "100+" overdue when more tasks are open than one count looks at', (tester) async {
+    final many = [for (var i = 0; i < 120; i++) _task('t$i', overdue: true)];
+    await _pump(tester, UiWorkflowTasksDrawer(api: _TasksApi(many, total: 250), refreshSeconds: 0));
+    expect(find.bySemanticsLabel('My tasks, 250 open, 100+ overdue'), findsOneWidget);
+    expect(_badge(tester)!.label, '99+');
+    expect(_badge(tester)!.tone, UiStatus.danger);
+  });
+
+  testWidgets('pauses polling while the app is in the background and counts again when it comes back', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    final api = _TasksApi([_task('a')]);
+    await _pump(tester, UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 30));
+    expect(key.currentState!.polling, isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    expect(key.currentState!.polling, isFalse);
+    final before = api.queries.length;
+    await tester.pump(const Duration(minutes: 3));
+    expect(api.queries.length, before, reason: 'no polling in the background');
+    api.open = [_task('a'), _task('b')];
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(api.queries.length, before + 1, reason: 'back in view: counted at once');
+    expect(_badge(tester)!.label, '2');
+    expect(key.currentState!.polling, isTrue);
+    await tester.pump(const Duration(seconds: 30));
+    expect(api.queries.length, before + 2);
+  });
+
+  testWidgets('hide() closes the drawer itself, even with a dialog on top of it', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    final api = _TasksApi([_task('a')]);
+    await _pump(tester, UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 0));
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    // Something else opens over the drawer (a decision, a confirmation).
+    final nav = Navigator.of(tester.element(find.byType(UiWorkflowTasks)));
+    nav.push(PageRouteBuilder<void>(opaque: false, pageBuilder: (context, a, b) => const Center(child: Text('On top'))));
+    await tester.pumpAndSettle();
+    key.currentState!.hide();
+    await tester.pumpAndSettle();
+    expect(find.byType(UiWorkflowTasks), findsNothing);
+    expect(find.text('On top'), findsOneWidget, reason: 'only the drawer goes');
+    expect(key.currentState!.isOpen, isFalse);
   });
 }

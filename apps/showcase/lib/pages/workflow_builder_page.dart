@@ -240,7 +240,7 @@ UiWorkflowTasksDrawer(api: api, showButton: false,                 // opened by 
             ApiRow('side', 'UiDrawerSide', 'Which edge the drawer comes from.', def: 'right'),
             ApiRow('size · variant', 'UiSize · UiButtonVariant', 'The button’s look.', def: 'sm · outline'),
             ApiRow('showButton', 'bool', 'Show the built-in button.', def: 'true'),
-            ApiRow('refreshSeconds', 'int', 'How often the count refreshes; 0 only on open, close and decisions.', def: '60'),
+            ApiRow('refreshSeconds', 'int', 'How often the count refreshes while the app is in the foreground; 0 only on open, close and decisions.', def: '60'),
             ApiRow('pageSize', 'int', 'Tasks per page in the inbox.', def: '25'),
           ],
           callbacks: const [
@@ -271,7 +271,7 @@ UiWorkflowTasksDrawer(api: api, showButton: false,                 // opened by 
 // The rows themselves, for your own page:
 for (final row in permissionRows(def)) print('\${row.label}: \${row.detail}');''',
           api: const [
-            ApiRow('api', 'UiWorkflowApi?', 'Loads every published workflow; saves with updatePermissions (POST /definitions/{id}/permissions).'),
+            ApiRow('api', 'UiWorkflowApi?', 'Loads every published workflow; saves with updatePermissions (POST /definitions/{id}/permissions). me is optional: without an answer, editing is offered and the server decides.'),
             ApiRow('permissionRows(def)', 'List<UiWfPermissionRow>', 'Moves (not automatic ones), the reset, a start button and approval/task steps, in reading order.'),
           ],
           callbacks: const [

@@ -785,6 +785,7 @@ List<UiWfToken> tokensAt(UiWorkflowDefinition def, UiWorkflowRegistry? reg, {Map
         UiWfToken(path: 'trigger.from', label: 'State before', group: 'What started it', type: 'text'),
         UiWfToken(path: 'trigger.to', label: 'State after', group: 'What started it', type: 'text'),
         UiWfToken(path: 'trigger.transition', label: 'Transition', group: 'What started it', type: 'text'),
+        UiWfToken(path: 'trigger.comment', label: 'Remarks', group: 'What started it', type: 'text'),
       ]);
     }
     if (trig.type == 'signal') {
@@ -798,6 +799,7 @@ List<UiWfToken> tokensAt(UiWorkflowDefinition def, UiWorkflowRegistry? reg, {Map
       UiWfToken(path: 'trigger.from', label: 'State before', group: 'The move', type: 'text'),
       UiWfToken(path: 'trigger.to', label: 'State after', group: 'The move', type: 'text'),
       UiWfToken(path: 'trigger.transition', label: 'Transition', group: 'The move', type: 'text'),
+      UiWfToken(path: 'trigger.comment', label: 'Remarks', group: 'The move', type: 'text'),
     ]);
   }
   tokens.addAll(const [
@@ -832,7 +834,7 @@ List<UiWfToken> tokensAt(UiWorkflowDefinition def, UiWorkflowRegistry? reg, {Map
         ? [...?reg?.actions?.where((a) => a.key == UiWfActionStep.of(s).action).firstOrNull?.outputs.map((o) => o.key)]
         : outputs?[s.type] ?? stepInfo(s.type).outputs;
     for (final o in outs) {
-      tokens.add(UiWfToken(path: 'steps.${s.id}.$o', label: _outputLabel(s, o, reg), group: stepName(s), type: o == 'decidedBy' ? 'user' : 'any'));
+      tokens.add(UiWfToken(path: 'steps.${s.id}.$o', label: _outputLabel(s, o, reg), group: stepName(s), type: o == 'decidedBy' ? 'user' : s.type == 'createRecord' && o == 'id' ? 'text' : 'any'));
     }
   }
   for (final v in def.variables ?? const <UiWfVariable>[]) {
@@ -1092,6 +1094,26 @@ bool transitionAllows(UiWorkflowDefinition def, UiWfTransition t, String stateId
     return s != null && s.category != 'terminal' && s.id != t.to;
   }
   return t.from.contains(stateId);
+}
+
+/// The states "from [stateId] onwards": that state and every state its moves lead to, without
+/// passing through the reset's target (the starting state unless the reset says otherwise), so final
+/// states are included and send-back loops to the start are not. In diagram order.
+List<String> wfStatesFrom(UiWorkflowDefinition def, String stateId) {
+  final lc = def.lifecycle;
+  if (lc == null || !lc.states.any((s) => s.id == stateId)) return const [];
+  final target = lc.reset?.to ?? lc.states.where((s) => s.category == 'initial').firstOrNull?.id;
+  final seen = {stateId};
+  final queue = [stateId];
+  while (queue.isNotEmpty) {
+    final at = queue.removeAt(0);
+    for (final t in lc.transitions) {
+      if (!transitionAllows(def, t, at) || seen.contains(t.to) || t.to == target) continue;
+      seen.add(t.to);
+      queue.add(t.to);
+    }
+  }
+  return [for (final s in lc.states) if (seen.contains(s.id)) s.id];
 }
 
 UiWorkflowDefinition updateLifecycle(UiWorkflowDefinition def, UiWfLifecycle Function(UiWfLifecycle lc) f) {

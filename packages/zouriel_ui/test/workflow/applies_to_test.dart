@@ -43,7 +43,7 @@ void main() {
   testWidgets('applies to offers only the record’s own fields, never the controlled field or related records', (tester) async {
     await _pump(tester);
     expect(find.text('APPLIES TO'), findsOneWidget);
-    expect(find.text('Every application.'), findsOneWidget);
+    expect(find.text('Every application that no other lifecycle on this field covers.'), findsOneWidget);
     final editor = tester.widget<WfConditionEditor>(find.byType(WfConditionEditor));
     expect([for (final t in editor.tokens) t.path], ['entity.title', 'entity.track', 'entity.programme']);
   });
