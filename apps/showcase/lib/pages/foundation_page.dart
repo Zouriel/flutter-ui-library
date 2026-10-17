@@ -61,7 +61,7 @@ class FoundationPage extends StatelessWidget {
                 ),
               ),
           ]),
-          code: "final themes = UiThemeController(theme: UiThemeName.dark);\nUiApp(controller: themes, home: ...);\nthemes.set(UiThemeName.lightTeal);\nthemes.toggle(); // Winter dark <-> light\n\n// A different theme for one part of a page:\nUiThemeScope(theme: UiThemeName.light, child: ...)",
+          code: 'final themes = UiThemeController(theme: UiThemeName.dark);\nUiApp(controller: themes, home: ...);\nthemes.set(UiThemeName.lightTeal);\nthemes.toggle(); // Winter dark <-> light\n\n// A different theme for one part of a page:\nUiThemeScope(theme: UiThemeName.light, child: ...)',
           api: const [
             ApiRow('set(theme)', 'method', 'Switch the app theme.'),
             ApiRow('toggle()', 'method', 'Winter dark and light; from any other theme goes to dark.'),
@@ -73,7 +73,7 @@ class FoundationPage extends StatelessWidget {
           name: 'Library defaults',
           widget: 'UiConfig',
           summary: 'App-wide defaults, the twin of the web provideUiConfig. animations: false removes the library\'s motion; the Android "remove animations" setting does the same automatically.',
-          code: "UiApp(\n  config: UiConfig(glass: true, radius: true, animations: true),\n  home: ...,\n)",
+          code: 'UiApp(\n  config: UiConfig(glass: true, radius: true, animations: true),\n  home: ...,\n)',
           api: const [
             ApiRow('glass', 'bool', 'Frosted surfaces on components that support it.', def: 'false'),
             ApiRow('radius', 'bool', 'Rounded corners.', def: 'true'),

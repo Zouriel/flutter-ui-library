@@ -37,7 +37,7 @@ void main() {
   });
 
   test('no Material or Cupertino imports in the library', () {
-    final bad = files.where((f) => RegExp(r"package:flutter/(material|cupertino)\.dart|package:material_ui").hasMatch(f.readAsStringSync())).map((f) => f.path);
+    final bad = files.where((f) => RegExp(r'package:flutter/(material|cupertino)\.dart|package:material_ui').hasMatch(f.readAsStringSync())).map((f) => f.path);
     expect(bad, isEmpty);
   });
 }

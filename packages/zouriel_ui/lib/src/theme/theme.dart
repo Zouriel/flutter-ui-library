@@ -220,9 +220,10 @@ class UiThemeScope extends StatelessWidget {
 
 /// Holds the app's current theme, the twin of the web `UiThemeService`. Persist [theme] yourself.
 class UiThemeController extends ChangeNotifier {
+  // Named parameters can't be private, so these can't be initializing formals.
   UiThemeController({UiThemeName theme = UiThemeName.dark, UiConfig config = const UiConfig()})
-      : _theme = theme,
-        _config = config;
+      : _theme = theme, // ignore: prefer_initializing_formals
+        _config = config; // ignore: prefer_initializing_formals
 
   UiThemeName _theme;
   UiConfig _config;

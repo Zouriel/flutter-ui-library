@@ -150,9 +150,9 @@ class UiButton extends StatelessWidget {
         final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 };
         final content = <Widget>[
           if (loading) UiSpinner(size: fontSize, color: look.fg, decorative: true),
-          if (icon != null && !loading) icon!,
+          if (!loading) ?icon,
           if (child != null) Flexible(child: child!) else if (label != null) Flexible(child: Text(label!, maxLines: 1, overflow: TextOverflow.ellipsis)),
-          if (trailingIcon != null) trailingIcon!,
+          ?trailingIcon,
         ];
         final row = IconTheme.merge(
           data: IconThemeData(color: look.fg, size: iconSize),

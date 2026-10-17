@@ -231,13 +231,13 @@ class RenderUiTouchTarget extends RenderShiftedBox {
   }
 
   @override
-  double computeMinIntrinsicWidth(double h) => (child?.getMinIntrinsicWidth(h) ?? 0).clamp(_minSize.width, double.infinity);
+  double computeMinIntrinsicWidth(double height) => (child?.getMinIntrinsicWidth(height) ?? 0).clamp(_minSize.width, double.infinity);
   @override
-  double computeMaxIntrinsicWidth(double h) => (child?.getMaxIntrinsicWidth(h) ?? 0).clamp(_minSize.width, double.infinity);
+  double computeMaxIntrinsicWidth(double height) => (child?.getMaxIntrinsicWidth(height) ?? 0).clamp(_minSize.width, double.infinity);
   @override
-  double computeMinIntrinsicHeight(double w) => (child?.getMinIntrinsicHeight(w) ?? 0).clamp(_minSize.height, double.infinity);
+  double computeMinIntrinsicHeight(double width) => (child?.getMinIntrinsicHeight(width) ?? 0).clamp(_minSize.height, double.infinity);
   @override
-  double computeMaxIntrinsicHeight(double w) => (child?.getMaxIntrinsicHeight(w) ?? 0).clamp(_minSize.height, double.infinity);
+  double computeMaxIntrinsicHeight(double width) => (child?.getMaxIntrinsicHeight(width) ?? 0).clamp(_minSize.height, double.infinity);
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {

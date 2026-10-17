@@ -124,11 +124,12 @@ class UiComboboxState extends State<UiCombobox> {
   }
 
   void _setQuery(String text) {
-    if (_query.text != text)
+    if (_query.text != text) {
       _query.value = TextEditingValue(
         text: text,
         selection: TextSelection.collapsed(offset: text.length),
       );
+    }
   }
 
   List<UiComboboxOption> get _filtered {
