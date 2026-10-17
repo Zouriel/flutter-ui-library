@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../button/button.dart';
 import '../button/segmented.dart';
+import '../combobox/combobox.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
@@ -95,8 +96,9 @@ class _DecideState extends ChangeNotifier {
   /// Set when a decision that needs remarks was made without them.
   bool commentMissing = false;
   String delegateTo = '';
-  String delegateName = '';
-  String peopleQuery = '';
+
+  /// The chosen person, kept listed so the field keeps showing their name while others are searched.
+  UiWfUser? delegateUser;
 
   /// People to hand the task to, from the API's directory search.
   List<UiWfUser> people = const [];
@@ -106,16 +108,30 @@ class _DecideState extends ChangeNotifier {
   UiJson answers = {};
   bool busy = false;
   String error = '';
+
+  /// Set once the dialog has closed: an answer that arrives after that is not shown.
+  bool _disposed = false;
+
   void set(VoidCallback f) {
+    if (_disposed) return;
     f();
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    peopleTimer?.cancel();
+    super.dispose();
   }
 }
 
 /// The decide dialog (the web `ui-wf-decide`): instructions, the task's form, a comment, and its
 /// buttons. Completes with the task as the engine returned it after a decision or a hand-over, or
-/// null when closed.
-Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api}) {
+/// null when closed. While a decision is on its way the dialog can't be closed (Close, the
+/// backdrop, Escape and Back wait for it). [onDecided] gets every saved decision or hand-over,
+/// even one whose answer arrives after the dialog was taken away, so the host can always reload.
+Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api, ValueChanged<UiWfTask>? onDecided}) {
   final st = _DecideState();
   final formKey = GlobalKey<UiFormRendererState>();
   String outcomeLabel(String key) => wfOutcomeLabel(key, [for (final o in task.outcomes) (key: o.key, label: o.label)]);
@@ -123,7 +139,6 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
   /// Looks people up as the name is typed (debounced; a slower older answer never replaces a newer one).
   void searchPeople(String query) {
     st.peopleTimer?.cancel();
-    st.peopleQuery = query;
     st.peopleTimer = Timer(Duration(milliseconds: query.isEmpty ? 0 : 250), () async {
       final n = ++st.peopleSeq;
       try {
@@ -131,7 +146,10 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
         if (n != st.peopleSeq) return;
         // People already on the task (or who decided) can't take it over; the engine refuses them too.
         final taken = {...task.assignees, ...task.decisions.map((d) => d.userId)};
-        st.set(() => st.people = [for (final u in found) if (!taken.contains(u.id)) u]);
+        final chosen = st.delegateUser;
+        final options = [for (final u in found) if (!taken.contains(u.id)) u];
+        if (chosen != null && !options.any((u) => u.id == chosen.id)) options.insert(0, chosen);
+        st.set(() => st.people = options);
       } catch (_) {
         if (n == st.peopleSeq) st.set(() => st.people = const []);
       }
@@ -156,6 +174,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
     });
     try {
       final res = await api.decide(task.id, outcome, comment: st.comment.isEmpty ? null : st.comment, data: st.answers);
+      onDecided?.call(res);
       if (ctx.mounted) Navigator.of(ctx).pop(res);
     } catch (e) {
       st.set(() => st.error = _errorText(e, 'The decision could not be saved.'));
@@ -172,6 +191,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
     });
     try {
       final res = await api.delegate(task.id, st.delegateTo);
+      onDecided?.call(res);
       if (ctx.mounted) Navigator.of(ctx).pop(res);
     } catch (e) {
       st.set(() => st.error = _errorText(e, 'Could not hand it over.'));
@@ -189,7 +209,8 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       builder: (ctx, _) {
         final t = ctx.ui;
         final remarks = wfRemarksLabel(task);
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+        // Nothing closes the dialog while a decision is on its way (Close, the backdrop, Escape, Back).
+        return PopScope(canPop: !st.busy, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
           if (task.entityTitle != null) Text(task.entityTitle!, style: _body(ctx, size: 14, weight: FontWeight.w600)),
           if (task.instructions != null) Text(task.instructions!, style: _body(ctx, size: 14, height: 1.5)),
           Text.rich(
@@ -200,15 +221,21 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
             style: _body(ctx, size: 12.5, color: t.textMuted),
           ),
           if (task.decisions.isNotEmpty)
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // A bulleted list, like the web `ul.decisions`.
+            Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
               for (final d in task.decisions)
-                Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: d.name ?? d.userId, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    TextSpan(text: ' chose “${outcomeLabel(d.outcome)}”${d.comment != null ? ': “${d.comment}”' : ''}'),
-                  ]),
-                  style: _body(ctx),
-                ),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  ExcludeSemantics(child: SizedBox(width: t.space4, child: Text('•', textAlign: TextAlign.center, style: _body(ctx)))),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: d.name ?? d.userId, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        TextSpan(text: ' chose “${outcomeLabel(d.outcome)}”${d.comment != null ? ': “${d.comment}”' : ''}'),
+                      ]),
+                      style: _body(ctx),
+                    ),
+                  ),
+                ]),
             ]),
           if (task.form != null)
             UiFormRenderer(key: formKey, definition: task.form!, showActions: false, showTitle: false, onValueChanged: (v) => st.answers = v),
@@ -238,26 +265,29 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
                 },
               ),
             ),
-            if (st.delegateOpen) ...[
-              UiSearchInput(size: UiSize.sm, value: st.peopleQuery, placeholder: 'Search for a person', label: 'Hand it to', onChanged: searchPeople),
-              for (final u in st.people)
-                _PersonOption(
-                  user: u,
-                  chosen: st.delegateTo == u.id,
-                  onTap: () => st.set(() {
-                    st.delegateTo = u.id;
-                    st.delegateName = u.name;
-                  }),
-                ),
-              if (st.people.isEmpty && st.peopleQuery.trim().isNotEmpty) const FbHint('Nobody found.'),
+            // One combobox that searches the directory as the name is typed, then Hand over (the web
+            // `ui-combobox` in `details.delegate`).
+            if (st.delegateOpen)
               Row(spacing: t.space2, children: [
-                Expanded(child: FbHint(st.delegateTo.isEmpty ? 'Choose who takes it over.' : 'Hand it to ${st.delegateName}.')),
+                Expanded(
+                  child: UiCombobox(
+                    size: UiSize.sm,
+                    placeholder: 'Search for a person',
+                    label: 'Hand it to',
+                    options: [for (final u in st.people) UiComboboxOption(value: u.id, label: u.email != null ? '${u.name} (${u.email})' : u.name)],
+                    value: st.delegateTo.isEmpty ? null : st.delegateTo,
+                    onQuery: searchPeople,
+                    onChanged: (v) => st.set(() {
+                      st.delegateTo = v ?? '';
+                      st.delegateUser = v == null ? null : st.people.where((u) => u.id == v).firstOrNull;
+                    }),
+                  ),
+                ),
                 UiButton(label: 'Hand over', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: st.busy || st.delegateTo.isEmpty ? null : () => delegate(ctx)),
               ]),
-            ],
           ],
           if (st.error.isNotEmpty) WfNote(st.error),
-        ]);
+        ]));
       },
     ),
     footerBuilder: (ctx) => ListenableBuilder(
@@ -268,7 +298,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
         spacing: ctx.ui.space2,
         runSpacing: ctx.ui.space2,
         children: [
-          UiButton(label: 'Close', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop()),
+          UiButton(label: 'Close', variant: UiButtonVariant.ghost, onPressed: st.busy ? null : () => Navigator.of(ctx).pop()),
           Wrap(spacing: ctx.ui.space2, runSpacing: ctx.ui.space2, children: [
             for (final o in task.outcomes)
               UiButton(label: o.label, variant: _variantOf(o.tone), onPressed: st.busy || !task.canDecide ? null : () => decide(ctx, o.key)),
@@ -277,43 +307,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       ),
     ),
   );
-  return future.whenComplete(() {
-    st.peopleTimer?.cancel();
-    st.dispose();
-  });
-}
-
-/// A person in the hand-over list.
-class _PersonOption extends StatelessWidget {
-  const _PersonOption({required this.user, required this.chosen, required this.onTap});
-  final UiWfUser user;
-  final bool chosen;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.ui;
-    return UiInteractive(
-      onTap: onTap,
-      checked: chosen,
-      semanticLabel: user.email != null ? '${user.name} (${user.email})' : user.name,
-      excludeChildSemantics: true,
-      pressScale: false,
-      builder: (context, s) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: chosen ? t.primary.withValues(alpha: 0.12) : (s.hovered ? t.surfaceHover : null),
-          borderRadius: BorderRadius.circular(t.radiusXs),
-          boxShadow: s.focused ? t.focusRing : null,
-        ),
-        child: Row(spacing: 8, children: [
-          Expanded(child: Text(user.name, style: _body(context, weight: chosen ? FontWeight.w600 : FontWeight.w400))),
-          if (user.email != null) Text(user.email!, style: _body(context, size: 12, color: t.textMuted)),
-          if (chosen) UiIcon(WfIcons.tick02, size: 14, color: t.primary),
-        ]),
-      ),
-    );
-  }
+  return future.whenComplete(st.dispose);
 }
 
 // ── Record actions ──────────────────────────────────────────────────────────────────────────
@@ -684,8 +678,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
   Future<void> _openTask(UiWfTask t) async {
     final api = widget.api;
     if (api == null) return;
-    final res = await showWfDecideDialog(context, task: t, api: api);
-    if (res != null) await widget.onReload?.call();
+    // Reloads on every saved decision, even one that lands after the dialog was taken away.
+    await showWfDecideDialog(context, task: t, api: api, onDecided: (_) => widget.onReload?.call());
   }
 
   @override
@@ -705,14 +699,17 @@ class _WfRecordActionsState extends State<WfRecordActions> {
           for (final m in r.manual) UiButton(label: m.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m)),
         ]),
       if (reset != null)
-        Container(
+        // Set apart by a dashed rule (the web `.reset { border-top: 1px dashed }`).
+        CustomPaint(
+          key: const ValueKey('wf-reset-row'),
+          painter: WfDashedTopRule(t.border),
+          child: Padding(
           padding: EdgeInsets.only(top: t.space2),
-          decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
           child: Wrap(spacing: t.space2, runSpacing: t.space2, alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text('Back to “${reset.toLabel}”: open tasks and runs stop.', style: _body(context, size: 12, color: t.textMuted)),
             UiButton(label: reset.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startReset(reset)),
           ]),
-        ),
+        )),
       if (tasks.isNotEmpty)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
           const _Heading('Waiting for'),
@@ -752,6 +749,26 @@ class _WfRecordActionsState extends State<WfRecordActions> {
   }
 }
 
+/// A 1px dashed rule along the top edge (the web `border-top: 1px dashed`).
+@visibleForTesting
+class WfDashedTopRule extends CustomPainter {
+  const WfDashedTopRule(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (var x = 0.0; x < size.width; x += 6) {
+      canvas.drawLine(Offset(x, 0.5), Offset(x + 3 > size.width ? size.width : x + 3, 0.5), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(WfDashedTopRule old) => old.color != color;
+}
+
 // ── Task inbox ──────────────────────────────────────────────────────────────────────────────
 
 /// The task inbox inside [UiWorkflowTasksDrawer]: approvals and tasks, due first, overdue marked,
@@ -779,6 +796,9 @@ class WfTaskInboxState extends State<WfTaskInbox> {
   late int _take = widget.pageSize;
   int _seq = 0;
 
+  /// The list has been read at least once (until then it says it is loading, not that it is empty).
+  bool _loaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -791,8 +811,27 @@ class WfTaskInboxState extends State<WfTaskInbox> {
     final old = oldWidget;
     if (old.api != widget.api || old.scope != widget.scope || old.pageSize != widget.pageSize) {
       _take = widget.pageSize;
-      reload();
+      _startOver();
     }
+  }
+
+  /// A different list (another engine, scope or tab): forget the old one and read it afresh.
+  void _startOver() {
+    setState(() {
+      _loaded = false;
+      _tasks = const [];
+      _total = 0;
+    });
+    reload();
+  }
+
+  /// What the empty list says: loading until the first answer (nothing next to an error), then
+  /// worded for whose tasks these are.
+  String get _emptyText {
+    if (!_loaded) return _error.isNotEmpty ? '' : 'Loading…';
+    final all = widget.scope == 'all';
+    if (_status == 'done') return all ? 'No finished tasks yet.' : 'You haven’t finished any tasks yet.';
+    return all ? 'No open tasks.' : 'Nothing is waiting for you.';
   }
 
   Future<void> reload() async {
@@ -805,6 +844,7 @@ class WfTaskInboxState extends State<WfTaskInbox> {
       setState(() {
         _tasks = page.items;
         _total = page.total;
+        _loaded = true;
         _error = '';
       });
     } catch (e) {
@@ -817,11 +857,10 @@ class WfTaskInboxState extends State<WfTaskInbox> {
   Future<void> _open(UiWfTask t) async {
     final api = widget.api;
     if (api == null) return;
-    final res = await showWfDecideDialog(context, task: t, api: api);
-    if (res != null) {
+    await showWfDecideDialog(context, task: t, api: api, onDecided: (res) {
       widget.onDecided?.call(res);
-      await reload();
-    }
+      if (mounted) reload();
+    });
   }
 
   @override
@@ -830,23 +869,24 @@ class WfTaskInboxState extends State<WfTaskInbox> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
       Row(children: [
         UiSegmented<String>(
-          label: 'Tasks',
+          label: 'Which tasks',
           size: UiSize.sm,
           value: _status,
           options: const [UiSegmentedOption(value: 'open', label: 'Open'), UiSegmentedOption(value: 'done', label: 'Done')],
           onChanged: (v) {
-            setState(() => _status = v);
-            reload();
+            _status = v;
+            _take = widget.pageSize;
+            _startOver();
           },
         ),
         const Spacer(),
         FbIconButton(icon: WfIcons.refresh, label: 'Refresh', onPressed: reload),
       ]),
       if (_error.isNotEmpty) WfNote(_error),
-      if (_tasks.isEmpty)
+      if (_tasks.isEmpty && _emptyText.isNotEmpty)
         Padding(
           padding: EdgeInsets.symmetric(vertical: t.space6),
-          child: Text(_status == 'open' ? 'Nothing is waiting for you.' : 'No finished tasks yet.', textAlign: TextAlign.center, style: _body(context, color: t.textMuted)),
+          child: Text(_emptyText, textAlign: TextAlign.center, style: _body(context, color: t.textMuted)),
         ),
       for (final task in _tasks) _TaskRow(task: task, outcome: _outcomeLabel(task), onTap: () => _open(task)),
       if (_total > _tasks.length)
@@ -855,7 +895,7 @@ class WfTaskInboxState extends State<WfTaskInbox> {
           child: UiButton(
             label: 'Show more',
             size: UiSize.sm,
-            variant: UiButtonVariant.ghost,
+            variant: UiButtonVariant.outline,
             onPressed: () {
               _take += widget.pageSize;
               reload();
@@ -946,6 +986,25 @@ class WfRunView extends StatefulWidget {
   State<WfRunView> createState() => WfRunViewState();
 }
 
+/// A skip or cancel dialog's state: on its way, and its error. Writes after it closed are ignored
+/// (an answer can arrive after the dialog was taken away).
+class _RunDialog extends ChangeNotifier {
+  bool busy = false;
+  String error = '';
+  bool _disposed = false;
+  void set(VoidCallback f) {
+    if (_disposed) return;
+    f();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
 class WfRunViewState extends State<WfRunView> {
   UiWfInstance? _run;
   UiWorkflowDefinition? _def;
@@ -953,6 +1012,9 @@ class WfRunViewState extends State<WfRunView> {
   String _error = '';
   bool _allowed = false;
   int _seq = 0;
+
+  /// A skip dialog is being prepared (its step's outputs are being read): a second tap waits.
+  bool _skipPending = false;
 
   bool get _mayIntervene => widget.canIntervene ?? _allowed;
 
@@ -1048,8 +1110,9 @@ class WfRunViewState extends State<WfRunView> {
     ];
   }
 
-  /// Tries again, skips or cancels; answers whether it worked. [err] also gets the error (a dialog's).
-  Future<bool> _act(String kind, {String? target, UiJson? outputs, String? reason, ValueNotifier<String>? err}) async {
+  /// Tries again, skips or cancels; answers whether it worked. A [dialog]'s buttons wait meanwhile,
+  /// and it shows the error.
+  Future<bool> _act(String kind, {String? target, UiJson? outputs, String? reason, _RunDialog? dialog}) async {
     final api = widget.api;
     final r = _run;
     if (api == null || r == null || _busy) return false;
@@ -1057,7 +1120,10 @@ class WfRunViewState extends State<WfRunView> {
       _busy = true;
       _error = '';
     });
-    err?.value = '';
+    dialog?.set(() {
+      dialog.busy = true;
+      dialog.error = '';
+    });
     try {
       final next = kind == 'retry'
           ? await api.retry(r.id, target: target)
@@ -1072,16 +1138,67 @@ class WfRunViewState extends State<WfRunView> {
     } catch (e) {
       final msg = _errorText(e, 'That did not work.');
       if (mounted) setState(() => _error = msg);
-      err?.value = msg;
+      dialog?.set(() => dialog.error = msg);
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
+      dialog?.set(() => dialog.busy = false);
     }
+  }
+
+  /// A skip or cancel dialog: Back and the confirm button wait while it is on its way, and so do
+  /// the backdrop, Escape and the back button.
+  Future<void> _runDialog({required String title, required List<Widget> Function(BuildContext ctx) body, required String confirm, UiButtonVariant variant = UiButtonVariant.primary, required Future<bool> Function(_RunDialog d) onConfirm}) async {
+    final d = _RunDialog();
+    await showUiModal<void>(
+      context: context,
+      title: title,
+      size: UiModalSize.md,
+      builder: (ctx) => ListenableBuilder(
+        listenable: d,
+        builder: (ctx, _) => PopScope(
+          canPop: !d.busy,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+            ...body(ctx),
+            if (d.error.isNotEmpty) WfNote(d.error),
+          ]),
+        ),
+      ),
+      footerBuilder: (ctx) => ListenableBuilder(
+        listenable: d,
+        builder: (ctx, _) => Row(children: [
+          UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: d.busy ? null : () => Navigator.of(ctx).pop()),
+          const Spacer(),
+          UiButton(
+            label: confirm,
+            variant: variant,
+            onPressed: d.busy
+                ? null
+                : () async {
+                    final ok = await onConfirm(d);
+                    if (ok && ctx.mounted) Navigator.of(ctx).pop();
+                  },
+          ),
+        ]),
+      ),
+    );
+    d.dispose();
   }
 
   /// Skipping: the run carries on as if the step had finished, with the results given here (for an
   /// app action, its outputs as the registry declares them, with labels people know).
   Future<void> _askSkip(String? target, String? stepId) async {
+    // Reading the step's outputs takes a moment: a second tap meanwhile must not open a second dialog.
+    if (_skipPending) return;
+    _skipPending = true;
+    try {
+      await _openSkip(target, stepId);
+    } finally {
+      _skipPending = false;
+    }
+  }
+
+  Future<void> _openSkip(String? target, String? stepId) async {
     final api = widget.api;
     final def = _def;
     final step = def != null && stepId != null ? indexSteps(def)[stepId]?.step : null;
@@ -1093,67 +1210,41 @@ class WfRunViewState extends State<WfRunView> {
     }
     if (!mounted) return;
     final values = <String, String>{};
-    final err = ValueNotifier('');
     final name = step != null ? stepName(step) : 'the step';
-    await showUiModal<void>(
-      context: context,
+    await _runDialog(
       title: 'Skip “$name”',
-      size: UiModalSize.md,
-      builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+      confirm: 'Skip the step',
+      body: (ctx) => [
         Text('The run carries on as if this step had finished.${outputs.isNotEmpty ? ' Give what it would have produced, for the steps after it.' : ''}', style: _body(ctx, size: 14)),
         for (final o in outputs)
-          FbSetting(label: o.label, child: UiInput(size: UiSize.sm, semanticLabel: o.label, onChanged: (v) => values[o.key] = v)),
-        ValueListenableBuilder(valueListenable: err, builder: (ctx, e, _) => e.isEmpty ? const SizedBox.shrink() : WfNote(e)),
-      ]),
-      footerBuilder: (ctx) => Row(children: [
-        UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop()),
-        const Spacer(),
-        UiButton(
-          label: 'Skip the step',
-          onPressed: () async {
-            final given = <String, Object?>{
-              for (final e in values.entries)
-                if (e.value.trim().isNotEmpty) e.key: e.value.trim(),
-            };
-            final ok = await _act('skip', target: target, outputs: given.isEmpty ? null : given, err: err);
-            if (ok && ctx.mounted) Navigator.of(ctx).pop();
-          },
-        ),
-      ]),
+          FbSetting(label: o.label, child: UiInput(size: UiSize.sm, semanticLabel: o.label, value: values[o.key], onChanged: (v) => values[o.key] = v)),
+      ],
+      onConfirm: (d) {
+        final given = <String, Object?>{
+          for (final e in values.entries)
+            if (e.value.trim().isNotEmpty) e.key: e.value.trim(),
+        };
+        return _act('skip', target: target, outputs: given.isEmpty ? null : given, dialog: d);
+      },
     );
-    err.dispose();
   }
 
   /// Cancelling is a negative action: confirmed, with optional remarks that go into the audit.
   Future<void> _askCancel() async {
     var remarks = '';
-    final err = ValueNotifier('');
-    await showUiModal<void>(
-      context: context,
+    await _runDialog(
       title: 'Cancel the run',
-      size: UiModalSize.md,
-      builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+      confirm: 'Cancel the run',
+      variant: UiButtonVariant.destructive,
+      body: (ctx) => [
         Text('The run stops here and its open tasks are cancelled. What it already did stays done.', style: _body(ctx, size: 14)),
         FbSetting(
           label: 'Remarks (optional)',
-          child: UiTextarea(rows: 2, autosize: true, semanticLabel: 'Remarks (optional)', onChanged: (v) => remarks = v),
+          child: UiTextarea(value: remarks, rows: 2, autosize: true, semanticLabel: 'Remarks (optional)', onChanged: (v) => remarks = v),
         ),
-        ValueListenableBuilder(valueListenable: err, builder: (ctx, e, _) => e.isEmpty ? const SizedBox.shrink() : WfNote(e)),
-      ]),
-      footerBuilder: (ctx) => Row(children: [
-        UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop()),
-        const Spacer(),
-        UiButton(
-          label: 'Cancel the run',
-          variant: UiButtonVariant.destructive,
-          onPressed: () async {
-            final ok = await _act('cancel', reason: remarks.trim().isEmpty ? null : remarks.trim(), err: err);
-            if (ok && ctx.mounted) Navigator.of(ctx).pop();
-          },
-        ),
-      ]),
+      ],
+      onConfirm: (d) => _act('cancel', reason: remarks.trim().isEmpty ? null : remarks.trim(), dialog: d),
     );
-    err.dispose();
   }
 
   @override
@@ -1326,10 +1417,13 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
     _loadTitles();
   }
 
+  int _titlesSeq = 0;
+
   Future<void> _loadTitles() async {
+    final n = ++_titlesSeq;
     try {
       final d = await widget.api?.definitions();
-      if (d != null && mounted) setState(() => _titles = {for (final x in d) x.key: x.title});
+      if (d != null && mounted && n == _titlesSeq) setState(() => _titles = {for (final x in d) x.key: x.title});
     } catch (_) {
       // Keys read as words when the titles can't be loaded.
     }
@@ -1346,6 +1440,11 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
     if (old.api != widget.api || old.entity != widget.entity || old.entityId != widget.entityId || old.instanceId != widget.instanceId) load(false);
+    // Another engine names its workflows its own way.
+    if (old.api != widget.api) {
+      _titles = const {};
+      _loadTitles();
+    }
   }
 
   UiWfAuditQuery _query({int? before, String? format}) => UiWfAuditQuery(
@@ -1410,42 +1509,52 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
     final t = context.ui;
     final v = _verification;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-      Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        SizedBox(
-          width: 160,
-          child: WfSelect(
-            label: 'Kind',
-            value: _category.isEmpty ? 'all' : _category,
-            options: [(value: 'all', label: 'Everything'), for (final c in wfAuditCategories) (value: c.value, label: c.label)],
-            onChanged: (c) {
-              setState(() => _category = c == 'all' ? '' : c);
-              load(false);
-            },
-          ),
-        ),
-        if (widget.entityId == null)
+      // Filters on the left, the buttons pushed to the right while they fit on one line (the web
+      // `.grow` spacer); on narrow screens they wrap.
+      LayoutBuilder(builder: (context, box) {
+        final filters = <Widget>[
           SizedBox(
-            width: 140,
-            child: UiInput(
-              size: UiSize.sm,
-              value: _recordText,
-              placeholder: 'Record id',
-              semanticLabel: 'Record id',
-              onChanged: (s) {
-                setState(() => _recordText = s);
-                _recordTimer?.cancel();
-                _recordTimer = Timer(const Duration(milliseconds: 350), () {
-                  if (!mounted || s.trim() == _recordFilter) return;
-                  setState(() => _recordFilter = s.trim());
-                  load(false);
-                });
+            width: 200,
+            child: WfSelect(
+              label: 'Kind',
+              value: _category.isEmpty ? 'all' : _category,
+              options: [(value: 'all', label: 'Everything'), for (final c in wfAuditCategories) (value: c.value, label: c.label)],
+              onChanged: (c) {
+                setState(() => _category = c == 'all' ? '' : c);
+                load(false);
               },
             ),
           ),
-        UiButton(label: 'Check integrity', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.securityCheck, size: 14), onPressed: _busy ? null : _verify),
-        if (widget.onExport != null)
-          UiButton(label: 'CSV', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.download04, size: 14), onPressed: _busy ? null : () => _export('csv')),
-      ]),
+          if (widget.entityId == null)
+            SizedBox(
+              width: 140,
+              child: UiInput(
+                size: UiSize.sm,
+                value: _recordText,
+                placeholder: 'Record id',
+                semanticLabel: 'Record id',
+                onChanged: (s) {
+                  setState(() => _recordText = s);
+                  _recordTimer?.cancel();
+                  _recordTimer = Timer(const Duration(milliseconds: 350), () {
+                    if (!mounted || s.trim() == _recordFilter) return;
+                    setState(() => _recordFilter = s.trim());
+                    load(false);
+                  });
+                },
+              ),
+            ),
+        ];
+        final buttons = <Widget>[
+          UiButton(label: 'Check integrity', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.securityCheck, size: 14), onPressed: _busy ? null : _verify),
+          if (widget.onExport != null)
+            UiButton(label: 'CSV', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.download04, size: 14), onPressed: _busy ? null : () => _export('csv')),
+        ];
+        if (box.maxWidth >= 620) {
+          return Row(spacing: t.space2, children: [...filters, const Spacer(), ...buttons]);
+        }
+        return Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [...filters, ...buttons]);
+      }),
       if (v != null)
         Semantics(
           liveRegion: true,
@@ -1563,9 +1672,10 @@ class _AuditRow extends StatelessWidget {
         ),
       ),
       if (open)
-        Container(
+        LayoutBuilder(builder: (context, box) => Container(
           color: t.bg,
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+          // Lined up under the entry's text on wide screens (the web `padding-left: 66px`).
+          padding: EdgeInsets.fromLTRB(box.maxWidth < 420 ? 10 : 66, 6, 10, 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             pair('About', Text(_subject(e), style: _body(context, size: 12))),
             if (raw) ...[
@@ -1592,7 +1702,7 @@ class _AuditRow extends StatelessWidget {
                 child: UiButton(label: raw ? 'Show as a list' : 'Show the raw data', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: onToggleRaw),
               ),
           ]),
-        ),
+        )),
     ]);
   }
 }

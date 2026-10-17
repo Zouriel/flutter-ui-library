@@ -229,4 +229,12 @@ void main() {
       await tester.pump();
     });
   });
+
+  testWidgets('onQuery gets the text as it is typed, for options looked up on the fly', (tester) async {
+    final typed = <String>[];
+    await pumpUi(tester, SizedBox(width: 300, child: UiCombobox(options: _countries, label: 'Country', onQuery: typed.add)));
+    await tester.enterText(find.byType(EditableText), 'mal');
+    await tester.pump();
+    expect(typed, ['mal']);
+  });
 }

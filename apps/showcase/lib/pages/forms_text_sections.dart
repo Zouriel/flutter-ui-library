@@ -349,7 +349,10 @@ UiFormField(label: 'Name', error: nameError, child: UiInput(value: name, onChang
           ApiRow('label', 'String?', 'Accessible name without a UiFormField.'),
           _sizeRow, _invalidRow, _radiusRow, _enabledRow,
         ],
-        callbacks: const [ApiRow('clear()', 'UiComboboxState', 'Clears the value, keeps focus, leaves the list closed.')],
+        callbacks: const [
+          ApiRow('onQuery', 'ValueChanged<String>?', 'The text as it is typed (the web field\'s native input event), to look options up as the person types.'),
+          ApiRow('clear()', 'UiComboboxState', 'Clears the value, keeps focus, leaves the list closed.'),
+        ],
         shapes: 'class UiComboboxOption { String label; String value; String? fontFamily; String? fontPackage; }',
       ),
       DocSection(

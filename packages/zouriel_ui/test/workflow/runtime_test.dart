@@ -14,7 +14,14 @@ final String arrow = String.fromCharCode(0x2192);
 
 Finder button(String label) => find.byWidgetPredicate((w) => w is UiButton && w.label == label);
 
+/// The control a text sits in: taps land on it (the text itself takes no hits).
+Finder control(String text) => find.ancestor(of: find.text(text), matching: find.byType(UiInteractive)).first;
+
 void main() {
+  // A tap that misses its widget fails the test instead of passing without doing anything.
+  setUp(() => WidgetController.hitTestWarningShouldBeFatal = true);
+  tearDown(() => WidgetController.hitTestWarningShouldBeFatal = false);
+
   group('UiWorkflowStateBadge', () {
     testWidgets('shows its label and is announced by it', (tester) async {
       final h = tester.ensureSemantics();
@@ -114,7 +121,7 @@ void main() {
     testWidgets('deciding a task through the decide dialog sends the outcome and comment, then reloads', (tester) async {
       final api = FakeWorkflowApi();
       await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
-      await tester.tap(find.text('Finance sign-off'));
+      await tester.tap(control('Finance sign-off'));
       await tester.pumpAndSettle();
       expect(find.text('Check the amount.'), findsOneWidget);
       expect(find.text('Remarks (required to reject)'), findsOneWidget);
@@ -174,7 +181,7 @@ void main() {
       final api = FakeWorkflowApi();
       UiWfTask? decided;
       await pumpPage(tester, WfTaskInbox(api: api, onDecided: (t) => decided = t));
-      await tester.tap(find.text('Task 1'));
+      await tester.tap(control('Task 1'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(EditableText).first, 'Missing transcript');
       await tester.pump();
@@ -188,7 +195,7 @@ void main() {
     testWidgets('rejecting without the remarks it requires sends nothing and says why', (tester) async {
       final api = FakeWorkflowApi();
       await pumpPage(tester, WfTaskInbox(api: api));
-      await tester.tap(find.text('Task 1'));
+      await tester.tap(control('Task 1'));
       await tester.pumpAndSettle();
       expect(find.text('Remarks (required to reject)'), findsOneWidget);
       await tester.tap(button('Reject'));
@@ -255,7 +262,7 @@ void main() {
       await tester.tap(button('Older entries'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('audit:::41'));
-      await tester.tap(find.text('#60'));
+      await tester.tap(control('#60'));
       await tester.pumpAndSettle();
       expect(find.text('hash60'), findsOneWidget);
       await tester.tap(button('Check integrity'));

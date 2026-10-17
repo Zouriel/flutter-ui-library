@@ -18,6 +18,9 @@ Future<void> pumpPage(WidgetTester tester, Widget child, {Size size = const Size
 
 Finder button(String label) => find.byWidgetPredicate((w) => w is UiButton && w.label == label);
 
+/// The control a text sits in: taps land on it (the text itself takes no hits).
+Finder control(String text) => find.ancestor(of: find.text(text), matching: find.byType(UiInteractive)).first;
+
 /// Answers tasks() only when told to, in any order.
 class _SlowTasks extends FakeWorkflowApi {
   final pending = <Completer<UiWfPage<UiWfTask>>>[];
@@ -45,6 +48,10 @@ class _SlowDecide extends FakeWorkflowApi {
 UiWfTask _task(String id, String title) => UiWfTask.fromJson(FakeWorkflowApi.taskJson(id, title: title));
 
 void main() {
+  // A tap that misses its widget fails the test instead of passing without doing anything.
+  setUp(() => WidgetController.hitTestWarningShouldBeFatal = true);
+  tearDown(() => WidgetController.hitTestWarningShouldBeFatal = false);
+
   group('labels', () {
     test('outcomes, task results and run statuses read as words', () {
       expect(wfOutcomeLabel('approved'), 'Approved');
@@ -78,35 +85,38 @@ void main() {
   testWidgets('a double tap on a decision sends it once', (tester) async {
     final api = _SlowDecide();
     await pumpPage(tester, WfTaskInbox(api: api));
-    await tester.tap(find.text('Task 1'));
+    await tester.tap(control('Task 1'));
     await tester.pumpAndSettle();
     final approve = button('Approve').last;
     await tester.tap(approve);
-    await tester.tap(approve, warnIfMissed: false);
+    await tester.tap(approve);
     await tester.pump();
     expect(api.decisions, 1);
     api.pending.single.complete(_task('t1', 'Task 1'));
     await tester.pumpAndSettle();
   });
 
-  testWidgets('handing a task over picks a person from the directory', (tester) async {
+  testWidgets('handing a task over offers people from the directory, not those already on it', (tester) async {
     final api = FakeWorkflowApi();
+    api.taskList.first['assignees'] = ['hana'];
     await pumpPage(tester, WfTaskInbox(api: api));
-    await tester.tap(find.text('Task 1'));
+    await tester.tap(control('Task 1'));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Hand it to someone else'));
     await tester.pumpAndSettle();
     expect(api.calls, contains('searchUsers:'));
-    await tester.enterText(find.descendant(of: find.byType(UiSearchInput), matching: find.byType(EditableText)), 'ali');
-    await tester.pump(const Duration(milliseconds: 300));
+    final field = find.descendant(of: find.byType(UiCombobox), matching: find.byType(EditableText));
+    await tester.tap(field);
     await tester.pumpAndSettle();
-    expect(find.text('Hana Ibrahim'), findsNothing);
-    await tester.tap(find.text('Ali Rasheed'));
-    await tester.pump();
-    expect(find.text('Hand it to Ali Rasheed.'), findsOneWidget);
+    // Everyone but Hana, who has it already.
+    expect(find.text('Ali Rasheed (ali@example.com)'), findsOneWidget);
+    expect(find.text('Mariyam Saeed'), findsOneWidget);
+    expect(find.textContaining('Hana Ibrahim'), findsNothing);
+    await tester.tap(find.text('Mariyam Saeed'));
+    await tester.pumpAndSettle();
     await tester.tap(button('Hand over'));
     await tester.pumpAndSettle();
-    expect(api.calls, contains('delegate:t1:ali'));
+    expect(api.calls, contains('delegate:t1:mariyam'));
   });
 
   testWidgets('the run view asks the engine whether the viewer may intervene', (tester) async {

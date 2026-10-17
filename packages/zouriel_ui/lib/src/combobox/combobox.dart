@@ -52,6 +52,7 @@ class UiCombobox extends StatefulWidget {
     this.fontPreview = false,
     this.fontPackage,
     this.focusNode,
+    this.onQuery,
   });
 
   final List<UiComboboxOption> options;
@@ -69,6 +70,10 @@ class UiCombobox extends StatefulWidget {
   final bool fontPreview;
   final String? fontPackage;
   final FocusNode? focusNode;
+
+  /// The text as it is typed (the web field's native `input` event), for options that are looked
+  /// up as the person types; the list still filters what it is given.
+  final ValueChanged<String>? onQuery;
 
   @override
   State<UiCombobox> createState() => UiComboboxState();
@@ -207,6 +212,7 @@ class UiComboboxState extends State<UiCombobox> {
       _overlay.show();
     }
     setState(() {});
+    widget.onQuery?.call(text);
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {

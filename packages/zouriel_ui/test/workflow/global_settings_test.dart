@@ -7,6 +7,9 @@ import 'fake_api.dart';
 
 Finder button(String label) => find.byWidgetPredicate((w) => w is UiButton && w.label == label);
 
+/// The control a text sits in: taps land on it (the text itself takes no hits).
+Finder control(String text) => find.ancestor(of: find.text(text), matching: find.byType(UiInteractive)).first;
+
 Future<GlobalKey<UiWorkflowGlobalSettingsState>> pumpSettings(WidgetTester tester, Widget Function(GlobalKey<UiWorkflowGlobalSettingsState> key) build, {Size size = const Size(900, 760)}) async {
   final key = GlobalKey<UiWorkflowGlobalSettingsState>();
   await pumpUi(tester, SizedBox(width: size.width, height: size.height, child: build(key)), size: size);
@@ -14,6 +17,10 @@ Future<GlobalKey<UiWorkflowGlobalSettingsState>> pumpSettings(WidgetTester teste
 }
 
 void main() {
+  // A tap that misses its widget fails the test instead of passing without doing anything.
+  setUp(() => WidgetController.hitTestWarningShouldBeFatal = true);
+  tearDown(() => WidgetController.hitTestWarningShouldBeFatal = false);
+
   testWidgets('loads through the API and saves with its revision', (tester) async {
     final api = FakeWorkflowApi();
     UiWorkflowSettings? saved;
@@ -53,7 +60,7 @@ void main() {
 
   testWidgets('webhook addresses must be an origin; connections get keys from their names', (tester) async {
     final key = await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, settings: UiWorkflowSettings(), registry: FakeWorkflowApi().registry));
-    await tester.tap(find.text('Webhooks'));
+    await tester.tap(control('Webhooks'));
     await tester.pumpAndSettle();
     final address = find.bySemanticsLabel('Address');
     await tester.enterText(find.descendant(of: find.byType(UiInput).first, matching: find.byType(EditableText)), 'https://hooks.example.com/path');
@@ -78,7 +85,7 @@ void main() {
   testWidgets('without an API, saving hands the settings back', (tester) async {
     UiWorkflowSettings? saved;
     await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, settings: UiWorkflowSettings.fromJson({'version': 1, 'timeZone': 'Indian/Maldives'}), onSettingsChanged: (s) => saved = s));
-    await tester.tap(find.text('Defaults'));
+    await tester.tap(control('Defaults'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('People may hand tasks to someone else'));
     await tester.pump();
@@ -95,7 +102,7 @@ void main() {
         UiWfTriggerOverview.fromJson({'definitionId': 'b', 'title': 'Escalate', 'kind': 'automation', 'type': 'fieldChanged', 'entity': 'application', 'field': 'status', 'summary': 'When Status changes'}),
       ];
     final key = await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, api: api));
-    await tester.tap(find.text('Watching'));
+    await tester.tap(control('Watching'));
     await tester.pumpAndSettle();
     expect(find.text('Two workflows start on the same change here. Check they don’t work against each other.'), findsOneWidget);
     await tester.tap(find.text('Running'));
@@ -114,7 +121,7 @@ void main() {
     final key = await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, api: api));
     await tester.tap(find.text('Sat'));
     await tester.pump();
-    await tester.tap(find.text('Watching'));
+    await tester.tap(control('Watching'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Running'));
     await tester.pumpAndSettle();
@@ -138,7 +145,7 @@ void main() {
     expect(find.text('America/New York'), findsOneWidget);
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Audit log'));
+    await tester.tap(control('Audit log'));
     await tester.pumpAndSettle();
     expect(find.text('Tasks and approvals'), findsOneWidget);
     expect(find.text('Record moves'), findsOneWidget);
@@ -147,7 +154,7 @@ void main() {
   testWidgets('hidden fields read as record type › field', (tester) async {
     final api = FakeWorkflowApi()..settingsValue = UiWorkflowSettings.fromJson({'version': 1, 'audit': {'maskedFields': ['application.amount']}});
     await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, api: api));
-    await tester.tap(find.text('Audit log'));
+    await tester.tap(control('Audit log'));
     await tester.pumpAndSettle();
     expect(find.text('Application › Amount'), findsOneWidget);
     expect(find.bySemanticsLabel('Stop hiding Application › Amount'), findsOneWidget);
@@ -155,7 +162,7 @@ void main() {
 
   testWidgets('audit masking offers only fields that are not already hidden or sensitive', (tester) async {
     final key = await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, settings: UiWorkflowSettings(), registry: FakeWorkflowApi().registry));
-    await tester.tap(find.text('Audit log'));
+    await tester.tap(control('Audit log'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Add a field…'));
     await tester.pumpAndSettle();

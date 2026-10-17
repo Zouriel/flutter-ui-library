@@ -318,10 +318,7 @@ class _DrawerBodyState extends State<_DrawerBody> {
             container: true,
             label: 'Stopped workflows',
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-              Semantics(
-                header: true,
-                child: Text('STOPPED WORKFLOWS', style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.44, color: t.danger)),
-              ),
+              WfSectionTitle('Stopped workflows', color: t.danger),
               const FbHint('They need someone to try again, skip the step or cancel.'),
               for (final r in stopped) _StoppedRow(run: r, onTap: () => setState(() => _open = r)),
             ]),

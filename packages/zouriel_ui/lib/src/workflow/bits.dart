@@ -90,17 +90,25 @@ class WfSection extends StatelessWidget {
   }
 }
 
-/// A small uppercase heading (the web `.wf-section-title`).
+/// A small uppercase heading (the web `.wf-section-title`). Upper case is only how it looks:
+/// screen readers get [text] as written (the web's `text-transform` leaves the text alone too),
+/// so it isn't spelled out letter by letter.
 class WfSectionTitle extends StatelessWidget {
-  const WfSectionTitle(this.text, {super.key});
+  const WfSectionTitle(this.text, {super.key, this.color});
   final String text;
+
+  /// The text colour; muted by default.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
     return Semantics(
       header: true,
-      child: Text(text.toUpperCase(), style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.44, color: t.textMuted)),
+      label: text,
+      child: ExcludeSemantics(
+        child: Text(text.toUpperCase(), style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.44, color: color ?? t.textMuted)),
+      ),
     );
   }
 }
