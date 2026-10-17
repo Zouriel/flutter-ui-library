@@ -23,6 +23,19 @@ void main() {
       expect(find.text('One'), findsOneWidget);
     });
 
+    testWidgets('golden: dots, the current ring clear of the lines', (tester) async {
+      await expectThemedGolden(
+        tester,
+        'stepper_dots',
+        (context) => const Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: 48, children: [
+          UiStepper(steps: steps, active: 1, variant: UiStepperVariant.dots, label: 'Progress'),
+          UiStepper(steps: steps, active: 1, variant: UiStepperVariant.dots, axis: Axis.vertical, tone: UiStepperTone.success, label: 'Progress'),
+        ]),
+        width: 240,
+        height: 120,
+      );
+    });
+
     testWidgets('dots: no numbers, each dot read with its state, in the tone', (tester) async {
       final h = tester.ensureSemantics();
       await pumpUi(tester, const UiStepper(steps: steps, active: 1, variant: UiStepperVariant.dots, tone: UiStepperTone.success, label: 'Progress'));

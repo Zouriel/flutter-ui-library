@@ -202,7 +202,8 @@ extension on UiStepper {
     Widget line(int i) => Container(
           width: vertical ? 1 : 8,
           height: vertical ? 8 : 1,
-          margin: vertical ? const EdgeInsets.symmetric(vertical: 2) : const EdgeInsets.symmetric(horizontal: 2),
+          // Clear of the current dot's 4px ring.
+          margin: vertical ? const EdgeInsets.symmetric(vertical: 6) : const EdgeInsets.symmetric(horizontal: 6),
           color: i < active ? toneColor : t.border,
         );
 
