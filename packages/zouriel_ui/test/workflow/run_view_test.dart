@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView;
+import 'package:zouriel_ui/src/workflow/history.dart' show wfReadableError;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';

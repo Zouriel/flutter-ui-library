@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:zouriel_ui/src/workflow/bits.dart' show wfArrow;
 import 'package:zouriel_ui/src/workflow/editors.dart';
+import 'package:zouriel_ui/src/workflow/permissions.dart' show permissionRows, emptyWhoText, sameWho;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';

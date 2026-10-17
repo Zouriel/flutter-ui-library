@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -377,10 +376,6 @@ void main() {
     });
   });
 
-  test('the record actions are internal: not exported by the package', () {
-    final src = File('lib/src/areas/workflow.dart').readAsStringSync();
-    expect(RegExp(r"runtime\.dart' hide [^;]*\bWfRecordActions\b").hasMatch(src), isTrue);
-  });
 }
 
 /// Answers tasks() only when told to.

@@ -6,17 +6,17 @@ library;
 export '../workflow/api.dart';
 export '../workflow/clock.dart';
 export '../workflow/definition.dart';
-export '../workflow/global_settings.dart';
-// The task inbox, the run view and the record actions are internal: apps use UiWorkflowTasksDrawer
-// and UiWorkflowPanel.
-export '../workflow/runtime.dart' hide WfTaskInbox, WfTaskInboxState, WfRunView, WfRunViewState, WfRecordActions, WfDashedTopRule;
-// wfPanelPath and its steps are internal (the web keeps them out of the public API too).
-export '../workflow/panel.dart' hide wfPanelPath, UiWfPanelStep;
-export '../workflow/permissions.dart';
-export '../workflow/history.dart' show wfDescribeHistory, wfOutcomeLabel, wfAuditActionLabel, wfActorLabel, wfStepTimedOut, wfCommentRequired, wfRemarksLabel, wfRemarksFor, wfReadableError;
+export '../workflow/global_settings.dart' show UiWorkflowGlobalSettings, UiWorkflowGlobalSettingsState;
+// What apps use, by name (the web public-api). The runtime views' inner parts (the decide dialog,
+// record actions, task inbox, run view and their helpers) and the permissions helpers are internal;
+// tests import them by path.
+export '../workflow/runtime.dart' show UiWorkflowStateBadge, UiWorkflowAudit, UiWorkflowAuditState;
+export '../workflow/panel.dart' show UiWorkflowPanel, UiWorkflowPanelState, UiWorkflowPanelLayout, UiWfPanelStep;
+export '../workflow/permissions.dart' show UiWorkflowPermissions, UiWorkflowPermissionsState;
+export '../workflow/history.dart' show wfDescribeHistory;
 export '../workflow/layout.dart';
 export '../workflow/schema.dart';
 export '../workflow/store.dart';
-export '../workflow/tasks_drawer.dart';
+export '../workflow/tasks_drawer.dart' show UiWorkflowTasksDrawer, UiWorkflowTasksDrawerState;
 export '../workflow/scope.dart' show UiWorkflowBuilderLayout;
 export '../workflow/workflow_builder.dart';

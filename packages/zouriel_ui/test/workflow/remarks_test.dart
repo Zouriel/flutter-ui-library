@@ -10,6 +10,7 @@ import 'package:zouriel_ui/src/workflow/inspector.dart';
 import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRecordActions;
 import 'package:zouriel_ui/src/workflow/scope.dart';
 import 'package:zouriel_ui/src/workflow/step_editors.dart';
+import 'package:zouriel_ui/src/workflow/history.dart' show wfCommentRequired, wfRemarksFor, wfRemarksLabel;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
