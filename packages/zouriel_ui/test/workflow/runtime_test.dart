@@ -229,7 +229,7 @@ void main() {
       // Filter by kind.
       await tester.tap(find.text('Everything'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('lifecycle').last);
+      await tester.tap(find.text('Record moves').last);
       await tester.pumpAndSettle();
       expect(api.calls, contains('audit:lifecycle::'));
     });

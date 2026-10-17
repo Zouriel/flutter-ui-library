@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -87,6 +89,13 @@ class UiWorkflowStateBadge extends StatelessWidget {
 class _DecideState extends ChangeNotifier {
   String comment = '';
   String delegateTo = '';
+  String delegateName = '';
+  String peopleQuery = '';
+
+  /// People to hand the task to, from the API's directory search.
+  List<UiWfUser> people = const [];
+  int peopleSeq = 0;
+  Timer? peopleTimer;
   bool delegateOpen = false;
   UiJson answers = {};
   bool busy = false;
@@ -103,9 +112,29 @@ class _DecideState extends ChangeNotifier {
 Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api}) {
   final st = _DecideState();
   final formKey = GlobalKey<UiFormRendererState>();
-  String outcomeLabel(String key) => task.outcomes.where((o) => o.key == key).firstOrNull?.label.toLowerCase() ?? key;
+  String outcomeLabel(String key) => wfOutcomeLabel(key, [for (final o in task.outcomes) (key: o.key, label: o.label)]);
+
+  /// Looks people up as the name is typed (debounced; a slower older answer never replaces a newer one).
+  void searchPeople(String query) {
+    st.peopleTimer?.cancel();
+    st.peopleQuery = query;
+    st.peopleTimer = Timer(Duration(milliseconds: query.isEmpty ? 0 : 250), () async {
+      final n = ++st.peopleSeq;
+      try {
+        final found = await api.searchUsers(query.trim(), take: 20);
+        if (n != st.peopleSeq) return;
+        // People already on the task (or who decided) can't take it over; the engine refuses them too.
+        final taken = {...task.assignees, ...task.decisions.map((d) => d.userId)};
+        st.set(() => st.people = [for (final u in found) if (!taken.contains(u.id)) u]);
+      } catch (_) {
+        if (n == st.peopleSeq) st.set(() => st.people = const []);
+      }
+    });
+  }
 
   Future<void> decide(BuildContext ctx, String outcome) async {
+    // A second tap while the first is on its way would send the decision twice.
+    if (st.busy) return;
     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
     if (task.form != null && formKey.currentState?.submit() == null) return;
     st.set(() {
@@ -123,7 +152,11 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
   }
 
   Future<void> delegate(BuildContext ctx) async {
-    st.set(() => st.busy = true);
+    if (st.busy || st.delegateTo.isEmpty) return;
+    st.set(() {
+      st.busy = true;
+      st.error = '';
+    });
     try {
       final res = await api.delegate(task.id, st.delegateTo);
       if (ctx.mounted) Navigator.of(ctx).pop(res);
@@ -159,7 +192,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
                 Text.rich(
                   TextSpan(children: [
                     TextSpan(text: d.name ?? d.userId, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    TextSpan(text: ' chose ${outcomeLabel(d.outcome)}${d.comment != null ? ': “${d.comment}”' : ''}'),
+                    TextSpan(text: ' chose “${outcomeLabel(d.outcome)}”${d.comment != null ? ': “${d.comment}”' : ''}'),
                   ]),
                   style: _body(ctx),
                 ),
@@ -171,12 +204,34 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
             child: UiTextarea(value: st.comment, rows: 2, autosize: true, semanticLabel: 'Comment', onChanged: (v) => st.comment = v),
           ),
           if (task.allowDelegation) ...[
-            Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Hand it to someone else', fontSize: 12.5, onTap: () => st.set(() => st.delegateOpen = !st.delegateOpen))),
-            if (st.delegateOpen)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: FbLink(
+                label: 'Hand it to someone else',
+                fontSize: 12.5,
+                onTap: () {
+                  st.set(() => st.delegateOpen = !st.delegateOpen);
+                  if (st.delegateOpen) searchPeople('');
+                },
+              ),
+            ),
+            if (st.delegateOpen) ...[
+              UiSearchInput(size: UiSize.sm, value: st.peopleQuery, placeholder: 'Search for a person', label: 'Hand it to', onChanged: searchPeople),
+              for (final u in st.people)
+                _PersonOption(
+                  user: u,
+                  chosen: st.delegateTo == u.id,
+                  onTap: () => st.set(() {
+                    st.delegateTo = u.id;
+                    st.delegateName = u.name;
+                  }),
+                ),
+              if (st.people.isEmpty && st.peopleQuery.trim().isNotEmpty) const FbHint('Nobody found.'),
               Row(spacing: t.space2, children: [
-                Expanded(child: UiInput(size: UiSize.sm, value: st.delegateTo, placeholder: 'Their user id', semanticLabel: 'User id', onChanged: (v) => st.set(() => st.delegateTo = v))),
+                Expanded(child: FbHint(st.delegateTo.isEmpty ? 'Choose who takes it over.' : 'Hand it to ${st.delegateName}.')),
                 UiButton(label: 'Hand over', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: st.busy || st.delegateTo.isEmpty ? null : () => delegate(ctx)),
               ]),
+            ],
           ],
           if (st.error.isNotEmpty) WfNote(st.error),
         ]);
@@ -199,7 +254,43 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       ),
     ),
   );
-  return future.whenComplete(st.dispose);
+  return future.whenComplete(() {
+    st.peopleTimer?.cancel();
+    st.dispose();
+  });
+}
+
+/// A person in the hand-over list.
+class _PersonOption extends StatelessWidget {
+  const _PersonOption({required this.user, required this.chosen, required this.onTap});
+  final UiWfUser user;
+  final bool chosen;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return UiInteractive(
+      onTap: onTap,
+      checked: chosen,
+      semanticLabel: user.email != null ? '${user.name} (${user.email})' : user.name,
+      excludeChildSemantics: true,
+      pressScale: false,
+      builder: (context, s) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: chosen ? t.primary.withValues(alpha: 0.12) : (s.hovered ? t.surfaceHover : null),
+          borderRadius: BorderRadius.circular(t.radiusXs),
+          boxShadow: s.focused ? t.focusRing : null,
+        ),
+        child: Row(spacing: 8, children: [
+          Expanded(child: Text(user.name, style: _body(context, weight: chosen ? FontWeight.w600 : FontWeight.w400))),
+          if (user.email != null) Text(user.email!, style: _body(context, size: 12, color: t.textMuted)),
+          if (chosen) UiIcon(WfIcons.tick02, size: 14, color: t.primary),
+        ]),
+      ),
+    );
+  }
 }
 
 // ── Record panel ────────────────────────────────────────────────────────────────────────────
@@ -228,13 +319,20 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
   List<UiWfAuditEntry> _history = const [];
   String _error = '';
 
+  /// Bumped by every load and change, so a slower older answer never replaces a newer one.
+  int _seq = 0;
+
   UiWfRecord? get record => _record;
 
   Future<void> _moved(UiWfRecord r) async {
-    setState(() => _record = r);
+    final n = ++_seq;
+    setState(() {
+      _record = r;
+      _error = '';
+    });
     widget.onChanged?.call(r);
     final api = widget.api;
-    if (api != null) await _loadHistory(api);
+    if (api != null) await _loadHistory(api, n);
   }
 
   @override
@@ -254,26 +352,27 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
   Future<void> reload() async {
     final api = widget.api;
     if (api == null) return;
+    final n = ++_seq;
     try {
       final r = await api.record(widget.entity, widget.entityId);
-      if (!mounted) return;
+      if (!mounted || n != _seq) return;
       setState(() {
         _record = r;
         _error = '';
       });
-      await _loadHistory(api);
+      await _loadHistory(api, n);
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'Could not load the record’s workflow.'));
+      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load the record’s workflow.'));
     }
   }
 
-  Future<void> _loadHistory(UiWorkflowApi api) async {
+  Future<void> _loadHistory(UiWorkflowApi api, int n) async {
     if (!widget.showHistory) return;
     try {
       final h = await api.recordHistory(widget.entity, widget.entityId, take: 50);
-      if (mounted) setState(() => _history = h);
+      if (mounted && n == _seq) setState(() => _history = h);
     } catch (_) {
-      if (mounted) setState(() => _history = const []);
+      // A failed history load leaves the last one in place.
     }
   }
 
@@ -451,6 +550,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
             onPressed: b
                 ? null
                 : () async {
+                    // A double tap must not apply the move twice.
+                    if (busy.value) return;
                     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
                     if (p.form != null && formKey.currentState?.submit() == null) return;
                     busy.value = true;
@@ -469,7 +570,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
 
   Future<bool> _apply(String key, UiJson input, ValueNotifier<String>? err) async {
     final api = widget.api;
-    if (api == null) return false;
+    if (api == null || _busy) return false;
     setState(() => _busy = true);
     try {
       final r = await api.applyTransition(widget.entity, widget.entityId, key, input: input);
@@ -491,7 +592,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
 
   Future<bool> _runManual(String key, UiJson input, ValueNotifier<String>? err) async {
     final api = widget.api;
-    if (api == null) return false;
+    if (api == null || _busy) return false;
     setState(() => _busy = true);
     try {
       await api.startManual(key, widget.entity, widget.entityId, input: input);
@@ -594,6 +695,7 @@ class UiWorkflowTasksState extends State<UiWorkflowTasks> {
   int _total = 0;
   String _error = '';
   late int _take = widget.pageSize;
+  int _seq = 0;
 
   @override
   void initState() {
@@ -614,24 +716,21 @@ class UiWorkflowTasksState extends State<UiWorkflowTasks> {
   Future<void> reload() async {
     final api = widget.api;
     if (api == null) return;
+    final n = ++_seq;
     try {
       final page = await api.tasks(UiWfTaskQuery(scope: widget.scope, status: _status == 'open' ? const ['open'] : const ['completed', 'timedOut', 'cancelled'], take: _take));
-      if (!mounted) return;
+      if (!mounted || n != _seq) return;
       setState(() {
         _tasks = page.items;
         _total = page.total;
         _error = '';
       });
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'Could not load tasks.'));
+      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load tasks.'));
     }
   }
 
-  String _outcomeLabel(UiWfTask t) {
-    if (t.status == 'timedOut') return 'Out of time';
-    if (t.status == 'cancelled') return 'Cancelled';
-    return t.outcomes.where((o) => o.key == t.outcome).firstOrNull?.label ?? t.outcome ?? 'Done';
-  }
+  String _outcomeLabel(UiWfTask t) => wfTaskResult(t);
 
   Future<void> _open(UiWfTask t) async {
     final api = widget.api;
@@ -747,12 +846,13 @@ class _RunRow {
 /// failed, skipped), the paths not taken greyed out, and an admin's retry/skip/cancel. When several
 /// paths stopped, each can be retried or skipped on its own.
 class UiWorkflowRun extends StatefulWidget {
-  const UiWorkflowRun({super.key, required this.api, required this.instanceId, this.canIntervene = false, this.onChanged});
+  const UiWorkflowRun({super.key, required this.api, required this.instanceId, this.canIntervene, this.onChanged});
   final UiWorkflowApi? api;
   final String instanceId;
 
-  /// Show retry, skip and cancel (needs the intervention permission on the server).
-  final bool canIntervene;
+  /// Show retry, skip and cancel. Left null, the view asks the engine (`me().canIntervene`), so only
+  /// people the server lets intervene see them; the server checks again either way.
+  final bool? canIntervene;
   final ValueChanged<UiWfInstance>? onChanged;
 
   @override
@@ -764,11 +864,16 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
   UiWorkflowDefinition? _def;
   bool _busy = false;
   String _error = '';
+  bool _allowed = false;
+  int _seq = 0;
+
+  bool get _mayIntervene => widget.canIntervene ?? _allowed;
 
   @override
   void initState() {
     super.initState();
     reload();
+    _askAllowed();
   }
 
   @override
@@ -776,21 +881,34 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
     if (old.api != widget.api || old.instanceId != widget.instanceId) reload();
+    if (old.api != widget.api || old.canIntervene != widget.canIntervene) _askAllowed();
+  }
+
+  /// Whether the engine lets this person intervene, when the host doesn't say.
+  void _askAllowed() {
+    final api = widget.api;
+    if (api == null || widget.canIntervene != null) return;
+    Future.sync(api.me).then((me) {
+      if (mounted) setState(() => _allowed = me.canIntervene);
+    }).catchError((Object _) {
+      if (mounted) setState(() => _allowed = false);
+    });
   }
 
   Future<void> reload() async {
     final api = widget.api;
     if (api == null) return;
+    final n = ++_seq;
     try {
       final results = await Future.wait([api.instance(widget.instanceId), api.instanceDefinition(widget.instanceId)]);
-      if (!mounted) return;
+      if (!mounted || n != _seq) return;
       setState(() {
         _run = results[0] as UiWfInstance;
         _def = results[1] as UiWorkflowDefinition;
         _error = '';
       });
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'Could not load the run.'));
+      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load the run.'));
     }
   }
 
@@ -841,23 +959,14 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
     ];
   }
 
-  static String _statusLabel(String s) =>
-      const {'queued': 'Queued', 'running': 'Running', 'waiting': 'Waiting', 'incident': 'Stopped', 'completed': 'Finished', 'failed': 'Failed', 'cancelled': 'Cancelled', 'active': 'Active', 'outOfSync': 'Out of sync'}[s] ??
-      s;
-
-  static String _statusTone(String s) => s == 'completed'
-      ? 'success'
-      : (s == 'incident' || s == 'failed')
-      ? 'danger'
-      : (s == 'cancelled' || s == 'outOfSync')
-      ? 'warning'
-      : 'info';
-
   Future<void> _act(String kind, [String? target]) async {
     final api = widget.api;
     final r = _run;
-    if (api == null || r == null) return;
-    setState(() => _busy = true);
+    if (api == null || r == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = '';
+    });
     try {
       final next = kind == 'retry'
           ? await api.retry(r.id, target: target)
@@ -865,6 +974,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
           ? await api.skip(r.id, target: target)
           : await api.cancel(r.id, reason: 'Cancelled from the run view');
       if (!mounted) return;
+      _seq++;
       setState(() => _run = next);
       widget.onChanged?.call(next);
     } catch (e) {
@@ -887,7 +997,8 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
         Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           Text(r.title, style: _body(context, size: 14, weight: FontWeight.w700)),
           Text('v${r.version}', style: context.uiText.code.copyWith(fontSize: 11.5, color: t.textMuted)),
-          WfChip(_statusLabel(r.status), tone: _statusTone(r.status)),
+          WfChip(wfRunStatusLabel(r.status), tone: wfRunStatusTone(r.status)),
+          if ((r.stateLabel ?? '').isNotEmpty) Text('· ${r.stateLabel}', style: _body(context, color: t.textSecondary)),
         ]),
         Text(
           '${r.entityTitle ?? r.entityId ?? ''} · started ${wfAgo(r.startedAt, UiWorkflowClock.nowOf(context))}${r.initiatorName != null ? ' by ${r.initiatorName}' : ''}',
@@ -906,7 +1017,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
               Text.rich(TextSpan(children: [const TextSpan(text: 'Stopped: ', style: TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: r.error ?? '')]), style: _body(context)),
-              if (widget.canIntervene && incidents.length > 1) ...[
+              if (_mayIntervene && incidents.length > 1) ...[ 
                 // Several paths stopped: each can be retried or skipped on its own.
                 for (final i in incidents)
                   Row(spacing: t.space2, children: [
@@ -914,18 +1025,18 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
                     btn('Try again', 'retry', target: i.token),
                     btn('Skip', 'skip', variant: UiButtonVariant.outline, target: i.token),
                   ]),
-                Align(alignment: AlignmentDirectional.centerStart, child: btn('Cancel the run', 'cancel', variant: UiButtonVariant.ghost)),
-              ] else if (widget.canIntervene)
+                Align(alignment: AlignmentDirectional.centerStart, child: btn('Cancel the run', 'cancel', variant: UiButtonVariant.destructive)),
+              ] else if (_mayIntervene)
                 Wrap(spacing: t.space2, runSpacing: t.space2, children: [
                   btn('Try again', 'retry'),
                   btn('Skip the step', 'skip', variant: UiButtonVariant.outline),
-                  btn('Cancel the run', 'cancel', variant: UiButtonVariant.ghost),
+                  btn('Cancel the run', 'cancel', variant: UiButtonVariant.destructive),
                 ]),
             ]),
           ),
         )
-      else if (widget.canIntervene && (r.status == 'waiting' || r.status == 'running' || r.status == 'queued'))
-        Align(alignment: AlignmentDirectional.centerStart, child: btn('Cancel the run', 'cancel', variant: UiButtonVariant.ghost)),
+      else if (_mayIntervene && (r.status == 'waiting' || r.status == 'running' || r.status == 'queued'))
+        Align(alignment: AlignmentDirectional.centerStart, child: btn('Cancel the run', 'cancel', variant: UiButtonVariant.destructive)),
       if (_error.isNotEmpty) WfNote(_error),
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final s in _rows) _RunStepRow(row: s),
@@ -935,7 +1046,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
           const WfSectionTitle('Tasks'),
           for (final task in r.tasks!)
             Text(
-              '•  ${task.title} — ${task.status == 'open' ? 'waiting for ${task.assigneeNames.join(', ')}' : (task.outcome ?? task.status)}',
+              '•  ${task.title} — ${task.status == 'open' ? 'waiting for ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}' : wfTaskResult(task)}',
               style: _body(context),
             ),
         ]),
@@ -989,8 +1100,6 @@ class _RunStepRow extends StatelessWidget {
 
 // ── Audit log ───────────────────────────────────────────────────────────────────────────────
 
-const List<String> _auditCategories = ['definition', 'instance', 'step', 'lifecycle', 'task', 'trigger', 'settings', 'audit'];
-
 /// `ui-workflow-audit`: the tamper-evident audit log: filter by record, run or kind, see
 /// before/after values, export, and check the hash chain.
 ///
@@ -1017,7 +1126,13 @@ class UiWorkflowAudit extends StatefulWidget {
 
 class UiWorkflowAuditState extends State<UiWorkflowAudit> {
   String _category = '';
+
+  /// What is typed in the record filter; it reaches [_recordFilter] (and the server) after a pause.
+  String _recordText = '';
   String _recordFilter = '';
+  Timer? _recordTimer;
+  final Set<int> _raw = {};
+  int _seq = 0;
   List<UiWfAuditEntry> _entries = const [];
   bool _hasMore = false;
   final Set<int> _open = {};
@@ -1029,6 +1144,12 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
   void initState() {
     super.initState();
     load(false);
+  }
+
+  @override
+  void dispose() {
+    _recordTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -1052,23 +1173,24 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
   Future<void> load(bool older) async {
     final api = widget.api;
     if (api == null) return;
+    final n = ++_seq;
     try {
       final before = older && _entries.isNotEmpty ? _entries.last.seq : null;
       final page = await api.audit(_query(before: before));
-      if (!mounted) return;
+      if (!mounted || n != _seq) return;
       setState(() {
         _entries = older ? [..._entries, ...page] : page;
         _hasMore = page.length == widget.pageSize;
         _error = '';
       });
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'Could not load the audit log.'));
+      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load the audit log.'));
     }
   }
 
   Future<void> _verify() async {
     final api = widget.api;
-    if (api == null) return;
+    if (api == null || _busy) return;
     setState(() => _busy = true);
     try {
       final v = await api.verifyAudit();
@@ -1082,7 +1204,7 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
 
   Future<void> _export(String format) async {
     final api = widget.api;
-    if (api == null) return;
+    if (api == null || _busy) return;
     setState(() => _busy = true);
     try {
       final bytes = await api.exportAudit(_query(format: format));
@@ -1105,7 +1227,7 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
           child: WfSelect(
             label: 'Kind',
             value: _category.isEmpty ? 'all' : _category,
-            options: [(value: 'all', label: 'Everything'), for (final c in _auditCategories) (value: c, label: c)],
+            options: [(value: 'all', label: 'Everything'), for (final c in wfAuditCategories) (value: c.value, label: c.label)],
             onChanged: (c) {
               setState(() => _category = c == 'all' ? '' : c);
               load(false);
@@ -1117,12 +1239,17 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
             width: 140,
             child: UiInput(
               size: UiSize.sm,
-              value: _recordFilter,
+              value: _recordText,
               placeholder: 'Record id',
               semanticLabel: 'Record id',
               onChanged: (s) {
-                setState(() => _recordFilter = s);
-                load(false);
+                setState(() => _recordText = s);
+                _recordTimer?.cancel();
+                _recordTimer = Timer(const Duration(milliseconds: 350), () {
+                  if (!mounted || s.trim() == _recordFilter) return;
+                  setState(() => _recordFilter = s.trim());
+                  load(false);
+                });
               },
             ),
           ),
@@ -1149,21 +1276,48 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
             _AuditRow(
               entry: _entries[i],
               open: _open.contains(_entries[i].seq),
+              raw: _raw.contains(_entries[i].seq),
               onToggle: () => setState(() => _open.contains(_entries[i].seq) ? _open.remove(_entries[i].seq) : _open.add(_entries[i].seq)),
+              onToggleRaw: () => setState(() => _raw.contains(_entries[i].seq) ? _raw.remove(_entries[i].seq) : _raw.add(_entries[i].seq)),
             ),
           ],
         ]),
       ),
-      if (_hasMore) Align(alignment: AlignmentDirectional.centerStart, child: UiButton(label: 'Older entries', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => load(true))),
+      if (_hasMore) Align(alignment: AlignmentDirectional.centerStart, child: UiButton(label: 'Older entries', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => load(true))),
     ]);
   }
 }
 
 class _AuditRow extends StatelessWidget {
-  const _AuditRow({required this.entry, required this.open, required this.onToggle});
+  const _AuditRow({required this.entry, required this.open, required this.raw, required this.onToggle, required this.onToggleRaw});
   final UiWfAuditEntry entry;
   final bool open;
+
+  /// Shows before/after/details as the stored JSON rather than key/value rows.
+  final bool raw;
   final VoidCallback onToggle;
+  final VoidCallback onToggleRaw;
+
+  /// One line per key of an audit entry's JSON field, for people to read.
+  static List<(String, String)> _rows(String? text) => [
+    for (final e in wfAuditJson(text).entries)
+      (
+        wfHumanize(e.key),
+        switch (e.value) {
+          null => '—',
+          final bool b => b ? 'Yes' : 'No',
+          final Map<Object?, Object?> m => jsonEncode(m),
+          final List<Object?> l => jsonEncode(l),
+          final v => jsString(v),
+        },
+      ),
+  ];
+
+  String _subject(UiWfAuditEntry e) {
+    final record = e.entity != null ? '${wfHumanize(e.entity!)} ${e.entityId ?? ''}'.trim() : '';
+    final subject = '${wfHumanize(e.subjectType)} ${e.subjectId}';
+    return record.isNotEmpty && e.subjectType != e.entity ? '$subject ($record)' : (record.isNotEmpty ? record : subject);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1187,7 +1341,7 @@ class _AuditRow extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       UiInteractive(
         onTap: onToggle,
-        semanticLabel: 'Entry ${e.seq}: ${e.category} ${e.action}, $who, ${wfDateTime(e.at)}',
+        semanticLabel: 'Entry ${e.seq}: ${wfAuditCategoryLabel(e.category)}, ${wfAuditActionLabel(e.category, e.action)}, $who, ${wfDateTime(e.at)}',
         toggled: open,
         excludeChildSemantics: true,
         pressScale: false,
@@ -1198,8 +1352,8 @@ class _AuditRow extends StatelessWidget {
             final narrow = box.maxWidth < 420;
             final what = Text.rich(
               TextSpan(children: [
-                TextSpan(text: e.category.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.33, color: catColor)),
-                TextSpan(text: ' ${e.action}'),
+                TextSpan(text: wfAuditCategoryLabel(e.category).toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.33, color: catColor)),
+                TextSpan(text: ' ${wfAuditActionLabel(e.category, e.action)}'),
               ]),
               style: _body(context),
             );
@@ -1221,11 +1375,30 @@ class _AuditRow extends StatelessWidget {
           color: t.bg,
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            pair('Subject', Text('${e.subjectType} ${e.subjectId}${e.entity != null ? ' (${e.entity} ${e.entityId})' : ''}', style: _body(context, size: 12))),
-            if (e.before != null) pair('Before', Text(e.before!, style: code)),
-            if (e.after != null) pair('After', Text(e.after!, style: code)),
-            if (e.data != null) pair('Details', Text(e.data!, style: code)),
+            pair('About', Text(_subject(e), style: _body(context, size: 12))),
+            if (raw) ...[
+              if (e.before != null) pair('Before', Text(e.before!, style: code)),
+              if (e.after != null) pair('After', Text(e.after!, style: code)),
+              if (e.data != null) pair('Details', Text(e.data!, style: code)),
+            ] else
+              for (final (label, text) in [('Before', e.before), ('After', e.after), ('Details', e.data)])
+                if (_rows(text).isNotEmpty)
+                  pair(
+                    label,
+                    Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
+                      for (final (k, v) in _rows(text))
+                        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: 10, children: [
+                          ConstrainedBox(constraints: const BoxConstraints(minWidth: 80), child: Text(k, style: _body(context, size: 12, color: t.textMuted))),
+                          Expanded(child: Text(v, style: _body(context, size: 12))),
+                        ]),
+                    ]),
+                  ),
             pair('Hash', Text(e.hash, style: code.copyWith(color: t.textMuted))),
+            if (e.before != null || e.after != null || e.data != null)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: UiButton(label: raw ? 'Show as a list' : 'Show the raw data', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: onToggleRaw),
+              ),
           ]),
         ),
     ]);

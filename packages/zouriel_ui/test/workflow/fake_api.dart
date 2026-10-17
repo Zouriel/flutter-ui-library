@@ -122,6 +122,24 @@ class FakeWorkflowApi extends Fake implements UiWorkflowApi {
   @override
   Future<UiWorkflowSchema> schema() => _do('schema', () => UiWorkflowSchema(registry: registry));
 
+  /// What me() says about intervening.
+  bool canIntervene = false;
+
+  @override
+  Future<UiWfMe> me() => _do('me', () => UiWfMe.fromJson({'type': 'user', 'id': 'hana', 'can': {'intervene': canIntervene}}));
+
+  static const people = [
+    {'id': 'hana', 'name': 'Hana Ibrahim', 'email': 'hana@example.com'},
+    {'id': 'ali', 'name': 'Ali Rasheed', 'email': 'ali@example.com'},
+    {'id': 'mariyam', 'name': 'Mariyam Saeed'},
+  ];
+
+  @override
+  Future<List<UiWfUser>> searchUsers(String query, {int take = 20}) => _do('searchUsers:$query', () => [
+    for (final u in people)
+      if ((u['name'] as String).toLowerCase().contains(query.toLowerCase())) UiWfUser.fromJson(u),
+  ]);
+
   @override
   Future<({UiWorkflowSettings settings, int revision})> settings() => _do('settings', () => (settings: settingsValue, revision: settingsRevision));
 

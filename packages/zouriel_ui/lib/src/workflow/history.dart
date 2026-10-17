@@ -118,3 +118,38 @@ String wfDescribeHistory(UiWfAuditEntry h, String Function(Object? key) stateLab
       return wfAuditActionLabel(h.category, h.action);
   }
 }
+
+/// How a finished task ended ("Approved", "Out of time", "Cancelled").
+String wfTaskResult(UiWfTask t) {
+  if (t.status == 'timedOut') return 'Out of time';
+  if (t.status == 'cancelled') return 'Cancelled';
+  return wfOutcomeLabel(t.outcome, [for (final o in t.outcomes) (key: o.key, label: o.label)]);
+}
+
+/// A run's status as people read it; the run view, run lists and the record panel all use it.
+String wfRunStatusLabel(String? s) {
+  if (s == null || s.isEmpty) return '';
+  return const {
+        'queued': 'Queued', 'running': 'Running', 'waiting': 'Waiting', 'incident': 'Stopped', 'completed': 'Finished',
+        'failed': 'Failed', 'cancelled': 'Cancelled', 'active': 'Active', 'outOfSync': 'Out of sync',
+      }[s] ??
+      wfHumanize(s);
+}
+
+/// The tone a run status is shown in.
+String wfRunStatusTone(String? s) => switch (s) {
+  'completed' => 'success',
+  'incident' || 'failed' => 'danger',
+  'cancelled' || 'outOfSync' => 'warning',
+  _ => 'info',
+};
+
+/// The audit log's categories, in the order filters list them.
+const List<({String value, String label})> wfAuditCategories = [
+  (value: 'lifecycle', label: 'Record moves'), (value: 'task', label: 'Tasks and decisions'), (value: 'instance', label: 'Runs'),
+  (value: 'step', label: 'Steps'), (value: 'trigger', label: 'Triggers'), (value: 'definition', label: 'Workflow changes'),
+  (value: 'settings', label: 'Settings'), (value: 'audit', label: 'The audit log itself'),
+];
+
+/// An audit category's label ("lifecycle" reads "Record moves").
+String wfAuditCategoryLabel(String category) => wfAuditCategories.where((c) => c.value == category).firstOrNull?.label ?? wfHumanize(category);
