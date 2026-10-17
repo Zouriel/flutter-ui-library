@@ -5,6 +5,10 @@ library;
 
 export '../workflow/api.dart';
 export '../workflow/definition.dart';
+export '../workflow/global_settings.dart';
+export '../workflow/runtime.dart';
 export '../workflow/layout.dart';
 export '../workflow/schema.dart';
 export '../workflow/store.dart';
+export '../workflow/scope.dart' show UiWorkflowBuilderLayout;
+export '../workflow/workflow_builder.dart';
