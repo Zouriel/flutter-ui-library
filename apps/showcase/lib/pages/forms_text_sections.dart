@@ -200,6 +200,7 @@ UiFormField(label: 'Name', error: nameError, child: UiInput(value: name, onChang
           ApiRow('rows', 'int', 'Visible lines (the starting height with autosize).', def: '4'),
           ApiRow('autosize', 'bool', 'Grow with the text.', def: 'false'),
           ApiRow('maxRows', 'int', 'With autosize: most lines before it scrolls.', def: '8'),
+          ApiRow('maxLength', 'int?', 'The most characters it takes (the web maxlength): typing and pasting stop there.', def: 'null'),
           ApiRow('placeholder', 'String', 'Shown while empty.', def: "''"),
           _invalidRow, _radiusRow, _enabledRow,
         ],

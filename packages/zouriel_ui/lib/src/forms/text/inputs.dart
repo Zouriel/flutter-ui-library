@@ -152,6 +152,7 @@ class UiTextarea extends StatefulWidget {
     this.readOnly = false,
     this.autofocus = false,
     this.semanticLabel,
+    this.maxLength,
   });
 
   final String? value;
@@ -169,6 +170,9 @@ class UiTextarea extends StatefulWidget {
   final bool readOnly;
   final bool autofocus;
   final String? semanticLabel;
+
+  /// The most characters it takes (the web `maxlength`): typing and pasting stop there.
+  final int? maxLength;
 
   @override
   State<UiTextarea> createState() => _UiTextareaState();
@@ -219,6 +223,7 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
           onChanged: widget.onChanged,
           autofocus: widget.autofocus,
           semanticLabel: widget.semanticLabel,
+          inputFormatters: widget.maxLength == null ? null : [LengthLimitingTextInputFormatter(widget.maxLength)],
         ),
       ),
     );

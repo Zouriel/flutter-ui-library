@@ -11,6 +11,7 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/modal.dart';
+import '../form_builder/engine/schema.dart' show UiFormSubmission;
 import '../form_builder/renderer/form_renderer.dart';
 import '../forms/choice/checkbox.dart';
 import '../forms/text/inputs.dart';
@@ -19,6 +20,7 @@ import 'api.dart';
 import 'bits.dart';
 import 'clock.dart';
 import 'definition.dart';
+import 'editors.dart' show WfValueInput;
 import 'history.dart';
 import 'icons.dart';
 import 'json.dart';
@@ -30,6 +32,63 @@ import 'schema.dart';
 // no dependency injection in Flutter: each takes the engine's [UiWorkflowApi] as `api`.
 
 const _errorText = wfErrorText;
+
+/// The most characters remarks may have; the engine refuses longer ones (spec §6 remarks).
+const int wfRemarksMax = 2000;
+
+/// Said when remarks are longer than the engine takes.
+const String _remarksTooLong = 'Remarks can be at most 2,000 characters.';
+
+String _thousands(int n) => n.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+$)'), (_) => ',');
+
+/// The remarks counter ("1,850 / 2,000"), shown only near the limit so it adds no noise before.
+String wfRemarksCounter(String? text) {
+  final n = (text ?? '').length;
+  return n >= wfRemarksMax * 0.9 ? '${_thousands(n)} / ${_thousands(wfRemarksMax)}' : '';
+}
+
+/// The answers of a filled form, read from its submission (which, unlike value changes, also holds
+/// answers nobody touched: defaults and prefilled values). With an error when they can't be sent:
+/// picked files need an upload address on the form, as the engine takes JSON only.
+({UiJson? data, String? error}) wfFormAnswers(UiFormSubmission s) {
+  if (s.files.values.any((f) => f.isNotEmpty)) {
+    return (data: null, error: 'The files picked in this form can’t be sent: the form needs an upload address for them.');
+  }
+  return (data: s.data, error: null);
+}
+
+/// A skipped step's result as its registry type wants it (a number as a number, yes/no as a
+/// boolean), or null when nothing usable was given (the web `wfSkipValue`).
+Object? wfSkipValue(String? type, Object? raw) {
+  if (raw == null) return null;
+  if (raw is String) {
+    final t = raw.trim();
+    if (t.isEmpty) return null;
+    if (type == 'number' || type == 'currency') {
+      final n = num.tryParse(t);
+      return n != null && n.isFinite ? n : null;
+    }
+    if (type == 'boolean') return t == 'true' ? true : (t == 'false' ? false : null);
+    return t;
+  }
+  if (raw is num) return raw.isFinite ? raw : null;
+  return raw;
+}
+
+/// The counter under a remarks field, near the limit only.
+class _RemarksCount extends StatelessWidget {
+  const _RemarksCount(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) {
+    final c = wfRemarksCounter(text);
+    if (c.isEmpty) return const SizedBox.shrink();
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: Semantics(liveRegion: true, child: Text(c, style: _body(context, size: 12, color: context.ui.textMuted))),
+    );
+  }
+}
 
 UiButtonVariant _variantOf(String? tone, {UiButtonVariant otherwise = UiButtonVariant.outline}) => switch (tone) {
   'danger' => UiButtonVariant.destructive,
@@ -98,7 +157,6 @@ class _DecideState extends ChangeNotifier {
   int peopleSeq = 0;
   Timer? peopleTimer;
   bool delegateOpen = false;
-  UiJson answers = {};
   bool busy = false;
   String error = '';
 
@@ -124,7 +182,9 @@ class _DecideState extends ChangeNotifier {
 /// null when closed. While a decision is on its way the dialog can't be closed (Close, the
 /// backdrop, Escape and Back wait for it). [onDecided] gets every saved decision or hand-over,
 /// even one whose answer arrives after the dialog was taken away, so the host can always reload.
-Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api, ValueChanged<UiWfTask>? onDecided}) {
+///
+/// [onRoute] gets the dialog's route as it opens, so a host can take it away (when its record changes).
+Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api, ValueChanged<UiWfTask>? onDecided, ValueChanged<Route<Object?>>? onRoute}) {
   final st = _DecideState();
   final formKey = GlobalKey<UiFormRendererState>();
   String outcomeLabel(String key) => wfOutcomeLabel(key, [for (final o in task.outcomes) (key: o.key, label: o.label)]);
@@ -153,11 +213,29 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
     // A second tap while the first is on its way would send the decision twice.
     if (st.busy) return;
     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
-    if (task.form != null && formKey.currentState?.submit() == null) return;
+    // Its submission holds every answer, untouched defaults and prefilled values too.
+    UiJson data = const {};
+    if (task.form != null) {
+      final s = formKey.currentState?.submit();
+      if (s == null) return;
+      final a = wfFormAnswers(s);
+      if (a.error != null) {
+        st.set(() => st.error = a.error!);
+        return;
+      }
+      data = a.data!;
+    }
     if (wfCommentRequired(task, outcome) && st.comment.trim().isEmpty) {
       st.set(() {
         st.commentMissing = true;
         st.error = 'Add remarks to explain “${outcomeLabel(outcome)}”.';
+      });
+      return;
+    }
+    if (st.comment.trim().length > wfRemarksMax) {
+      st.set(() {
+        st.commentMissing = true;
+        st.error = _remarksTooLong;
       });
       return;
     }
@@ -166,7 +244,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       st.error = '';
     });
     try {
-      final res = await api.decide(task.id, outcome, comment: st.comment.isEmpty ? null : st.comment, data: st.answers);
+      final res = await api.decide(task.id, outcome, comment: st.comment.trim().isEmpty ? null : st.comment.trim(), data: data);
       onDecided?.call(res);
       if (ctx.mounted) Navigator.of(ctx).pop(res);
     } catch (e) {
@@ -197,7 +275,10 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
     context: context,
     title: task.title,
     size: UiModalSize.md,
-    builder: (ctx) => ListenableBuilder(
+    builder: (ctx) {
+      final route = ModalRoute.of(ctx);
+      if (route != null) onRoute?.call(route);
+      return ListenableBuilder(
       listenable: st,
       builder: (ctx, _) {
         final t = ctx.ui;
@@ -231,7 +312,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
                 ]),
             ]),
           if (task.form != null)
-            UiFormRenderer(key: formKey, definition: task.form!, showActions: false, showTitle: false, onValueChanged: (v) => st.answers = v),
+            UiFormRenderer(key: formKey, definition: task.form!, showActions: false, showTitle: false),
           FbSetting(
             label: remarks,
             child: UiTextarea(
@@ -240,12 +321,14 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
               autosize: true,
               semanticLabel: remarks,
               invalid: st.commentMissing,
-              onChanged: (v) {
+              maxLength: wfRemarksMax,
+              onChanged: (v) => st.set(() {
                 st.comment = v;
-                if (st.commentMissing) st.set(() => st.commentMissing = false);
-              },
+                st.commentMissing = false;
+              }),
             ),
           ),
+          if (wfRemarksCounter(st.comment).isNotEmpty) _RemarksCount(st.comment),
           if (task.allowDelegation) ...[
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -282,7 +365,8 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
           if (st.error.isNotEmpty) WfNote(st.error),
         ]));
       },
-    ),
+    );
+    },
     footerBuilder: (ctx) => ListenableBuilder(
       listenable: st,
       // Full width, so Close sits at the start and the decisions at the end (the web `.foot`).
@@ -413,7 +497,12 @@ class _WfRecordActionsState extends State<WfRecordActions> {
   void didUpdateWidget(WfRecordActions oldWidget) {
     super.didUpdateWidget(oldWidget);
     // A dialog belongs to the record it was opened for: switching records closes it.
-    if (oldWidget.entity != widget.entity || oldWidget.entityId != widget.entityId) _closeDialog(later: true);
+    if (oldWidget.entity != widget.entity || oldWidget.entityId != widget.entityId) {
+      // A dialog, an open task and an error belong to the record they were for: another record clears them.
+      _closeDialog(later: true);
+      _closeTask();
+      _error = '';
+    }
   }
 
   @override
@@ -445,8 +534,24 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     }
   }
 
+  /// The record shown is the one named by `entity`/`entityId`. While the host is switching records
+  /// the old record may still be bound: nothing is sent then, so an old move's key never reaches a new id.
+  bool get _current => widget.record.entity == widget.entity && widget.record.id == widget.entityId;
+
+  /// The open decision's route, closed when the record changes.
+  Route<Object?>? _taskRoute;
+
+  void _closeTask() {
+    final route = _taskRoute;
+    _taskRoute = null;
+    if (route == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (route.isActive) route.navigator?.removeRoute(route);
+    });
+  }
+
   void _start(UiWfTransitionOption t) {
-    if (_busy) return;
+    if (_busy || !_current) return;
     final p = _PendingAction(t, _ActionKind.move, wfRemarksFor(t));
     if (t.form == null && t.confirm == null && p.remarks == UiWfRemarks.none) {
       _apply(t.key, const {}, null);
@@ -456,7 +561,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
   }
 
   void _startManual(UiWfManualOption m) {
-    if (_busy) return;
+    if (_busy || !_current) return;
     if (m.form == null) {
       _runManual(m.key, const {}, null);
       return;
@@ -466,7 +571,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
 
   /// Starting over: always confirmed (it stops work in progress), with the reset's form when it has one.
   void _startReset(UiWfResetOption rs) {
-    if (_busy) return;
+    if (_busy || !_current) return;
     final d = _confirm(_PendingAction(
       UiWfTransitionOption(key: '', label: rs.label, to: rs.to, toLabel: rs.toLabel, tone: 'danger',
           confirm: rs.confirm ?? 'Start over from “${rs.toLabel}”? Open tasks and runs stop.', form: rs.form),
@@ -526,12 +631,31 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     Future<void> confirm(BuildContext ctx) async {
       // A double tap must not apply the move twice; nor may the reset go before its list arrives.
       if (d.busy || d.loading) return;
+      // Nothing is sent while an old record is still bound: an old move's key never reaches a new id.
+      if (!_current) return;
       // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
-      if (o.form != null && formKey.currentState?.submit() == null) return;
+      // Its submission holds every answer, untouched defaults and prefilled values too.
+      if (o.form != null) {
+        final s = formKey.currentState?.submit();
+        if (s == null) return;
+        final a = wfFormAnswers(s);
+        if (a.error != null) {
+          d.set(() => d.error = a.error!);
+          return;
+        }
+        d.input = a.data!;
+      }
       if (p.remarks == UiWfRemarks.required && d.remark.trim().isEmpty) {
         d.set(() {
           d.remarkMissing = true;
           d.error = 'Add remarks to explain this.';
+        });
+        return;
+      }
+      if (p.remarks != UiWfRemarks.none && d.remark.trim().length > wfRemarksMax) {
+        d.set(() {
+          d.remarkMissing = true;
+          d.error = _remarksTooLong;
         });
         return;
       }
@@ -557,7 +681,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
           builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
             if (o.confirm != null) Text(o.confirm!, style: _body(ctx, size: 14)),
             if (o.form != null)
-              UiFormRenderer(key: formKey, definition: o.form!, showActions: false, showTitle: false, onValueChanged: (v) => d.input = v)
+              UiFormRenderer(key: formKey, definition: o.form!, showActions: false, showTitle: false)
             else if (o.confirm == null)
               Text('Move this record to “${o.toLabel}”?', style: _body(ctx, size: 14)),
             if (p.remarks != UiWfRemarks.none)
@@ -569,12 +693,14 @@ class _WfRecordActionsState extends State<WfRecordActions> {
                   autosize: true,
                   invalid: d.remarkMissing,
                   semanticLabel: 'Remarks',
-                  onChanged: (v) {
+                  maxLength: wfRemarksMax,
+                  onChanged: (v) => d.set(() {
                     d.remark = v;
-                    if (d.remarkMissing) d.set(() => d.remarkMissing = false);
-                  },
+                    d.remarkMissing = false;
+                  }),
                 ),
               ),
+            if (p.remarks != UiWfRemarks.none && wfRemarksCounter(d.remark).isNotEmpty) _RemarksCount(d.remark),
             if (reset) _WfResetUndoList(dialog: d),
             if (d.error.isNotEmpty) WfNote(d.error),
           ]),
@@ -673,7 +799,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     final api = widget.api;
     if (api == null) return;
     // Reloads on every saved decision, even one that lands after the dialog was taken away.
-    await showWfDecideDialog(context, task: t, api: api, onDecided: (_) => widget.onReload?.call());
+    await showWfDecideDialog(context, task: t, api: api, onDecided: (_) => widget.onReload?.call(), onRoute: (r) => _taskRoute = r);
+    _taskRoute = null;
   }
 
   @override
@@ -1142,7 +1269,7 @@ class WfRunViewState extends State<WfRunView> {
 
   /// A skip or cancel dialog: Back and the confirm button wait while it is on its way, and so do
   /// the backdrop, Escape and the back button.
-  Future<void> _runDialog({required String title, required List<Widget> Function(BuildContext ctx) body, required String confirm, UiButtonVariant variant = UiButtonVariant.primary, required Future<bool> Function(_RunDialog d) onConfirm}) async {
+  Future<void> _runDialog({required String title, required List<Widget> Function(BuildContext ctx, _RunDialog d) body, required String confirm, UiButtonVariant variant = UiButtonVariant.primary, required Future<bool> Function(_RunDialog d) onConfirm}) async {
     final d = _RunDialog();
     await showUiModal<void>(
       context: context,
@@ -1153,7 +1280,7 @@ class WfRunViewState extends State<WfRunView> {
         builder: (ctx, _) => PopScope(
           canPop: !d.busy,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
-            ...body(ctx),
+            ...body(ctx, d),
             if (d.error.isNotEmpty) WfNote(d.error),
           ]),
         ),
@@ -1196,28 +1323,52 @@ class WfRunViewState extends State<WfRunView> {
     final api = widget.api;
     final def = _def;
     final step = def != null && stepId != null ? indexSteps(def)[stepId]?.step : null;
-    var outputs = <({String key, String label})>[];
+    var outputs = const <UiWfParamDescriptor>[];
     if (step?.type == 'action' && api != null) {
+      // An app action's results are declared in the registry, with labels, types and which are required.
       final schema = await Future.sync(api.schema).then<UiWorkflowSchema?>((s) => s).catchError((Object _) => null);
       final action = schema?.registry.actions?.where((a) => a.key == UiWfActionStep.of(step!).action).firstOrNull;
-      outputs = [for (final o in action?.outputs ?? const <UiWfParamDescriptor>[]) (key: o.key, label: o.label)];
+      outputs = action?.outputs ?? const [];
     }
     if (!mounted) return;
-    final values = <String, String>{};
+    final values = <String, Object?>{};
     final name = step != null ? stepName(step) : 'the step';
     await _runDialog(
       title: 'Skip “$name”',
       confirm: 'Skip the step',
-      body: (ctx) => [
+      body: (ctx, d) => [
         Text('The run carries on as if this step had finished.${outputs.isNotEmpty ? ' Give what it would have produced, for the steps after it.' : ''}', style: _body(ctx, size: 14)),
+        // Each result in its registry type (a number, yes/no, a date, a choice).
         for (final o in outputs)
-          FbSetting(label: o.label, child: UiInput(size: UiSize.sm, semanticLabel: o.label, value: values[o.key], onChanged: (v) => values[o.key] = v)),
+          FbSetting(
+            label: '${o.label}${o.required ? ' (required)' : ''}',
+            child: WfValueInput(
+              field: o.options?.isNotEmpty ?? false ? UiWfFieldDescriptor.fromJson({'key': o.key, 'label': o.label, 'type': 'enum', 'options': [for (final x in o.options!) x.json]}) : null,
+              type: o.type,
+              value: values[o.key],
+              label: o.label,
+              onChanged: (v) => d.set(() {
+                values[o.key] = v;
+                d.error = '';
+              }),
+            ),
+          ),
       ],
-      onConfirm: (d) {
-        final given = <String, Object?>{
-          for (final e in values.entries)
-            if (e.value.trim().isNotEmpty) e.key: e.value.trim(),
-        };
+      onConfirm: (d) async {
+        final given = <String, Object?>{};
+        final missing = <String>[];
+        for (final o in outputs) {
+          final v = wfSkipValue(o.type, values[o.key]);
+          if (v == null) {
+            if (o.required) missing.add(o.label);
+            continue;
+          }
+          given[o.key] = v;
+        }
+        if (missing.isNotEmpty) {
+          d.set(() => d.error = 'Give ${missing.join(', ')}: the steps after it need ${missing.length == 1 ? 'it' : 'them'}.');
+          return false;
+        }
         return _act('skip', target: target, outputs: given.isEmpty ? null : given, dialog: d);
       },
     );
@@ -1230,14 +1381,21 @@ class WfRunViewState extends State<WfRunView> {
       title: 'Cancel the run',
       confirm: 'Cancel the run',
       variant: UiButtonVariant.destructive,
-      body: (ctx) => [
+      body: (ctx, d) => [
         Text('The run stops here and its open tasks are cancelled. What it already did stays done.', style: _body(ctx, size: 14)),
         FbSetting(
           label: 'Remarks (optional)',
-          child: UiTextarea(value: remarks, rows: 2, autosize: true, semanticLabel: 'Remarks (optional)', onChanged: (v) => remarks = v),
+          child: UiTextarea(value: remarks, rows: 2, autosize: true, semanticLabel: 'Remarks (optional)', maxLength: wfRemarksMax, onChanged: (v) => d.set(() => remarks = v)),
         ),
+        if (wfRemarksCounter(remarks).isNotEmpty) _RemarksCount(remarks),
       ],
-      onConfirm: (d) => _act('cancel', reason: remarks.trim().isEmpty ? null : remarks.trim(), dialog: d),
+      onConfirm: (d) async {
+        if (remarks.trim().length > wfRemarksMax) {
+          d.set(() => d.error = _remarksTooLong);
+          return false;
+        }
+        return _act('cancel', reason: remarks.trim().isEmpty ? null : remarks.trim(), dialog: d);
+      },
     );
   }
 
@@ -1404,6 +1562,9 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
   /// Workflow titles by key, so entries by a workflow name it rather than its key.
   Map<String, String> _titles = const {};
 
+  /// The first page has arrived (until then the list says it is loading, not that it is empty).
+  bool _loaded = false;
+
   @override
   void initState() {
     super.initState();
@@ -1445,8 +1606,9 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
     category: _category.isEmpty ? null : _category,
     entity: widget.entity,
     entityId: widget.entityId ?? (_recordFilter.isEmpty ? null : _recordFilter),
-    instanceId: widget.instanceId,
-    take: widget.pageSize,
+    // An export is the whole filtered log, not a page (and never one run's: see [_export]).
+    instanceId: format == null ? widget.instanceId : null,
+    take: format == null ? widget.pageSize : null,
     before: before,
     format: format,
   );
@@ -1463,6 +1625,7 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
       setState(() {
         _entries = older ? [..._entries, ...page] : page;
         _hasMore = page.length == widget.pageSize;
+        _loaded = true;
         _error = '';
       });
     } catch (e) {
@@ -1486,7 +1649,8 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
 
   Future<void> _export(String format) async {
     final api = widget.api;
-    if (api == null || _busy) return;
+    // A run's log can't be exported on its own (the engine's export has no run filter).
+    if (api == null || _busy || widget.instanceId != null) return;
     setState(() => _busy = true);
     try {
       final bytes = await api.exportAudit(_query(format: format));
@@ -1541,7 +1705,8 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
         ];
         final buttons = <Widget>[
           UiButton(label: 'Check integrity', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.securityCheck, size: 14), onPressed: _busy ? null : _verify),
-          if (widget.onExport != null)
+          // The engine's export can't be narrowed to one run: offering it here would export more than is listed.
+          if (widget.onExport != null && widget.instanceId == null)
             UiButton(label: 'CSV', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.download04, size: 14), onPressed: _busy ? null : () => _export('csv')),
         ];
         if (box.maxWidth >= 620) {
@@ -1549,6 +1714,8 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
         }
         return Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [...filters, ...buttons]);
       }),
+      if (widget.instanceId != null && widget.onExport != null)
+        const FbHint('Only one run’s entries are shown. To export, open the audit log of the whole record: an export can’t be limited to one run.'),
       if (v != null)
         Semantics(
           liveRegion: true,
@@ -1562,7 +1729,10 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
         decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (_entries.isEmpty)
-            Padding(padding: EdgeInsets.all(t.space6), child: Text('No entries.', textAlign: TextAlign.center, style: _body(context, color: t.textMuted))),
+            Padding(
+              padding: EdgeInsets.all(t.space6),
+              child: Text(_loaded ? 'No entries.' : (_error.isNotEmpty ? 'Nothing to show.' : 'Loading…'), textAlign: TextAlign.center, style: _body(context, color: t.textMuted)),
+            ),
           for (var i = 0; i < _entries.length; i++) ...[
             if (i > 0) Container(height: 1, color: t.borderSubtle),
             _AuditRow(

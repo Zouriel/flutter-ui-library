@@ -157,4 +157,14 @@ void main() {
     expect(box.top, lessThanOrEqualTo(text.top));
     expect(box.bottom, greaterThanOrEqualTo(text.bottom));
   });
+
+  testWidgets('textarea: maxLength stops typing and pasting there; unset, it takes any length', (tester) async {
+    final values = <String>[];
+    await pumpUi(tester, SizedBox(width: 300, child: UiTextarea(maxLength: 5, semanticLabel: 'Note', onChanged: values.add)));
+    await tester.enterText(find.byType(EditableText), 'abcdefgh');
+    expect(tester.widget<EditableText>(find.byType(EditableText)).controller.text, 'abcde');
+    await pumpUi(tester, const SizedBox(width: 300, child: UiTextarea(key: ValueKey('free'), semanticLabel: 'Note')));
+    await tester.enterText(find.byType(EditableText), 'abcdefgh');
+    expect(tester.widget<EditableText>(find.byType(EditableText)).controller.text, 'abcdefgh');
+  });
 }
