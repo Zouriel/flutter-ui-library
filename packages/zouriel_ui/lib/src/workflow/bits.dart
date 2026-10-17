@@ -173,6 +173,7 @@ class WfSelect extends StatelessWidget {
     required this.label,
     this.placeholder,
     this.unknownSuffix = 'not available here',
+    this.unknownLabel,
     this.enabled = true,
     this.size = UiSize.sm,
   });
@@ -185,6 +186,9 @@ class WfSelect extends StatelessWidget {
   final String label;
   final String? placeholder;
   final String unknownSuffix;
+
+  /// How a stored value that isn't among [options] reads (default: the value, then [unknownSuffix] in brackets).
+  final String Function(String value)? unknownLabel;
   final bool enabled;
   final UiSize size;
 
@@ -200,7 +204,7 @@ class WfSelect extends StatelessWidget {
       value: v == null || v.isEmpty ? null : v,
       options: [
         for (final o in options) UiSelectOption(label: o.label, value: o.value),
-        if (!known) UiSelectOption(label: '$v ($unknownSuffix)', value: v, disabled: true),
+        if (!known) UiSelectOption(label: unknownLabel?.call(v) ?? '$v ($unknownSuffix)', value: v, disabled: true),
       ],
       onChanged: onChanged == null ? null : (x) => x != v ? onChanged!(x) : null,
     );

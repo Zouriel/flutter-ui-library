@@ -307,6 +307,10 @@ extension type const UiWfPermissionsSummary._(UiJson json) implements UiWfDefini
 
   /// Records moved onto the new version, so the new permissions apply to them too.
   int get recordsMoved => wfInt(json['recordsMoved']) ?? 0;
+
+  /// Records left on an older version whose states or transitions differ (they need an explicit
+  /// migration). Older engines leave it out.
+  int get recordsKept => wfInt(json['recordsKept']) ?? 0;
 }
 
 extension type const UiWfAuditEntry._(UiJson json) implements Object {

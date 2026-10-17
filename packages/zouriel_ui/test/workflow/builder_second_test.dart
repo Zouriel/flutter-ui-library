@@ -284,6 +284,20 @@ void main() {
     final ids = [for (final s in listSteps(c.def, 'transition:submit')!) s.type];
     expect(ids, ['notify', 'notify', 'wait']);
   });
+
+  // Mirrors @zouriel/ui 00bd610: webhook methods.
+  testWidgets('the webhook picker offers exactly GET, POST, PUT, PATCH, DELETE; another stored method shows as not allowed', (tester) async {
+    final def = createWorkflow('automation', title: 'H').patch({
+      'steps': [step('w1', 'webhook', {'url': 'https://x.test', 'method': 'HEAD'}).json],
+    });
+    await pumpInspector(tester, def, const UiWfSelection.step('w1'));
+    final method = find.descendant(of: find.byWidgetPredicate((w) => w is WfSelect && w.label == 'Method'), matching: find.byType(UiSelect));
+    final options = tester.widget<UiSelect>(method).options;
+    expect([for (final o in options) if (!o.disabled) o.value]..sort(), ['DELETE', 'GET', 'PATCH', 'POST', 'PUT']);
+    final stored = options.singleWhere((o) => o.disabled);
+    expect((stored.value, stored.label), ('HEAD', 'HEAD: not allowed'));
+    expect(tester.widget<UiSelect>(method).value, 'HEAD');
+  });
 }
 
 class _SaveCounter extends Fake implements UiWorkflowApi {

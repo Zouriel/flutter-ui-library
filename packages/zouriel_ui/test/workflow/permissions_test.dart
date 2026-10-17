@@ -469,6 +469,23 @@ void main() {
     expect(find.textContaining('Your draft no longer has “Submit”, “Start over”, so the draft kept them as before.'), findsOneWidget);
   });
 
+  // Mirrors @zouriel/ui 00bd610: recordsKept.
+  for (final (saved, text) in [
+    ({'recordsMoved': 3, 'recordsKept': 2}, 'Saved: version 2 is now in use, and 3 existing records follow it; 2 stay on their version because it differs.'),
+    ({'recordsMoved': 1, 'recordsKept': 1}, 'Saved: version 2 is now in use, and 1 existing record follows it; 1 stays on its version because it differs.'),
+    ({'recordsKept': 1}, 'Saved: version 2 is now in use; 1 existing record stays on its version because it differs.'),
+    ({'recordsKept': 4}, 'Saved: version 2 is now in use; 4 existing records stay on their version because it differs.'),
+  ]) {
+    testWidgets('says how many records stay on their version: $saved', (tester) async {
+      await _pump(tester, api: _Api(canPublish: true, saved: saved));
+      tester.widget<WfAssigneesEditor>(_editor('Submit')).onChanged([UiWfAssignee.role('head')]);
+      await tester.pump();
+      await tester.tap(find.widgetWithText(UiButton, 'Save 1 change'));
+      await tester.pumpAndSettle();
+      expect(find.text(text), findsOneWidget);
+    });
+  }
+
   testWidgets('says so when the engine found nothing to change', (tester) async {
     await _pump(tester, api: _Api(canPublish: true, saved: {'changed': false}));
     tester.widget<WfAssigneesEditor>(_editor('Submit')).onChanged([UiWfAssignee.role('head')]);

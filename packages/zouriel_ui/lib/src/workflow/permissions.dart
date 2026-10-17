@@ -379,12 +379,16 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     }
   }
 
-  /// What a save did, in words: the version in use, records that now follow it, and draft steps it
-  /// couldn't change.
+  /// What a save did, in words: the version in use, records that now follow it, records left on an
+  /// older version because its states or transitions differ, and draft steps it couldn't change.
   String _savedMessage(UiWfPermissionsSummary summary, List<UiWfPermissionRow> rows) {
     if (summary.changed == false) return 'Nothing changed: version ${summary.version} stays in use.';
     final moved = summary.recordsMoved;
-    final parts = ['Saved: version ${summary.version} is now in use${moved > 0 ? ', and $moved existing record${moved == 1 ? '' : 's'} follow${moved == 1 ? 's' : ''} it' : ''}.'];
+    final kept = summary.recordsKept;
+    final movedPart = moved > 0 ? ', and $moved existing record${moved == 1 ? '' : 's'} follow${moved == 1 ? 's' : ''} it' : '';
+    final keptWho = moved > 0 ? '$kept' : '$kept existing record${kept == 1 ? '' : 's'}';
+    final keptPart = kept > 0 ? '; $keptWho ${kept == 1 ? 'stays on its' : 'stay on their'} version because it differs' : '';
+    final parts = ['Saved: version ${summary.version} is now in use$movedPart$keptPart.'];
     final skipped = [for (final n in summary.draftSkipped) '“${rows.where((r) => r.node == n).firstOrNull?.label ?? n}”'];
     if (skipped.isNotEmpty) parts.add('Your draft no longer has ${skipped.join(', ')}, so the draft kept ${skipped.length == 1 ? 'it' : 'them'} as before.');
     return parts.join(' ');

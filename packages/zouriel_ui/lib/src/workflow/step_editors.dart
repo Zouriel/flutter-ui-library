@@ -17,7 +17,9 @@ import 'scope.dart';
 const List<WfOption> _tones = [
   (value: 'neutral', label: 'neutral'), (value: 'primary', label: 'primary'), (value: 'success', label: 'success'), (value: 'warning', label: 'warning'), (value: 'danger', label: 'danger'),
 ];
-const List<String> _methods = ['POST', 'PUT', 'PATCH', 'GET', 'DELETE'];
+/// The only methods a webhook step may use, in the order the picker lists them (spec §13: GET, POST,
+/// PUT, PATCH, DELETE in capitals; anything else is the engine's `badMethod`).
+const List<String> wfWebhookMethods = ['POST', 'PUT', 'PATCH', 'GET', 'DELETE'];
 
 /// Settings for one step (the web `ui-wf-step-editor`). Each step type gets its own section;
 /// common settings (name, deadlines, what happens on failure, a note) come around it.
@@ -630,7 +632,14 @@ class _WfStepEditorState extends State<WfStepEditor> {
               ),
             ),
           Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.end, children: [
-            SizedBox(width: 96, child: field('Method', WfSelect(label: 'Method', value: w.method, options: [for (final m in _methods) (value: m, label: m)], onChanged: (v) => patch({'method': v})))),
+            SizedBox(width: 96, child: field('Method', WfSelect(
+                  label: 'Method',
+                  value: w.method,
+                  options: [for (final m in wfWebhookMethods) (value: m, label: m)],
+                  // A method the engine refuses (e.g. from imported JSON) shows as it is, never offered.
+                  unknownLabel: (m) => '$m: not allowed',
+                  onChanged: (v) => patch({'method': v}),
+                ))),
             if ((w.connection ?? '').isEmpty)
               Expanded(child: field('Address', UiInput(size: UiSize.sm, type: UiInputType.url, value: w.url ?? '', placeholder: 'https://…', semanticLabel: 'Address', onChanged: (v) => patch({'url': v}, 'url')))),
           ]),
