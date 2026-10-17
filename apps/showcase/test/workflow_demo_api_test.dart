@@ -97,4 +97,43 @@ void main() {
     api.actingAs = 'ali';
     await expectLater(api.updatePermissions('wf_status', const []), throwsA(isA<UiWfApiError>().having((e) => e.status, 'status', 403)));
   });
+
+  test('the demo bank: while it is down the payment fails, is tried again on the clock, and stops after the fourth attempt', () async {
+    final api = DemoWorkflowApi()..bankDown = true;
+    api.actingAs = 'mariyam';
+    await api.decide('t1', 'approved');
+    var run = await api.instance('run1');
+    expect(run.status, 'waiting', reason: 'the first attempt failed; another is scheduled');
+    for (var i = 0; i < 3; i++) {
+      api.advance(const Duration(minutes: 5));
+    }
+    run = await api.instance('run1');
+    expect(run.status, 'incident');
+    expect(run.error, 'InvalidOperationException: Bank API: 503 Service Unavailable');
+    expect(run.steps!.last.attempt, 4);
+    // Stopped runs are listed for the drawer and on the record.
+    expect((await api.instances(const UiWfInstanceQuery(status: ['incident']))).items.single.id, 'run1');
+    expect((await api.record('application', '1')).instances.single.status, 'incident');
+    // Only admins put it right; tried again while the bank is still down, it stops again.
+    await expectLater(api.retry('run1'), throwsA(isA<UiWfApiError>()));
+    api.actingAs = 'hana';
+    expect((await api.retry('run1')).status, 'incident');
+    api.bankDown = false;
+    expect((await api.retry('run1')).status, 'completed');
+  });
+
+  test('skipping the payment gives its results; cancelling stops the run', () async {
+    final api = DemoWorkflowApi()..bankDown = true;
+    api.actingAs = 'mariyam';
+    await api.decide('t1', 'approved');
+    for (var i = 0; i < 3; i++) {
+      api.advance(const Duration(minutes: 5));
+    }
+    api.actingAs = 'hana';
+    final skipped = await api.skip('run1', outputs: {'invoiceNo': 'INV-9'});
+    expect(skipped.status, 'completed');
+    expect(skipped.steps!.last.status, 'skipped');
+    final cancelled = await api.cancel('run1', reason: 'Withdrawn');
+    expect(cancelled.status, 'cancelled');
+  });
 }

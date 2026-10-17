@@ -1,13 +1,18 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 
 import '../badge/badge.dart';
 import '../button/button.dart';
 import '../core/icon.dart';
+import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/drawer.dart';
+import '../theme/theme.dart';
 import 'api.dart';
+import 'bits.dart';
+import 'history.dart';
 import 'icons.dart';
 import 'runtime.dart';
 
@@ -93,6 +98,19 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   /// Whether the app is in view: polling pauses while it is in the background.
   bool _visible = true;
 
+  /// Workflows that stopped and need someone to try again, skip or cancel: listed (and counted) only
+  /// for people the engine lets intervene, since only they can act on them.
+  final _stopped = ValueNotifier<List<UiWfInstance>>(const []);
+
+  /// Whether the engine lets this person intervene, asked once per API.
+  ({UiWorkflowApi api, Future<bool> may})? _intervene;
+
+  /// The stopped workflows counted now.
+  List<UiWfInstance> get stopped => _stopped.value;
+
+  /// What the badge counts: open tasks and stopped workflows.
+  int get total => _count + _stopped.value.length;
+
   /// Open tasks for the signed-in person.
   int get count => _count;
 
@@ -105,8 +123,13 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   /// Whether the drawer is showing.
   bool get isOpen => _shown;
 
-  /// What a screen reader says after the label: ", 2 open, 1 overdue" or ", none open".
-  String get countText => _count > 0 ? ', $_count open${_overdue > 0 ? ', $overdueText overdue' : ''}' : ', none open';
+  /// What a screen reader says after the label: ", 2 open, 1 overdue" or ", none open", then
+  /// ", 1 stopped workflow" when there are any.
+  String get countText {
+    final tasks = _count > 0 ? ', $_count open${_overdue > 0 ? ', $overdueText overdue' : ''}' : ', none open';
+    final st = _stopped.value.length;
+    return '$tasks${st > 0 ? ', $st stopped workflow${st == 1 ? '' : 's'}' : ''}';
+  }
 
   @override
   void initState() {
@@ -136,6 +159,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _seq++;
+    _stopped.dispose();
     super.dispose();
   }
 
@@ -166,12 +190,23 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     if (api == null) return;
     final n = ++_seq;
     try {
-      final page = await api.tasks(UiWfTaskQuery(scope: widget.scope, status: const ['open'], take: _countTake));
+      if (_intervene?.api != api) {
+        _intervene = (api: api, may: Future.sync(api.me).then((me) => me?.canIntervene ?? false).catchError((Object _) => false));
+      }
+      final results = await Future.wait<Object>([api.tasks(UiWfTaskQuery(scope: widget.scope, status: const ['open'], take: _countTake)), _intervene!.may]);
+      final page = results[0] as UiWfPage<UiWfTask>;
+      final may = results[1] as bool;
+      final stopped = may
+          ? await Future.sync(() => api.instances(const UiWfInstanceQuery(status: ['incident'], take: _countTake)))
+              .then<List<UiWfInstance>>((p) => p.items)
+              .catchError((Object _) => const <UiWfInstance>[])
+          : const <UiWfInstance>[];
       if (!mounted || n != _seq) return;
       setState(() {
         _count = page.total;
         _overdue = page.items.where((t) => t.overdue).length;
         _capped = page.total > page.items.length;
+        _stopped.value = stopped;
       });
     } catch (_) {
       // Not signed in or offline: keep the last count rather than flashing zero.
@@ -190,14 +225,20 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
       title: widget.label,
       builder: (ctx) {
         _drawerRoute = ModalRoute.of(ctx);
-        return WfTaskInbox(
+        return _DrawerBody(
+          stopped: _stopped,
           api: widget.api,
-          scope: widget.scope,
-          pageSize: widget.pageSize,
-          onDecided: (t) {
-            widget.onDecided?.call(t);
-            refresh();
-          },
+          // After trying again, skipping or cancelling the run may no longer be stopped: count again.
+          onRunChanged: refresh,
+          inbox: WfTaskInbox(
+            api: widget.api,
+            scope: widget.scope,
+            pageSize: widget.pageSize,
+            onDecided: (t) {
+              widget.onDecided?.call(t);
+              refresh();
+            },
+          ),
         );
       },
     );
@@ -229,9 +270,96 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
       icon: UiIcon(WfIcons.inbox, size: widget.size == UiSize.sm ? 14 : 16, strokeWidth: 1.8),
       // The badge is for eyes; the button's name carries the count for screen readers.
       semanticLabel: '${widget.label}$countText',
-      trailingIcon: _count > 0 ? ExcludeSemantics(child: UiBadge(label: _count > 99 ? '99+' : '$_count', tone: _overdue > 0 ? UiStatus.danger : UiStatus.primary)) : null,
+      // Red when a task is overdue or a workflow stopped: both need attention.
+      trailingIcon: total > 0
+          ? ExcludeSemantics(child: UiBadge(label: total > 99 ? '99+' : '$total', tone: _overdue > 0 || _stopped.value.isNotEmpty ? UiStatus.danger : UiStatus.primary))
+          : null,
       onPressed: show,
       child: ExcludeSemantics(child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    );
+  }
+}
+
+/// The drawer's content: the stopped workflows (for people who may intervene) above the task inbox;
+/// a stopped workflow opens its run view, with a way back to the list.
+class _DrawerBody extends StatefulWidget {
+  const _DrawerBody({required this.stopped, required this.api, required this.onRunChanged, required this.inbox});
+  final ValueListenable<List<UiWfInstance>> stopped;
+  final UiWorkflowApi? api;
+  final VoidCallback onRunChanged;
+  final Widget inbox;
+
+  @override
+  State<_DrawerBody> createState() => _DrawerBodyState();
+}
+
+class _DrawerBodyState extends State<_DrawerBody> {
+  UiWfInstance? _open;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final run = _open;
+    if (run != null) {
+      // One stopped workflow, with try again, skip and cancel.
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: UiButton(label: '‹ Back to the list', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _open = null)),
+        ),
+        WfRunView(key: ValueKey('drawer-run-${run.id}'), api: widget.api, instanceId: run.id, onChanged: (_) => widget.onRunChanged()),
+      ]);
+    }
+    return ValueListenableBuilder(
+      valueListenable: widget.stopped,
+      builder: (context, stopped, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space4, children: [
+        if (stopped.isNotEmpty)
+          Semantics(
+            container: true,
+            label: 'Stopped workflows',
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+              Semantics(
+                header: true,
+                child: Text('STOPPED WORKFLOWS', style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.44, color: t.danger)),
+              ),
+              const FbHint('They need someone to try again, skip the step or cancel.'),
+              for (final r in stopped) _StoppedRow(run: r, onTap: () => setState(() => _open = r)),
+            ]),
+          ),
+        widget.inbox,
+      ]),
+    );
+  }
+}
+
+class _StoppedRow extends StatelessWidget {
+  const _StoppedRow({required this.run, required this.onTap});
+  final UiWfInstance run;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final title = '${run.title}${(run.entityTitle ?? '').isNotEmpty ? ' · ${run.entityTitle}' : ''}';
+    final why = wfReadableError(run.error).isEmpty ? 'Stopped' : wfReadableError(run.error);
+    return UiInteractive(
+      onTap: onTap,
+      semanticLabel: '$title, $why',
+      excludeChildSemantics: true,
+      pressScale: false,
+      builder: (context, s) => Container(
+        padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+        decoration: BoxDecoration(
+          color: s.hovered ? t.surfaceHover : t.surface,
+          border: Border.all(color: Color.lerp(t.border, t.danger, 0.45)!),
+          borderRadius: BorderRadius.circular(t.radius),
+          boxShadow: s.focused ? t.focusRing : null,
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
+          Text(title, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.text)),
+          Text(why, style: context.uiText.body.copyWith(fontSize: 12, color: t.danger)),
+        ]),
+      ),
     );
   }
 }

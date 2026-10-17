@@ -32,7 +32,7 @@ void main() {
     expect(find.textContaining('Start over shows to the head of office once an application has moved on from Draft.'), findsOneWidget);
     final sections = [for (final s in tester.widgetList<DocSection>(find.byType(DocSection))) s.name];
     expect(sections, [
-      'Workflow panel', 'My tasks drawer', 'Run', 'Audit log', 'State badge', 'Permissions', 'Global settings',
+      'Workflow panel', 'My tasks drawer', 'Audit log', 'State badge', 'Permissions', 'Global settings',
       'Putting a settings page together',
     ]);
     // The head of office may start this application over.
@@ -98,6 +98,28 @@ void main() {
     expect(tester.widget<UiWorkflowPanel>(find.byType(UiWorkflowPanel)).layout, UiWorkflowPanelLayout.compact);
     expect(find.byKey(const ValueKey('wf-track')), findsOneWidget);
     expect(button('Start over'), findsOneWidget);
+    await _done(tester);
+  });
+
+  testWidgets('Show a stopped payment: the payment fails while the bank is down, and the panel shows it under Running', (tester) async {
+    await _pump(tester, const WorkflowComponentsPage());
+    tester.widget<UiSegmented<UiWorkflowPanelLayout>>(find.byWidgetPredicate((w) => w is UiSegmented<UiWorkflowPanelLayout>)).onChanged!(UiWorkflowPanelLayout.compact);
+    await tester.pump(const Duration(seconds: 1));
+    tester.widget<UiButton>(button('Show a stopped payment')).onPressed!();
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.text('RUNNING'), findsOneWidget);
+    expect(find.text('Bank API: 503 Service Unavailable'), findsWidgets);
+    // The head of office may put it right: the bank is back up, so trying again pays.
+    final again = button('Try again');
+    expect(again, findsOneWidget);
+    tester.widget<UiButton>(again).onPressed!();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.text('Bank API: 503 Service Unavailable'), findsNothing);
+    expect(tester.widget<UiButton>(button('Show a stopped payment')).onPressed, isNull, reason: 'the sign-off was decided');
     await _done(tester);
   });
 }

@@ -924,24 +924,29 @@ class _RunRow {
   final UiIconData icon;
 }
 
-/// `ui-workflow-run`: one run drawn over its workflow: each step with what happened (done, waiting,
-/// failed, skipped), the paths not taken greyed out, and an admin's retry/skip/cancel. When several
-/// paths stopped, each can be retried or skipped on its own.
-class UiWorkflowRun extends StatefulWidget {
-  const UiWorkflowRun({super.key, required this.api, required this.instanceId, this.canIntervene, this.onChanged});
+/// One run drawn over its workflow (the web `ui-wf-run-view`): each step with what happened (done,
+/// waiting, failed, skipped), the paths not taken greyed out, and, for people who may intervene, try
+/// again, skip (giving the step's results) and cancel (with remarks). When several paths stopped, each
+/// can be retried or skipped on its own. Internal: the workflow panel and the tasks drawer show it
+/// where the run matters.
+class WfRunView extends StatefulWidget {
+  const WfRunView({super.key, required this.api, required this.instanceId, this.canIntervene, this.showHead = true, this.onChanged});
   final UiWorkflowApi? api;
   final String instanceId;
 
   /// Show retry, skip and cancel. Left null, the view asks the engine (`me().canIntervene`), so only
   /// people the server lets intervene see them; the server checks again either way.
   final bool? canIntervene;
+
+  /// Show the run's title, version and status (off where the host already names the run).
+  final bool showHead;
   final ValueChanged<UiWfInstance>? onChanged;
 
   @override
-  State<UiWorkflowRun> createState() => UiWorkflowRunState();
+  State<WfRunView> createState() => WfRunViewState();
 }
 
-class UiWorkflowRunState extends State<UiWorkflowRun> {
+class WfRunViewState extends State<WfRunView> {
   UiWfInstance? _run;
   UiWorkflowDefinition? _def;
   bool _busy = false;
@@ -959,7 +964,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
   }
 
   @override
-  void didUpdateWidget(UiWorkflowRun oldWidget) {
+  void didUpdateWidget(WfRunView oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
     if (old.api != widget.api || old.instanceId != widget.instanceId) reload();
@@ -995,13 +1000,13 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
   }
 
   /// The paths stopped by a failure: one per token waiting on an incident, named after its step.
-  List<({String token, String name})> get _incidents {
+  List<({String token, String? stepId, String name})> get _incidents {
     final r = _run;
     final steps = _def != null ? indexSteps(_def!) : null;
     return [
       for (final tk in r?.tokens ?? const <UiWfRunToken>[])
         if (tk.waiting == 'incident')
-          (token: tk.id, name: _incidentName(steps, tk)),
+          (token: tk.id, stepId: tk.stepId, name: _incidentName(steps, tk)),
     ];
   }
 
@@ -1035,6 +1040,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
               loc.path.length - 1,
               status,
               texts[status] ?? status,
+              // The step's own detail keeps the engine's full text, for whoever debugs it.
               last?.error ?? (runs.length > 1 ? '${runs.length} attempts' : ''),
               status == 'completed' ? WfIcons.tick02 : status == 'timedOut' ? WfIcons.clock02 : (status == 'failed' ? WfIcons.cancel01 : wfStepIcon(loc.step.type)),
             );
@@ -1042,29 +1048,112 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
     ];
   }
 
-  Future<void> _act(String kind, [String? target]) async {
+  /// Tries again, skips or cancels; answers whether it worked. [err] also gets the error (a dialog's).
+  Future<bool> _act(String kind, {String? target, UiJson? outputs, String? reason, ValueNotifier<String>? err}) async {
     final api = widget.api;
     final r = _run;
-    if (api == null || r == null || _busy) return;
+    if (api == null || r == null || _busy) return false;
     setState(() {
       _busy = true;
       _error = '';
     });
+    err?.value = '';
     try {
       final next = kind == 'retry'
           ? await api.retry(r.id, target: target)
           : kind == 'skip'
-          ? await api.skip(r.id, target: target)
-          : await api.cancel(r.id, reason: 'Cancelled from the run view');
-      if (!mounted) return;
+          ? await api.skip(r.id, outputs: outputs, target: target)
+          : await api.cancel(r.id, reason: reason);
+      if (!mounted) return true;
       _seq++;
       setState(() => _run = next);
       widget.onChanged?.call(next);
+      return true;
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'That did not work.'));
+      final msg = _errorText(e, 'That did not work.');
+      if (mounted) setState(() => _error = msg);
+      err?.value = msg;
+      return false;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Skipping: the run carries on as if the step had finished, with the results given here (for an
+  /// app action, its outputs as the registry declares them, with labels people know).
+  Future<void> _askSkip(String? target, String? stepId) async {
+    final api = widget.api;
+    final def = _def;
+    final step = def != null && stepId != null ? indexSteps(def)[stepId]?.step : null;
+    var outputs = <({String key, String label})>[];
+    if (step?.type == 'action' && api != null) {
+      final schema = await Future.sync(api.schema).then<UiWorkflowSchema?>((s) => s).catchError((Object _) => null);
+      final action = schema?.registry.actions?.where((a) => a.key == UiWfActionStep.of(step!).action).firstOrNull;
+      outputs = [for (final o in action?.outputs ?? const <UiWfParamDescriptor>[]) (key: o.key, label: o.label)];
+    }
+    if (!mounted) return;
+    final values = <String, String>{};
+    final err = ValueNotifier('');
+    final name = step != null ? stepName(step) : 'the step';
+    await showUiModal<void>(
+      context: context,
+      title: 'Skip “$name”',
+      size: UiModalSize.md,
+      builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+        Text('The run carries on as if this step had finished.${outputs.isNotEmpty ? ' Give what it would have produced, for the steps after it.' : ''}', style: _body(ctx, size: 14)),
+        for (final o in outputs)
+          FbSetting(label: o.label, child: UiInput(size: UiSize.sm, semanticLabel: o.label, onChanged: (v) => values[o.key] = v)),
+        ValueListenableBuilder(valueListenable: err, builder: (ctx, e, _) => e.isEmpty ? const SizedBox.shrink() : WfNote(e)),
+      ]),
+      footerBuilder: (ctx) => Row(children: [
+        UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop()),
+        const Spacer(),
+        UiButton(
+          label: 'Skip the step',
+          onPressed: () async {
+            final given = <String, Object?>{
+              for (final e in values.entries)
+                if (e.value.trim().isNotEmpty) e.key: e.value.trim(),
+            };
+            final ok = await _act('skip', target: target, outputs: given.isEmpty ? null : given, err: err);
+            if (ok && ctx.mounted) Navigator.of(ctx).pop();
+          },
+        ),
+      ]),
+    );
+    err.dispose();
+  }
+
+  /// Cancelling is a negative action: confirmed, with optional remarks that go into the audit.
+  Future<void> _askCancel() async {
+    var remarks = '';
+    final err = ValueNotifier('');
+    await showUiModal<void>(
+      context: context,
+      title: 'Cancel the run',
+      size: UiModalSize.md,
+      builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+        Text('The run stops here and its open tasks are cancelled. What it already did stays done.', style: _body(ctx, size: 14)),
+        FbSetting(
+          label: 'Remarks (optional)',
+          child: UiTextarea(rows: 2, autosize: true, semanticLabel: 'Remarks (optional)', onChanged: (v) => remarks = v),
+        ),
+        ValueListenableBuilder(valueListenable: err, builder: (ctx, e, _) => e.isEmpty ? const SizedBox.shrink() : WfNote(e)),
+      ]),
+      footerBuilder: (ctx) => Row(children: [
+        UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop()),
+        const Spacer(),
+        UiButton(
+          label: 'Cancel the run',
+          variant: UiButtonVariant.destructive,
+          onPressed: () async {
+            final ok = await _act('cancel', reason: remarks.trim().isEmpty ? null : remarks.trim(), err: err);
+            if (ok && ctx.mounted) Navigator.of(ctx).pop();
+          },
+        ),
+      ]),
+    );
+    err.dispose();
   }
 
   @override
@@ -1073,21 +1162,23 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
     final r = _run;
     if (r == null) return _error.isNotEmpty ? WfNote(_error) : const FbHint('Loading…');
     final incidents = _incidents;
-    UiButton btn(String label, String kind, {UiButtonVariant variant = UiButtonVariant.primary, String? target}) =>
-        UiButton(label: label, size: UiSize.sm, variant: variant, onPressed: _busy ? null : () => _act(kind, target));
+    UiButton btn(String label, VoidCallback onTap, {UiButtonVariant variant = UiButtonVariant.primary}) =>
+        UiButton(label: label, size: UiSize.sm, variant: variant, onPressed: _busy ? null : onTap);
+    final cancel = btn('Cancel the run', _askCancel, variant: UiButtonVariant.destructive);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-      Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-        Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text(r.title, style: _body(context, size: 14, weight: FontWeight.w700)),
-          Text('v${r.version}', style: context.uiText.code.copyWith(fontSize: 11.5, color: t.textMuted)),
-          WfChip(wfRunStatusLabel(r.status), tone: wfRunStatusTone(r.status)),
-          if ((r.stateLabel ?? '').isNotEmpty) Text('· ${r.stateLabel}', style: _body(context, color: t.textSecondary)),
+      if (widget.showHead)
+        Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
+          Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Text(r.title, style: _body(context, size: 14, weight: FontWeight.w700)),
+            Text('v${r.version}', style: context.uiText.code.copyWith(fontSize: 11.5, color: t.textMuted)),
+            WfChip(wfRunStatusLabel(r.status), tone: wfRunStatusTone(r.status)),
+            if ((r.stateLabel ?? '').isNotEmpty) Text('· ${r.stateLabel}', style: _body(context, color: t.textSecondary)),
+          ]),
+          Text(
+            '${r.entityTitle ?? r.entityId ?? ''} · started ${wfAgo(r.startedAt, UiWorkflowClock.nowOf(context))}${r.initiatorName != null ? ' by ${r.initiatorName}' : ''}',
+            style: _body(context, size: 12, color: t.textMuted),
+          ),
         ]),
-        Text(
-          '${r.entityTitle ?? r.entityId ?? ''} · started ${wfAgo(r.startedAt, UiWorkflowClock.nowOf(context))}${r.initiatorName != null ? ' by ${r.initiatorName}' : ''}',
-          style: _body(context, size: 12, color: t.textMuted),
-        ),
-      ]),
       if (r.status == 'incident')
         Semantics(
           liveRegion: true,
@@ -1099,27 +1190,29 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
               borderRadius: BorderRadius.circular(t.radius),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
-              Text.rich(TextSpan(children: [const TextSpan(text: 'Stopped: ', style: TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: r.error ?? '')]), style: _body(context)),
-              if (_mayIntervene && incidents.length > 1) ...[ 
+              Text.rich(TextSpan(children: [const TextSpan(text: 'Stopped: ', style: TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: wfReadableError(r.error))]), style: _body(context)),
+              if (_mayIntervene && incidents.length > 1) ...[
                 // Several paths stopped: each can be retried or skipped on its own.
                 for (final i in incidents)
                   Row(spacing: t.space2, children: [
                     Expanded(child: Text(i.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: _body(context))),
-                    btn('Try again', 'retry', target: i.token),
-                    btn('Skip', 'skip', variant: UiButtonVariant.outline, target: i.token),
+                    btn('Try again', () => _act('retry', target: i.token)),
+                    btn('Skip', () => _askSkip(i.token, i.stepId), variant: UiButtonVariant.outline),
                   ]),
-                Align(alignment: AlignmentDirectional.centerStart, child: btn('Cancel the run', 'cancel', variant: UiButtonVariant.destructive)),
+                Align(alignment: AlignmentDirectional.centerStart, child: cancel),
               ] else if (_mayIntervene)
                 Wrap(spacing: t.space2, runSpacing: t.space2, children: [
-                  btn('Try again', 'retry'),
-                  btn('Skip the step', 'skip', variant: UiButtonVariant.outline),
-                  btn('Cancel the run', 'cancel', variant: UiButtonVariant.destructive),
-                ]),
+                  btn('Try again', () => _act('retry')),
+                  btn('Skip the step', () => _askSkip(null, r.errorStepId), variant: UiButtonVariant.outline),
+                  cancel,
+                ])
+              else
+                const FbHint('Someone who looks after workflows can try it again or skip it.'),
             ]),
           ),
         )
       else if (_mayIntervene && (r.status == 'waiting' || r.status == 'running' || r.status == 'queued'))
-        Align(alignment: AlignmentDirectional.centerStart, child: btn('Cancel the run', 'cancel', variant: UiButtonVariant.destructive)),
+        Align(alignment: AlignmentDirectional.centerStart, child: cancel),
       if (_error.isNotEmpty) WfNote(_error),
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final s in _rows) _RunStepRow(row: s),

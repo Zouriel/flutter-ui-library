@@ -2,8 +2,8 @@
 
 The Flutter port of `@zouriel/ui/workflow` (see `projects/ui/workflow/README.md` in the Angular
 repo): a builder where admins design workflows without code, and the widgets that run them in
-your app: a workflow panel, a My tasks drawer, a run view, an audit log, a
-permissions page and a settings screen. Workflows
+your app: a workflow panel (with the record's running and stopped workflows), a My tasks drawer, an
+audit log, a permissions page and a settings screen. Workflows
 are JSON in the Zouriel Workflows format, run by an engine on your server (the .NET engine first;
 Laravel and Go engines follow the same spec and REST API).
 
@@ -14,7 +14,6 @@ Code: `packages/zouriel_ui/lib/src/workflow/` (and `lib/src/canvas/viewport.dart
 UiWorkflowBuilder          // where admins design workflows
 UiWorkflowPanel            // a record's workflow: a stepper, a compact card or an edge drawer
 UiWorkflowTasksDrawer      // a "My tasks" button with a count, where people decide their tasks
-UiWorkflowRun              // one run over its workflow, with retry/skip/cancel
 UiWorkflowAudit            // the tamper-evident log: filter, export, verify
 UiWorkflowGlobalSettings   // working hours, channels, webhooks, retention
 UiWorkflowPermissions      // who may do what in every published workflow
@@ -165,7 +164,11 @@ The showcase's **Workflow components** page (`apps/showcase`, `#/workflow-compon
 `#/workflow-panel` opens it too) shows each of these live on the in-memory office, with when to use
 it, a snippet and its parameters, and a "You are" / "Application" picker so you can see what each
 person gets: the head of office sees every button (Start over once an application has moved on from
-Draft), the applicant only their own moves, finance only the sign-off.
+Draft), the applicant only their own moves, finance only the sign-off. "Show a stopped payment"
+reproduces a payment the bank refused: with the demo bank down (the engine sample's
+`POST /api/demo/bank {down}`; in the in-memory office, `DemoWorkflowApi.bankDown`), finance signs the
+application off, Create invoice fails with "Bank API: 503 Service Unavailable" four times as the
+clock moves on, and the run stops; the panel shows it under Running, and the bank is back by then.
 
 ```dart
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
@@ -173,7 +176,6 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)
 UiWorkflowTasksDrawer(api: api, onDecided: (_) => refresh())
 UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks') // everyone's, for admins
-UiWorkflowRun(api: api, instanceId: runId, canIntervene: isAdmin)
 UiWorkflowAudit(api: api, entity: 'application', entityId: app.id, onExport: (bytes, format) => save(bytes))
 UiWorkflowGlobalSettings(api: api)
 ```
@@ -200,6 +202,29 @@ drawer's rail keeps one dot (named by the title) so it can still open.
 `UiWorkflowPanel(layout: UiWorkflowPanelLayout.compact)`, which shows what it did: the badge, the
 strip of states, the moves, tasks and manual workflows, and the history (`title: ''` hides the
 panel's heading). Its `onChanged` is the same; its `reload()` is on `UiWorkflowPanelState`.
+
+**Running and stopped workflows.** Under "Running" the panel lists the record's workflows still
+going (`record.instances` with status queued, running, waiting or incident), stopped ones first.
+Each row shows its status, its title, and why it stopped (the readable error) or "since …"; tapping
+it opens the run's steps (the internal `WfRunView`, without its own heading), and changes made there
+reload the panel. A stopped run opens by itself the first time the panel sees it, so what to do is
+in view. The section comes after the actions in `compact` (and for record types with no lifecycle)
+and `horizontal`, and inside the active step, after the actions, in `vertical`.
+
+In the run view, people the engine lets intervene (`me().canIntervene`) can:
+- **Try again**;
+- **Skip the step**: a dialog asks for what the step would have produced (for an app action, its
+  outputs as the registry declares them, with their labels); only filled values are sent, trimmed
+  (`skip(id, outputs:, target:)`);
+- **Cancel the run**: a confirmation with "Remarks (optional)" (`cancel(id, reason:)`).
+Everyone else sees why it stopped and "Someone who looks after workflows can try it again or skip
+it." Summaries (the "Stopped:" line, the panel's rows, the drawer's list) read the error through
+`wfReadableError`, which drops the engine's exception type ("InvalidOperationException: Bank API:
+503" reads "Bank API: 503"); a step's own detail keeps the full text for whoever debugs it.
+
+**Breaking (0.28.0):** `UiWorkflowRun` is removed from the public API. Runs show where they matter:
+in `UiWorkflowPanel`'s Running section (a record's workflows) and in the tasks drawer's Stopped
+workflows (for people who may intervene). The view itself is the internal `WfRunView`.
 
 **Breaking (0.27.0):** `UiWorkflowTasks` is removed from the public API: the tasks drawer is where
 people work through their tasks. Use `UiWorkflowTasksDrawer` (with `scope: 'all'` for everyone's
@@ -252,6 +277,14 @@ shows how many tasks are open (`api.tasks(UiWfTaskQuery(scope: scope, status: ['
 and opens them in a `UiDrawer` titled with the button's label: due first and overdue marked, open or
 finished, each opening its decision. `scope` is `'mine'` (the signed-in person's) or `'all'`
 (everyone's, for admins; give it a label such as "All tasks"); the count follows it.
+
+For people the engine lets intervene (`me().canIntervene`, asked once per API), the drawer also
+loads stopped workflows (`api.instances(UiWfInstanceQuery(status: ['incident'], take: 100))`). The
+badge counts open tasks plus stopped workflows and turns danger when anything is overdue or stopped;
+screen readers hear ", 1 stopped workflow" after the tasks. Inside, a "Stopped workflows" section
+sits above the tasks, with a hint and a row per run (title · record, and the readable error);
+tapping one shows its run view with "‹ Back to the list", and trying again, skipping or cancelling
+counts again.
 
 - The badge is primary, danger when any open task is overdue, absent at 0, and reads `99+` above 99.
 - Screen readers hear the label and the count: "My tasks, 3 open, 1 overdue" or "My tasks, none open".

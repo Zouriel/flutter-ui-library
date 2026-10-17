@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/widgets.dart';
 
+import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../dialog/drawer.dart';
 import '../navigation/stepper.dart';
@@ -11,6 +12,7 @@ import 'api.dart';
 import 'bits.dart';
 import 'clock.dart';
 import 'history.dart';
+import 'icons.dart';
 import 'runtime.dart';
 
 /// How [UiWorkflowPanel] sits on the page (the web `UiWorkflowPanelLayout`):
@@ -121,6 +123,10 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
   final _record = ValueNotifier<UiWfRecord?>(null);
   final _history = ValueNotifier<List<UiWfAuditEntry>>(const []);
   final _error = ValueNotifier<String>('');
+
+  /// Runs shown open: a stopped run opens by itself the first time it is seen, so what to do is in view.
+  final _openRuns = ValueNotifier<Set<String>>(const {});
+  final Set<String> _seenStopped = {};
   final _rail = OverlayPortalController();
   int _seq = 0;
   bool _peek = false;
@@ -154,6 +160,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     _record.dispose();
     _history.dispose();
     _error.dispose();
+    _openRuns.dispose();
     super.dispose();
   }
 
@@ -168,9 +175,15 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
         widget.showHistory ? api.recordHistory(widget.entity, widget.entityId, take: 100).catchError((_) => <UiWfAuditEntry>[]) : Future.value(<UiWfAuditEntry>[]),
       ]);
       if (!mounted || n != _seq) return;
-      _record.value = results[0] as UiWfRecord;
+      final record = results[0] as UiWfRecord;
+      _record.value = record;
       _history.value = results[1] as List<UiWfAuditEntry>;
       _error.value = '';
+      final stopped = [for (final i in record.instances) if (i.status == 'incident' && !_seenStopped.contains(i.id)) i.id];
+      if (stopped.isNotEmpty) {
+        _seenStopped.addAll(stopped);
+        _openRuns.value = {..._openRuns.value, ...stopped};
+      }
       if (_isDrawer) setState(() {}); // the rail's dots
     } catch (e) {
       if (mounted && n == _seq) _error.value = e is UiWfApiError ? e.message : 'Could not load the record’s workflow.';
@@ -224,7 +237,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
   Widget _body(BuildContext context, UiWorkflowPanelLayout mode) {
     final horizontal = mode == UiWorkflowPanelLayout.horizontal;
     return ListenableBuilder(
-      listenable: Listenable.merge([_record, _history, _error]),
+      listenable: Listenable.merge([_record, _history, _error, _openRuns]),
       builder: (context, _) {
         final t = context.ui;
         final r = _record.value;
@@ -254,7 +267,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
                 final entries = path.steps[i].entries;
                 final parts = <Widget>[
                   if (widget.showHistory && entries.isNotEmpty) log(entries),
-                  if (state == UiStepState.active) actions() else if (state == UiStepState.todo && entries.isEmpty) const FbHint('Not reached yet'),
+                  if (state == UiStepState.active) ...[actions(), ?_runs(context, r)] else if (state == UiStepState.todo && entries.isEmpty) const FbHint('Not reached yet'),
                 ];
                 return parts.isEmpty ? null : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: parts);
               },
@@ -262,6 +275,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
           else ...[
             UiStepper(steps: steps, active: path.active, axis: Axis.horizontal, tone: UiStepperTone.success, label: widget.title),
             actions(),
+            ?_runs(context, r),
             if (widget.showHistory && _history.value.isNotEmpty) ...[
               const WfSectionTitle('History'),
               log(_newestFirst.take(8).toList()),
@@ -269,6 +283,38 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
           ],
         ]);
       },
+    );
+  }
+
+  /// The record's workflows still running or stopped (stopped ones first), each opening its steps
+  /// and, for people who may, try again, skip or cancel. Null when there are none.
+  Widget? _runs(BuildContext context, UiWfRecord r) {
+    const live = {'queued', 'running', 'waiting', 'incident'};
+    final runs = [for (final i in r.instances) if (live.contains(i.status)) i]
+      ..sort((a, b) => (b.status == 'incident' ? 1 : 0) - (a.status == 'incident' ? 1 : 0));
+    if (runs.isEmpty) return null;
+    final t = context.ui;
+    final now = UiWorkflowClock.nowOf(context);
+    final open = _openRuns.value;
+    void toggle(String id) => _openRuns.value = open.contains(id) ? ({...open}..remove(id)) : {...open, id};
+    return Semantics(
+      container: true,
+      label: 'Workflows running',
+      child: Padding(
+        padding: EdgeInsets.only(top: t.space2),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+          const WfSectionTitle('Running'),
+          for (final run in runs)
+            _RunCard(
+              key: ValueKey('wf-run-${run.id}'),
+              run: run,
+              open: open.contains(run.id),
+              subtitle: run.status == 'incident' ? (wfReadableError(run.error).isEmpty ? 'Stopped' : wfReadableError(run.error)) : 'since ${wfAgo(run.startedAt, now)}',
+              onToggle: () => toggle(run.id),
+              view: WfRunView(key: ValueKey('wf-run-view-${run.id}'), api: widget.api, instanceId: run.id, showHead: false, onChanged: (_) => reload()),
+            ),
+        ]),
+      ),
     );
   }
 
@@ -328,6 +374,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
         ),
       // Without a lifecycle there is no "current state" to have nothing to do in.
       _actions(r, emptyText: state != null ? widget.emptyText : ''),
+      ?_runs(context, r),
       if (widget.showHistory)
         Padding(
           padding: EdgeInsets.only(top: t.space2),
@@ -447,6 +494,65 @@ class _TrackState extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// One running or stopped workflow in the panel's "Running" list: a row (status, title, why it
+/// stopped or since when) that opens its steps.
+class _RunCard extends StatelessWidget {
+  const _RunCard({super.key, required this.run, required this.open, required this.subtitle, required this.onToggle, required this.view});
+  final UiWfInstance run;
+  final bool open;
+  final String subtitle;
+  final VoidCallback onToggle;
+  final Widget view;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final stopped = run.status == 'incident';
+    final edge = stopped ? Color.lerp(t.border, t.danger, 0.45)! : t.border;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: t.surface, border: Border.all(color: edge), borderRadius: BorderRadius.circular(t.radius)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        Semantics(
+          expanded: open,
+          child: UiInteractive(
+            onTap: onToggle,
+            semanticLabel: '${run.title}, ${wfRunStatusLabel(run.status)}, $subtitle',
+            excludeChildSemantics: true,
+            pressScale: false,
+            builder: (context, s) => Container(
+              color: s.hovered ? t.surfaceHover : null,
+              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+              child: Row(spacing: t.space2, children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
+                    Row(spacing: t.space2, children: [
+                      WfChip(wfRunStatusLabel(run.status), tone: wfRunStatusTone(run.status)),
+                      Expanded(child: Text(run.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.text))),
+                    ]),
+                    Text(subtitle, style: context.uiText.body.copyWith(fontSize: 12, color: stopped ? t.danger : t.textMuted)),
+                  ]),
+                ),
+                AnimatedRotation(
+                  turns: open ? 0.5 : 0,
+                  duration: context.uiAnimate ? t.motionFast : Duration.zero,
+                  child: UiIcon(WfIcons.arrowDown01, size: 14, strokeWidth: 1.8, color: t.textMuted),
+                ),
+              ]),
+            ),
+          ),
+        ),
+        if (open)
+          Container(
+            padding: EdgeInsets.fromLTRB(t.space3, t.space2, t.space3, t.space3),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
+            child: view,
+          ),
+      ]),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -43,7 +44,7 @@ void main() {
     api.instanceJson['steps'] = [
       {'id': 'r1', 'nodeId': 'c', 'type': 'notify', 'attempt': 1, 'status': 'completed', 'output': {'outcome': 'timedOut'}, 'startedAt': ''},
     ];
-    await pumpUi(tester, SizedBox(width: 420, height: 800, child: SingleChildScrollView(child: UiWorkflowRun(api: api, instanceId: 'i1'))), size: const Size(420, 800));
+    await pumpUi(tester, SizedBox(width: 420, height: 800, child: SingleChildScrollView(child: WfRunView(api: api, instanceId: 'i1'))), size: const Size(420, 800));
     await tester.pumpAndSettle();
     expect(find.text('Out of time'), findsOneWidget);
     expect(find.text('Done'), findsNothing);

@@ -205,6 +205,11 @@ String wfRemarksLabel(UiWfTask t) {
 /// Whether a move asks for remarks: its setting, else optional for red moves (older engines send none).
 UiWfRemarks wfRemarksFor(UiWfTransitionOption t) => t.comment ?? (t.tone == 'danger' ? UiWfRemarks.optional : UiWfRemarks.none);
 
+/// A run's error as people read it: without the engine's exception-type prefix
+/// ("InvalidOperationException: Bank API: 503" reads "Bank API: 503"). The step's own detail keeps
+/// the full text for whoever debugs it.
+String wfReadableError(String? error) => (error ?? '').replaceFirst(RegExp(r'^[A-Z]\w*Exception:\s*'), '');
+
 /// Whether a finished step ended by running out of time (an approval or task, or a wait, that timed out).
 bool wfStepTimedOut(Object? output) => output is Map && (output['outcome'] == 'timedOut' || output['timedOut'] == true);
 

@@ -161,6 +161,13 @@ class DemoWorkflowApi implements UiWorkflowApi {
   late List<Map<String, Object?>> _tasks;
   late List<Map<String, Object?>> _audit;
   late Map<String, Object?> _run;
+
+  /// The sample's demo bank (the engine sample's `GET`/`POST /api/demo/bank {down}`): while it is
+  /// down, the finance check's Create invoice step fails with "Bank API: 503 Service Unavailable"; it
+  /// is tried again on a timer and the run stops after the fourth attempt.
+  bool bankDown = false;
+  static const String _bankError = 'InvalidOperationException: Bank API: 503 Service Unavailable';
+  static const int _payAttempts = 4;
   UiWorkflowSettings _settings = UiWorkflowSettings();
   int _settingsRevision = 1;
   int _seq = 0;
@@ -206,7 +213,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
       'id': 'run1', 'definitionId': finance.id, 'definitionKey': finance.key, 'title': finance.title, 'version': 1, 'kind': 'automation',
       'entity': 'application', 'entityId': '1', 'entityTitle': _record['title'], 'status': 'waiting', 'initiatorName': 'Ali Rasheed',
       'startedAt': _ago(const Duration(hours: 3)), 'updatedAt': _ago(const Duration(hours: 3)),
-      'steps': [
+      'steps': <Map<String, Object?>>[
         {'id': 'r1', 'nodeId': 's_big', 'type': 'branch', 'attempt': 1, 'status': 'completed', 'startedAt': _ago(const Duration(hours: 3))},
         {'id': 'r2', 'nodeId': 's_fin', 'type': 'approval', 'attempt': 1, 'status': 'waiting', 'startedAt': _ago(const Duration(hours: 3))},
       ],
@@ -602,8 +609,46 @@ class DemoWorkflowApi implements UiWorkflowApi {
   // ── Runs ────────────────────────────────────────────────────────────────────────────────
 
   @override
-  Future<UiWfPage<UiWfInstance>> instances(UiWfInstanceQuery q) =>
-      _later(() => q.entityId == null || q.entityId == '1' ? UiWfPage([UiWfInstance.fromJson(_run)], 1) : const UiWfPage(<UiWfInstance>[], 0));
+  Future<UiWfPage<UiWfInstance>> instances(UiWfInstanceQuery q) => _later(() {
+    final mine = (q.entityId == null || q.entityId == '1') && (q.status == null || q.status!.contains(_run['status']));
+    return mine ? UiWfPage([UiWfInstance.fromJson(_clone(_run))], 1) : const UiWfPage(<UiWfInstance>[], 0);
+  });
+
+  /// The run's steps, changed in place (created as a `List<Map<String, Object?>>` in [reset]).
+  List<Map<String, Object?>> get _runSteps => _run['steps']! as List<Map<String, Object?>>;
+
+  /// Runs the finance check's payment step (Create invoice): done while the bank is up; while it is
+  /// down, failed and tried again on a timer, stopping after the fourth attempt (or at once when an
+  /// admin tries it again by hand).
+  void _pay({bool byHand = false}) {
+    final steps = _runSteps;
+    final prev = steps.where((x) => x['nodeId'] == 's_inv').lastOrNull;
+    final attempt = (prev?['attempt'] as int? ?? 0) + 1;
+    steps.removeWhere((x) => x['nodeId'] == 's_inv');
+    _run['updatedAt'] = _now();
+    if (!bankDown) {
+      steps.add({'id': 'r3', 'nodeId': 's_inv', 'type': 'action', 'attempt': attempt, 'status': 'completed', 'output': {'invoiceNo': 'INV-1042'}, 'startedAt': _now()});
+      _run.addAll({'status': 'completed', 'error': null, 'errorStepId': null, 'tokens': <Object?>[]});
+      _log('instance', 'completed');
+      return;
+    }
+    steps.add({'id': 'r3', 'nodeId': 's_inv', 'type': 'action', 'attempt': attempt, 'status': 'failed', 'error': _bankError, 'startedAt': _now()});
+    if (attempt < _payAttempts && !byHand) {
+      _run.addAll({'status': 'waiting', 'error': null, 'errorStepId': null, 'tokens': [{'id': 'tok1', 'status': 'waiting', 'waiting': 'retry', 'stepId': 's_inv'}]});
+    } else {
+      _run.addAll({'status': 'incident', 'error': _bankError, 'errorStepId': 's_inv', 'tokens': [{'id': 'tok1', 'status': 'waiting', 'waiting': 'incident', 'stepId': 's_inv'}]});
+      _log('instance', 'incident', data: {'error': _bankError});
+    }
+  }
+
+  /// Whether the finance sign-off on application 1 is still open (its payment hasn't run yet).
+  bool get signOffOpen => _tasks.any((t) => t['id'] == 't1' && t['status'] == 'open');
+
+  /// Moves the demo clock on (the sandbox's "advance"): a payment waiting for its next attempt tries again.
+  void advance(Duration by) {
+    final tokens = (_run['tokens'] as List? ?? const []).cast<Map>();
+    if (_run['status'] == 'waiting' && tokens.any((t) => t['waiting'] == 'retry')) _pay();
+  }
 
   @override
   Future<UiWfInstance> instance(String id) => _later(() => UiWfInstance.fromJson(_clone(_run)));
@@ -613,18 +658,33 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfInstance> cancel(String id, {String? reason}) => _later(() {
-    _run['status'] = 'cancelled';
+    _onlyAdmins('cancel a workflow');
+    _run.addAll({'status': 'cancelled', 'tokens': <Object?>[], 'endedAt': _now()});
+    _log('instance', 'cancelled', data: {'reason': ?reason}, actor: _actorName);
     return UiWfInstance.fromJson(_clone(_run));
   });
 
   @override
   Future<UiWfInstance> retry(String id, {String? target}) => _later(() {
-    _run['status'] = 'waiting';
+    _onlyAdmins('try a workflow again');
+    if (_run['status'] == 'incident') {
+      _log('instance', 'retried', actor: _actorName);
+      _pay(byHand: true);
+    }
     return UiWfInstance.fromJson(_clone(_run));
   });
 
   @override
-  Future<UiWfInstance> skip(String id, {UiJson? outputs, String? target}) => retry(id, target: target);
+  Future<UiWfInstance> skip(String id, {UiJson? outputs, String? target}) => _later(() {
+    _onlyAdmins('skip a step');
+    if (_run['status'] == 'incident') {
+      final steps = _runSteps..removeWhere((x) => x['nodeId'] == 's_inv');
+      steps.add({'id': 'r3', 'nodeId': 's_inv', 'type': 'action', 'attempt': 1, 'status': 'skipped', 'output': outputs, 'startedAt': _now()});
+      _run.addAll({'status': 'completed', 'error': null, 'errorStepId': null, 'tokens': <Object?>[]});
+      _log('instance', 'skipped', data: {'outputs': ?outputs}, actor: _actorName);
+    }
+    return UiWfInstance.fromJson(_clone(_run));
+  });
 
   @override
   Future<UiWfInstance> migrate(String id, int version, {Map<String, String>? stateMap}) => instance(id);
@@ -664,8 +724,15 @@ class DemoWorkflowApi implements UiWorkflowApi {
     t['decisions'] = [{'userId': actingAs, 'name': _actorName, 'outcome': outcome, 'comment': comment, 'data': data, 'at': _now()}];
     _log('task', 'decided', data: {'outcome': outcome, 'comment': comment}, actor: _actorName);
     if (id == 't1') {
-      _run['status'] = outcome == 'approved' ? 'completed' : 'completed';
-      (_run['steps'] as List).last = {...(_run['steps'] as List).last as Map<String, Object?>, 'status': 'completed'};
+      final steps = _runSteps;
+      final i = steps.indexWhere((x) => x['nodeId'] == 's_fin');
+      if (i >= 0) steps[i] = {...steps[i], 'status': 'completed', 'output': {'outcome': outcome}};
+      // Approved: the payment (Create invoice) runs next; rejected: the applicant is told and it ends.
+      if (outcome == 'approved') {
+        _pay();
+      } else {
+        _run.addAll({'status': 'completed', 'tokens': <Object?>[]});
+      }
     }
     return _asSeen(t);
   });
@@ -697,6 +764,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
       ],
       'manual': _isAdmin ? r['manual'] : <Object?>[],
       'tasks': [for (final t in open) _asSeen(t).json],
+      // The finance check runs about application 1.
+      'instances': id == '1' ? [_clone(_run)] : <Object?>[],
       'reset': canReset ? {'label': 'Start over', 'to': 'draft', 'toLabel': 'Draft', 'confirm': null, 'form': _resetForm} : null,
     });
   }

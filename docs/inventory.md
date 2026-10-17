@@ -1522,9 +1522,9 @@ File: `workflow/src/runtime.ts`
 The approvals and tasks inside the tasks drawer, with the decide dialog (internal; was the public `UiWorkflowTasks` before 0.27.0).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
-### UiWorkflowRun (component, `ui-workflow-run`)
+### WfRunView (component, `ui-wf-run-view`)
 File: `workflow/src/runtime.ts`  
-One run over its workflow, with retry/skip (per stopped path) and cancel.  
+One run over its workflow, with retry, skip (asking for the step's results, per stopped path) and cancel (confirmed, with remarks), shown in the workflow panel's Running section and the tasks drawer's Stopped workflows (internal; was the public `UiWorkflowRun` before 0.28.0).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiWorkflowAudit (component, `ui-workflow-audit`)

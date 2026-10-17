@@ -2,9 +2,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/bits.dart' show WfArrowText, wfArrow;
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
+import '../media/media_helpers.dart';
 import 'fake_api.dart';
 
 Finder button(String label) => find.byWidgetPredicate((w) => w is UiButton && w.label == label);
@@ -55,6 +57,42 @@ class _RecordApi extends Fake implements UiWorkflowApi {
   Future<UiWfRecord> record(String entity, String id) async => rec;
   @override
   Future<List<UiWfAuditEntry>> recordHistory(String entity, String id, {int take = 200}) async => history;
+}
+
+Map<String, Object?> _run(String id, String title, String status, [String? error]) => {
+      'id': id, 'definitionId': 'd', 'definitionKey': 'k', 'title': title, 'version': 1, 'kind': 'automation', 'entity': 'application', 'entityId': '1',
+      'entityTitle': 'A', 'status': status, 'error': error, 'startedAt': DateTime.now().toUtc().toIso8601String(), 'updatedAt': '',
+      'steps': <Object?>[], 'tokens': <Object?>[],
+    };
+
+/// A record with runs, which the panel lists under "Running" and opens with their steps.
+class _RunsApi extends _RecordApi {
+  _RunsApi(List<Map<String, Object?>> runs, {this.canIntervene = true})
+    : runs = runs,
+      super(UiWfRecord.fromJson({...record('Submitted').json, 'instances': runs}), const []);
+  final List<Map<String, Object?>> runs;
+  final bool canIntervene;
+  final loaded = <String>[];
+  final retried = <String>[];
+
+  @override
+  Future<UiWfInstance> instance(String id) async {
+    loaded.add(id);
+    return UiWfInstance.fromJson(runs.firstWhere((r) => r['id'] == id));
+  }
+
+  /// What [instanceDefinition] answers (an empty workflow unless set).
+  UiWorkflowDefinition runDefinition = createWorkflow('automation', title: 'W', entity: 'application');
+
+  @override
+  Future<UiWorkflowDefinition> instanceDefinition(String id) async => runDefinition;
+  @override
+  Future<UiWfMe> me() async => UiWfMe.fromJson({'can': {'intervene': canIntervene}});
+  @override
+  Future<UiWfInstance> retry(String id, {String? target}) async {
+    retried.add(id);
+    return UiWfInstance.fromJson({...runs.firstWhere((r) => r['id'] == id), 'status': 'running', 'error': null});
+  }
 }
 
 /// A record type with no lifecycle, with one manual workflow.
@@ -234,6 +272,94 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(UiDrawer), findsOneWidget);
       expect(button('Send a reminder'), findsOneWidget);
+    });
+
+    testWidgets('lists the record\'s workflows still running: a stopped one opens with its steps, a waiting one opens when tapped', (tester) async {
+      final api = _RunsApi([
+        _run('w1', 'Tell the panel', 'waiting'),
+        _run('s1', 'Pay approved scholarships', 'incident', 'InvalidOperationException: Bank API: 503'),
+        _run('d1', 'Old run', 'completed'),
+      ]);
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
+      expect(find.text('RUNNING'), findsOneWidget);
+      // Stopped first, finished runs not listed.
+      final titles = [for (final t in ['Pay approved scholarships', 'Tell the panel']) tester.getTopLeft(find.text(t)).dy];
+      expect(titles[0], lessThan(titles[1]));
+      expect(find.text('Old run'), findsNothing);
+      expect(find.text('Bank API: 503'), findsOneWidget, reason: 'the readable error, without the exception type');
+      expect(find.textContaining('since '), findsWidgets);
+      expect(find.byType(WfRunView), findsOneWidget, reason: 'the stopped one opened by itself');
+      expect(button('Try again'), findsOneWidget);
+      await tester.tap(find.text('Tell the panel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WfRunView), findsNWidgets(2));
+      expect(api.loaded, ['s1', 'w1']);
+      // Tapped again, it closes; the stopped one doesn't reopen by itself after a reload.
+      await tester.tap(find.text('Pay approved scholarships'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WfRunView), findsOneWidget);
+      await tester.state<UiWorkflowPanelState>(find.byType(UiWorkflowPanel)).reload();
+      await tester.pumpAndSettle();
+      expect(find.byType(WfRunView), findsOneWidget);
+    });
+
+    testWidgets('a run changed in place (tried again) reloads the panel', (tester) async {
+      final api = _RunsApi([_run('s1', 'Pay approved scholarships', 'incident', 'Bank API: 503')]);
+      var records = 0;
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.horizontal, onChanged: (_) => records++), size: const Size(900, 900));
+      final before = api.loaded.length;
+      await tester.tap(button('Try again'));
+      await tester.pumpAndSettle();
+      expect(api.retried, ['s1']);
+      expect(api.loaded.length, before, reason: 'the panel reloaded the record, not the run');
+    });
+
+    for (final layout in [UiWorkflowPanelLayout.vertical, UiWorkflowPanelLayout.horizontal, UiWorkflowPanelLayout.compact]) {
+      testWidgets('Running comes after the actions (${layout.name})', (tester) async {
+        final api = _RunsApi([_run('w1', 'Tell the panel', 'waiting')]);
+        api.rec.json['transitions'] = [{'key': 'approve', 'label': 'Approve', 'to': 'Approved', 'toLabel': 'Approved', 'tone': 'success', 'confirm': null, 'form': null}];
+        // Five states side by side need the room.
+        await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: layout), size: const Size(900, 1200));
+        expect(tester.getTopLeft(find.text('RUNNING')).dy, greaterThan(tester.getBottomLeft(button('Approve')).dy));
+      });
+    }
+
+    testWidgets('people who may not intervene see why it stopped and who can fix it', (tester) async {
+      final api = _RunsApi([_run('s1', 'Pay approved scholarships', 'incident', 'Bank API: 503')], canIntervene: false);
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
+      expect(button('Try again'), findsNothing);
+      expect(find.text('Someone who looks after workflows can try it again or skip it.'), findsOneWidget);
+    });
+
+    testWidgets('golden: a stopped run in the panel', (tester) async {
+      const failure = 'InvalidOperationException: Bank API: 503 Service Unavailable';
+      final api = _RunsApi([
+        {
+          ..._run('s1', 'Pay approved scholarships', 'incident', failure),
+          'errorStepId': 'pay',
+          'steps': [
+            {'id': 'r1', 'nodeId': 'check', 'type': 'approval', 'attempt': 1, 'status': 'completed', 'output': {'outcome': 'approved'}, 'startedAt': ''},
+            {'id': 'r2', 'nodeId': 'pay', 'type': 'action', 'attempt': 4, 'status': 'failed', 'error': failure, 'startedAt': ''},
+          ],
+          'tokens': [{'id': 't1', 'status': 'waiting', 'waiting': 'incident', 'stepId': 'pay'}],
+        },
+        _run('w1', 'Tell the panel', 'waiting'),
+      ]);
+      api.runDefinition = createWorkflow('automation', title: 'Pay approved scholarships', entity: 'application').patch({
+        'steps': [
+          {...createStep('approval').json, 'id': 'check', 'title': 'Finance sign-off'},
+          {...createStep('action').json, 'id': 'pay', 'title': 'Create the payment', 'action': 'bank.pay'},
+          {...createStep('notify').json, 'id': 'mail', 'title': 'Email the student'},
+        ],
+      });
+      await expectThemedGoldenAfter(
+        tester,
+        'workflow_panel_running',
+        (context) => UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact),
+        before: (tester) => tester.pumpAndSettle(),
+        width: 460,
+        height: 760,
+      );
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/history.dart';
 import 'package:zouriel_ui/src/workflow/runtime.dart' show WfTaskInbox, WfTaskInboxState;
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -110,14 +111,14 @@ void main() {
 
   testWidgets('the run view asks the engine whether the viewer may intervene', (tester) async {
     final api = FakeWorkflowApi()..canIntervene = true;
-    await pumpPage(tester, UiWorkflowRun(api: api, instanceId: 'i1'));
+    await pumpPage(tester, WfRunView(api: api, instanceId: 'i1'));
     expect(api.calls, contains('me'));
     expect(button('Cancel the run'), findsOneWidget);
     final no = FakeWorkflowApi();
-    await pumpPage(tester, UiWorkflowRun(key: const ValueKey('no'), api: no, instanceId: 'i1'));
+    await pumpPage(tester, WfRunView(key: const ValueKey('no'), api: no, instanceId: 'i1'));
     expect(button('Cancel the run'), findsNothing);
     // The host can still decide.
-    await pumpPage(tester, UiWorkflowRun(key: const ValueKey('yes'), api: no, instanceId: 'i1', canIntervene: true));
+    await pumpPage(tester, WfRunView(key: const ValueKey('yes'), api: no, instanceId: 'i1', canIntervene: true));
     expect(button('Cancel the run'), findsOneWidget);
   });
 

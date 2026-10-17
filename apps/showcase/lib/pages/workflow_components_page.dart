@@ -30,8 +30,55 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   /// Bumped after something changed, so the lists and views elsewhere on the page load again.
   int _rev = 0;
 
+  /// Bumped when the page itself changes the application (Show a stopped payment, Reset), so the
+  /// panel is drawn again; the panel's own changes it shows already.
+  int _panelRev = 0;
+  bool _busy = false;
+  String _prepError = '';
+
+  /// Whether the picked application's finance sign-off is still open, so its payment can be made to fail.
+  bool get _stoppable => _appId == '1' && _api.signOffOpen;
+
+  /// The scenario from the docs: with the demo bank down, finance signs this application off.
+  /// Creating the invoice fails; after its retries (the clock moved on 5 minutes, four times) the run
+  /// stops and the panel shows it under Running. The bank is switched back on, so Try again works.
+  Future<void> _stopPayment() async {
+    if (!_stoppable || _busy) return;
+    final who = _api.actingAs;
+    setState(() {
+      _busy = true;
+      _prepError = '';
+    });
+    _api.bankDown = true;
+    try {
+      // Everyone with a sign-off on it approves.
+      for (final u in DemoWorkflowApi.people) {
+        _api.actingAs = u.id;
+        final open = (await _api.tasks(const UiWfTaskQuery(scope: 'mine', status: ['open']))).items;
+        for (final task in open.where((x) => x.canDecide && x.kind == 'approval' && x.entityId == _appId)) {
+          await _api.decide(task.id, 'approved', comment: 'Signed off.');
+        }
+      }
+      for (var i = 0; i < 4; i++) {
+        _api.advance(const Duration(minutes: 5));
+      }
+    } catch (e) {
+      _prepError = 'Couldn’t stop a payment: ${e is UiWfApiError ? e.message : e}';
+    } finally {
+      _api.bankDown = false;
+      _api.actingAs = who;
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _rev++;
+          _panelRev++;
+        });
+      }
+    }
+  }
+
   final Map<String, GlobalKey> _anchors = {
-    for (final a in ['panel', 'tasks-drawer', 'run', 'audit', 'state-badge', 'permissions', 'global-settings', 'settings-page']) a: GlobalKey(),
+    for (final a in ['panel', 'tasks-drawer', 'audit', 'state-badge', 'permissions', 'global-settings', 'settings-page']) a: GlobalKey(),
   };
 
   @override
@@ -117,6 +164,7 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
                 onPressed: () => setState(() {
                   _api.reset();
                   _rev++;
+                  _panelRev++;
                 }),
               ),
             ),
@@ -131,8 +179,21 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
               'and manual workflows. Use it when the workflow is part of the page\'s story; choose a vertical or horizontal panel, a compact '
               'one for a side column or details card (a badge with a strip of states, the actions and one history), or a drawer that waits '
               'on the screen\'s edge as a rail of dots when the page is busy. A record type with no lifecycle still shows its manual '
-              'workflows, open tasks and history.',
+              'workflows, open tasks and history. Under Running it lists the record\'s workflows still going, each opening its steps; one '
+              'that stopped (a payment the bank refused, say) opens by itself, and people who may intervene try it again, skip the step '
+              'giving what it would have produced, or cancel it, right there.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiButton(label: 'Show a stopped payment', size: UiSize.sm, variant: UiButtonVariant.outline, loading: _busy, onPressed: _stoppable && !_busy ? _stopPayment : null),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: note(_stoppable
+                    ? 'Has finance sign this application off while the demo bank is down: the payment fails, and the panel shows it under '
+                          'Running with Try again, Skip and Cancel (the bank is back by then).'
+                    : 'The finance sign-off has been decided: Reset the office (above) to show a stopped payment again.'),
+              ),
+            ]),
+            if (_prepError.isNotEmpty) UiText(_prepError, color: t.danger),
             UiSegmented<UiWorkflowPanelLayout>(
               label: 'Layout',
               size: UiSize.sm,
@@ -149,10 +210,10 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
             if (drawer) ...[
               note('The panel is on the ${_layout == UiWorkflowPanelLayout.sideDrawer ? 'right edge' : 'bottom edge'} of the screen as a rail '
                   'of dots: one per state, green up to where the application is now. Hover it with a mouse to peek, or tap it to open the drawer.'),
-              UiWorkflowPanel(key: _k('panel-${_layout.name}', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
+              UiWorkflowPanel(key: _k('panel-${_layout.name}-$_panelRev', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
             ] else
               frame(
-                UiWorkflowPanel(key: _k('panel-${_layout.name}', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
+                UiWorkflowPanel(key: _k('panel-${_layout.name}-$_panelRev', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
                 maxWidth: _layout == UiWorkflowPanelLayout.horizontal ? null : 460,
               ),
           ]),
@@ -188,7 +249,9 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
           widget: 'UiWorkflowTasksDrawer',
           summary: 'Where people work through their approvals and tasks: a button for the app\'s header with the number open (red when one '
               'is overdue) that opens them in a drawer, open or finished, each opening its decision with its form. People act from any page; '
-              'open it from code too, for a link in a message or a shortcut. With scope \'all\' it lists everyone\'s tasks, for admins.',
+              'open it from code too, for a link in a message or a shortcut. With scope \'all\' it lists everyone\'s tasks, for admins. '
+              'People who may intervene also find stopped workflows here, counted in the badge (red) and listed above the tasks, each '
+              'opening its steps with try again, skip and cancel.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             Container(
               padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space2),
@@ -226,24 +289,6 @@ UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks', pageSize: 50)'
             ApiRow('onDecided', 'ValueChanged<UiWfTask>', 'After a task was decided in the drawer.'),
             ApiRow('show() · hide() · refresh()', 'state', 'Through a GlobalKey<UiWorkflowTasksDrawerState>.'),
           ],
-        ),
-        DocSection(
-          key: _anchors['run'],
-          name: 'Run',
-          widget: 'UiWorkflowRun',
-          summary: 'One run drawn over its workflow: each step with what happened (done, waiting, failed, skipped), the paths not taken greyed '
-              'out, and retry, skip and cancel for admins. Use it on an admin page that opens a run from a list, or from a record\'s history.',
-          demo: _appId == '1'
-              ? frame(UiWorkflowRun(key: _k('run'), api: _api, instanceId: 'run1', onChanged: (_) => _changed()), maxWidth: 640)
-              : note('This application has no runs yet: pick the one in review to see its finance check.'),
-          code: '''// an admin page for one run
-UiWorkflowRun(api: api, instanceId: runId, onChanged: (_) => reload())   // canIntervene: null asks the engine''',
-          api: const [
-            ApiRow('api', 'UiWorkflowApi?', 'The engine API.'),
-            ApiRow('instanceId', 'String', 'The run to show.'),
-            ApiRow('canIntervene', 'bool?', 'Show retry, skip and cancel; null asks the engine (me) whether this person may.'),
-          ],
-          callbacks: const [ApiRow('onChanged', 'ValueChanged<UiWfInstance>', 'After a retry, skip or cancel.')],
         ),
         DocSection(
           key: _anchors['audit'],
@@ -428,7 +473,10 @@ class _Where extends StatelessWidget {
         Wrap(spacing: t.space4, runSpacing: t.space3, children: [
           row('A record\'s page', [link('Workflow panel', 'panel')]),
           row('Approvals and tasks', [link('My tasks drawer', 'tasks-drawer')]),
-          row('Admin pages', [link('Run', 'run'), link('Audit log', 'audit')]),
+          row('Admin pages', [
+            link('Audit log', 'audit'),
+            UiText('(a stopped workflow is fixed from the record\'s panel or the tasks drawer)', color: t.textMuted),
+          ]),
           row('A settings page', [link('Permissions', 'permissions'), link('Global settings', 'global-settings'), link('Put together', 'settings-page')]),
           row('The builder page', [UiButton(label: 'Workflow builder', size: UiSize.sm, variant: UiButtonVariant.link, onPressed: onBuilder)]),
         ]),

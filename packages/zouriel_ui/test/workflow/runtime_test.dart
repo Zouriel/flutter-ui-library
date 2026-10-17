@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/runtime.dart' show WfTaskInbox;
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -201,15 +202,16 @@ void main() {
     });
   });
 
-  group('UiWorkflowRun', () {
+  group('WfRunView', () {
     testWidgets('steps of the run with their status, the paths not taken dimmed', (tester) async {
-      await pumpPage(tester, UiWorkflowRun(api: FakeWorkflowApi(), instanceId: 'i1'));
+      await pumpPage(tester, WfRunView(api: FakeWorkflowApi(), instanceId: 'i1'));
       expect(find.text('Stopped'), findsOneWidget);
       expect(find.text('Tell the ERP'), findsOneWidget);
       expect(find.text('Timed out'), findsOneWidget);
       expect(find.text('Failed'), findsNWidgets(2));
-      // Without intervention rights there are no buttons.
+      // Without intervention rights there are no buttons, and it says who can fix it.
       expect(button('Try again'), findsNothing);
+      expect(find.text('Someone who looks after workflows can try it again or skip it.'), findsOneWidget);
       final notRun = tester.widget<Opacity>(find.ancestor(of: find.text('Tell the applicant'), matching: find.byType(Opacity)).first);
       expect(notRun.opacity, 0.45);
     });
@@ -217,7 +219,7 @@ void main() {
     testWidgets('two stopped paths: each can be retried or skipped on its own', (tester) async {
       final api = FakeWorkflowApi();
       UiWfInstance? changed;
-      await pumpPage(tester, UiWorkflowRun(api: api, instanceId: 'i1', canIntervene: true, onChanged: (r) => changed = r));
+      await pumpPage(tester, WfRunView(api: api, instanceId: 'i1', canIntervene: true, onChanged: (r) => changed = r));
       expect(button('Try again'), findsNWidgets(2));
       expect(button('Skip'), findsNWidgets(2));
       expect(button('Skip the step'), findsNothing);
@@ -230,8 +232,12 @@ void main() {
     testWidgets('one stopped path keeps the three buttons', (tester) async {
       final api = FakeWorkflowApi();
       api.instanceJson = {...api.instanceJson, 'tokens': [{'id': 'tokA', 'status': 'waiting', 'waiting': 'incident', 'stepId': 'a'}]};
-      await pumpPage(tester, UiWorkflowRun(api: api, instanceId: 'i1', canIntervene: true));
+      await pumpPage(tester, WfRunView(api: api, instanceId: 'i1', canIntervene: true));
       await tester.tap(button('Skip the step'));
+      await tester.pumpAndSettle();
+      // It asks first; the dialog's own button skips.
+      expect(api.calls.where((c) => c.startsWith('skip')), isEmpty);
+      await tester.tap(button('Skip the step').last);
       await tester.pumpAndSettle();
       expect(api.calls, contains('skip:i1:'));
       // Running again: only Cancel stays.

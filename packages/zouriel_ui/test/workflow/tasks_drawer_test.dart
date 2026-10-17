@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zouriel_ui/src/workflow/runtime.dart' show WfTaskInbox;
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView, WfTaskInbox;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -35,6 +35,46 @@ class _TasksApi extends Fake implements UiWorkflowApi {
     if (g != null) await g.future;
     if (e != null) throw e;
     return UiWfPage(snapshot, n);
+  }
+}
+
+Finder button(String label) => find.byWidgetPredicate((w) => w is UiButton && w.label == label);
+
+/// The tasks API plus a stopped workflow, for someone the engine may or may not let intervene.
+class _StoppedApi extends _TasksApi {
+  _StoppedApi({required this.intervene}) : super([_task('a')]);
+  final bool intervene;
+
+  /// The stopped run was put right (it no longer shows as stopped).
+  bool fixed = false;
+  final asked = <UiWfInstanceQuery>[];
+  int meCalls = 0;
+
+  static final Map<String, Object?> stuck = {
+    'id': 's1', 'title': 'Pay approved scholarships', 'entityTitle': 'Bursary – Ali', 'status': 'incident', 'kind': 'automation',
+    'error': 'InvalidOperationException: Bank API: 503', 'startedAt': DateTime.now().toUtc().toIso8601String(), 'steps': <Object?>[], 'tokens': <Object?>[],
+  };
+
+  @override
+  Future<UiWfMe> me() async {
+    meCalls++;
+    return UiWfMe.fromJson({'can': {'intervene': intervene}});
+  }
+
+  @override
+  Future<UiWfPage<UiWfInstance>> instances(UiWfInstanceQuery q) async {
+    asked.add(q);
+    return fixed ? const UiWfPage(<UiWfInstance>[], 0) : UiWfPage([UiWfInstance.fromJson(stuck)], 1);
+  }
+
+  @override
+  Future<UiWfInstance> instance(String id) async => UiWfInstance.fromJson(fixed ? {...stuck, 'status': 'running', 'error': null} : stuck);
+  @override
+  Future<UiWorkflowDefinition> instanceDefinition(String id) async => createWorkflow('automation', title: 'W', entity: 'application');
+  @override
+  Future<UiWfInstance> retry(String id, {String? target}) async {
+    fixed = true;
+    return UiWfInstance.fromJson({...stuck, 'status': 'running', 'error': null});
   }
 }
 
@@ -261,5 +301,55 @@ void main() {
     expect(find.byType(WfTaskInbox), findsNothing);
     expect(find.text('On top'), findsOneWidget, reason: 'only the drawer goes');
     expect(key.currentState!.isOpen, isFalse);
+  });
+
+  group('stopped workflows', () {
+    testWidgets('for people who may intervene: counted in the badge (red) and listed above the tasks, each opening its run', (tester) async {
+      final api = _StoppedApi(intervene: true);
+      await _pump(tester, UiWorkflowTasksDrawer(api: api, refreshSeconds: 0));
+      expect(api.asked.single.status, ['incident']);
+      expect(api.asked.single.take, 100);
+      expect(_badge(tester)!.label, '2');
+      // Red: a stopped workflow needs attention even when no task is overdue.
+      expect(_badge(tester)!.tone, UiStatus.danger);
+      expect(find.bySemanticsLabel('My tasks, 1 open, 1 stopped workflow'), findsOneWidget);
+      await tester.tap(find.byType(UiButton));
+      await tester.pumpAndSettle();
+      expect(find.text('STOPPED WORKFLOWS'), findsOneWidget);
+      expect(find.text('Pay approved scholarships · Bursary – Ali'), findsOneWidget);
+      expect(find.text('Bank API: 503'), findsOneWidget);
+      // Above the tasks.
+      expect(tester.getTopLeft(find.text('STOPPED WORKFLOWS')).dy, lessThan(tester.getTopLeft(find.byType(WfTaskInbox)).dy));
+      // The drawer asked once (opening it counted again without asking again).
+      expect(api.meCalls, 1);
+      await tester.tap(find.text('Pay approved scholarships · Bursary – Ali'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WfRunView), findsOneWidget);
+      expect(find.byType(WfTaskInbox), findsNothing);
+      // Put right in place: counted again, and back in the list it is gone.
+      await tester.tap(button('Try again'));
+      await tester.pumpAndSettle();
+      expect(api.fixed, isTrue);
+      await tester.tap(button('‹ Back to the list'));
+      await tester.pumpAndSettle();
+      expect(find.text('STOPPED WORKFLOWS'), findsNothing);
+      expect(find.byType(WfTaskInbox), findsOneWidget);
+    });
+
+    testWidgets('not for people who may not: nothing asked, nothing counted', (tester) async {
+      final api = _StoppedApi(intervene: false);
+      await _pump(tester, UiWorkflowTasksDrawer(api: api, refreshSeconds: 0));
+      expect(api.asked, isEmpty);
+      expect(_badge(tester)!.label, '1');
+      expect(_badge(tester)!.tone, UiStatus.primary);
+      expect(find.bySemanticsLabel('My tasks, 1 open'), findsOneWidget);
+    });
+
+    testWidgets('several stopped workflows read in the plural', (tester) async {
+      final key = GlobalKey<UiWorkflowTasksDrawerState>();
+      await _pump(tester, UiWorkflowTasksDrawer(key: key, api: _StoppedApi(intervene: true), refreshSeconds: 0));
+      expect(key.currentState!.countText, ', 1 open, 1 stopped workflow');
+      expect(key.currentState!.total, 2);
+    });
   });
 }
