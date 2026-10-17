@@ -39,16 +39,23 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   String _sendError = '';
 
   /// Whether the picked application's finance sign-off is still open, so its payment can be made to fail.
-  bool get _stoppable => _api.signOffOpen(_appId);
+  bool get _stoppable => _stopTarget != null;
+
+  /// The application whose payment the demo makes fail: the picked one while its sign-off is open,
+  /// else the first one that still has one (the page says so and switches to it).
+  String? get _stopTarget => _api.signOffOpen(_appId) ? _appId : _api.applications.map((a) => a.id).where(_api.signOffOpen).firstOrNull;
 
   /// The scenario from the docs: with the demo bank down, finance signs this application off.
   /// Creating the invoice fails; after its retries (the clock moved on 5 minutes, four times) the run
   /// stops and the panel shows it under Running. The bank is switched back on, so Try again works.
   /// The demo engine does it in one go, without changing who the page acts as.
   void _stopPayment() {
-    if (!_stoppable) return;
-    final done = _api.stopPayment(_appId);
+    final target = _stopTarget;
+    if (target == null) return;
+    final done = _api.stopPayment(target);
     setState(() {
+      // Show the application whose payment stopped.
+      _appId = target;
       _prepError = done ? '' : 'There was no open finance sign-off to approve.';
       _rev++;
       _panelRev++;
@@ -56,7 +63,17 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   }
 
   /// What the note next to "Show a stopped payment" says, by what became of the finance check.
-  String get _stopNote => switch (_api.financeCheckState(_appId)) {
+  String get _stopNote {
+    final target = _stopTarget;
+    if (target != null && target != _appId) {
+      final title = _api.applications.firstWhere((a) => a.id == target).title;
+      return 'This application’s finance sign-off isn’t open, so the demo uses $title: finance signs it off while the demo bank is down. '
+          'The payment fails, and the panel (switched to that application) shows it under Stopped with Try again, Skip and Cancel.';
+    }
+    return _stopNoteFor;
+  }
+
+  String get _stopNoteFor => switch (_api.financeCheckState(_appId)) {
         'open' => 'Has finance sign this application off while the demo bank is down: the payment fails, and the panel shows it under '
             'Running with Try again, Skip and Cancel (the bank is back by then).',
         'cancelled' => 'This application\'s finance check was cancelled (it started over, or was approved or rejected): Reset the office '
@@ -256,7 +273,16 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
               decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
               child: Row(children: [
                 Expanded(child: UiText('Scholarship office', variant: UiTextVariant.label)),
-                UiWorkflowTasksDrawer(key: _k('drawer'), api: _api, onDecided: (_) => _changed()),
+                // Not drawn again on the page's changes (that would close it after every decision): it counts
+                // again itself; the rest of the page reads again.
+                UiWorkflowTasksDrawer(
+                  key: ValueKey('drawer-$_user'),
+                  api: _api,
+                  onDecided: (_) => setState(() {
+                    _rev++;
+                    _panelRev++;
+                  }),
+                ),
               ]),
             ),
             note('The finance sign-off is Mariyam\'s (finance); checking the transcript is Hana\'s. Pick “You are” to see each person\'s count; '

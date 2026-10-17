@@ -132,8 +132,37 @@ void main() {
     expect(find.textContaining('Has finance sign this application off'), findsOneWidget);
     tester.widget<UiSelect>(find.byWidgetPredicate((w) => w is UiSelect && w.label == 'Application')).onChanged!('3');
     await tester.pump(const Duration(seconds: 1));
-    expect(find.textContaining('No finance check runs for this application'), findsOneWidget);
+    // Its sign-off isn't open: the demo uses the next application that has one, and says so.
+    expect(find.textContaining('so the demo uses Marine biology degree, Ali Rasheed'), findsOneWidget);
+    tester.widget<UiButton>(button('Show a stopped payment')).onPressed!();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.widget<UiSelect>(find.byWidgetPredicate((w) => w is UiSelect && w.label == 'Application')).value, '1', reason: 'switched to it');
+    expect(find.text('STOPPED'), findsOneWidget);
+    // None left open: the button waits.
     expect(tester.widget<UiButton>(button('Show a stopped payment')).onPressed, isNull);
+    await _done(tester);
+  });
+
+  testWidgets('the tasks drawer stays open after a decision in it', (tester) async {
+    await _pump(tester, const WorkflowComponentsPage());
+    tester.widget<UiSelect>(find.byWidgetPredicate((w) => w is UiSelect && w.label == 'You are')).onChanged!('mariyam');
+    await tester.pump(const Duration(seconds: 1));
+    final drawer = tester.state<UiWorkflowTasksDrawerState>(find.byType(UiWorkflowTasksDrawer));
+    drawer.show();
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.bySemanticsLabel(RegExp('^Finance sign-off,')).last);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.descendant(of: find.byType(UiModal), matching: button('Approve')));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.byType(UiModal), findsNothing);
+    expect(tester.state<UiWorkflowTasksDrawerState>(find.byType(UiWorkflowTasksDrawer)).isOpen, isTrue);
+    expect(identical(tester.state<UiWorkflowTasksDrawerState>(find.byType(UiWorkflowTasksDrawer)), drawer), isTrue);
+    drawer.hide();
+    await tester.pump(const Duration(seconds: 1));
     await _done(tester);
   });
 
