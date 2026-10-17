@@ -291,7 +291,9 @@ class WfWorkflowEditor extends StatelessWidget {
           else
             () {
               var n = vars[j].patch(p);
-              if (p.containsKey('label')) n = n.patch({'key': wfKey(p['label'] as String, [for (var k = 0; k < vars.length; k++) if (k != i) vars[k].key])});
+              // The key follows the name only while nothing reads the variable yet; renaming then never breaks a step.
+              final used = jsonStringify(def.json).contains('vars.${vars[j].key}');
+              if (p.containsKey('label') && !used) n = n.patch({'key': wfKey(p['label'] as String, [for (var k = 0; k < vars.length; k++) if (k != i) vars[k].key])});
               final d = n.defaultValue;
               if (d == null || d == '') n = n.patch({'default': null});
               return n;

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../core/icon.dart';
@@ -383,19 +385,36 @@ class _Fork extends StatelessWidget {
     ]);
 
     if (stacked) return connector(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final s in slots) lane(s)]));
-    return connector(LayoutBuilder(builder: (context, box) {
-      const minW = 230.0;
-      final gap = t.space3;
-      final needed = slots.length * minW + (slots.length - 1) * gap;
-      if (needed <= box.maxWidth) {
-        return Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: gap, children: [for (final s in slots) Expanded(child: lane(s))]);
-      }
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: gap, children: [for (final s in slots) SizedBox(width: minW, child: lane(s))]),
-      );
-    }));
+    // Columns never shrink below a readable width: the canvas as a whole widens and scrolls
+    // sideways instead (see wfListWidth). Wider branches get a bigger share.
+    return connector(Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: wfForkGap, children: [
+      for (final s in slots) Expanded(flex: _laneWidth(s.steps).round(), child: lane(s)),
+    ]));
   }
+}
+
+/// The narrowest a branch column gets.
+const double wfLaneMinWidth = 230;
+
+/// The space between branch columns.
+const double wfForkGap = 12;
+
+/// A column's inner padding and border, on both sides.
+const double _lanePad = 14;
+
+double _laneWidth(List<UiWfStep> steps) => math.max(wfLaneMinWidth, wfListWidth(steps) + _lanePad);
+
+/// The width a list of steps needs so every branch column keeps [wfLaneMinWidth]: the widest of
+/// its steps, where a container needs its columns side by side.
+double wfListWidth(List<UiWfStep> steps) {
+  var w = 0.0;
+  for (final step in steps) {
+    final slots = stepSlots(step);
+    if (slots.isEmpty) continue;
+    final need = slots.fold(0.0, (sum, s) => sum + _laneWidth(s.steps)) + (slots.length - 1) * wfForkGap;
+    w = math.max(w, need);
+  }
+  return w;
 }
 
 /// The step catalogue: search, categories, tap to add or drag onto the canvas (the web
@@ -564,9 +583,14 @@ class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
         child: SingleChildScrollView(
           controller: _scroll,
           padding: EdgeInsets.fromLTRB(t.space3, t.space4, t.space3, t.space12 + widget.bottomPadding),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
+          child: LayoutBuilder(builder: (context, box) {
+            // 760 for a plain list; wider when branches need room, then the canvas scrolls sideways.
+            final stacked = WfBuilderScope.of(context).ui.layout == UiWorkflowBuilderLayout.narrow;
+            final needed = stacked ? 0.0 : wfListWidth(store.def.steps ?? const []);
+            final room = box.maxWidth;
+            final width = needed > room ? needed : math.min(760.0, room);
+            final flow = SizedBox(
+              width: width,
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const WfTriggerCard(),
                 WfStepList(listId: 'root', steps: store.def.steps ?? const [], lead: true),
@@ -579,8 +603,9 @@ class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
                   ),
                 ),
               ]),
-            ),
-          ),
+            );
+            return needed > room ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: flow) : Center(child: flow);
+          }),
         ),
       ),
     );

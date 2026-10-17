@@ -36,6 +36,9 @@ class _DrawnEdge {
 /// arrows. Drag a card to move it, drag from its handle onto another card to add a transition (on
 /// touch: tap the handle, then the target), and use "Tidy up" to lay everything out again. A List
 /// view shows the same as text.
+/// Space around the cards inside the diagram.
+const double _frameMargin = 48;
+
 class WfLifecycleCanvas extends StatefulWidget {
   const WfLifecycleCanvas({super.key});
 
@@ -66,7 +69,24 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
   UiWfLayout _layoutOf(UiWfLifecycle? lc) =>
       lc != null ? autoLayout(lc) : const UiWfLayout(positions: {}, edges: [], width: wfNodeW, height: wfNodeH);
 
+  /// The drawing area: every card plus a margin, with room for loops under the cards. Cards dragged
+  /// left of or above the origin widen it, so nothing is ever cut off. Drags don't change it until
+  /// they drop, so the card under the pointer never jumps.
+  ({double ox, double oy, double width, double height}) _frame(UiWfLayout l) {
+    final ps = l.positions.values;
+    final minX = ps.fold(0.0, (m, p) => math.min(m, p.dx));
+    final minY = ps.fold(0.0, (m, p) => math.min(m, p.dy));
+    return (ox: _frameMargin - minX, oy: _frameMargin - minY, width: l.width - minX + _frameMargin * 2, height: l.height - minY + _frameMargin * 2 + 56);
+  }
+
+  /// Where a card is drawn (in the drawing area).
   Offset _pos(UiWfLayout layout, String id) {
+    final f = _frame(layout);
+    return _place(layout, id) + Offset(f.ox, f.oy);
+  }
+
+  /// Where a card is in the lifecycle's own coordinates (what `layout` stores), mid-drag included.
+  Offset _place(UiWfLayout layout, String id) {
     final d = _dragPos;
     if (d != null && d.id == id) return d.at;
     return layout.positions[id] ?? Offset.zero;
@@ -93,7 +113,9 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
     store.addState('New state', at);
     ui.inspect();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _viewport.reveal(Rect.fromLTWH(at[0].toDouble(), at[1].toDouble(), wfNodeW, wfNodeH));
+      if (!mounted) return;
+      final f = _frame(_layoutOf(WfBuilderScope.read(context).store.def.lifecycle));
+      _viewport.reveal(Rect.fromLTWH(at[0] + f.ox, at[1] + f.oy, wfNodeW, wfNodeH));
     });
   }
 
@@ -193,7 +215,8 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
       final p = edgePath(_pos(layout, e.from), _pos(layout, e.to), e.back, lane);
       edges.add(_DrawnEdge(e.id, tr, p, p.label, tr.auto != null, sel == UiWfSelection.transition(tr.id)));
     }
-    final cw = layout.width + 120, ch = layout.height + 160;
+    final frame = _frame(layout);
+    final cw = frame.width, ch = frame.height;
     final touch = uiTouchPlatform(context);
 
     final diagram = UiCanvasViewport(
@@ -247,11 +270,11 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
               onHover: (on) => setState(() => _hovered = on ? s.id : (_hovered == s.id ? null : _hovered)),
               onTap: () => _clickState(store, ui, s),
               onKeyMove: (d) {
-                final p = _pos(layout, s.id);
-                store.placeState(s.id, math.max(0, p.dx + d.dx), math.max(0, p.dy + d.dy));
+                final p = _place(layout, s.id);
+                store.placeState(s.id, p.dx + d.dx, p.dy + d.dy);
               },
               onDragStart: () {
-                _dragOrigin = _pos(layout, s.id);
+                _dragOrigin = _place(layout, s.id);
                 _dragDelta = Offset.zero;
               },
               onDragUpdate: (screenDelta) {

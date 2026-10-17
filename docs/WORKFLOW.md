@@ -92,7 +92,11 @@ medium (720+) opens the picker in a dialog; narrow opens the picker and the sett
 sheets. Grips drag at once (with a 1px slop so they beat scroll views on phones); a card or a
 picker type drags after a long press on touch and after a small move with a mouse. The lifecycle
 diagram sits on `UiCanvasViewport` (pan, pinch, wheel and trackpad zoom, `+` `-` `0`, a fit that
-keeps re-fitting until the canvas is touched, and a minimap when it is at least 520x340).
+keeps re-fitting until the person pans or zooms, and a minimap when it is at least 520x340).
+
+The lifecycle diagram sits on `UiCanvasViewport`, which keeps fitting the diagram until the person
+pans or zooms (a refit that comes up mid-drag waits for the pointer to lift) and never fits below
+60% (`fitMinZoom`): a larger diagram starts at its top-left corner and the minimap shows the rest.
 
 ## Running workflows in your app
 

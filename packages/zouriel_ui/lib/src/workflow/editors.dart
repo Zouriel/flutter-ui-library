@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../button/button.dart';
@@ -160,22 +162,33 @@ class _WfTemplateEditorState extends State<WfTemplateEditor> {
 /// A one-unit ISO duration: an amount, a unit (`M` minutes, `H`, `D`, `W`, `Mo` months), and a sign.
 typedef WfSimpleDuration = ({int n, String unit, bool negative});
 
-final RegExp _simple = RegExp(r'^(-)?P(?:(\d+)M|(\d+)W|(\d+)D|T(\d+)H|T(\d+)M)$');
+final RegExp _simple = RegExp(r'^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$');
 
-/// Reads a one-unit ISO duration (`P3D`, `PT4H`, `-P1D`), or null when it has several parts.
+/// Reads an ISO duration as one number and unit (`P3D` is 3 days). Durations written with several
+/// parts elsewhere become their total in the largest unit that keeps them exact (`P1DT12H` is 36
+/// hours); null when that's impossible (months mixed with days) or it isn't a duration.
 WfSimpleDuration? parseSimpleDuration(String? iso) {
-  final m = _simple.firstMatch(iso ?? '');
-  if (m == null) return null;
+  final text = iso ?? '';
+  final m = _simple.firstMatch(text);
+  if (m == null || text == 'P' || text == '-P' || text.endsWith('T')) return null;
   final negative = m.group(1) != null;
-  if (m.group(2) != null) return (n: int.parse(m.group(2)!), unit: 'Mo', negative: negative);
-  if (m.group(3) != null) return (n: int.parse(m.group(3)!), unit: 'W', negative: negative);
-  if (m.group(4) != null) return (n: int.parse(m.group(4)!), unit: 'D', negative: negative);
-  if (m.group(5) != null) return (n: int.parse(m.group(5)!), unit: 'H', negative: negative);
-  return (n: int.parse(m.group(6)!), unit: 'M', negative: negative);
+  int g(int i) => int.parse(m.group(i) ?? '0');
+  final months = g(2) * 12 + g(3);
+  final w = g(4), d = g(5), h = g(6), mi = g(7), sec = g(8);
+  final minutes = ((w * 7 + d) * 24 + h) * 60 + mi + (sec / 60).round();
+  if (months != 0 && minutes != 0) return null;
+  if (months != 0) return (n: months, unit: 'Mo', negative: negative);
+  if (w != 0 && d == 0 && h == 0 && mi == 0 && sec == 0) return (n: w, unit: 'W', negative: negative);
+  if (minutes % 1440 == 0) return (n: minutes ~/ 1440, unit: 'D', negative: negative);
+  if (minutes % 60 == 0) return (n: minutes ~/ 60, unit: 'H', negative: negative);
+  return (n: minutes, unit: 'M', negative: negative);
 }
 
+/// The most of each unit a duration may hold (the engines refuse more than 50 years).
+const Map<String, int> wfDurationUnitMax = {'Mo': 600, 'W': 2600, 'D': 18250, 'H': 438000, 'M': 26280000};
+
 String formatSimpleDuration(num n, String unit, [bool negative = false]) {
-  final v = n.isFinite ? (n < 0 ? 0 : n.round()) : 0;
+  final v = n.isFinite ? math.min(wfDurationUnitMax[unit] ?? 600, n < 0 ? 0 : n.round()) : 0;
   final body = switch (unit) { 'Mo' => 'P${v}M', 'W' => 'P${v}W', 'D' => 'P${v}D', 'H' => 'PT${v}H', _ => 'PT${v}M' };
   return (negative ? '-' : '') + body;
 }
@@ -202,6 +215,7 @@ class WfDurationInput extends StatelessWidget {
           size: UiSize.sm,
           value: p.n,
           min: 0,
+          max: wfDurationUnitMax[p.unit],
           semanticLabel: '$label amount',
           onChanged: (v) => onChanged(formatSimpleDuration(v ?? 0, p.unit, p.negative)),
         ),

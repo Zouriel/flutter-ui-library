@@ -291,6 +291,17 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     }
   }
 
+  /// Publishing or rolling back left the engine's draft equal to [def].
+  void _synced(UiWorkflowDefinition def) {
+    if (!mounted) return;
+    setState(() {
+      _savedOnce = true;
+      _lastSaved = jsonStringify(def.json);
+    });
+    _reportDirty();
+    widget.onSaved?.call(def);
+  }
+
   void _setView(UiWorkflowBuilderView v) => setState(() {
     _view = v;
     _sheetSnap = 0;
@@ -628,7 +639,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     final t = context.ui;
     switch (_view) {
       case UiWorkflowBuilderView.versions:
-        return WfVersions(saved: _savedOnce);
+        return WfVersions(saved: _savedOnce, onSynced: _synced);
       case UiWorkflowBuilderView.test:
         return const WfTest();
       case UiWorkflowBuilderView.build:

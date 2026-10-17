@@ -49,7 +49,12 @@ class UiCanvasViewportController extends ChangeNotifier {
   double _minZoom = 0.25;
   double _maxZoom = 2.5;
   double _padding = 32;
+  double _fitMinZoom = 0.6;
   bool _auto = true;
+
+  /// Pointers down on the canvas: refits wait for them, so nothing jumps mid-gesture.
+  int _held = 0;
+  bool _fitWhenReleased = false;
   BuildContext? _context;
 
   /// The current view.
@@ -59,8 +64,9 @@ class UiCanvasViewportController extends ChangeNotifier {
   /// The viewport's size on screen.
   Size get size => _size;
 
-  /// True until someone pans or zooms: until then the view keeps fitting the content as sizes
-  /// settle and content changes.
+  /// True until someone pans or zooms: until then the view keeps fitting the content as the canvas
+  /// resizes (a panel opening beside it) or the content changes. Tapping or dragging things on the
+  /// canvas doesn't count; a refit that comes up mid-drag waits for the pointer to lift.
   bool get autoFit => _auto;
 
   void _setView(UiViewportView v, {bool notify = true}) {
@@ -73,13 +79,30 @@ class UiCanvasViewportController extends ChangeNotifier {
   double _clamp(double z) => math.min(_maxZoom, math.max(_minZoom, z));
 
   /// Called by the viewport while laying out. Re-fits silently while [autoFit].
-  void _configure(Size size, Size content, double minZoom, double maxZoom, double padding) {
+  void _configure(Size size, Size content, double minZoom, double maxZoom, double padding, double fitMinZoom) {
+    final changed = size != _size || content != _content;
     _size = size;
     _content = content;
     _minZoom = minZoom;
     _maxZoom = maxZoom;
     _padding = padding;
-    if (_auto) _view = _fitView() ?? _view;
+    _fitMinZoom = fitMinZoom;
+    if (!_auto || !changed) return;
+    if (_held > 0) {
+      _fitWhenReleased = true;
+    } else {
+      _view = _fitView() ?? _view;
+    }
+  }
+
+  void _press() => _held++;
+
+  void _release() {
+    if (_held > 0) _held--;
+    if (_held == 0 && _fitWhenReleased) {
+      _fitWhenReleased = false;
+      if (_auto) fit();
+    }
   }
 
   UiViewportView? _fitView() {
@@ -87,11 +110,15 @@ class UiCanvasViewportController extends ChangeNotifier {
     if (w <= 0 || h <= 0) return null;
     final p = _padding;
     final cw = math.max(1.0, _content.width), ch = math.max(1.0, _content.height);
-    final zoom = _clamp(math.min(1, math.min((w - p * 2) / cw, (h - p * 2) / ch)));
-    return UiViewportView(zoom: zoom, x: (w - _content.width * zoom) / 2, y: (h - _content.height * zoom) / 2);
+    final zoom = _clamp(math.max(math.min(_fitMinZoom, 1), math.min(1, math.min((w - p * 2) / cw, (h - p * 2) / ch))));
+    // Content too big even at the smallest fit zoom is shown from its top-left corner.
+    double place(double room, double size) => size * zoom <= room - p * 2 ? (room - size * zoom) / 2 : p;
+    return UiViewportView(zoom: zoom, x: place(w, cw), y: place(h, ch));
   }
 
-  /// Shows all the content, centred. Never zooms in past 100%. Turns auto-fit back on.
+  /// Shows all the content, centred, never zooming in past 100% or out past the viewport's
+  /// `fitMinZoom`; content too big for that shows from its top-left corner (the minimap shows the
+  /// rest). Turns auto-fit back on.
   void fit() {
     final v = _fitView();
     if (v == null) return;
@@ -183,6 +210,7 @@ class UiCanvasViewport extends StatefulWidget {
     this.minZoom = 0.25,
     this.maxZoom = 2.5,
     this.padding = 32,
+    this.fitMinZoom = 0.6,
     this.controls = true,
     this.minimap = false,
     this.minimapItems = const [],
@@ -199,6 +227,10 @@ class UiCanvasViewport extends StatefulWidget {
 
   /// Space kept around the content when fitting.
   final double padding;
+
+  /// The smallest zoom fitting uses; below it text is unreadable, so a large diagram starts at its
+  /// top-left corner instead.
+  final double fitMinZoom;
   final bool controls;
   final bool minimap;
   final List<UiMinimapItem> minimapItems;
@@ -247,10 +279,8 @@ class _UiCanvasViewportState extends State<UiCanvasViewport> {
     if (mounted) setState(() {});
   }
 
-  void _down(PointerDownEvent e) {
-    // Touching the canvas (even to drag a node) ends auto-fitting, so the view never jumps mid-gesture.
-    _c._auto = false;
-  }
+  void _down(PointerDownEvent e) => _c._press();
+  void _up(PointerEvent e) => _c._release();
 
   void _signal(PointerSignalEvent e) {
     if (e is! PointerScrollEvent) return;
@@ -317,7 +347,7 @@ class _UiCanvasViewportState extends State<UiCanvasViewport> {
     final settings = MediaQuery.maybeGestureSettingsOf(context);
     return LayoutBuilder(builder: (context, box) {
       final size = box.biggest;
-      c._configure(size, Size(widget.contentWidth, widget.contentHeight), widget.minZoom, widget.maxZoom, widget.padding);
+      c._configure(size, Size(widget.contentWidth, widget.contentHeight), widget.minZoom, widget.maxZoom, widget.padding, widget.fitMinZoom);
       final v = c.view;
       final roomy = size.width >= 520 && size.height >= 340;
       return Semantics(
@@ -332,6 +362,8 @@ class _UiCanvasViewportState extends State<UiCanvasViewport> {
               _down(e);
               if (!_focus.hasFocus) _focus.requestFocus();
             },
+            onPointerUp: _up,
+            onPointerCancel: _up,
             onPointerSignal: _signal,
             child: RawGestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -427,15 +459,15 @@ class _Controls extends StatelessWidget {
         boxShadow: t.shadow1,
       ),
       child: Row(mainAxisSize: MainAxisSize.min, spacing: 2, children: [
-        btn(HugeIcons.strokeRoundedZoomOutArea, 'Zoom out', () => controller.zoomBy(1 / 1.2)),
+        btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', () => controller.zoomBy(1 / 1.2)),
         SizedBox(
           width: 38,
           child: Semantics(
-            liveRegion: true,
+            label: 'Zoom $pct%',
             child: Text('$pct%', textAlign: TextAlign.center, style: context.uiText.label.copyWith(fontSize: 11.5, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
           ),
         ),
-        btn(HugeIcons.strokeRoundedZoomInArea, 'Zoom in', () => controller.zoomBy(1.2)),
+        btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', () => controller.zoomBy(1.2)),
         btn(HugeIcons.strokeRoundedFullScreen, 'Fit to view', controller.fit),
       ]),
     );

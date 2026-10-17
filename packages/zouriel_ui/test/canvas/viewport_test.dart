@@ -46,9 +46,29 @@ void main() {
   });
 
   testWidgets('large content is zoomed out to fit inside the padding', (tester) async {
-    final c = await pumpViewport(tester, cw: 1600, ch: 600);
-    expect(c.view.zoom, closeTo((800 - 64) / 1600, 1e-9));
-    expect(c.view.x, closeTo((800 - 1600 * c.view.zoom) / 2, 1e-9));
+    final c = await pumpViewport(tester, cw: 1200, ch: 600);
+    expect(c.view.zoom, closeTo((800 - 64) / 1200, 1e-9));
+    expect(c.view.x, closeTo((800 - 1200 * c.view.zoom) / 2, 1e-9));
+  });
+
+  testWidgets('fitting never zooms out past 60%: very large content starts at its top-left', (tester) async {
+    final c = await pumpViewport(tester, cw: 3000, ch: 400);
+    expect(c.view.zoom, 0.6);
+    expect(c.view.x, 32); // the padding, not centred
+    expect(c.view.y, closeTo((600 - 400 * 0.6) / 2, 1e-9)); // it fits this way: centred
+  });
+
+  testWidgets('a refit that comes up while a pointer is down waits for it to lift', (tester) async {
+    final c = await pumpViewport(tester);
+    final g = await tester.startGesture(const Offset(300, 100));
+    await tester.pump();
+    tester.view.physicalSize = const Size(600, 600) * 2;
+    await tester.pump();
+    expect(c.view.x, (800 - 400) / 2); // not yet
+    await g.up();
+    await tester.pump();
+    expect(c.autoFit, isTrue); // a tap is not a pan
+    expect(c.view.x, (600 - 400) / 2);
   });
 
   testWidgets('auto-fit follows size changes until the person pans', (tester) async {

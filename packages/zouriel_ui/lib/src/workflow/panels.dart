@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/types.dart';
+import '../dialog/modal.dart';
 import '../forms/text/inputs.dart';
 import '../theme/theme.dart';
 import 'api.dart';
@@ -15,6 +16,7 @@ import 'icons.dart';
 import 'json.dart';
 import 'schema.dart';
 import 'scope.dart';
+import 'store.dart';
 
 /// A bordered card with a small heading (the panels' `.card`).
 class _Card extends StatelessWidget {
@@ -52,10 +54,13 @@ Widget _page(BuildContext context, double maxWidth, List<Widget> children) {
 /// Versions: what changed since publishing, publish with a note, earlier versions, roll back (the
 /// web `ui-wf-versions`).
 class WfVersions extends StatefulWidget {
-  const WfVersions({super.key, required this.saved});
+  const WfVersions({super.key, required this.saved, this.onSynced});
 
   /// Whether the workflow has been saved to the engine (versions live there).
   final bool saved;
+
+  /// The engine's draft now equals this definition (after publishing or rolling back).
+  final ValueChanged<UiWorkflowDefinition>? onSynced;
 
   @override
   State<WfVersions> createState() => _WfVersionsState();
@@ -69,6 +74,9 @@ class _WfVersionsState extends State<WfVersions> {
   String _error = '';
   int? _seenVersion;
   UiWorkflowApi? _seenApi;
+
+  /// Publishers' names by user id.
+  final Map<String, String> _names = {};
 
   @override
   void didChangeDependencies() {
@@ -94,9 +102,51 @@ class _WfVersionsState extends State<WfVersions> {
           _diff = diff;
         });
       }
+      _loadNames(api, [for (final v in d.versions) ?v.publishedBy]);
     } catch (_) {
       if (mounted) setState(() => _detail = null);
     }
+  }
+
+  Future<void> _loadNames(UiWorkflowApi api, List<String> ids) async {
+    final missing = {for (final id in ids) if (!_names.containsKey(id)) id};
+    if (missing.isEmpty) return;
+    for (final id in missing) {
+      _names[id] = id;
+    }
+    final found = await Future.wait([for (final id in missing) api.user(id).catchError((Object _) => null)]);
+    if (!mounted) return;
+    setState(() {
+      var i = 0;
+      for (final id in missing) {
+        _names[id] = found[i++]?.name ?? id;
+      }
+    });
+  }
+
+  Future<void> _askRollback(UiWorkflowApi api, UiWorkflowBuilderController store, int version) async {
+    final ok = await showUiModal<bool>(
+      context: context,
+      title: 'Make version $version current?',
+      size: UiModalSize.sm,
+      builder: (ctx) => Text(
+        'This publishes version $version again as a new version, and the draft becomes a copy of it. Edits not yet saved are replaced.',
+        style: ctx.uiText.body.copyWith(fontSize: 14, height: 1.5, color: ctx.ui.text),
+      ),
+      footerBuilder: (ctx) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
+        UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop(false)),
+        UiButton(label: 'Make current', onPressed: () => Navigator.of(ctx).pop(true)),
+      ]),
+    );
+    if (ok != true || !mounted) return;
+    await _run(() async {
+      await api.rollback(store.def.id, version);
+      // The engine's draft is now the old version: show that, not the edits from before.
+      final d = await api.definition(store.def.id);
+      if (d.published != null) store.published = d.published;
+      store.commit(d.draft);
+      widget.onSynced?.call(d.draft);
+    });
   }
 
   Future<void> _run(Future<void> Function() f) async {
@@ -144,11 +194,13 @@ class _WfVersionsState extends State<WfVersions> {
             onPressed: _busy || errors > 0
                 ? null
                 : () => _run(() async {
-                    await api.saveDraft(store.def);
-                    final s = await api.publish(store.def.id, note: _note.isEmpty ? null : _note);
+                    final def = store.def;
+                    await api.saveDraft(def);
+                    final s = await api.publish(def.id, note: _note.isEmpty ? null : _note);
                     setState(() => _note = '');
                     final pd = await api.definition(s.id);
                     if (pd.published != null) store.published = pd.published;
+                    widget.onSynced?.call(def);
                   }),
           ),
           if (errors > 0) FbHint('Fix $errors problem${errors == 1 ? '' : 's'} first.'),
@@ -167,13 +219,13 @@ class _WfVersionsState extends State<WfVersions> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text((v.note ?? '').isNotEmpty ? v.note! : 'No note', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
                   Text(
-                    '${wfDateTime(v.publishedAt)}${v.publishedBy != null ? ' · ${v.publishedBy}' : ''} · ${v.instances} run${v.instances == 1 ? '' : 's'}',
+                    '${wfDateTime(v.publishedAt)}${v.publishedBy != null ? ' · ${_names[v.publishedBy] ?? v.publishedBy}' : ''} · ${v.instances} run${v.instances == 1 ? '' : 's'}',
                     style: context.uiText.body.copyWith(fontSize: 11.5, color: t.textMuted),
                   ),
                 ]),
               ),
               if (v.version != current)
-                FbLink(label: 'Make current', onTap: _busy ? null : () => _run(() => api.rollback(store.def.id, v.version)))
+                FbLink(label: 'Make current', onTap: _busy ? null : () => _askRollback(api, store, v.version))
               else
                 const WfChip('Current', tone: 'success'),
             ]),
