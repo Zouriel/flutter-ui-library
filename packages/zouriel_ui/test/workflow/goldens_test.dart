@@ -188,4 +188,10 @@ void main() {
       height: 940,
     );
   });
+
+  testWidgets('golden: a record whose own lifecycle is stuck (Needs attention)', (tester) async {
+    final api = FakeWorkflowApi()..canIntervene = true;
+    api.recordJson = {...api.recordJson, 'status': 'incident', 'error': 'A timer (auto:t2) failed 10 times and was stopped: InvalidOperationException: The database refused writing application.status.'};
+    await expectThemedGolden(tester, 'workflow_panel_stuck', (_) => UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact), height: 640);
+  });
 }

@@ -4,9 +4,13 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/widgets.dart';
 
+import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
+import '../core/types.dart';
 import '../dialog/drawer.dart';
+import '../dialog/modal.dart';
+import '../feedback/alert.dart';
 import '../navigation/stepper.dart';
 import '../theme/theme.dart';
 import 'api.dart';
@@ -174,6 +178,17 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   /// "Earlier, before starting over" is open.
   final _earlierOpen = ValueNotifier<bool>(false);
 
+  /// Bumped when the stuck-record banner's own state changes (who may act, busy, its error).
+  final _stuckTick = ValueNotifier<int>(0);
+
+  /// Whether the engine lets this person intervene (`me().canIntervene`), asked once the record is stuck.
+  bool _mayIntervene = false;
+  UiWorkflowApi? _interveneAskedFor;
+
+  /// A retry or skip of the record's stopped timer is under way, and what went wrong with the last one.
+  bool _recordBusy = false;
+  String _recordActError = '';
+
   /// Looks again every 15 s while a run is still going and the app is in view.
   Timer? _poll;
   bool _visible = true;
@@ -224,6 +239,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       _error.value = '';
       _openRuns.value = const {};
       _seenStopped.clear();
+      _recordActError = '';
       _syncPoll();
     }
     if (old.api != widget.api || old.entity != widget.entity || old.entityId != widget.entityId) reload();
@@ -285,6 +301,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
     _closeTimer?.cancel();
     _historyError.dispose();
     _earlierOpen.dispose();
+    _stuckTick.dispose();
     _record.dispose();
     _history.dispose();
     _error.dispose();
@@ -317,6 +334,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       _historyError.value = historyFailed;
       _error.value = '';
       _syncPoll();
+      if (record.status == 'incident') _askIntervene(api);
       if (before != null && _signature(before) != _signature(record)) widget.onChanged?.call(record);
       final stopped = [for (final i in record.instances) if (i.status == 'incident' && !_seenStopped.contains(i.id)) i.id];
       if (stopped.isNotEmpty) {
@@ -327,6 +345,109 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
     } catch (e) {
       if (mounted && n == _seq) _error.value = wfErrorText(e, 'Could not load the record’s workflow.');
     }
+  }
+
+  /// The record's lifecycle stuck: ask (once per API) whether this person may try it again or skip it.
+  void _askIntervene(UiWorkflowApi api) {
+    if (_interveneAskedFor == api) return;
+    _interveneAskedFor = api;
+    Future.sync(api.me).then((me) {
+      if (!mounted) return;
+      _mayIntervene = me?.canIntervene ?? false;
+      _stuckTick.value++;
+    }).catchError((Object _) {
+      // A failed answer is not kept: the next time the record is read stuck, ask again.
+      _interveneAskedFor = null;
+      if (mounted) {
+        _mayIntervene = false;
+        _stuckTick.value++;
+      }
+    });
+  }
+
+  /// Tries the record's stopped timer again, or skips it. The record view doesn't carry its lifecycle
+  /// instance's id, so it is looked up (the record's lifecycle instance in `incident`); if there is
+  /// none any more (cleared meanwhile), the reload shows that. Answers whether it worked.
+  Future<bool> _recordAct(String kind) async {
+    final api = widget.api;
+    final r = _record.value;
+    if (api == null || r == null || _recordBusy) return false;
+    final entity = widget.entity, id = widget.entityId;
+    _recordBusy = true;
+    _recordActError = '';
+    _stuckTick.value++;
+    try {
+      final page = await api.instances(UiWfInstanceQuery(entity: entity, entityId: id, kind: const ['record'], status: const ['incident'], take: 10));
+      final own = page.items.where((i) => r.lifecycle == null || i.definitionKey == r.lifecycle).firstOrNull ?? page.items.firstOrNull;
+      if (own != null) await (kind == 'retry' ? api.retry(own.id) : api.skip(own.id));
+      // Pointed at another record meanwhile: nothing here to update.
+      if (!mounted || entity != widget.entity || id != widget.entityId) return false;
+      await reload();
+      return true;
+    } catch (e) {
+      if (mounted && entity == widget.entity && id == widget.entityId) _recordActError = wfErrorText(e, 'That did not work.');
+      return false;
+    } finally {
+      _recordBusy = false;
+      if (mounted) _stuckTick.value++;
+    }
+  }
+
+  /// Skipping the record's stopped timer: confirmed, since what it would have done (an automatic move,
+  /// a time limit) never happens.
+  Future<void> _askSkipRecordTimer(UiWfRecord r) async {
+    await showUiModal<void>(
+      context: context,
+      title: 'Skip ${wfParkedTimerName(r.error)}',
+      size: UiModalSize.md,
+      builder: (ctx) => ValueListenableBuilder(
+        valueListenable: _stuckTick,
+        builder: (ctx, _, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+          Text('It is dropped without running: the record stays where it is, with nothing scheduled in its place. It can still be moved by hand.',
+              style: ctx.uiText.body.copyWith(fontSize: 14, color: ctx.ui.text)),
+          if (_recordActError.isNotEmpty) WfNote(_recordActError),
+        ]),
+      ),
+      footerBuilder: (ctx) => ValueListenableBuilder(
+        valueListenable: _stuckTick,
+        builder: (ctx, _, _) => Row(children: [
+          UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: _recordBusy ? null : () => Navigator.of(ctx).pop()),
+          const Spacer(),
+          UiButton(
+            label: 'Skip it',
+            onPressed: _recordBusy
+                ? null
+                : () async {
+                    final ok = await _recordAct('skip');
+                    if (ok && ctx.mounted) Navigator.of(ctx).pop();
+                  },
+          ),
+        ]),
+      ),
+    );
+  }
+
+  /// The record's own lifecycle is stuck (spec §10: a timer that kept failing was parked). It is not
+  /// frozen: its moves still work, and any move clears this.
+  Widget _stuck(BuildContext context, UiWfRecord r) {
+    final t = context.ui;
+    return UiAlert(
+      key: const ValueKey('wf-stuck'),
+      tone: UiAlertTone.warning,
+      heading: 'Needs attention',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
+        Text(wfReadableError(r.error).isNotEmpty ? wfReadableError(r.error) : 'Something in this record’s workflow stopped.', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+        if (_mayIntervene) ...[
+          FbHint('Try again runs it now. Skip drops it, and the record stays ${(r.stateLabel ?? '').isNotEmpty ? 'in ${r.stateLabel}' : 'where it is'}. Moving the record also clears this.'),
+          Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+            UiButton(label: 'Try again', size: UiSize.sm, onPressed: _recordBusy ? null : () => _recordAct('retry')),
+            UiButton(label: 'Skip', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _recordBusy ? null : () => _askSkipRecordTimer(r)),
+          ]),
+          if (_recordActError.isNotEmpty) WfNote(_recordActError),
+        ] else
+          const FbHint('The record can still be moved. Someone who looks after workflows has been told.'),
+      ]),
+    );
   }
 
   Future<void> _moved(UiWfRecord r) async {
@@ -386,7 +507,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   Widget _body(BuildContext context, UiWorkflowPanelLayout mode) {
     final horizontal = mode == UiWorkflowPanelLayout.horizontal;
     return ListenableBuilder(
-      listenable: Listenable.merge([_record, _history, _error, _openRuns, _historyError, _earlierOpen]),
+      listenable: Listenable.merge([_record, _history, _error, _openRuns, _historyError, _earlierOpen, _stuckTick]),
       builder: (context, _) {
         final t = context.ui;
         final r = _record.value;
@@ -400,9 +521,10 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
                   FbLink(label: 'Try again', fontSize: 12.5, onTap: reload),
                 ]),
               );
-        Widget withStale(Widget body) => stale == null
+        final stuck = r.status == 'incident' ? _stuck(context, r) : null;
+        Widget withStale(Widget body) => stale == null && stuck == null
             ? body
-            : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [stale, body]);
+            : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [?stale, ?stuck, body]);
         // Compact, or no lifecycle: the state as a badge and a strip, the actions, and one flat history.
         if (r.state == null || mode == UiWorkflowPanelLayout.compact) return withStale(_compact(context, r, gap: mode == UiWorkflowPanelLayout.compact ? t.space2 : t.space3));
         final path = wfPanelPath(r, _history.value);

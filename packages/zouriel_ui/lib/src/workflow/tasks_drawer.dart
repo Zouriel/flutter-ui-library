@@ -101,8 +101,9 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   /// Whether the app is in view: polling pauses while it is in the background.
   bool _visible = true;
 
-  /// Workflows that stopped and need someone to try again, skip or cancel: listed (and counted) only
-  /// for people the engine lets intervene, since only they can act on them.
+  /// Workflows that stopped and need someone to try again, skip or cancel: every instance in `incident`
+  /// (automations, lifecycle child runs, and record instances whose timer was parked), listed (and
+  /// counted) only for people the engine lets intervene, since only they can act on them.
   final _stopped = ValueNotifier<List<UiWfInstance>>(const []);
 
   /// Whether the engine lets this person intervene, asked once per API (again after a failed answer).
@@ -360,7 +361,7 @@ class _DrawerBodyState extends State<_DrawerBody> {
             label: 'Stopped workflows',
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
               WfSectionTitle('Stopped workflows', color: t.danger),
-              const FbHint('They need someone to try again, skip the step or cancel.'),
+              const FbHint('They need someone to try again or skip what stopped them.'),
               for (final r in stopped) _StoppedRow(run: r, onTap: () => setState(() => _open = r)),
             ]),
           ),
@@ -378,7 +379,8 @@ class _StoppedRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final title = '${run.title}${(run.entityTitle ?? '').isNotEmpty ? ' · ${run.entityTitle}' : ''}';
+    // A record's lifecycle reads "<lifecycle> · <record>", a run "<workflow> · <record>".
+    final title = wfStoppedLabel(run);
     final why = wfReadableError(run.error).isEmpty ? 'Stopped' : wfReadableError(run.error);
     return UiInteractive(
       onTap: onTap,

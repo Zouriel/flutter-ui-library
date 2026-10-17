@@ -239,6 +239,20 @@ it." Summaries (the "Stopped:" line, the panel's rows, the drawer's list) read t
 `wfReadableError`, which drops the engine's exception type ("InvalidOperationException: Bank API:
 503" reads "Bank API: 503"); a step's own detail keeps the full text for whoever debugs it.
 
+**Stuck timers (spec §10).** A timer that keeps failing (a lifecycle's automatic move or time limit,
+a task's reminder or escalation) puts its instance in `incident` with an `error`, record instances
+included; Try again re-arms it (due now) and Skip drops it unrun. A run or instance needs attention
+exactly when its status is `incident`. The readable error names the timer by its purpose ("An
+automatic move failed 10 times…", "A time limit…", "A reminder…", "An escalation…", else "A
+timer…"). In the run view such an incident offers Try again and Skip (confirmed: "Skip the
+automatic move", button "Skip it", no results asked), and Cancel for runs only; a record instance
+has no step list. When `record.status` is `incident` the panel shows a "Needs attention" warning
+with `record.error`; people who may intervene (`me()` is asked only then) get Try again and Skip for
+the record's lifecycle instance (looked up with `instances(entity, entityId, kind: ['record'],
+status: ['incident'])`), others read that someone who looks after workflows has been told. The
+record's moves stay offered. The tasks drawer's stopped workflows include record instances and
+lifecycle runs, named "workflow · record".
+
 **Breaking (0.28.0):** `UiWorkflowRun` is removed from the public API. Runs show where they matter:
 in `UiWorkflowPanel`'s Running section (a record's workflows) and in the tasks drawer's Stopped
 workflows (for people who may intervene). The view itself is the internal `WfRunView`.

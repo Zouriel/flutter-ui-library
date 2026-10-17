@@ -229,7 +229,13 @@ extension type const UiWfRecord._(UiJson json) implements Object {
   String? get state => wfStrOrNull(json['state']);
   String? get stateLabel => wfStrOrNull(json['stateLabel']);
   String? get stateTone => wfStrOrNull(json['stateTone']);
+  /// The record's lifecycle instance status: `active`, `outOfSync`, `completed`, or `incident` when a
+  /// timer of its state (an automatic move or time limit) kept failing and was parked (spec §10). An
+  /// `incident` record is not frozen: its transitions and reset are still offered, and any move clears it.
   String? get status => wfStrOrNull(json['status']);
+
+  /// Why the record is in `incident` (masked); null otherwise. Older engines leave it out.
+  String? get error => wfStrOrNull(json['error']);
   String? get stateEnteredAt => wfStrOrNull(json['stateEnteredAt']);
   List<UiWfTransitionOption> get transitions => wfList(json['transitions'], UiWfTransitionOption.fromJson);
   List<UiWfTask> get tasks => wfList(json['tasks'], UiWfTask.fromJson);

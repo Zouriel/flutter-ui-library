@@ -247,8 +247,9 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
           summary: 'Where people work through their approvals and tasks: a button for the app\'s header with the number open (red when one '
               'is overdue) that opens them in a drawer, open or finished, each opening its decision with its form. People act from any page; '
               'open it from code too, for a link in a message or a shortcut. With scope \'all\' it lists everyone\'s tasks, for admins. '
-              'People who may intervene also find stopped workflows here, counted in the badge (red) and listed above the tasks, each '
-              'opening its steps with try again, skip and cancel.',
+              'People who may intervene also find stopped workflows here (automations, a lifecycle\'s runs, and a record whose own '
+              'automatic move or time limit kept failing), counted in the badge (red) and listed above the tasks as “workflow · record”, '
+              'each opening with try again and skip (and cancel, for runs).',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             Container(
               padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space2),

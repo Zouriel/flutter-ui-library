@@ -216,10 +216,54 @@ String wfRemarksLabel(UiWfTask t) {
 /// Whether a move asks for remarks: its setting, else optional for red moves (older engines send none).
 UiWfRemarks wfRemarksFor(UiWfTransitionOption t) => t.comment ?? (t.tone == 'danger' ? UiWfRemarks.optional : UiWfRemarks.none);
 
-/// A run's error as people read it: without the engine's exception-type prefix
-/// ("InvalidOperationException: Bank API: 503" reads "Bank API: 503"). The step's own detail keeps
-/// the full text for whoever debugs it.
-String wfReadableError(String? error) => (error ?? '').replaceFirst(RegExp(r'^[A-Z]\w*Exception:\s*'), '');
+/// What a parked timer was for, by its purpose (`auto:<transition id>`, `sla:<state id>`,
+/// `reminder`, `escalation`): how a sentence starts with it, and how it reads inside one.
+const List<(String, String, String)> _timerPurposes = [
+  ('auto', 'An automatic move', 'the automatic move'),
+  ('sla', 'A time limit', 'the time limit'),
+  ('reminder', 'A reminder', 'the reminder'),
+  ('escalation', 'An escalation', 'the escalation'),
+];
+
+(String, String) _timerPurpose(String purpose) {
+  for (final (p, start, inside) in _timerPurposes) {
+    if (purpose == p || purpose.startsWith('$p:')) return (start, inside);
+  }
+  return ('A timer', 'the timer');
+}
+
+/// A run's error as people read it (the web `wfReadableError`): without the engine's exception-type
+/// prefixes ("InvalidOperationException: Bank API: 503" reads "Bank API: 503"), and a parked timer
+/// named by what it was for ("A timer (auto:t2) failed 10 times and was stopped: …" reads "An
+/// automatic move failed 10 times and was stopped: …"). The step's own detail keeps the full text.
+String wfReadableError(String? error) => (error ?? '')
+    .replaceFirstMapped(RegExp(r'^A timer \(([^)]*)\)'), (m) => _timerPurpose(m.group(1)!).$1)
+    .replaceAllMapped(RegExp(r'(^|:\s+)[A-Z]\w*Exception:\s*'), (m) => m.group(1)!);
+
+/// The parked timer an incident's error names, as it reads inside a sentence ("the automatic move",
+/// "the reminder"; else "the timer").
+String wfParkedTimerName(String? error) {
+  final m = RegExp(r'^A timer \(([^)]*)\)').firstMatch(error ?? '');
+  return _timerPurpose(m?.group(1) ?? '').$2;
+}
+
+/// An instance held in `incident` by a timer the engine parked (spec §10: it kept failing) rather
+/// than by a stopped step (the web `wfTimerParked`): always so for a lifecycle record instance (it has
+/// no steps of its own), and for a run when none of its paths waits on a stopped step and its error is
+/// the engine's parked-timer message ("A timer (reminder) failed …"). Retry re-arms the timer and
+/// skip drops it.
+bool wfTimerParked(UiWfInstance r) {
+  if (r.status != 'incident') return false;
+  if (r.kind == 'record') return true;
+  return !(r.tokens ?? const <UiWfRunToken>[]).any((t) => t.waiting == 'incident') && (r.error ?? '').startsWith('A timer (');
+}
+
+/// A stopped workflow as the tasks drawer lists it (the web `wfStoppedLabel`): "title · record"
+/// (the record's title, else its id), or just the title when it is about no record.
+String wfStoppedLabel(UiWfInstance i) {
+  final rec = (i.entityTitle ?? '').isNotEmpty ? i.entityTitle! : (i.entityId ?? '');
+  return rec.isNotEmpty ? '${i.title} · $rec' : i.title;
+}
 
 /// Whether a finished step ended by running out of time (an approval or task, or a wait, that timed out).
 bool wfStepTimedOut(Object? output) => output is Map && (output['outcome'] == 'timedOut' || output['timedOut'] == true);

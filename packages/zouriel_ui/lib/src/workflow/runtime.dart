@@ -1374,6 +1374,26 @@ class WfRunViewState extends State<WfRunView> {
     );
   }
 
+  /// Skipping the parked timer(s) of an incident: confirmed first, since what it would have done never
+  /// happens. No results are asked (a timer has none).
+  Future<void> _askSkipTimer() async {
+    final r = _run;
+    if (r == null) return;
+    await _runDialog(
+      title: 'Skip ${wfParkedTimerName(r.error)}',
+      confirm: 'Skip it',
+      body: (ctx, d) => [
+        Text(
+          r.kind == 'record'
+              ? 'It is dropped without running: the record stays where it is, with nothing scheduled in its place. It can still be moved by hand.'
+              : 'It is dropped without running. The task stays open and can still be decided.',
+          style: _body(ctx, size: 14),
+        ),
+      ],
+      onConfirm: (d) => _act('skip', dialog: d),
+    );
+  }
+
   /// Cancelling is a negative action: confirmed, with optional remarks that go into the audit.
   Future<void> _askCancel() async {
     var remarks = '';
@@ -1434,7 +1454,17 @@ class WfRunViewState extends State<WfRunView> {
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
               Text.rich(TextSpan(children: [const TextSpan(text: 'Stopped: ', style: TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: wfReadableError(r.error))]), style: _body(context)),
-              if (_mayIntervene && incidents.length > 1) ...[
+              if (_mayIntervene && wfTimerParked(r)) ...[
+                // A timer kept failing and the engine parked it: Try again re-arms it (due now), Skip drops it unrun.
+                FbHint(r.kind == 'record'
+                    ? 'Try again runs it now. Skip drops it: the record stays where it is. Moving the record by hand also clears this.'
+                    : 'Try again runs it now. Skip drops it; the task stays open and can still be decided.'),
+                Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+                  btn('Try again', () => _act('retry')),
+                  btn('Skip', _askSkipTimer, variant: UiButtonVariant.outline),
+                  if (r.kind != 'record') cancel,
+                ]),
+              ] else if (_mayIntervene && incidents.length > 1) ...[
                 // Several paths stopped: each can be retried or skipped on its own.
                 for (final i in incidents)
                   Row(spacing: t.space2, children: [
@@ -1457,9 +1487,11 @@ class WfRunViewState extends State<WfRunView> {
       else if (_mayIntervene && (r.status == 'waiting' || r.status == 'running' || r.status == 'queued'))
         Align(alignment: AlignmentDirectional.centerStart, child: cancel),
       if (_error.isNotEmpty) WfNote(_error),
-      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        for (final s in _rows) _RunStepRow(row: s),
-      ]),
+      // A lifecycle record instance has no steps of its own: no empty list for it.
+      if (_rows.isNotEmpty)
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          for (final s in _rows) _RunStepRow(row: s),
+        ]),
       if (r.tasks?.isNotEmpty ?? false)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
           const WfSectionTitle('Tasks'),
@@ -1519,8 +1551,8 @@ class _RunStepRow extends StatelessWidget {
 
 // ── Audit log ───────────────────────────────────────────────────────────────────────────────
 
-/// `ui-workflow-audit`: the tamper-evident audit log: filter by record, run or kind, see
-/// before/after values, export, and check the hash chain.
+/// `ui-workflow-audit`: the tamper-evident audit log: filter by kind or record id (the inputs show
+/// one record or one run), see before/after values, export, and check the hash chain.
 ///
 /// The web version downloads the export in the browser; here the bytes go to [onExport], so the
 /// app can save or share them (path_provider, share_plus…).
