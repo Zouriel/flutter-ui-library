@@ -105,19 +105,21 @@ Implement `UiWorkflowApi` yourself to talk to an engine some other way (the show
 in-memory one, `apps/showcase/lib/pages/workflow_demo_api.dart`). It has the same calls as the REST
 client; a few are optional or only needed by some widgets:
 
-- `resetPreview` (optional): lists what a reset would take back. Throw `UnimplementedError` when
-  there is no such list; the reset dialog then only asks for confirmation.
+- `resetPreview` (optional, the web `resetPreview?`): lists what a reset would take back. Its default
+  throws `UnimplementedError`, so a class that `extends UiWorkflowApi` can leave it out (one that
+  `implements` it throws `UnimplementedError` itself); the reset dialog then only asks for
+  confirmation.
 - `updatePermissions`: needed by `UiWorkflowPermissions` to save.
+- `me` (optional): who is signed in and what they may do. `UiWorkflowApi.me()` has a default that
+  answers null ("not known"); a class that `extends UiWorkflowApi` can leave it out, and one that
+  `implements` it can return null. Without an answer the builder and the permissions page offer
+  editing and the server decides, showing its answer if it refuses.
 
 The engine's refusals reach people through the usual error text (`UiWfApiError.message`), with no
 special screens: `wrongLifecycle` (409, the record follows another lifecycle), `commentRequired`
 (400, remarks the move or reset requires), `notAllowed` (a reset outside the states it is offered
 in), `resetChanged` (409, the list changed) and a reset list refused because no reset is offered
 (the dialog then says the list couldn't be read).
-- `me` (optional): who is signed in and what they may do. `UiWorkflowApi.me()` has a default that
-  answers null ("not known"); a class that `extends UiWorkflowApi` can leave it out, and one that
-  `implements` it can return null. Without an answer the builder and the permissions page offer
-  editing and the server decides, showing its answer if it refuses.
 
 ## The builder
 
@@ -150,13 +152,17 @@ UiWorkflowBuilder(
 Layout by its own width: wide (1100+) shows the step picker, canvas and settings side by side;
 medium (720+) opens the picker in a dialog; narrow opens the picker and the settings in bottom
 sheets. Grips drag at once (with a 1px slop so they beat scroll views on phones); a card or a
-picker type drags after a long press on touch and after a small move with a mouse. The lifecycle
-diagram sits on `UiCanvasViewport` (pan, pinch, wheel and trackpad zoom, `+` `-` `0`, a fit that
-keeps re-fitting until the person pans or zooms, and a minimap when it is at least 520x340).
+picker type drags after a long press on touch and after a small move with a mouse; Escape cancels a
+drag ("Move cancelled"), and a drop lands only on a list that can be seen (not one scrolled out of
+view under the header). The grip shows when a card is hovered or selected (always on touch); read-only
+hides grips and menus but keeps their room. Only a tap on the canvas background opens the workflow's
+settings. On a phone the settings sheet keeps Delete and the "‹ parent" link for states, transitions,
+the reset and their steps.
 
-The lifecycle diagram sits on `UiCanvasViewport`, which keeps fitting the diagram until the person
-pans or zooms (a refit that comes up mid-drag waits for the pointer to lift) and never fits below
-60% (`fitMinZoom`): a larger diagram starts at its top-left corner and the minimap shows the rest.
+The lifecycle diagram sits on `UiCanvasViewport` (pan, pinch, wheel and trackpad zoom, `+` `-` `0`,
+and a minimap when it is at least 520x340), which keeps fitting the diagram until the person pans or
+zooms (a refit that comes up mid-drag waits for the pointer to lift) and never fits below 60%
+(`fitMinZoom`): a larger diagram starts at its top-left corner and the minimap shows the rest.
 
 ## Running workflows in your app
 
@@ -166,9 +172,12 @@ it, a snippet and its parameters, and a "You are" / "Application" picker so you 
 person gets: the head of office sees every button (Start over once an application has moved on from
 Draft), the applicant only their own moves, finance only the sign-off. "Show a stopped payment"
 reproduces a payment the bank refused: with the demo bank down (the engine sample's
-`POST /api/demo/bank {down}`; in the in-memory office, `DemoWorkflowApi.bankDown`), finance signs the
-application off, Create invoice fails with "Bank API: 503 Service Unavailable" four times as the
-clock moves on, and the run stops; the panel shows it under Running, and the bank is back by then.
+`POST /api/demo/bank {down}`; in the in-memory office, `DemoWorkflowApi.stopPayment`, which does it
+in one go without changing who the page acts as), finance signs the application off, Create invoice
+fails with "Bank API: 503 Service Unavailable" four times as the clock moves on, and the run stops;
+the panel shows it under Running, and the bank is back by then. Start over, or approving or rejecting
+the application, cancels its finance check. "Send another application for review" starts another
+application's finance sign-off, so finance has a task again.
 
 ```dart
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
@@ -186,7 +195,14 @@ current state the person's moves, tasks and manual workflows (or "Nothing for yo
 now."). `layout` picks `vertical`, `horizontal`, `compact`, `sideDrawer` or `bottomDrawer`. The drawer
 layouts put a rail of dots on the screen's edge through the overlay, wherever the widget sits: a
 mouse hover opens a `UiDrawerPeek` over the page (moving away closes it), a tap opens a regular
-`showUiDrawer`.
+`showUiDrawer`. The host can open and close it with `open` and follow it with `onOpenChanged` (the web
+`[(open)]`). Switching to another record drops the old one at once (no stale buttons while the new one
+loads); a load error shows the engine's message with its details.
+
+In the current state, a task opens the decide dialog: instructions, the form, remarks, earlier
+decisions as a bulleted list, and "Hand it to someone else", one combobox that searches the directory
+as a name is typed (people already on the task aren't offered), then Hand over. While a decision is
+on its way Close, the backdrop, Escape and Back wait. Start over sits under a dashed rule.
 
 `compact` is for a side column or a details card: the state as a badge with "since" (and "Out of
 sync" when it is), a strip of the lifecycle's states (the current one filled, passed ones in a
@@ -217,7 +233,8 @@ In the run view, people the engine lets intervene (`me().canIntervene`) can:
   outputs as the registry declares them, with their labels); only filled values are sent, trimmed
   (`skip(id, outputs:, target:)`);
 - **Cancel the run**: a confirmation with "Remarks (optional)" (`cancel(id, reason:)`).
-Everyone else sees why it stopped and "Someone who looks after workflows can try it again or skip
+In both dialogs Back and the confirm button wait while the answer is on its way, and a double tap on
+Skip opens one dialog. Everyone else sees why it stopped and "Someone who looks after workflows can try it again or skip
 it." Summaries (the "Stopped:" line, the panel's rows, the drawer's list) read the error through
 `wfReadableError`, which drops the engine's exception type ("InvalidOperationException: Bank API:
 503" reads "Bank API: 503"); a step's own detail keeps the full text for whoever debugs it.
@@ -326,11 +343,15 @@ drawer.currentState!.show();     // also hide() and refresh(); isOpen, count, ov
 | `variant` | `UiButtonVariant` | `outline` | The button's look. |
 | `showButton` | `bool` | `true` | Off when the app opens the drawer from its own control. |
 | `refreshSeconds` | `int` | `60` | How often the count refreshes while the app is in the foreground; 0 only on start, open, close and decisions. |
-| `pageSize` | `int` | `25` | Tasks per page in the inbox. |
-| `onDecided` | `ValueChanged<UiWfTask>?` | | After a task was decided in the drawer. |
+| `pageSize` | `int` | `25` | Tasks per page in the drawer's list. |
+| `scope` | `String` | `'mine'` | The signed-in person's tasks (`'mine'`), or everyone's (`'all'`, for admins; give it a `label` such as "All tasks"). The count follows it, and the empty list is worded for it ("No open tasks."). |
+| `onDecided` | `ValueChanged<UiWfTask>?` | | After a task was decided in the drawer (read when it happens, so a new callback from the host is used). |
 
-There is no read-only mode: the inbox shows only the person's own tasks, and a task they may not
-decide (`canDecide` false) is listed without "Your turn" and can't be opened, as in the tasks drawer.
+The open drawer follows the host: another `api`, `scope` or `pageSize` reaches its list. `hide()`
+closes a decision dialog open over it too, and the drawer closes when the widget goes away. A task the
+person may not decide (`canDecide` false, e.g. someone else's with scope `'all'`) still opens, with its
+decision buttons off. While a decision is on its way its dialog can't be closed, and a decision saved
+after the dialog was taken away still reloads the list.
 
 ## Permissions (UiWorkflowPermissions)
 

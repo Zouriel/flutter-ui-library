@@ -1509,12 +1509,12 @@ Design automations and lifecycles; two-way definition, API, schema, settings, pe
 
 ### UiWorkflowPanel (component, `ui-workflow-panel`)
 File: `workflow/src/panel.ts`  
-A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens). Record types with no lifecycle still show their manual workflows, tasks and history.  
+A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens; `[(open)]` is `open` + `onOpenChanged`). Record types with no lifecycle still show their manual workflows, tasks and history.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### WfRecordActions (component, `ui-wf-record-actions`)
 File: `workflow/src/runtime.ts`  
-A record's moves, manual workflows and tasks with their dialogs, used by the workflow panel.  
+A record's moves, manual workflows and tasks with their dialogs, used by the workflow panel (internal: not exported by the package).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### WfTaskInbox (component, `ui-wf-task-inbox`)
@@ -1525,6 +1525,16 @@ The approvals and tasks inside the tasks drawer, with the decide dialog (interna
 ### WfRunView (component, `ui-wf-run-view`)
 File: `workflow/src/runtime.ts`  
 One run over its workflow, with retry, skip (asking for the step's results, per stopped path) and cancel (confirmed, with remarks), shown in the workflow panel's Running section and the tasks drawer's Stopped workflows (internal; was the public `UiWorkflowRun` before 0.28.0).  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowTasksDrawer (component, `ui-workflow-tasks-drawer`)
+File: `workflow/src/tasks-drawer.ts`  
+A "My tasks" button with the number open (red when one is overdue or a workflow stopped) that opens the tasks in a drawer, open or finished, each opening its decision; stopped workflows above them for people who may intervene. `[(open)]` is `open` + `onOpenChanged`; `scope: 'all'` lists everyone's tasks.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowPermissions (component, `ui-workflow-permissions`)
+File: `workflow/src/permissions.ts`  
+Who may make each move, start over, start each manual workflow and decide each task, edited on the published version and published as a new one; says what it did (records moved, draft steps skipped).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiWorkflowAudit (component, `ui-workflow-audit`)
