@@ -128,7 +128,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
 
   /// What `me()` said about editing; an API without it (or an error) leaves editing on, and the
   /// server still decides.
-  bool _mayEdit = true;
+  bool? _mayEdit;
   bool? _lastDirty;
 
   UiWorkflowBuilderController get controller => widget.controller ?? (_own ??= UiWorkflowBuilderController(definition: widget.definition));
@@ -178,7 +178,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   }
 
   void _applyReadOnly() {
-    final ro = widget.readOnly ?? !_mayEdit;
+    final ro = widget.readOnly ?? (_mayEdit == false);
     controller.readOnly = ro;
     if (ro && _view != UiWorkflowBuilderView.build) _view = UiWorkflowBuilderView.build;
   }
@@ -199,6 +199,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     if (!identical(c.api, api)) c.api = api;
     if (!identical(_loadedFor, api)) {
       _loadedFor = api;
+      _mayEdit = null; // a new engine: ask it again
       _loadContext(api);
       _validateSoon();
     }
@@ -235,24 +236,29 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     } catch (e) {
       if (mounted) setState(() => _saveError = e is UiWfApiError ? e.message : 'Could not load the app’s record types.');
     }
-    // Settings are optional for builders (only admins can read them).
-    api.settings().then((s) {
-      if (mounted) controller.settings = s.settings;
-    }).catchError((Object _) {});
-    // Whether this person may edit.
-    // Future.sync: an API without me() (one that throws) leaves editing on.
-    Future.sync(api.me).then((me) {
-      if (!mounted) return;
-      setState(() {
-        _mayEdit = me.canEdit;
-        _applyReadOnly();
-      });
-    }).catchError((Object _) {});
+    // Whether this person may edit; an API without me() (or an error) leaves editing on, and the
+    // server still decides. Settings (webhook connections) are only for editors, so they wait for
+    // the answer, and so does the engine check.
+    final canEdit = await Future.sync(api.me).then((me) => me.canEdit).catchError((Object _) => true);
+    if (!mounted || !identical(api, controller.api)) return;
+    setState(() {
+      _mayEdit = canEdit;
+      _applyReadOnly();
+    });
+    _reportDirty();
+    _validateSoon();
+    if (canEdit) {
+      // Settings are optional for builders (only admins can read them).
+      api.settings().then((s) {
+        if (mounted) controller.settings = s.settings;
+      }).catchError((Object _) {});
+    }
   }
 
   /// Tells the host whether leaving now would lose edits.
   void _reportDirty() {
-    final d = widget.persist && controller.api != null && _dirty;
+    // Someone only looking never has unsaved changes.
+    final d = widget.persist && controller.api != null && !controller.readOnly && _dirty;
     if (d == _lastDirty) return;
     _lastDirty = d;
     final cb = widget.onDirtyChanged;
@@ -264,7 +270,9 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     _validateTimer?.cancel();
     final api = controller.api;
     // Checking needs the right to edit.
-    if (api == null || controller.readOnly) return;
+    // Checking needs the right to edit: wait for me(), and never check for someone only looking.
+    final lookOnly = widget.readOnly ?? (_mayEdit == null ? null : !_mayEdit!);
+    if (api == null || lookOnly != false) return;
     final def = controller.def;
     final seq = ++_validateSeq;
     // Not notified here: this runs while building.
@@ -708,7 +716,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
           border: Border(left: left ? BorderSide.none : BorderSide(color: t.borderSubtle), right: left ? BorderSide(color: t.borderSubtle) : BorderSide.none),
         );
         return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (layout == UiWorkflowBuilderLayout.wide)
+          // Someone only looking has nothing to add.
+          if (layout == UiWorkflowBuilderLayout.wide && !controller.readOnly)
             Container(
               width: 224,
               padding: EdgeInsets.fromLTRB(t.space2, t.space3, t.space2, 0),
@@ -721,7 +730,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
                     padding: EdgeInsets.only(bottom: t.space2),
                     child: Semantics(header: true, child: Text('Add a step', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: t.textSecondary))),
                   ),
-                  Expanded(child: WfReadOnly(readOnly: controller.readOnly, child: WfStepPicker(dnd: _dnd, onChosen: _addFromPalette))),
+                  Expanded(child: WfStepPicker(dnd: _dnd, onChosen: _addFromPalette)),
                 ]),
               ),
             ),

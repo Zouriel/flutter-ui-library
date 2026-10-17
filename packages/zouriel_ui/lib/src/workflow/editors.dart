@@ -208,29 +208,42 @@ class WfDurationInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = parseSimpleDuration(value) ?? (n: 1, unit: 'D', negative: false);
-    return Row(spacing: 6, children: [
-      SizedBox(
-        width: signed ? 88 : 96,
-        child: UiNumberInput(
-          size: UiSize.sm,
-          value: p.n,
-          min: 0,
-          max: wfDurationUnitMax[p.unit],
-          semanticLabel: '$label amount',
-          onChanged: (v) => onChanged(formatSimpleDuration(v ?? 0, p.unit, p.negative)),
-        ),
-      ),
-      Expanded(child: WfSelect(label: '$label unit', value: p.unit, options: _units, onChanged: (u) => onChanged(formatSimpleDuration(p.n, u, p.negative)))),
-      if (signed)
-        Expanded(
-          child: WfSelect(
-            label: '$label direction',
-            value: p.negative ? 'before' : 'after',
-            options: const [(value: 'before', label: 'before'), (value: 'after', label: 'after')],
-            onChanged: (d) => onChanged(formatSimpleDuration(p.n, p.unit, d == 'before')),
+    // The unit select keeps room for its longest word ("minutes", "months"), the direction for
+    // "before"; the amount takes what is left, up to 96. (The web reserves 88 and 76; this select's
+    // padding and chevron need a little more.) Touch steppers are 48 wide each and don't fit a box
+    // this small, so on touch the amount is typed (a number keyboard) and can shrink to 64; with a
+    // mouse its 24-wide steppers stay and it keeps 88.
+    const unitMin = 108.0, directionMin = 96.0;
+    final touch = uiTouchPlatform(context);
+    return LayoutBuilder(builder: (context, box) {
+      final rest = box.maxWidth - 6 - unitMin - (signed ? 6 + directionMin : 0);
+      final amount = rest.clamp(touch ? 64.0 : 88.0, signed ? 88.0 : 96.0);
+      return Row(spacing: 6, children: [
+        SizedBox(
+          width: amount,
+          child: UiNumberInput(
+            size: UiSize.sm,
+            steppers: !touch,
+            value: p.n,
+            min: 0,
+            max: wfDurationUnitMax[p.unit],
+            semanticLabel: '$label amount',
+            onChanged: (v) => onChanged(formatSimpleDuration(v ?? 0, p.unit, p.negative)),
           ),
         ),
-    ]);
+        Expanded(flex: 10, child: WfSelect(label: '$label unit', value: p.unit, options: _units, onChanged: (u) => onChanged(formatSimpleDuration(p.n, u, p.negative)))),
+        if (signed)
+          Expanded(
+            flex: 9,
+            child: WfSelect(
+              label: '$label direction',
+              value: p.negative ? 'before' : 'after',
+              options: const [(value: 'before', label: 'before'), (value: 'after', label: 'after')],
+              onChanged: (d) => onChanged(formatSimpleDuration(p.n, p.unit, d == 'before')),
+            ),
+          ),
+      ]);
+    });
   }
 }
 

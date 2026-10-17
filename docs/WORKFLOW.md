@@ -84,7 +84,7 @@ UiWorkflowBuilder(
 | `persist` | `bool` | Save and Publish through the API. |
 | `onProblemsChanged` | `List<UiWfProblem>` | The engine's problems after each check. |
 | `onSaved` | `UiWorkflowDefinition` | After a successful save. |
-| `readOnly` | `bool?` | Look without changing anything; null asks `api.me()` whether the person may edit. Shows "View only", hides Save, Publish, Versions and Test, turns controls off and skips the engine check. |
+| `readOnly` | `bool?` | Look without changing anything; null asks `api.me()` whether the person may edit. Shows "View only", hides Save, Publish, Versions and Test, the palette, the + slots, grips and step menus; cards still open in the inspector, whose fields are turned off, and the controller ignores edits. Viewers never count as unsaved, and nothing is checked by the engine or loaded (settings) until `me()` has answered, and never for viewers. |
 | `onDirtyChanged` | `bool` | Whether there are edits not yet saved through the API (with `persist`). |
 | `actions` | `Widget?` | Your own buttons in the header. |
 
@@ -142,3 +142,7 @@ survive a round trip, and every helper returns a new definition, keeping untouch
   the non-modal drawer is a separate widget, `UiDrawerPeek` (an overlay with no barrier or focus grab).
 - The web stepper's orientation is explicit; here `axis` stays optional (horizontal when it fits), and
   the workflow panel passes `Axis.vertical` for step bodies.
+- The duration editor's unit select keeps 108 (direction 96) rather than the web's 88 (76): this select's
+  padding and chevron need it to show "minutes" whole. On touch the amount has no steppers (48-wide
+  touch steppers don't fit a 64–96 box; a number keyboard takes their place).
+- Autosized text areas refit to their width with no extra code (Flutter lays text out per width).

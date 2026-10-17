@@ -86,11 +86,11 @@ void main() {
     testWidgets('steppers and arrow keys step, clamped and rounded to precision', (tester) async {
       final handle = tester.ensureSemantics();
       final log = <num?>[];
-      await pumpUi(tester, _Num(initial: 9.5, max: 10, precision: 1, log: log));
-      await tester.tap(find.bySemanticsLabel('Increment'));
+      await pumpUi(tester, _Num(initial: 9.5, max: 10, precision: 1, label: 'Amount', log: log));
+      await tester.tap(find.bySemanticsLabel('Increase Amount'));
       await tester.pump();
       expect(log.last, 10);
-      await tester.tap(find.bySemanticsLabel('Decrement'));
+      await tester.tap(find.bySemanticsLabel('Decrease Amount'));
       await tester.pump();
       expect(log.last, 9);
       await tester.tap(find.byType(EditableText));
@@ -101,8 +101,8 @@ void main() {
       await tester.pump();
       expect(log.last, 9);
       // Side by side at the end, each a full touch target.
-      final dec = tester.getRect(find.bySemanticsLabel('Decrement'));
-      final inc = tester.getRect(find.bySemanticsLabel('Increment'));
+      final dec = tester.getRect(find.bySemanticsLabel('Decrease Amount'));
+      final inc = tester.getRect(find.bySemanticsLabel('Increase Amount'));
       expect(dec.right, inc.left);
       expect(dec.top, inc.top);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));

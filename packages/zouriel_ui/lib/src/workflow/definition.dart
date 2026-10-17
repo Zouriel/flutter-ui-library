@@ -833,7 +833,7 @@ String tokenLabel(List<UiWfToken> tokens, String path) {
 // ── Plain-English summaries ─────────────────────────────────────────────────────────────────
 
 class UiWfDescribeContext {
-  const UiWfDescribeContext({required this.registry, required this.def, this.tokens, this.workflowTitle, this.userName});
+  const UiWfDescribeContext({required this.registry, required this.def, this.tokens, this.workflowTitle, this.userName, this.lifecycle});
   final UiWorkflowRegistry? registry;
   final UiWorkflowDefinition def;
   final List<UiWfToken>? tokens;
@@ -841,6 +841,9 @@ class UiWfDescribeContext {
   /// Other workflows' titles by key (for sub-workflows and lifecycle triggers).
   final String? Function(String key)? workflowTitle;
   final String? Function(String id)? userName;
+
+  /// Another lifecycle's published definition by key, when loaded (names its states and transitions).
+  final UiWorkflowDefinition? Function(String key)? lifecycle;
 }
 
 final RegExp _duration = RegExp(r'^(-)?P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$');
@@ -917,10 +920,12 @@ String describeTrigger(UiWfTrigger? t, UiWfDescribeContext ctx) {
       final to = t.to;
       return 'When ${f?.label ?? t.field} ${from != null && from.isNotEmpty ? 'changes from ${vals(from)} ' : 'changes '}${to != null && to.isNotEmpty ? 'to ${vals(to)}' : ''}'.trim();
     case 'stateEntered':
-      final states = (t.states ?? const []).join(' or ');
+      final known = ctx.lifecycle?.call(t.lifecycle ?? '')?.lifecycle?.states ?? const <UiWfState>[];
+      final states = [for (final k in t.states ?? const <String>[]) known.where((s) => s.key == k).firstOrNull?.label ?? k].join(' or ');
       return 'When ${lifecycleName()} enters ${states.isEmpty ? '…' : states}';
     case 'transitionApplied':
-      final ts = (t.transitions ?? const []).join(' or ');
+      final moves = ctx.lifecycle?.call(t.lifecycle ?? '')?.lifecycle?.transitions ?? const <UiWfTransition>[];
+      final ts = [for (final k in t.transitions ?? const <String>[]) '“${moves.where((m) => m.key == k).firstOrNull?.label ?? k}”'].join(' or ');
       return 'After ${ts.isEmpty ? '…' : ts} in ${lifecycleName()}';
     case 'dateReached':
       return '${describeDuration(t.offset)} ${f?.label ?? t.field ?? 'a date'}'.replaceFirst(RegExp(r'^no time set '), 'On ');

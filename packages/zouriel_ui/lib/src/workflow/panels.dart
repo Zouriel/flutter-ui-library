@@ -95,7 +95,8 @@ class _WfVersionsState extends State<WfVersions> {
     if (api == null) return;
     try {
       final d = await api.definition(store.def.id);
-      final diff = d.summary.version > 0 ? await api.diff(d.summary.id) : const <String>[];
+      // The engine's own flag says whether anything is unpublished; the diff only explains what.
+      final diff = d.summary.version > 0 && d.summary.hasDraftChanges ? await api.diff(d.summary.id) : const <String>[];
       if (mounted) {
         setState(() {
           _detail = d;
@@ -125,6 +126,7 @@ class _WfVersionsState extends State<WfVersions> {
   }
 
   Future<void> _askRollback(UiWorkflowApi api, UiWorkflowBuilderController store, int version) async {
+    if (_busy) return;
     final ok = await showUiModal<bool>(
       context: context,
       title: 'Make version $version current?',
@@ -150,6 +152,8 @@ class _WfVersionsState extends State<WfVersions> {
   }
 
   Future<void> _run(Future<void> Function() f) async {
+    // One at a time: a double tap must not publish (or roll back, archive, restore) twice.
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = '';
@@ -297,7 +301,7 @@ class _WfTestState extends State<WfTest> {
   Future<void> _run() async {
     final store = WfBuilderScope.read(context).store;
     final api = store.api;
-    if (api == null) return;
+    if (api == null || _busy) return;
     setState(() {
       _busy = true;
       _error = '';

@@ -10,6 +10,7 @@ import '../datepicker/date_picker.dart';
 import '../forms/text/inputs.dart';
 import '../forms/text/number_input.dart';
 import '../forms/text/time_picker.dart';
+import '../forms/choice/switch.dart';
 import '../theme/theme.dart';
 import 'api.dart';
 import 'bits.dart';
@@ -344,7 +345,16 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
     );
   }
 
-  Widget _items(List<String> values, ValueChanged<String> onRemove, {String removeVerb = 'Remove', bool code = false}) {
+  /// `application.applicantEmail` reads "Application › Applicant email".
+  String _fieldName(String path) {
+    final i = path.indexOf('.');
+    if (i < 0) return path;
+    final e = _registry?.entities.where((x) => x.key == path.substring(0, i)).firstOrNull;
+    final f = e?.fields.where((x) => x.key == path.substring(i + 1)).firstOrNull;
+    return e != null && f != null ? '${e.label} › ${f.label}' : path;
+  }
+
+  Widget _items(List<String> values, ValueChanged<String> onRemove, {String removeVerb = 'Remove', bool code = false, String Function(String v)? labelOf}) {
     final t = context.ui;
     return Wrap(spacing: 4, runSpacing: 4, children: [
       for (final v in values)
@@ -352,10 +362,10 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           padding: const EdgeInsets.only(left: 8),
           decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(t.radiusXs)),
           child: Row(mainAxisSize: MainAxisSize.min, spacing: 2, children: [
-            Text(v, style: (code ? context.uiText.code : context.uiText.body).copyWith(fontSize: 12.5, color: t.text)),
+            Text(labelOf?.call(v) ?? v, style: (code ? context.uiText.code : context.uiText.body).copyWith(fontSize: 12.5, color: t.text)),
             UiInteractive(
               onTap: () => onRemove(v),
-              semanticLabel: '$removeVerb $v',
+              semanticLabel: '$removeVerb ${labelOf?.call(v) ?? v}',
               excludeChildSemantics: true,
               pressScale: false,
               builder: (context, s) => Container(
@@ -592,7 +602,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       FbSetting(
         label: 'Hide these values in the log and run views',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
-          if (_s.maskedFields.isNotEmpty) _items(_s.maskedFields, _removeMasked, removeVerb: 'Stop hiding', code: true),
+          if (_s.maskedFields.isNotEmpty) _items(_s.maskedFields, _removeMasked, removeVerb: 'Stop hiding', labelOf: _fieldName),
           WfSelect(key: ValueKey('m$_resetKey'), label: 'Add a field to hide', placeholder: 'Add a field…', value: null, options: maskable, onChanged: _addMasked),
           const FbHint('Fields the app marks as sensitive are always hidden.'),
           SizedBox(height: t.space1),
@@ -630,7 +640,16 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           return _card([
             Row(children: [
               Expanded(child: Text(label, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text))),
-              FbSwitch(value: _isPaused(entity), label: 'Paused', onChanged: _busy ? null : (on) => _setPaused(entity, on)),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                widthFactor: 1,
+                child: UiSwitch(
+                  value: _isPaused(entity),
+                  label: _isPaused(entity) ? 'Paused' : 'Running',
+                  semanticLabel: 'Pause workflows for $label',
+                  onChanged: _busy ? null : (on) => _setPaused(entity, on),
+                ),
+              ),
             ]),
             for (final tr in triggers)
               Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [

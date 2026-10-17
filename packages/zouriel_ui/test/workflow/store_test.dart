@@ -3,6 +3,19 @@ import 'package:zouriel_ui/zouriel_ui.dart';
 
 // Port of the web `store.spec.ts`.
 
+class _LifecycleApi extends Fake implements UiWorkflowApi {
+  int loads = 0;
+  @override
+  Future<UiWfDefinitionDetail> definition(String id) async {
+    loads++;
+    final life = UiWorkflowDefinition.fromJson({
+      'kind': 'lifecycle', 'key': 'appLife', 'title': 'Application lifecycle', 'entity': 'application',
+      'lifecycle': {'states': [{'id': 's1', 'key': 'review', 'label': 'In review', 'category': 'active'}], 'transitions': <Object?>[]},
+    });
+    return UiWfDefinitionDetail.fromJson({'summary': {'id': id, 'key': 'appLife'}, 'draft': life.json, 'published': life.json, 'versions': <Object?>[], 'problems': <Object?>[]});
+  }
+}
+
 void main() {
   late DateTime now;
   UiWorkflowBuilderController fresh() {
@@ -169,5 +182,18 @@ void main() {
     expect(s.errorCount, 2);
     expect(s.problemsOf('s1').map((p) => p.message), ['One', 'Two']);
     expect(s.problemsOf(null).single.message, 'Whole');
+  });
+
+  test('the describe context loads another lifecycle once, then names its states', () async {
+    final s = fresh();
+    final api = _LifecycleApi();
+    s.api = api;
+    s.others = [UiWfDefinitionSummary.fromJson({'id': 'L1', 'key': 'appLife', 'title': 'Application lifecycle', 'kind': 'lifecycle'})];
+    final trig = UiWfTrigger.fromJson({'type': 'stateEntered', 'lifecycle': 'appLife', 'states': ['review']});
+    expect(describeTrigger(trig, s.describeContext()), 'When Application lifecycle enters review'); // not loaded yet
+    describeTrigger(trig, s.describeContext()); // asked again while loading: still one request
+    await Future<void>.delayed(Duration.zero);
+    expect(describeTrigger(trig, s.describeContext()), 'When Application lifecycle enters In review');
+    expect(api.loads, 1);
   });
 }

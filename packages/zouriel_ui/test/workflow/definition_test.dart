@@ -255,6 +255,28 @@ void main() {
       expect(describeTrigger(UiWfTrigger.fromJson({'type': 'dateReached', 'field': 'deadline', 'offset': '-P2D'}), ctx), '2 days before deadline');
     });
 
+    test('lifecycle triggers name the other lifecycle\'s states and transitions once it is loaded', () {
+      final def = createWorkflow('automation', title: 'x', entity: 'application');
+      final life = UiWorkflowDefinition.fromJson({
+        'kind': 'lifecycle', 'key': 'appLife', 'title': 'Application lifecycle', 'entity': 'application',
+        'lifecycle': {
+          'states': [
+            {'id': 's1', 'key': 'review', 'label': 'In review', 'category': 'active'},
+            {'id': 's2', 'key': 'done', 'label': 'Approved', 'category': 'terminal'},
+          ],
+          'transitions': [{'id': 't1', 'key': 'approve', 'label': 'Approve', 'from': ['review'], 'to': 'done'}],
+        },
+      });
+      final entered = UiWfTrigger.fromJson({'type': 'stateEntered', 'lifecycle': 'appLife', 'states': ['review', 'done']});
+      final moved = UiWfTrigger.fromJson({'type': 'transitionApplied', 'lifecycle': 'appLife', 'transitions': ['approve']});
+      final bare = UiWfDescribeContext(registry: registry, def: def);
+      expect(describeTrigger(entered, bare), 'When appLife enters review or done');
+      expect(describeTrigger(moved, bare), 'After “approve” in appLife');
+      final loaded = UiWfDescribeContext(registry: registry, def: def, workflowTitle: (k) => k == 'appLife' ? 'Application lifecycle' : null, lifecycle: (k) => k == 'appLife' ? life : null);
+      expect(describeTrigger(entered, loaded), 'When Application lifecycle enters In review or Approved');
+      expect(describeTrigger(moved, loaded), 'After “Approve” in Application lifecycle');
+    });
+
     test('steps read naturally', () {
       final def = createWorkflow('automation', title: 'x', entity: 'application');
       final ctx = UiWfDescribeContext(registry: registry, def: def);

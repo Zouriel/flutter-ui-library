@@ -54,7 +54,7 @@ void main() {
   testWidgets('fitting never zooms out past 60%: very large content starts at its top-left', (tester) async {
     final c = await pumpViewport(tester, cw: 3000, ch: 400);
     expect(c.view.zoom, 0.6);
-    expect(c.view.x, 32); // the padding, not centred
+    expect(c.view.x, 0); // at its edge, not centred
     expect(c.view.y, closeTo((600 - 400 * 0.6) / 2, 1e-9)); // it fits this way: centred
   });
 

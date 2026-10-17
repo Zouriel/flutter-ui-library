@@ -32,7 +32,7 @@ class WfTriggerCard extends StatelessWidget {
     final when = trigger?.when;
     final condition = when != null && (!when.isGroup || when.conditions.isNotEmpty);
     final problems = store.problemsOf(null).where((p) => p.isError).toList();
-    return UiInteractive(
+    return _CardWidth(child: UiInteractive(
       onTap: () {
         store.selection = UiWfSelection.trigger;
         ctx.ui.inspect();
@@ -74,7 +74,7 @@ class WfTriggerCard extends StatelessWidget {
           if (problems.isNotEmpty) WfChip('${problems.length}', tone: 'danger', tooltip: problems.first.message),
         ]),
       ),
-    );
+    ));
   }
 }
 
@@ -138,6 +138,7 @@ class WfStepCard extends StatelessWidget {
         ),
       ),
     );
+    final ro = store.readOnly;
     if (dnd != null) grip = WfDragSource(dnd: dnd, immediate: true, payload: payload, child: grip);
 
     Widget body = UiInteractive(
@@ -164,9 +165,11 @@ class WfStepCard extends StatelessWidget {
         ]),
       ),
     );
-    if (dnd != null) body = WfDragSource(dnd: dnd, payload: payload, child: body);
+    if (dnd != null && !ro) body = WfDragSource(dnd: dnd, payload: payload, child: body);
 
-    return Opacity(
+    // Long titles never widen the canvas: cards take their column's width and truncate. On a canvas
+    // widened by a branch further down, top-level cards stay readable and centred, menus in reach.
+    return _CardWidth(child: Opacity(
       opacity: step.disabled ? 0.6 : 1,
       child: Container(
         constraints: const BoxConstraints(minHeight: 46),
@@ -185,13 +188,15 @@ class WfStepCard extends StatelessWidget {
         ),
         child: IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
-            grip,
+            // Someone only looking can inspect a step but not move or change it.
+            if (ro) const SizedBox(width: 6) else grip,
             Expanded(child: body),
             if (errors.isNotEmpty)
               Center(child: WfChip('${errors.length}', tone: 'danger', tooltip: errors.first.message))
             else if (warnings.isNotEmpty)
               Center(child: WfChip('!', tone: 'warning', tooltip: warnings.first.message)),
-            Center(
+            if (!ro)
+              Center(
               child: UiMenu(
                 placement: UiPlacement.bottomEnd,
                 items: [
@@ -208,8 +213,17 @@ class WfStepCard extends StatelessWidget {
           ]),
         ),
       ),
-    );
+    ));
   }
+}
+
+/// At most 560 wide, centred (the web card's `max-width: 560px; margin-inline: auto`).
+class _CardWidth extends StatelessWidget {
+  const _CardWidth({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: child));
 }
 
 /// A "+" between steps: tap to pick a step for this place (the web `ui-wf-add-slot`).
@@ -225,7 +239,8 @@ class WfAddSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final ui = WfBuilderScope.of(context).ui;
+    final ctx = WfBuilderScope.of(context);
+    final ui = ctx.ui;
     final touch = uiTouchPlatform(context);
     final h = touch ? 34.0 : 26.0;
     final d = touch ? 28.0 : 20.0;
@@ -233,7 +248,9 @@ class WfAddSlot extends StatelessWidget {
       height: h,
       child: Stack(alignment: Alignment.center, children: [
         Positioned(top: first ? h / 2 : 0, bottom: 0, child: Container(width: 2, color: t.border)),
-        UiInteractive(
+        // Someone only looking can't add steps: the connector stays, the + goes.
+        if (!ctx.store.readOnly)
+          UiInteractive(
           onTap: () => ui.requestAdd(WfDropTarget(listId, index)),
           semanticLabel: label,
           excludeChildSemantics: true,
@@ -549,6 +566,10 @@ class WfAutomationCanvas extends StatefulWidget {
 
 class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
   final ScrollController _scroll = ScrollController();
+  final ScrollController _hscroll = ScrollController();
+
+  /// The workflow the wide canvas was last centred for.
+  String? _centredFor;
   final GlobalKey _viewport = GlobalKey(debugLabel: 'wf automation viewport');
   WfDnd? _dnd;
 
@@ -566,6 +587,7 @@ class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
   void dispose() {
     _dnd?.removeScroller(_viewport);
     _scroll.dispose();
+    _hscroll.dispose();
     super.dispose();
   }
 
@@ -604,8 +626,15 @@ class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
                 ),
               ]),
             );
-            final shown = WfReadOnly(readOnly: store.readOnly, child: flow);
-            return needed > room ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: shown) : Center(child: shown);
+            if (needed > room && _centredFor != store.def.id) {
+              // A canvas wider than the view (branches) opens on its middle, where the trigger and
+              // the main line are.
+              _centredFor = store.def.id;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _hscroll.hasClients) _hscroll.jumpTo(_hscroll.position.maxScrollExtent / 2);
+              });
+            }
+            return needed > room ? SingleChildScrollView(controller: _hscroll, scrollDirection: Axis.horizontal, child: flow) : Center(child: flow);
           }),
         ),
       ),

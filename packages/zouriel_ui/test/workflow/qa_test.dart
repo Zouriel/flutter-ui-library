@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/canvas.dart';
@@ -12,6 +16,8 @@ class _VersionsApi extends Fake implements UiWorkflowApi {
   _VersionsApi(this.draft);
   UiWorkflowDefinition draft;
   final calls = <String>[];
+  bool drafty = false;
+  Completer<void>? archiving;
 
   @override
   Future<UiWorkflowSchema> schema() async => UiWorkflowSchema(registry: UiWorkflowRegistry.fromJson({'entities': <Object?>[]}));
@@ -22,12 +28,22 @@ class _VersionsApi extends Fake implements UiWorkflowApi {
   @override
   Future<List<UiWfProblem>> validate(UiWorkflowDefinition def) async => const [];
   @override
-  Future<List<String>> diff(String id) async => const ['Changed “Tell them”'];
+  Future<List<String>> diff(String id) async {
+    calls.add('diff');
+    return const ['Changed “Tell them”'];
+  }
+
+  @override
+  Future<UiWfDefinitionSummary> archive(String id) async {
+    calls.add('archive');
+    await archiving?.future;
+    return UiWfDefinitionSummary.fromJson({'id': id, 'status': 'archived'});
+  }
   @override
   Future<UiWfUser?> user(String id) async => id == 'u1' ? UiWfUser.fromJson({'id': 'u1', 'name': 'Hana Ibrahim'}) : null;
   @override
   Future<UiWfDefinitionDetail> definition(String id) async => UiWfDefinitionDetail.fromJson({
-    'summary': {'id': id, 'key': draft.key, 'status': 'published', 'version': 2},
+    'summary': {'id': id, 'key': draft.key, 'status': 'published', 'version': 2, 'hasDraftChanges': drafty},
     'draft': draft.json,
     'published': draft.json,
     'versions': [
@@ -70,6 +86,33 @@ void main() {
       expect(formatSimpleDuration(-3, 'D'), 'P0D');
       expect(formatSimpleDuration(2, 'H', true), '-PT2H');
     });
+  });
+
+  Future<void> durationFits(WidgetTester tester, List<(double, bool)> cases, {required bool steppers}) async {
+    for (final (w, signed) in cases) {
+      await tester.pumpWidget(UiApp(home: Align(alignment: Alignment.topLeft, child: SizedBox(width: w, child: WfDurationInput(value: signed ? '-PT5M' : 'PT5M', signed: signed, onChanged: (_) {})))));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'nothing overflows at $w');
+      for (final word in ['minutes', if (signed) 'before']) {
+        final para = tester.renderObject<RenderParagraph>(find.text(word));
+        expect(para.size.width, greaterThanOrEqualTo(para.getMaxIntrinsicWidth(double.infinity) - 0.5), reason: '"$word" fits at $w');
+      }
+      expect(find.bySemanticsLabel('Increase Duration amount'), steppers ? findsOneWidget : findsNothing);
+    }
+  }
+
+  // The narrowest each fits in is the amount's minimum + 6 + 108 (+ 6 + 96 for the direction).
+  testWidgets('durations: on touch the unit keeps room for "minutes" and the amount is typed', (tester) async {
+    await durationFits(tester, [(178.0, false), (280.0, true), (320.0, false), (360.0, true)], steppers: false);
+  });
+
+  testWidgets('durations: with a mouse the amount keeps its steppers and the unit its room', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    try {
+      await durationFits(tester, [(202.0, false), (304.0, true), (320.0, false), (360.0, true)], steppers: true);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   test('branches need room for every column, nested ones too', () {
@@ -132,5 +175,64 @@ void main() {
     expect(c.def.title, 'Rolled back to 1');
     expect(saved?.title, 'Rolled back to 1');
     expect(find.text('Unsaved changes'), findsNothing);
+  });
+
+  testWidgets('versions: a double tap archives once; the change list follows the engine\'s draft flag', (tester) async {
+    final def = createWorkflow('automation', title: 'Draft edits', entity: 'application');
+    final api = _VersionsApi(def)..archiving = Completer<void>();
+    final c = UiWorkflowBuilderController(definition: def);
+    addTearDown(c.dispose);
+    tester.view.physicalSize = const Size(1280, 900) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(home: UiWorkflowBuilder(controller: c, api: api, persist: true)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Versions'));
+    await tester.pumpAndSettle();
+    // No draft changes: no diff is asked for, and the card says so.
+    expect(api.calls, isNot(contains('diff')));
+    expect(find.text('None. The draft matches the published version.'), findsOneWidget);
+    final archive = find.widgetWithText(UiButton, 'Archive');
+    await tester.ensureVisible(archive);
+    await tester.pumpAndSettle();
+    final onPressed = tester.widget<UiButton>(archive).onPressed!;
+    onPressed(); // two taps before the button can rebuild as busy
+    onPressed();
+    await tester.pump();
+    expect(api.calls.where((x) => x == 'archive'), hasLength(1));
+    api.drafty = true;
+    api.archiving!.complete();
+    await tester.pumpAndSettle();
+    expect(api.calls.where((x) => x == 'archive'), hasLength(1));
+    expect(api.calls, contains('diff'));
+    expect(find.text('•  Changed “Tell them”'), findsOneWidget);
+  });
+
+  testWidgets('wide branches: top-level cards stay at most 560 and centred, and the canvas opens on the trigger', (tester) async {
+    final par = UiWfStep.fromJson({
+      ...createStep('parallel').json,
+      'id': 'par',
+      'paths': [for (var i = 0; i < 6; i++) {'id': 'p$i', 'label': 'P$i', 'steps': [_step('n$i').json]}],
+    });
+    final def = insertStep(insertStep(createWorkflow('automation', title: 'Wide', entity: 'application'), 'root', 0, _step('first')), 'root', 1, par);
+    final c = UiWorkflowBuilderController(definition: def);
+    addTearDown(c.dispose);
+    tester.view.physicalSize = const Size(1280, 900) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(home: UiWorkflowBuilder(controller: c)));
+    await tester.pumpAndSettle();
+    final scroller = find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal);
+    expect(scroller, findsOneWidget, reason: 'six paths need more room than the view');
+    final view = tester.getRect(scroller);
+    // The card itself: the box inside its 560 limit, not the full-width slot it is centred in.
+    Rect card(Finder of) => tester.getRect(find.descendant(of: of, matching: find.byWidgetPredicate((w) => w is ConstrainedBox && w.constraints.maxWidth == 560)).first);
+    final trigger = card(find.byType(WfTriggerCard));
+    final first = card(find.byWidgetPredicate((w) => w is WfStepCard && w.step.id == 'first'));
+    final fork = card(find.byWidgetPredicate((w) => w is WfStepCard && w.step.id == 'par'));
+    for (final r in [trigger, first, fork]) {
+      expect(r.width, lessThanOrEqualTo(560));
+      expect(r.center.dx, moreOrLessEquals(trigger.center.dx, epsilon: 1));
+    }
+    expect(trigger.center.dx, moreOrLessEquals(view.center.dx, epsilon: 2), reason: 'opens scrolled so the trigger is in the middle');
+    expect(tester.widget<SingleChildScrollView>(scroller).controller!.offset, greaterThan(0));
   });
 }

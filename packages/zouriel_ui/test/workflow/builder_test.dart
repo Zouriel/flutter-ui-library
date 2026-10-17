@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
@@ -41,12 +42,18 @@ UiWorkflowDefinition automation() => UiWorkflowDefinition.fromJson({
 });
 
 class _Api extends Fake implements UiWorkflowApi {
-  _Api({this.canEdit = true});
+  _Api({this.canEdit = true, this.meAnswer});
   final bool canEdit;
   final calls = <String>[];
 
+  /// Holds me() back until completed, when given.
+  final Completer<void>? meAnswer;
+
   @override
-  Future<UiWfMe> me() async => UiWfMe.fromJson({'type': 'user', 'id': 'u', 'can': {'edit': canEdit}});
+  Future<UiWfMe> me() async {
+    await meAnswer?.future;
+    return UiWfMe.fromJson({'type': 'user', 'id': 'u', 'can': {'edit': canEdit}});
+  }
   List<UiWfProblem> problems = [];
 
   @override
@@ -54,7 +61,10 @@ class _Api extends Fake implements UiWorkflowApi {
   @override
   Future<List<UiWfDefinitionSummary>> definitions() async => [];
   @override
-  Future<({UiWorkflowSettings settings, int revision})> settings() async => (settings: UiWorkflowSettings(), revision: 1);
+  Future<({UiWorkflowSettings settings, int revision})> settings() async {
+    calls.add('settings');
+    return (settings: UiWorkflowSettings(), revision: 1);
+  }
   @override
   Future<List<UiWfProblem>> validate(UiWorkflowDefinition def) async {
     calls.add('validate');
@@ -323,6 +333,21 @@ void main() {
     expect(draft.onEnter!.single.type, 'wait');
   });
 
+  testWidgets('a state\'s connect handle takes the press even where the next card overlaps it', (tester) async {
+    final base = createWorkflow('lifecycle', title: 'Life', entity: 'application');
+    final [draft, done] = base.lifecycle!.states;
+    // "Done" sits right against Draft, its card over Draft's handle; it is drawn after Draft.
+    final def = base.patch({'lifecycle': base.lifecycle!.patch({'layout': {draft.id: [0, 0], done.id: [wfNodeW - 4, 0]}}).json});
+    await pumpBuilder(tester, def: def);
+    final handle = find.bySemanticsLabel('Add a transition from ${draft.label}');
+    expect(handle, findsOneWidget);
+    final at = tester.getCenter(handle);
+    expect(tester.getRect(find.bySemanticsLabel(RegExp('^${done.label}')).first).contains(at), isTrue, reason: 'the overlap this test is about');
+    await tester.tapAt(at);
+    await tester.pumpAndSettle();
+    expect(find.text('Now tap the state it goes to'), findsOneWidget);
+  });
+
   testWidgets('read-only: View only, no Save, Publish, Versions or Test, no edits, no engine check', (tester) async {
     final api = _Api(canEdit: false);
     final out = await pumpBuilder(tester, api: api, persist: true);
@@ -333,13 +358,35 @@ void main() {
     expect(find.text('Publish…'), findsNothing);
     expect(find.text('Versions'), findsNothing);
     expect(api.calls, isNot(contains('validate')));
-    // The + slots and the palette take no taps.
-    await tester.tap(find.bySemanticsLabel('Add a step here').first, warnIfMissed: false);
+    expect(api.calls, isNot(contains('settings'))); // only editors read the settings
+    // Nothing to add with: no palette, no + slots, no grips or step menus.
+    expect(find.text('Add a step'), findsNothing);
+    expect(find.bySemanticsLabel('Add a step here'), findsNothing);
+    expect(find.bySemanticsLabel('Move Tell the applicant (or use the menu)'), findsNothing);
+    expect(find.bySemanticsLabel('More for Tell the applicant'), findsNothing);
+    // Cards still open their settings, which can be read but not changed.
+    await tester.tap(find.text('Tell the applicant'));
     await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsLabel('Wait').first, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    expect(find.text('Send by'), findsOneWidget);
+    final name = find.byWidgetPredicate((w) => w is UiInput && w.semanticLabel == 'Name');
+    await tester.tap(name.first, warnIfMissed: false);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.context?.widget, isNot(isA<EditableText>())); // the field took no focus
+    expect(find.bySemanticsLabel('Delete Tell the applicant'), findsNothing);
     expect(out, isEmpty);
-    expect(find.text('Add a step'), findsOneWidget); // only the palette heading, no dialog
+  });
+
+  testWidgets('no engine check and no settings until me() has answered', (tester) async {
+    final answer = Completer<void>();
+    final api = _Api(meAnswer: answer);
+    await pumpBuilder(tester, api: api, persist: true);
+    await tester.pump(const Duration(seconds: 1));
+    expect(api.calls, isEmpty);
+    answer.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(api.calls, containsAll(['settings', 'validate']));
   });
 
   testWidgets('readOnly: false overrides what me() says', (tester) async {

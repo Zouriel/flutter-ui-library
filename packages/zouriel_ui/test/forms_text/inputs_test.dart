@@ -79,6 +79,18 @@ void main() {
     expect(tester.getSize(find.byType(UiTextarea)).height, h2);
   });
 
+  testWidgets('textarea: autosize refits when its width changes', (tester) async {
+    const text = 'A sentence long enough to wrap onto more lines once the field gets narrow.';
+    Widget at(double w) => SizedBox(width: w, child: const UiTextarea(value: text, semanticLabel: 'Bio', rows: 1, autosize: true, maxRows: 8));
+    await pumpUi(tester, at(600));
+    final wide = tester.getSize(find.byType(UiTextarea)).height;
+    await pumpUi(tester, at(160));
+    final narrow = tester.getSize(find.byType(UiTextarea)).height;
+    expect(narrow, greaterThan(wide));
+    await pumpUi(tester, at(600));
+    expect(tester.getSize(find.byType(UiTextarea)).height, wide);
+  });
+
   testWidgets('textarea: without autosize it stays rows tall', (tester) async {
     await pumpUi(tester, const SizedBox(width: 300, child: UiTextarea(semanticLabel: 'Bio', rows: 3)));
     final h0 = tester.getSize(find.byType(UiTextarea)).height;

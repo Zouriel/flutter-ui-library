@@ -207,6 +207,11 @@ class UiWorkflowBuilderController extends ChangeNotifier {
     def: _def,
     tokens: tokens,
     workflowTitle: (key) => _others.where((o) => o.key == key).firstOrNull?.title,
+    lifecycle: (key) {
+      // Loaded on demand; the summary reads keys until it arrives.
+      loadLifecycle(key);
+      return _lifecycleCache[key];
+    },
   );
 
   // ── History ─────────────────────────────────────────────────────────────────────────────

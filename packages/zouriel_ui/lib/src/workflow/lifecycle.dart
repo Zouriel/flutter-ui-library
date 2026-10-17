@@ -219,6 +219,61 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
     final cw = frame.width, ch = frame.height;
     final touch = uiTouchPlatform(context);
 
+    Widget stateAt(UiWfState s, _StateLayer layer) => Positioned(
+            left: _pos(layout, s.id).dx,
+            top: _pos(layout, s.id).dy,
+            child: _StateCard(
+              key: ValueKey('${layer.name}-${s.id}'),
+              layer: layer,
+              state: s,
+              touch: touch,
+              selected: sel == UiWfSelection.state(s.id),
+              hovered: _hovered == s.id,
+              dragging: _dragPos?.id == s.id,
+              bad: store.problemsOf(s.id).any((p) => p.isError),
+              target: _connectFrom != null && _connectFrom != s.id,
+              outCount: outgoing(s.id).length,
+              onHover: (on) => setState(() => _hovered = on ? s.id : (_hovered == s.id ? null : _hovered)),
+              onTap: () => _clickState(store, ui, s),
+              onKeyMove: (d) {
+                final p = _place(layout, s.id);
+                store.placeState(s.id, p.dx + d.dx, p.dy + d.dy);
+              },
+              onDragStart: () {
+                _dragOrigin = _place(layout, s.id);
+                _dragDelta = Offset.zero;
+              },
+              onDragUpdate: (screenDelta) {
+                // Someone only looking can't move cards.
+                if (store.readOnly) return;
+                _dragDelta += screenDelta / _viewport.view.zoom;
+                if (_dragPos == null && _dragDelta.distance < 4) return;
+                // Snap to an 8px grid so cards line up.
+                final at = Offset(((_dragOrigin.dx + _dragDelta.dx) / 8).roundToDouble() * 8, ((_dragOrigin.dy + _dragDelta.dy) / 8).roundToDouble() * 8);
+                setState(() => _dragPos = (id: s.id, at: at));
+              },
+              onDragEnd: (commit) {
+                final d = _dragPos;
+                setState(() => _dragPos = null);
+                if (commit && d != null) store.placeState(s.id, d.at.dx, d.at.dy);
+              },
+              onHandleTap: () => setState(() => _connectFrom = _connectFrom == s.id ? null : s.id),
+              onHandleDrag: (global) {
+                final p = _pos(layout, s.id);
+                setState(() => _rubber = (Offset(p.dx + wfNodeW, p.dy + wfNodeH / 2), _viewport.toWorld(global)));
+              },
+              onHandleDrop: (global, commit) {
+                setState(() => _rubber = null);
+                if (!commit) return;
+                final to = _stateAt(layout, states, _viewport.toWorld(global));
+                if (to != null && to != s.id) {
+                  store.addTransition(s.id, to);
+                  ui.inspect();
+                }
+              },
+            ),
+          );
+
     final diagram = UiCanvasViewport(
       controller: _viewport,
       contentWidth: cw,
@@ -253,58 +308,12 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
               child: _EdgeLabel(edge: e, onTap: () => _select(store, ui, UiWfSelection.transition(e.transition.id))),
             ),
           ),
-        for (final s in states)
-          Positioned(
-            left: _pos(layout, s.id).dx,
-            top: _pos(layout, s.id).dy,
-            child: _StateCard(
-              key: ValueKey('state-${s.id}'),
-              state: s,
-              touch: touch,
-              selected: sel == UiWfSelection.state(s.id),
-              hovered: _hovered == s.id,
-              dragging: _dragPos?.id == s.id,
-              bad: store.problemsOf(s.id).any((p) => p.isError),
-              target: _connectFrom != null && _connectFrom != s.id,
-              outCount: outgoing(s.id).length,
-              onHover: (on) => setState(() => _hovered = on ? s.id : (_hovered == s.id ? null : _hovered)),
-              onTap: () => _clickState(store, ui, s),
-              onKeyMove: (d) {
-                final p = _place(layout, s.id);
-                store.placeState(s.id, p.dx + d.dx, p.dy + d.dy);
-              },
-              onDragStart: () {
-                _dragOrigin = _place(layout, s.id);
-                _dragDelta = Offset.zero;
-              },
-              onDragUpdate: (screenDelta) {
-                _dragDelta += screenDelta / _viewport.view.zoom;
-                if (_dragPos == null && _dragDelta.distance < 4) return;
-                // Snap to an 8px grid so cards line up.
-                final at = Offset(((_dragOrigin.dx + _dragDelta.dx) / 8).roundToDouble() * 8, ((_dragOrigin.dy + _dragDelta.dy) / 8).roundToDouble() * 8);
-                setState(() => _dragPos = (id: s.id, at: at));
-              },
-              onDragEnd: (commit) {
-                final d = _dragPos;
-                setState(() => _dragPos = null);
-                if (commit && d != null) store.placeState(s.id, d.at.dx, d.at.dy);
-              },
-              onHandleTap: () => setState(() => _connectFrom = _connectFrom == s.id ? null : s.id),
-              onHandleDrag: (global) {
-                final p = _pos(layout, s.id);
-                setState(() => _rubber = (Offset(p.dx + wfNodeW, p.dy + wfNodeH / 2), _viewport.toWorld(global)));
-              },
-              onHandleDrop: (global, commit) {
-                setState(() => _rubber = null);
-                if (!commit) return;
-                final to = _stateAt(layout, states, _viewport.toWorld(global));
-                if (to != null && to != s.id) {
-                  store.addTransition(s.id, to);
-                  ui.inspect();
-                }
-              },
-            ),
-          ),
+        // Cards first, then the connect handles above all of them, so a card never takes a press
+        // meant for the handle beside it.
+        for (final s in states) stateAt(s, _StateLayer.card),
+        if (!store.readOnly)
+          for (final s in states)
+            if (s.category != 'terminal') stateAt(s, _StateLayer.handle),
       ]),
     );
 
@@ -405,9 +414,12 @@ class _EdgeLabel extends StatelessWidget {
 
 const _mouseKinds = {PointerDeviceKind.mouse, PointerDeviceKind.trackpad};
 
+enum _StateLayer { card, handle }
+
 class _StateCard extends StatelessWidget {
   const _StateCard({
     super.key,
+    required this.layer,
     required this.state,
     required this.touch,
     required this.selected,
@@ -427,6 +439,8 @@ class _StateCard extends StatelessWidget {
     required this.onHandleDrop,
   });
 
+  /// The card itself, or only its connect handle (drawn above every card).
+  final _StateLayer layer;
   final UiWfState state;
   final bool touch;
   final bool selected;
@@ -573,7 +587,15 @@ class _StateCard extends StatelessWidget {
       ),
     );
 
-    // The box reaches past the card's right edge so the handle, which overhangs it, can be hit.
+    if (layer == _StateLayer.handle) {
+      return SizedBox(
+        width: wfNodeW + handleSize / 2,
+        height: wfNodeH,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Positioned(left: wfNodeW - handleSize / 2, top: wfNodeH / 2 - handleSize / 2, child: handle),
+        ]),
+      );
+    }
     return MouseRegion(
       onEnter: (_) => onHover(true),
       onExit: (_) => onHover(false),
@@ -582,7 +604,6 @@ class _StateCard extends StatelessWidget {
         height: wfNodeH,
         child: Stack(clipBehavior: Clip.none, children: [
           Positioned(left: 0, top: 0, child: card),
-          if (!terminal) Positioned(left: wfNodeW - handleSize / 2, top: wfNodeH / 2 - handleSize / 2, child: handle),
         ]),
       ),
     );
@@ -890,7 +911,7 @@ class _WfLifecycleRunsState extends State<WfLifecycleRuns> {
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Padding(padding: const EdgeInsets.only(bottom: 4), child: FbHint(hint)),
-                  WfReadOnly(readOnly: store.readOnly, child: WfStepList(listId: active, steps: listSteps(store.def, active) ?? const [])),
+                  WfStepList(listId: active, steps: listSteps(store.def, active) ?? const []),
                 ]),
               ),
             ),

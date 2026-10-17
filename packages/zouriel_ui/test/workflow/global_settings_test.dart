@@ -98,10 +98,12 @@ void main() {
     await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
     expect(find.text('Two workflows start on the same change here. Check they don’t work against each other.'), findsOneWidget);
-    await tester.tap(find.text('Paused'));
+    await tester.tap(find.text('Running'));
     await tester.pumpAndSettle();
     expect(key.currentState!.value.paused, ['application']);
     expect(api.calls, contains('saveSettings:3'));
+    expect(find.text('Paused'), findsOneWidget); // the switch says what it is now
+    expect(find.bySemanticsLabel(RegExp('Pause workflows for Application')), findsOneWidget);
   });
 
   testWidgets('pausing saves only the pause; other edits stay unsaved', (tester) async {
@@ -114,7 +116,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Paused'));
+    await tester.tap(find.text('Running'));
     await tester.pumpAndSettle();
     // The engine got the pause on top of what was saved, without Saturday.
     expect(api.settingsValue.paused, ['application']);
@@ -140,6 +142,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tasks and approvals'), findsOneWidget);
     expect(find.text('Record moves'), findsOneWidget);
+  });
+
+  testWidgets('hidden fields read as record type › field', (tester) async {
+    final api = FakeWorkflowApi()..settingsValue = UiWorkflowSettings.fromJson({'version': 1, 'audit': {'maskedFields': ['application.amount']}});
+    await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, api: api));
+    await tester.tap(find.text('Audit log'));
+    await tester.pumpAndSettle();
+    expect(find.text('Application › Amount'), findsOneWidget);
+    expect(find.bySemanticsLabel('Stop hiding Application › Amount'), findsOneWidget);
   });
 
   testWidgets('audit masking offers only fields that are not already hidden or sensitive', (tester) async {

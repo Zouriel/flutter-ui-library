@@ -111,8 +111,9 @@ class UiCanvasViewportController extends ChangeNotifier {
     final p = _padding;
     final cw = math.max(1.0, _content.width), ch = math.max(1.0, _content.height);
     final zoom = _clamp(math.max(math.min(_fitMinZoom, 1), math.min(1, math.min((w - p * 2) / cw, (h - p * 2) / ch))));
-    // Content too big even at the smallest fit zoom is shown from its top-left corner.
-    double place(double room, double size) => size * zoom <= room - p * 2 ? (room - size * zoom) / 2 : p;
+    // Content too big even at the smallest fit zoom starts at its top-left edge (the content brings
+    // its own margin), not a padding in.
+    double place(double room, double size) => size * zoom <= room - p * 2 ? (room - size * zoom) / 2 : 0;
     return UiViewportView(zoom: zoom, x: place(w, cw), y: place(h, ch));
   }
 
