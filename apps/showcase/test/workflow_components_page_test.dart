@@ -105,7 +105,7 @@ void main() {
     await _done(tester);
   });
 
-  testWidgets('Show a stopped payment: the payment fails while the bank is down, and the panel shows it under Running', (tester) async {
+  testWidgets('Show a stopped payment: the payment fails while the bank is down, and the panel shows it under Stopped', (tester) async {
     await _pump(tester, const WorkflowComponentsPage());
     tester.widget<UiSegmented<UiWorkflowPanelLayout>>(find.byWidgetPredicate((w) => w is UiSegmented<UiWorkflowPanelLayout>)).onChanged!(UiWorkflowPanelLayout.compact);
     await tester.pump(const Duration(seconds: 1));
@@ -113,7 +113,7 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    expect(find.text('RUNNING'), findsOneWidget);
+    expect(find.text('STOPPED'), findsOneWidget); // every listed run stopped
     expect(find.text('Bank API: 503 Service Unavailable'), findsWidgets);
     // The head of office may put it right: the bank is back up, so trying again pays.
     final again = button('Try again');

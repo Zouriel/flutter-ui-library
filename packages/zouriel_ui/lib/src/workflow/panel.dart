@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/widgets.dart';
@@ -44,7 +45,12 @@ class UiWfPanelStep {
 /// The states a record shows, in order (the web `wfPanelPath`): the states it has been through (first
 /// visit first), then, unless it has finished, the states it hasn't reached yet in the lifecycle's
 /// order. The active one is the current state; a state it went back from counts as not reached.
-({List<UiWfPanelStep> steps, int active}) wfPanelPath(UiWfRecord r, List<UiWfAuditEntry> history) {
+///
+/// After a reset the path starts again: what happened before the latest reset is returned apart, in
+/// `earlier` (oldest first), so states visited only before starting over show as not reached. When
+/// the history is cut short (only the newest entries), entries before its first move belong to the
+/// state that move left.
+({List<UiWfPanelStep> steps, int active, List<UiWfAuditEntry> earlier}) wfPanelPath(UiWfRecord r, List<UiWfAuditEntry> history) {
   String label(String k) => r.states.where((s) => s.key == k).firstOrNull?.label ?? k;
   final steps = <UiWfPanelStep>[];
   final byKey = <String, UiWfPanelStep>{};
@@ -53,10 +59,25 @@ class UiWfPanelStep {
         steps.add(s);
         return s;
       });
-  UiWfPanelStep? here;
-  for (final h in [...history]..sort((a, b) => a.seq.compareTo(b.seq))) {
-    final entered = h.category == 'lifecycle' ? wfAuditJson(h.after)['state'] : null;
-    if (entered is String && entered.isNotEmpty) here = visit(entered);
+  final sorted = [...history]..sort((a, b) => a.seq.compareTo(b.seq));
+  var lastReset = -1;
+  for (var i = 0; i < sorted.length; i++) {
+    if (sorted[i].category == 'lifecycle' && sorted[i].action == 'reset') lastReset = i;
+  }
+  final earlier = lastReset > 0 ? sorted.sublist(0, lastReset) : <UiWfAuditEntry>[];
+  final current = lastReset > 0 ? sorted.sublist(lastReset) : sorted;
+  String? entered(UiWfAuditEntry h) {
+    final s = h.category == 'lifecycle' ? wfAuditJson(h.after)['state'] : null;
+    return s is String && s.isNotEmpty ? s : null;
+  }
+
+  // A cut-short history may begin mid-state: the first move says which state it left.
+  final firstMove = current.where((h) => entered(h) != null).firstOrNull;
+  final left = firstMove == null ? null : wfAuditJson(firstMove.before)['state'];
+  UiWfPanelStep? here = firstMove != null && !identical(firstMove, current.first) && left is String && left.isNotEmpty ? visit(left) : null;
+  for (final h in current) {
+    final k = entered(h);
+    if (k != null) here = visit(k);
     // An entry belongs to the state the record was in when it happened (a move, to the state it entered).
     here?.entries.add(h);
   }
@@ -69,8 +90,17 @@ class UiWfPanelStep {
       if (!byKey.containsKey(s.key)) visit(s.key);
     }
   }
-  return (steps: steps, active: active < 0 ? 0 : active);
+  return (steps: steps, active: active < 0 ? 0 : active, earlier: earlier);
 }
+
+/// What [UiWorkflowPanel.onChanged] compares between two reads: the state, its status, and each run's status.
+String _signature(UiWfRecord r) => jsonEncode([r.state, r.status, [for (final i in r.instances) '${i.id}:${i.status}']..sort()]);
+
+/// How many history entries the panel reads; the engine returns the newest ones.
+const int wfPanelHistoryTake = 500;
+
+/// How often the panel looks again while one of the record's runs is still going.
+const Duration _runsPoll = Duration(seconds: 15);
 
 /// `ui-workflow-panel`: the workflow of one record, to attach to the record's page: its states as a
 /// stepper (green for states it has been through, dark for those not reached), what happened in
@@ -117,7 +147,9 @@ class UiWorkflowPanel extends StatefulWidget {
   /// Said in the current state when this person has nothing to do there; empty hides it.
   final String emptyText;
 
-  /// After the record moved through the panel, so the page can reload its own data.
+  /// Whenever the record's workflow changed as the panel saw it: a move made in the panel, and any
+  /// reload that finds a new state or status or runs that started, finished or stopped (after a
+  /// decision, a manual start, a retry, skip or cancel, or the panel looking again while runs go on).
   final ValueChanged<UiWfRecord>? onChanged;
 
   /// Drawer layouts: whether the drawer is open, when the host controls it (true opens it as a
@@ -131,10 +163,20 @@ class UiWorkflowPanel extends StatefulWidget {
   State<UiWorkflowPanel> createState() => UiWorkflowPanelState();
 }
 
-class UiWorkflowPanelState extends State<UiWorkflowPanel> {
+class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObserver {
   final _record = ValueNotifier<UiWfRecord?>(null);
   final _history = ValueNotifier<List<UiWfAuditEntry>>(const []);
   final _error = ValueNotifier<String>('');
+
+  /// The history could not be read (the record could).
+  final _historyError = ValueNotifier<bool>(false);
+
+  /// "Earlier, before starting over" is open.
+  final _earlierOpen = ValueNotifier<bool>(false);
+
+  /// Looks again every 15 s while a run is still going and the app is in view.
+  Timer? _poll;
+  bool _visible = true;
 
   /// Runs shown open: a stopped run opens by itself the first time it is seen, so what to do is in view.
   final _openRuns = ValueNotifier<Set<String>>(const {});
@@ -162,6 +204,9 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     super.initState();
     // Shown for good (show() may not be called during a rebuild); it draws nothing unless a drawer layout.
     _rail.show();
+    WidgetsBinding.instance.addObserver(this);
+    final now = WidgetsBinding.instance.lifecycleState;
+    _visible = now == null || now == AppLifecycleState.resumed || now == AppLifecycleState.inactive;
     reload();
     if (widget.open == true) WidgetsBinding.instance.addPostFrameCallback((_) => _openFromHost());
   }
@@ -175,9 +220,11 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
       _seq++;
       _record.value = null;
       _history.value = const [];
+      _historyError.value = false;
       _error.value = '';
       _openRuns.value = const {};
       _seenStopped.clear();
+      _syncPoll();
     }
     if (old.api != widget.api || old.entity != widget.entity || old.entityId != widget.entityId) reload();
     if (old.open != widget.open) {
@@ -212,8 +259,32 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _visible = state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+    _syncPoll();
+  }
+
+  /// Some run of the record is still going (queued, running or waiting): worth looking again.
+  bool get _runsGoing => (_record.value?.instances ?? const <UiWfInstance>[]).any((i) => const {'queued', 'running', 'waiting'}.contains(i.status));
+
+  /// Whether the panel is looking again on a timer now.
+  bool get polling => _poll != null;
+
+  void _syncPoll() {
+    final go = _runsGoing && _visible && mounted;
+    if (go == (_poll != null)) return;
+    _poll?.cancel();
+    _poll = go ? Timer.periodic(_runsPoll, (_) => reload()) : null;
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _poll?.cancel();
+    _poll = null;
     _closeTimer?.cancel();
+    _historyError.dispose();
+    _earlierOpen.dispose();
     _record.dispose();
     _history.dispose();
     _error.dispose();
@@ -227,15 +298,26 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     if (api == null) return;
     final n = ++_seq;
     try {
+      var historyFailed = false;
       final results = await Future.wait<Object>([
         api.record(widget.entity, widget.entityId),
-        widget.showHistory ? api.recordHistory(widget.entity, widget.entityId, take: 100).catchError((_) => <UiWfAuditEntry>[]) : Future.value(<UiWfAuditEntry>[]),
+        widget.showHistory
+            ? api.recordHistory(widget.entity, widget.entityId, take: wfPanelHistoryTake).catchError((Object _) {
+                historyFailed = true;
+                return <UiWfAuditEntry>[];
+              })
+            : Future.value(<UiWfAuditEntry>[]),
       ]);
       if (!mounted || n != _seq) return;
       final record = results[0] as UiWfRecord;
+      final before = _record.value;
       _record.value = record;
-      _history.value = results[1] as List<UiWfAuditEntry>;
+      // A failed history read keeps what was shown rather than emptying it.
+      if (!historyFailed) _history.value = results[1] as List<UiWfAuditEntry>;
+      _historyError.value = historyFailed;
       _error.value = '';
+      _syncPoll();
+      if (before != null && _signature(before) != _signature(record)) widget.onChanged?.call(record);
       final stopped = [for (final i in record.instances) if (i.status == 'incident' && !_seenStopped.contains(i.id)) i.id];
       if (stopped.isNotEmpty) {
         _seenStopped.addAll(stopped);
@@ -304,20 +386,33 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
   Widget _body(BuildContext context, UiWorkflowPanelLayout mode) {
     final horizontal = mode == UiWorkflowPanelLayout.horizontal;
     return ListenableBuilder(
-      listenable: Listenable.merge([_record, _history, _error, _openRuns]),
+      listenable: Listenable.merge([_record, _history, _error, _openRuns, _historyError, _earlierOpen]),
       builder: (context, _) {
         final t = context.ui;
         final r = _record.value;
         if (r == null) return _error.value.isNotEmpty ? WfNote(_error.value) : const FbHint('Loading…');
+        // A reload failed: what is shown may be out of date.
+        final stale = _error.value.isEmpty
+            ? null
+            : WfNote.custom(
+                child: Wrap(spacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text('${_error.value} What is shown may be out of date.', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+                  FbLink(label: 'Try again', fontSize: 12.5, onTap: reload),
+                ]),
+              );
+        Widget withStale(Widget body) => stale == null
+            ? body
+            : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [stale, body]);
         // Compact, or no lifecycle: the state as a badge and a strip, the actions, and one flat history.
-        if (r.state == null || mode == UiWorkflowPanelLayout.compact) return _compact(context, r, gap: mode == UiWorkflowPanelLayout.compact ? t.space2 : t.space3);
+        if (r.state == null || mode == UiWorkflowPanelLayout.compact) return withStale(_compact(context, r, gap: mode == UiWorkflowPanelLayout.compact ? t.space2 : t.space3));
         final path = wfPanelPath(r, _history.value);
         final now = UiWorkflowClock.nowOf(context);
         final steps = [for (final s in path.steps) UiStep(label: s.label)];
         Widget actions() => _actions(r, emptyText: widget.emptyText);
         Widget log(List<UiWfAuditEntry> entries) => _log(context, r, entries);
 
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
+        final historyNote = _historyError.value ? 'The history could not be loaded.' : _historyNote;
+        return withStale(Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
           Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
             UiWorkflowStateBadge(label: r.stateLabel ?? r.state!, tone: r.stateTone),
             Text('since ${wfAgo(r.stateEnteredAt, now)}', style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
@@ -338,19 +433,52 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
                 ];
                 return parts.isEmpty ? null : Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: parts);
               },
-            )
-          else ...[
+            ),
+          if (!horizontal && widget.showHistory && path.earlier.isNotEmpty) _earlier(context, r, path.earlier),
+          if (!horizontal && widget.showHistory && historyNote.isNotEmpty) FbHint(historyNote),
+          if (horizontal) ...[
             UiStepper(steps: steps, active: path.active, axis: Axis.horizontal, tone: UiStepperTone.success, label: widget.title),
             actions(),
             ?_runs(context, r),
+            if (widget.showHistory && _historyError.value) const FbHint('The history could not be loaded.'),
             if (widget.showHistory && _history.value.isNotEmpty) ...[
               const WfSectionTitle('History'),
               log(_newestFirst.take(8).toList()),
             ],
           ],
-        ]);
+        ]));
       },
     );
+  }
+
+  /// Said under the history when only the newest entries were read.
+  String get _historyNote => _history.value.length >= wfPanelHistoryTake ? 'Showing the latest $wfPanelHistoryTake entries.' : '';
+
+  /// What happened before the record last started over, folded away (the web `details.earlier`).
+  Widget _earlier(BuildContext context, UiWfRecord r, List<UiWfAuditEntry> entries) {
+    final t = context.ui;
+    final open = _earlierOpen.value;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: UiInteractive(
+          onTap: () => _earlierOpen.value = !open,
+          toggled: open,
+          semanticLabel: 'Earlier, before starting over (${entries.length})',
+          excludeChildSemantics: true,
+          pressScale: false,
+          builder: (context, s) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : null),
+            child: Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [
+              UiIcon(open ? WfIcons.arrowDown01 : WfIcons.arrowRight01, size: 12, strokeWidth: 2, color: t.textSecondary),
+              Text('Earlier, before starting over (${entries.length})', style: context.uiText.body.copyWith(fontSize: 12.5, color: t.textSecondary)),
+            ]),
+          ),
+        ),
+      ),
+      if (open) _log(context, r, entries),
+    ]);
   }
 
   /// The record's workflows still running or stopped (stopped ones first), each opening its steps
@@ -364,13 +492,15 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     final now = UiWorkflowClock.nowOf(context);
     final open = _openRuns.value;
     void toggle(String id) => _openRuns.value = open.contains(id) ? ({...open}..remove(id)) : {...open, id};
+    // "Stopped" when every listed run stopped on an error, else "Running".
+    final heading = runs.every((x) => x.status == 'incident') ? 'Stopped' : 'Running';
     return Semantics(
       container: true,
-      label: 'Workflows running',
+      label: heading,
       child: Padding(
         padding: EdgeInsets.only(top: t.space2),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-          const WfSectionTitle('Running'),
+          WfSectionTitle(heading),
           for (final run in runs)
             _RunCard(
               key: ValueKey('wf-run-${run.id}'),
@@ -447,7 +577,8 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
           padding: EdgeInsets.only(top: t.space2),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: 6, children: [
             const WfSectionTitle('History'),
-            if (_history.value.isEmpty) const FbHint('Nothing yet.') else _log(context, r, _newestFirst),
+            if (_history.value.isEmpty) FbHint(_historyError.value ? 'The history could not be loaded.' : 'Nothing yet.') else _log(context, r, _newestFirst),
+            if (_history.value.isNotEmpty && (_historyError.value || _historyNote.isNotEmpty)) FbHint(_historyError.value ? 'The history could not be loaded.' : _historyNote),
           ]),
         ),
     ]);
@@ -457,7 +588,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     if (!_isDrawer) return const SizedBox.shrink();
     final t = context.ui;
     final r = _record.value;
-    final path = r == null ? (steps: <UiWfPanelStep>[], active: 0) : wfPanelPath(r, _history.value);
+    final path = r == null ? (steps: <UiWfPanelStep>[], active: 0, earlier: <UiWfAuditEntry>[]) : wfPanelPath(r, _history.value);
     // A record type with no lifecycle still gets one dot, so the rail can open.
     final dots = [
       for (final st in path.steps) UiStep(label: st.label),
@@ -550,7 +681,8 @@ class _TrackState extends StatelessWidget {
       child: Container(
         height: 22,
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(color: here ? t.primary : t.surfaceHover, borderRadius: BorderRadius.circular(11)),
+        // Passed states read as done (a tint of success, like the stepper's), not as not reached.
+        decoration: BoxDecoration(color: here ? t.primary : (done ? t.success.withValues(alpha: 0.12) : t.surfaceHover), borderRadius: BorderRadius.circular(11)),
         child: Center(
           widthFactor: 1,
           child: Text(
@@ -559,7 +691,7 @@ class _TrackState extends StatelessWidget {
               fontSize: 11.5,
               height: 1,
               fontWeight: here ? FontWeight.w600 : FontWeight.w500,
-              color: here ? t.primaryContrast : (done ? t.textSecondary : t.textMuted),
+              color: here ? t.primaryContrast : (done ? t.success : t.textMuted),
             ),
           ),
         ),

@@ -10,7 +10,8 @@ export '../workflow/global_settings.dart';
 // The task inbox, the run view and the record actions are internal: apps use UiWorkflowTasksDrawer
 // and UiWorkflowPanel.
 export '../workflow/runtime.dart' hide WfTaskInbox, WfTaskInboxState, WfRunView, WfRunViewState, WfRecordActions, WfDashedTopRule;
-export '../workflow/panel.dart';
+// wfPanelPath and its steps are internal (the web keeps them out of the public API too).
+export '../workflow/panel.dart' hide wfPanelPath, UiWfPanelStep;
 export '../workflow/permissions.dart';
 export '../workflow/history.dart' show wfDescribeHistory, wfOutcomeLabel, wfAuditActionLabel, wfActorLabel, wfStepTimedOut, wfCommentRequired, wfRemarksLabel, wfRemarksFor, wfReadableError;
 export '../workflow/layout.dart';

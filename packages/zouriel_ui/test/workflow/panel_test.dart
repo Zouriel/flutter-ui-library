@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/bits.dart' show WfArrowText, wfArrow;
+import 'package:zouriel_ui/src/workflow/panel.dart' show wfPanelPath, UiWfPanelStep;
 import 'package:zouriel_ui/src/workflow/runtime.dart' show WfRunView;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
@@ -30,7 +33,7 @@ UiWfAuditEntry entry(String action, String? after, {String? before, String categ
       'before': before == null ? null : '{"state":"$before"}', 'after': after == null ? null : '{"state":"$after"}', 'data': '{}',
     });
 
-List<String> keys(({List<UiWfPanelStep> steps, int active}) p) => [for (final s in p.steps) s.key];
+List<String> keys(({List<UiWfPanelStep> steps, int active, List<UiWfAuditEntry> earlier}) p) => [for (final s in p.steps) s.key];
 
 Future<void> pumpPanel(WidgetTester tester, UiWorkflowPanel panel, {Size size = const Size(480, 900)}) async {
   await pumpUi(tester, SizedBox(width: size.width, height: size.height, child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: panel)), size: size);
@@ -226,7 +229,7 @@ void main() {
       final ui = tester.element(track).ui;
       Color? colorOf(String label) => strip.firstWhere((t) => t.data == label).style?.color;
       expect(colorOf('Submitted'), ui.primaryContrast, reason: 'here');
-      expect(colorOf('Draft'), ui.textSecondary, reason: 'done');
+      expect(colorOf('Draft'), ui.success, reason: 'done: a tint of success, like the stepper');
       expect(colorOf('Approved'), ui.textMuted, reason: 'not reached');
       expect(button('Approve'), findsOneWidget);
       final log = [for (final w in tester.widgetList<WfArrowText>(find.byType(WfArrowText))) w.text];
@@ -362,4 +365,152 @@ void main() {
       );
     });
   });
+
+  // Mirrors @zouriel/ui 1935963.
+  group('wfPanelPath after a reset and with a cut-short history', () {
+    test('groups what happened before the latest reset apart; states visited only before it count as not reached', () {
+      final h = [
+        entry('created', 'Draft'), entry('transitioned', 'Submitted', before: 'Draft'), entry('transitioned', 'Review', before: 'Submitted'),
+        entry('reset', 'Draft', before: 'Review'), entry('transitioned', 'Submitted', before: 'Draft'),
+      ];
+      final p = wfPanelPath(record('Submitted'), h);
+      expect([for (final e in p.earlier) e.seq], [for (final e in h.sublist(0, 3)) e.seq]);
+      expect(keys(p), ['Draft', 'Submitted', 'Review', 'Approved', 'Rejected']);
+      expect([for (final e in p.steps[0].entries) e.action], ['reset']);
+      expect(p.steps[2].entries, isEmpty);
+      expect(p.active, 1);
+    });
+
+    test('entries before the first move of a cut-short history belong to the state that move left', () {
+      final task = entry('created', null, category: 'task');
+      final moved = entry('transitioned', 'Review', before: 'Submitted');
+      final p = wfPanelPath(record('Review'), [task, moved]);
+      expect(keys(p).sublist(0, 2), ['Submitted', 'Review']);
+      expect([for (final e in p.steps[0].entries) e.seq], [task.seq]);
+    });
+  });
+
+  group('UiWorkflowPanel reloads', () {
+    testWidgets('a late answer for the old record is dropped after a switch', (tester) async {
+      final api = _SwitchApi();
+      final id = ValueNotifier('1');
+      await pumpUi(tester, ValueListenableBuilder<String>(valueListenable: id, builder: (_, v, _) => UiWorkflowPanel(api: api, entity: 'application', entityId: v)), size: const Size(700, 1200));
+      api.gates['1'] = Completer<void>();
+      tester.state<UiWorkflowPanelState>(find.byType(UiWorkflowPanel)).reload();
+      id.value = '2';
+      await tester.pumpAndSettle();
+      expect(find.text('State 2'), findsWidgets);
+      api.gates['1']!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('State 1'), findsNothing);
+      expect(find.text('State 2'), findsWidgets);
+    });
+
+    testWidgets('fires onChanged after any reload that finds a new state, not only for moves made in the panel', (tester) async {
+      final api = FakeWorkflowApi();
+      final changed = <String?>[];
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', onChanged: (r) => changed.add(r.state)));
+      final panel = tester.state<UiWorkflowPanelState>(find.byType(UiWorkflowPanel));
+      await panel.reload();
+      expect(changed, isEmpty, reason: 'nothing changed');
+      api.recordJson = {...api.recordJson, 'state': 'approved', 'stateLabel': 'Approved'};
+      await panel.reload();
+      expect(changed, ['approved']);
+      api.recordJson = {...api.recordJson, 'instances': [_run('r9', 'Pay', 'waiting')]};
+      await panel.reload();
+      expect(changed, ['approved', 'approved'], reason: 'a run started');
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('shows a failed reload over the record it still shows, with Try again; and a failed history as such', (tester) async {
+      final api = _FlakyApi();
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
+      expect(find.text('Nothing yet.'), findsNothing);
+      expect(find.text('The history could not be loaded.'), findsOneWidget);
+      api.failRecord = true;
+      await tester.state<UiWorkflowPanelState>(find.byType(UiWorkflowPanel)).reload();
+      await tester.pumpAndSettle();
+      expect(find.text('The engine is down. What is shown may be out of date.'), findsOneWidget);
+      expect(button('Approve'), findsOneWidget, reason: 'the record stays');
+      api.failRecord = false;
+      await tester.tap(find.bySemanticsLabel('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('may be out of date'), findsNothing);
+    });
+
+    testWidgets('says "Stopped" over runs that all stopped, and looks again every 15 s while one is still going', (tester) async {
+      final api = FakeWorkflowApi();
+      api.recordJson = {...api.recordJson, 'instances': [_run('r1', 'Pay', 'incident', 'X: boom')]};
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
+      expect(find.text('STOPPED'), findsOneWidget);
+      final panel = tester.state<UiWorkflowPanelState>(find.byType(UiWorkflowPanel));
+      expect(panel.polling, isFalse, reason: 'nothing is still going');
+      api.recordJson = {...api.recordJson, 'instances': [_run('r1', 'Pay', 'incident', 'X: boom'), _run('r2', 'Remind', 'waiting')]};
+      await panel.reload();
+      await tester.pump();
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(panel.polling, isTrue);
+      final reads = api.calls.where((c) => c.startsWith('record:')).length;
+      await tester.pump(const Duration(seconds: 15));
+      expect(api.calls.where((c) => c.startsWith('record:')).length, reads + 1);
+      // In the background it waits.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      expect(panel.polling, isFalse);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      expect(panel.polling, isTrue);
+      await tester.pumpWidget(const SizedBox());
+      expect(panel.polling, isFalse, reason: 'stopped when it goes away');
+    });
+
+    testWidgets('vertical: what happened before starting over is grouped apart, not under states not reached', (tester) async {
+      final h = [
+        entry('created', 'Draft'), entry('transitioned', 'Submitted', before: 'Draft'),
+        entry('reset', 'Draft', before: 'Submitted'),
+      ];
+      await pumpPanel(tester, UiWorkflowPanel(api: _RecordApi(record('Draft'), h), entity: 'application', entityId: '1'));
+      final label = find.bySemanticsLabel('Earlier, before starting over (2)');
+      expect(label, findsOneWidget);
+      expect(find.text('Started in Draft'), findsNothing, reason: 'folded away');
+      await tester.tap(label);
+      await tester.pumpAndSettle();
+      expect(find.text('Started in Draft'), findsOneWidget);
+    });
+
+    testWidgets('reads 500 history entries and says when only the latest were read', (tester) async {
+      final api = _ManyApi();
+      await pumpPanel(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact), size: const Size(480, 900));
+      expect(api.took, 500);
+      expect(find.text('Showing the latest 500 entries.'), findsOneWidget);
+    });
+  });
+}
+
+class _SwitchApi extends FakeWorkflowApi {
+  final gates = <String, Completer<void>>{};
+  @override
+  Future<UiWfRecord> record(String entity, String id) async {
+    await gates[id]?.future;
+    return UiWfRecord.fromJson({...recordJson, 'id': id, 'stateLabel': 'State $id'});
+  }
+}
+
+class _FlakyApi extends FakeWorkflowApi {
+  bool failRecord = false;
+  @override
+  Future<UiWfRecord> record(String entity, String id) async {
+    if (failRecord) throw const UiWfApiError(503, 'down', 'The engine is down.');
+    return super.record(entity, id);
+  }
+
+  @override
+  Future<List<UiWfAuditEntry>> recordHistory(String entity, String id, {int take = 200}) async => throw const UiWfApiError(500, 'boom', 'No history');
+}
+
+class _ManyApi extends FakeWorkflowApi {
+  int? took;
+  @override
+  Future<List<UiWfAuditEntry>> recordHistory(String entity, String id, {int take = 200}) async {
+    took = take;
+    return [for (var i = take; i >= 1; i--) entry('decided', null, category: 'task')];
+  }
 }
