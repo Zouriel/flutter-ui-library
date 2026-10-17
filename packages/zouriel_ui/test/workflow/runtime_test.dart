@@ -21,6 +21,14 @@ void main() {
       expect(find.bySemanticsLabel('In review'), findsOneWidget);
       h.dispose();
     });
+
+    testWidgets('info has the theme\'s info colour, primary the primary colour', (tester) async {
+      await pumpPage(tester, const Column(children: [UiWorkflowStateBadge(label: 'Submitted', tone: 'info'), UiWorkflowStateBadge(label: 'In progress', tone: 'primary')]));
+      final t = tester.element(find.text('Submitted')).ui;
+      expect(t.info, isNot(t.primary), reason: 'the default theme gives info its own colour');
+      expect(tester.widget<Text>(find.text('Submitted')).style?.color, t.info);
+      expect(tester.widget<Text>(find.text('In progress')).style?.color, t.primary);
+    });
   });
 
   group('UiWorkflowRecordPanel', () {

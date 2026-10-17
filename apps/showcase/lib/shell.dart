@@ -33,10 +33,7 @@ class ShowcaseShell extends StatefulWidget {
 
 class _ShowcaseShellState extends State<ShowcaseShell> {
   // On the web build, #/<page-id> opens that page (handy for links and screenshots).
-  late ShowcasePage _page = showcasePages.firstWhere(
-    (p) => Uri.base.fragment == '/${p.id}',
-    orElse: () => showcasePages.first,
-  );
+  late ShowcasePage _page = showcasePageById(Uri.base.fragment.replaceFirst('/', '')) ?? showcasePages.first;
   final _menuOpen = ValueNotifier(false);
 
   void _go(ShowcasePage p) {
@@ -55,7 +52,13 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
     final t = context.ui;
     final wide = MediaQuery.sizeOf(context).width >= 900;
     final padding = MediaQuery.paddingOf(context);
-    final page = KeyedSubtree(key: ValueKey(_page.id), child: Builder(builder: _page.builder));
+    final page = ShowcaseNav(
+      go: (id) {
+        final p = showcasePageById(id);
+        if (p != null) _go(p);
+      },
+      child: KeyedSubtree(key: ValueKey(_page.id), child: Builder(builder: _page.builder)),
+    );
 
     final bar = Container(
       height: 52 + padding.top,

@@ -149,6 +149,12 @@ pans or zooms (a refit that comes up mid-drag waits for the pointer to lift) and
 
 ## Running workflows in your app
 
+The showcase's **Workflow components** page (`apps/showcase`, `#/workflow-components`; the old
+`#/workflow-panel` opens it too) shows each of these live on the in-memory office, with when to use
+it, a snippet and its parameters, and a "You are" / "Application" picker so you can see what each
+person gets: the head of office sees every button (Start over once an application has moved on from
+Draft), the applicant only their own moves, finance only the sign-off.
+
 ```dart
 UiWorkflowRecordPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)

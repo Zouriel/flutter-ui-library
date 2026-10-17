@@ -188,4 +188,27 @@ void main() {
       height: 600,
     );
   });
+
+  testWidgets('switches to its phone layout on its own, with no width given', (tester) async {
+    Future<(double, double)> navTops(Size screen) async {
+      await pumpUi(
+        tester,
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SizedBox(height: 560, child: UiWorkflowGlobalSettings(settings: UiWorkflowSettings(), registry: FakeWorkflowApi().registry)),
+          ]),
+        ),
+        size: screen,
+      );
+      expect(tester.takeException(), isNull);
+      // Two of the section buttons.
+      return (tester.getTopLeft(find.text('Defaults')).dy, tester.getTopLeft(find.text('Channels')).dy);
+    }
+
+    final (phoneA, phoneB) = await navTops(const Size(390, 844));
+    expect(phoneA, phoneB, reason: 'on a phone the sections are one scrolling row');
+    final (wideA, wideB) = await navTops(const Size(1100, 844));
+    expect(wideB, greaterThan(wideA), reason: 'wide, they are a column beside the form');
+  });
 }

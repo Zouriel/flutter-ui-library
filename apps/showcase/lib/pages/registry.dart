@@ -19,7 +19,7 @@ import 'overview_page.dart';
 import 'typography_page.dart';
 import 'window_page.dart';
 import 'workflow_builder_page.dart';
-import 'workflow_panel_page.dart';
+import 'workflow_components_page.dart';
 
 /// A showcase page in the side menu, grouped like the web docs.
 class ShowcasePage {
@@ -46,9 +46,31 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('file-viewer', 'Flagship', 'File viewer', HugeIcons.strokeRoundedFile02, (_) => const FileViewerPage()),
   ShowcasePage('form-builder', 'Flagship', 'Form builder', HugeIcons.strokeRoundedTask01, (_) => const FormBuilderPage()),
   ShowcasePage('workflow-builder', 'Flagship', 'Workflow builder', HugeIcons.strokeRoundedWorkflowSquare01, (_) => const WorkflowBuilderPage()),
-  ShowcasePage('workflow-panel', 'Flagship', 'Workflow panel', HugeIcons.strokeRoundedWorkflowCircle01, (_) => const WorkflowPanelPage()),
+  ShowcasePage('workflow-components', 'Flagship', 'Workflow components', HugeIcons.strokeRoundedWorkflowCircle01, (_) => const WorkflowComponentsPage()),
   ShowcasePage('window', 'Flagship', 'Window system', HugeIcons.strokeRoundedBrowser, (_) => const WindowPage()),
   ShowcasePage('design-tools', 'Flagship', 'Design tools', HugeIcons.strokeRoundedPenTool01, (_) => const DesignToolsPage()),
   ShowcasePage('fx', 'Motion', 'Motion & FX', HugeIcons.strokeRoundedMagicWand01, (_) => const FxPage()),
   ShowcasePage('behaviors', 'Motion', 'Behavior directives', HugeIcons.strokeRoundedTouch01, (_) => const BehaviorsPage()),
 ];
+
+/// Old page ids that moved, and where they went.
+const Map<String, String> _movedPages = {'workflow-panel': 'workflow-components'};
+
+/// The page with [id] (an old id opens the page that replaced it), or null.
+ShowcasePage? showcasePageById(String id) {
+  final real = _movedPages[id] ?? id;
+  return showcasePages.where((p) => p.id == real).firstOrNull;
+}
+
+/// Lets a page open another one (a link from one page to another).
+class ShowcaseNav extends InheritedWidget {
+  const ShowcaseNav({super.key, required this.go, required super.child});
+
+  /// Opens the page with this id.
+  final ValueChanged<String> go;
+
+  static ShowcaseNav? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<ShowcaseNav>();
+
+  @override
+  bool updateShouldNotify(ShowcaseNav oldWidget) => false;
+}

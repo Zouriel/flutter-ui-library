@@ -61,10 +61,27 @@ class DemoWorkflowApi implements UiWorkflowApi {
   });
 
   static const _users = [
-    {'id': 'ali', 'name': 'Ali Rasheed', 'email': 'ali@example.com', 'roles': ['applicant']},
-    {'id': 'hana', 'name': 'Hana Ibrahim', 'email': 'hana@example.com', 'roles': ['reviewer']},
-    {'id': 'mariyam', 'name': 'Mariyam Saeed', 'email': 'mariyam@example.com', 'roles': ['finance']},
+    {'id': 'hana', 'name': 'Hana Ibrahim', 'email': 'hana@example.com', 'title': 'Head of office', 'roles': ['reviewer', 'head', 'admin']},
+    {'id': 'ali', 'name': 'Ali Rasheed', 'email': 'ali@example.com', 'title': 'Applicant', 'roles': ['applicant']},
+    {'id': 'mariyam', 'name': 'Mariyam Saeed', 'email': 'mariyam@example.com', 'title': 'Finance', 'roles': ['finance']},
   ];
+
+  /// The people the demos can act as.
+  static List<({String id, String name, String title})> get people => [
+        for (final u in _users) (id: u['id']! as String, name: u['name']! as String, title: u['title']! as String),
+      ];
+
+  /// Who the API acts as: what they may do follows their roles (the head of office may do everything).
+  String actingAs = 'hana';
+
+  Map<String, Object?> get _actor => _users.firstWhere((u) => u['id'] == actingAs, orElse: () => _users.first);
+  String get _actorName => _actor['name']! as String;
+  bool _hasRole(String role) => (_actor['roles']! as List).contains(role);
+  bool get _isAdmin => _hasRole('admin');
+
+  void _onlyAdmins(String what) {
+    if (!_isAdmin) throw UiWfApiError(403, 'forbidden', 'Only admins can $what.');
+  }
 
   /// The lifecycle the record panel uses (published, so automations can be triggered by it).
   static UiWorkflowDefinition statusLifecycle() => UiWorkflowDefinition.fromJson({
@@ -111,7 +128,18 @@ class DemoWorkflowApi implements UiWorkflowApi {
   });
 
   late Map<String, Map<String, Object?>> _defs;
-  late Map<String, Object?> _record;
+  /// The applications by id; "1" is the one the workflows have worked on.
+  late Map<String, Map<String, Object?>> _records;
+  Map<String, Object?> get _record => _records['1']!;
+
+  /// Each application's applicant (who may submit or withdraw it).
+  static const Map<String, String> _applicants = {'1': 'ali', '2': 'ali', '3': 'ali'};
+
+  /// The applications, for a picker.
+  List<({String id, String title, String stateLabel, String? stateTone})> get applications => [
+        for (final e in _records.entries)
+          (id: e.key, title: e.value['title']! as String, stateLabel: e.value['stateLabel']! as String, stateTone: e.value['stateTone'] as String?),
+      ];
 
   /// The application's own fields that the demo workflow changes (and a reset can put back).
   late Map<String, Object?> _fields;
@@ -149,7 +177,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
       status.id: {'draft': status.json, 'published': _clone(status.json), 'status': 'published', 'version': 1, 'versions': [_version(1, 'First version')], 'updatedAt': _ago(const Duration(days: 9))},
       finance.id: {'draft': finance.json, 'published': _clone(finance.json), 'status': 'published', 'version': 1, 'versions': [_version(1, 'Finance signs off large amounts')], 'updatedAt': _ago(const Duration(days: 7))},
     };
-    _record = {
+    _records = {};
+    _records['1'] = {
       'entity': 'application', 'id': '1', 'title': 'Marine biology degree, Ali Rasheed', 'lifecycle': 'applicationStatus', 'lifecycleTitle': 'Application status',
       'state': 'review', 'stateLabel': 'In review', 'stateTone': 'info', 'status': 'active', 'stateEnteredAt': _ago(const Duration(hours: 3)),
       'transitions': _transitionsFrom('review'),
@@ -160,6 +189,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
         {'key': 'approved', 'label': 'Approved', 'category': 'terminal', 'tone': 'success'}, {'key': 'rejected', 'label': 'Rejected', 'category': 'terminal', 'tone': 'danger'},
       ],
     };
+    _records['2'] = _plainRecord('2', 'Nursing diploma, Ali Rasheed', 'draft');
+    _records['3'] = _plainRecord('3', 'Law degree, Ali Rasheed', 'approved');
     _fields = {'reviewer': 'Rana Ibrahim', 'budget': 42000};
     _documents = ['d9'];
     _done = ['field:application:1:reviewer', 'created:document:d9', 'field:programme:p1:budget', 'message:m1'];
@@ -190,6 +221,38 @@ class DemoWorkflowApi implements UiWorkflowApi {
     _settingsRevision = 1;
   }
 
+  /// An application the workflows haven't done anything to yet, in [state].
+  Map<String, Object?> _plainRecord(String id, String title, String state) {
+    final r = <String, Object?>{
+      'entity': 'application', 'id': id, 'title': title, 'lifecycle': 'applicationStatus', 'lifecycleTitle': 'Application status',
+      'status': 'active', 'stateEnteredAt': _ago(const Duration(days: 2)), 'instances': <Object?>[], 'manual': <Object?>[],
+      'states': _record['states'],
+    };
+    _setState(r, state);
+    return r;
+  }
+
+  /// Moves a record to [state] (its label, tone and the moves from there).
+  void _setState(Map<String, Object?> r, String state) {
+    final s = (r['states']! as List).cast<Map>().firstWhere((x) => x['key'] == state);
+    r['state'] = state;
+    r['stateLabel'] = s['label'];
+    r['stateTone'] = s['tone'];
+    r['stateEnteredAt'] = _now();
+    r['transitions'] = _transitionsFrom(state);
+  }
+
+  Map<String, Object?> _rec(String id) => _records[id] ?? (throw const UiWfApiError(404, 'notFound', 'There is no such application.'));
+
+  /// Whether the acting person may make a move (by its `who`: the applicant, or a role).
+  bool _mayMove(Map<String, Object?> t, String recordId) {
+    for (final w in (t['_who'] as List? ?? const []).cast<Map>()) {
+      if (w['field'] == 'entity.applicant' && _applicants[recordId] == actingAs) return true;
+      if (w['role'] is String && _hasRole(w['role'] as String)) return true;
+    }
+    return false;
+  }
+
   Map<String, Object?> _version(int v, String note) => {'version': v, 'note': note, 'publishedAt': _now(), 'publishedBy': 'Hana Ibrahim', 'instances': v == 1 ? 3 : 0};
 
   Map<String, Object?> _task(String id, String title, String kind, {required Duration due, bool overdue = false}) => {
@@ -214,16 +277,18 @@ class DemoWorkflowApi implements UiWorkflowApi {
         if (transitionAllows(def, t, state.id) && !t.hidden)
           {
             'key': t.key, 'label': t.label, 'to': lc.states.firstWhere((s) => s.id == t.to).key, 'toLabel': lc.states.firstWhere((s) => s.id == t.to).label,
-            'tone': t.tone, 'confirm': t.confirm, 'form': t.inputForm,
+            'tone': t.tone, 'confirm': t.confirm, 'form': t.inputForm, 'comment': ?t.comment?.name,
+            // Who may make it (kept here, never sent).
+            '_who': [for (final w in t.who ?? const <UiWfAssignee>[]) w.json],
           },
     ];
   }
 
-  void _log(String category, String action, {Object? before, Object? after, Object? data, String? actor, String? at}) {
+  void _log(String category, String action, {Object? before, Object? after, Object? data, String? actor, String? at, String entityId = '1'}) {
     _seq++;
     _audit.insert(0, {
       'seq': _seq, 'id': 'a$_seq', 'at': at ?? _now(), 'actorType': actor == null ? 'workflow' : 'user', 'actorName': actor, 'actorId': actor == null ? null : 'u',
-      'category': category, 'action': action, 'subjectType': category, 'subjectId': '1', 'entity': 'application', 'entityId': '1', 'instanceId': 'run1',
+      'category': category, 'action': action, 'subjectType': category, 'subjectId': entityId, 'entity': 'application', 'entityId': entityId, 'instanceId': 'run1',
       'before': before == null ? null : jsonEncode(before), 'after': after == null ? null : jsonEncode(after), 'data': data == null ? null : jsonEncode(data),
       'correlationId': 'c$_seq', 'prevHash': 'h${_seq - 1}', 'hash': 'h$_seq',
     });
@@ -247,8 +312,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfMe> me() => _later(() => UiWfMe.fromJson({
-    'type': 'user', 'id': 'hana', 'name': 'Hana Ibrahim', 'roles': ['reviewer', 'admin'],
-    'can': {'edit': true, 'publish': true, 'settings': true, 'intervene': true, 'audit': true},
+    'type': 'user', 'id': actingAs, 'name': _actorName, 'roles': _actor['roles'],
+    'can': {'edit': _isAdmin, 'publish': _isAdmin, 'settings': _isAdmin, 'intervene': _isAdmin, 'audit': _isAdmin},
   }));
 
   @override
@@ -256,6 +321,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<int> saveSettings(UiWorkflowSettings settings, int revision) => _later(() {
+    _onlyAdmins('change the workflow settings');
     if (revision != _settingsRevision) throw const UiWfApiError(409, 'conflict', 'Someone else changed the settings. Reload and try again.');
     _settings = UiWorkflowSettings.fromJson(_clone(settings.json));
     _log('settings', 'saved', actor: 'Hana Ibrahim');
@@ -346,6 +412,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) => _later(() {
+    _onlyAdmins('change who may do what');
     final d = _defs[id]!;
     if (d['published'] == null) throw const UiWfApiError(409, 'not_published', 'Publish the workflow first.');
     // Apply each change to a JSON definition: a transition's or the reset's/start button's "who",
@@ -517,7 +584,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
   // ── Runs ────────────────────────────────────────────────────────────────────────────────
 
   @override
-  Future<UiWfPage<UiWfInstance>> instances(UiWfInstanceQuery q) => _later(() => UiWfPage([UiWfInstance.fromJson(_run)], 1));
+  Future<UiWfPage<UiWfInstance>> instances(UiWfInstanceQuery q) =>
+      _later(() => q.entityId == null || q.entityId == '1' ? UiWfPage([UiWfInstance.fromJson(_run)], 1) : const UiWfPage(<UiWfInstance>[], 0));
 
   @override
   Future<UiWfInstance> instance(String id) => _later(() => UiWfInstance.fromJson(_clone(_run)));
@@ -548,16 +616,26 @@ class DemoWorkflowApi implements UiWorkflowApi {
   @override
   Future<UiWfPage<UiWfTask>> tasks(UiWfTaskQuery q) => _later(() {
     final statuses = q.status ?? const ['open'];
-    final list = [for (final t in _tasks) if (statuses.contains(t['status'])) t];
-    return UiWfPage([for (final t in list.take(q.take ?? 25)) UiWfTask.fromJson(_clone(t))], list.length);
+    final mine = q.scope != 'all';
+    if (!mine) _onlyAdmins("see everyone's tasks");
+    final list = [
+      for (final t in _tasks)
+        if (statuses.contains(t['status']) && (!mine || (t['assignees']! as List).contains(actingAs))) t,
+    ];
+    return UiWfPage([for (final t in list.take(q.take ?? 25)) _asSeen(t)], list.length);
   });
 
+  /// A task as the acting person sees it: they can decide it when it is open and theirs.
+  UiWfTask _asSeen(Map<String, Object?> t) =>
+      UiWfTask.fromJson({..._clone(t) as Map<String, Object?>, 'canDecide': t['status'] == 'open' && (t['assignees']! as List).contains(actingAs)});
+
   @override
-  Future<UiWfTask> task(String id) => _later(() => UiWfTask.fromJson(_clone(_tasks.firstWhere((t) => t['id'] == id))));
+  Future<UiWfTask> task(String id) => _later(() => _asSeen(_tasks.firstWhere((t) => t['id'] == id)));
 
   @override
   Future<UiWfTask> decide(String id, String outcome, {String? comment, UiJson? data}) => _later(() {
     final t = _tasks.firstWhere((x) => x['id'] == id);
+    if (!(t['assignees']! as List).contains(actingAs)) throw const UiWfApiError(403, 'notAllowed', 'This task is for someone else.');
     if (t['requireComment'] == 'reject' && outcome == 'rejected' && (comment ?? '').trim().isEmpty) {
       throw const UiWfApiError(422, 'commentRequired', 'Say why you are rejecting it.');
     }
@@ -565,13 +643,13 @@ class DemoWorkflowApi implements UiWorkflowApi {
     t['outcome'] = outcome;
     t['canDecide'] = false;
     t['completedAt'] = _now();
-    t['decisions'] = [{'userId': 'mariyam', 'name': 'Mariyam Saeed', 'outcome': outcome, 'comment': comment, 'data': data, 'at': _now()}];
-    _log('task', 'decided', data: {'outcome': outcome, 'comment': comment}, actor: 'Mariyam Saeed');
+    t['decisions'] = [{'userId': actingAs, 'name': _actorName, 'outcome': outcome, 'comment': comment, 'data': data, 'at': _now()}];
+    _log('task', 'decided', data: {'outcome': outcome, 'comment': comment}, actor: _actorName);
     if (id == 't1') {
       _run['status'] = outcome == 'approved' ? 'completed' : 'completed';
       (_run['steps'] as List).last = {...(_run['steps'] as List).last as Map<String, Object?>, 'status': 'completed'};
     }
-    return UiWfTask.fromJson(_clone(t));
+    return _asSeen(t);
   });
 
   @override
@@ -579,8 +657,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
     final t = _tasks.firstWhere((x) => x['id'] == id);
     t['assignees'] = [to];
     t['assigneeNames'] = [_users.where((u) => u['id'] == to).firstOrNull?['name'] ?? to];
-    t['canDecide'] = false;
-    return UiWfTask.fromJson(_clone(t));
+    return _asSeen(t);
   });
 
   @override
@@ -588,13 +665,20 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   // ── Records ─────────────────────────────────────────────────────────────────────────────
 
-  UiWfRecord _recordNow() {
-    final open = [for (final t in _tasks) if (t['status'] == 'open') t];
-    // The demo lifecycle can be started over whenever that would change something.
-    final canReset = _record['state'] != 'draft' || open.isNotEmpty;
+  /// A record as the acting person sees it: only the moves they may make, the open tasks about it
+  /// (decidable when theirs), and Start over for the head of office once it would change something.
+  UiWfRecord _recordNow(String id) {
+    final r = _rec(id);
+    final open = [for (final t in _tasks) if (t['status'] == 'open' && t['entityId'] == id) t];
+    final canReset = _hasRole('head') && (r['state'] != 'draft' || open.isNotEmpty);
     return UiWfRecord.fromJson({
-      ..._clone(_record) as Map<String, Object?>,
-      'tasks': open,
+      ..._clone(r) as Map<String, Object?>,
+      'transitions': [
+        for (final t in (r['transitions']! as List).cast<Map<String, Object?>>())
+          if (_mayMove(t, id)) {...t}..remove('_who'),
+      ],
+      'manual': _isAdmin ? r['manual'] : <Object?>[],
+      'tasks': [for (final t in open) _asSeen(t).json],
       'reset': canReset ? {'label': 'Start over', 'to': 'draft', 'toLabel': 'Draft', 'confirm': null, 'form': _resetForm} : null,
     });
   }
@@ -610,7 +694,9 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   /// What the demo workflow did since the application last started over, for the reset list: only
   /// what is still listed in [_done], so a reset empties it until the application moves on again.
-  List<Map<String, Object?>> _resetItems() {
+  List<Map<String, Object?>> _resetItems(String recordId) {
+    // Only application 1 has had workflows do things to it.
+    if (recordId != '1') return const [];
     final all = <String, Map<String, Object?>>{
       'field:application:1:reviewer': {'kind': 'field', 'title': 'Reviewer of Application “${_record['title'] ?? 'Bursary'}”: back to nobody',
         'detail': 'Now ${_fields['reviewer'] ?? 'nobody'}', 'workflow': 'Scholarship review', 'step': 'Assign the reviewer', 'undoable': true, 'selected': true},
@@ -640,12 +726,14 @@ class DemoWorkflowApi implements UiWorkflowApi {
   }
 
   @override
-  Future<UiWfResetPreview> resetPreview(String entity, String id) => _later(() => UiWfResetPreview.fromJson({'reset': _recordNow().reset?.json, 'items': _resetItems()}));
+  Future<UiWfResetPreview> resetPreview(String entity, String id) => _later(() => UiWfResetPreview.fromJson({'reset': _recordNow(id).reset?.json, 'items': _resetItems(id)}));
 
   @override
   Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment}) => _later(() {
-    final before = _record['state'];
-    final items = _resetItems();
+    final r = _rec(id);
+    if (_recordNow(id).reset == null) throw const UiWfApiError(403, 'notAllowed', 'You can’t start this application over.');
+    final before = r['state'];
+    final items = _resetItems(id);
     if (undo?.any((u) => !items.any((i) => i['id'] == u)) ?? false) {
       throw const UiWfApiError(409, 'resetChanged', 'What the workflow did has changed; check the list again.');
     }
@@ -654,39 +742,34 @@ class DemoWorkflowApi implements UiWorkflowApi {
       _takeBack(u);
     }
     // Starting over: from here the list holds only what the workflow does next.
-    _done = [];
+    if (id == '1') _done = [];
     for (final task in _tasks) {
-      if (task['status'] == 'open') task['status'] = 'cancelled';
+      if (task['status'] == 'open' && task['entityId'] == id) task['status'] = 'cancelled';
     }
-    _record['state'] = 'draft';
-    _record['stateLabel'] = 'Draft';
-    _record['stateTone'] = 'neutral';
-    _record['stateEnteredAt'] = _now();
-    _record['transitions'] = _transitionsFrom('draft');
-    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}, 'undone': undone, 'comment': ?comment}, actor: 'Hana Ibrahim');
-    return _recordNow();
+    _setState(r, 'draft');
+    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}, 'undone': undone, 'comment': ?comment},
+        actor: _actorName, entityId: id);
+    return _recordNow(id);
   });
 
   @override
-  Future<UiWfRecord> record(String entity, String id) => _later(_recordNow);
+  Future<UiWfRecord> record(String entity, String id) => _later(() => _recordNow(id));
 
   @override
-  Future<List<UiWfAuditEntry>> recordHistory(String entity, String id, {int take = 200}) =>
-      _later(() => [for (final a in _audit.where((a) => a['category'] == 'lifecycle' || a['category'] == 'task').take(take)) UiWfAuditEntry.fromJson(a)]);
+  Future<List<UiWfAuditEntry>> recordHistory(String entity, String id, {int take = 200}) => _later(() => [
+        for (final a in _audit.where((a) => a['entityId'] == id && (a['category'] == 'lifecycle' || a['category'] == 'task')).take(take)) UiWfAuditEntry.fromJson(a),
+      ]);
 
   @override
   Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input, String? comment}) => _later(() {
-    final options = (_record['transitions'] as List).cast<Map<String, Object?>>();
-    final t = options.where((x) => x['key'] == key).firstOrNull;
-    if (t == null) throw const UiWfApiError(403, 'notAllowed', 'That move isn’t possible from here.');
-    final before = _record['state'];
-    _record['state'] = t['to'];
-    _record['stateLabel'] = t['toLabel'];
-    _record['stateTone'] = (_record['states'] as List).cast<Map>().firstWhere((s) => s['key'] == t['to'])['tone'];
-    _record['stateEnteredAt'] = _now();
-    _record['transitions'] = _transitionsFrom(t['to'] as String);
-    _log('lifecycle', 'transitioned', before: {'state': before}, after: {'state': t['to']}, data: {'transition': key, 'label': t['label'], 'comment': ?comment}, actor: 'Hana Ibrahim');
-    if (before == 'draft' && t['to'] == 'review') {
+    final r = _rec(id);
+    final t = (r['transitions']! as List).cast<Map<String, Object?>>().where((x) => x['key'] == key).firstOrNull;
+    if (t == null || !_mayMove(t, id)) throw const UiWfApiError(403, 'notAllowed', 'That move isn’t possible from here.');
+    final before = r['state'];
+    _setState(r, t['to']! as String);
+    _log('lifecycle', 'transitioned', before: {'state': before}, after: {'state': t['to']}, data: {'transition': key, 'label': t['label'], 'comment': ?comment},
+        actor: _actorName, entityId: id);
+    if (id == '1' && before == 'draft' && t['to'] == 'review') {
       // The workflow assigns a reviewer and opens a checklist again, which a later reset can take back.
       _fields['reviewer'] = 'Rana Ibrahim';
       if (!_documents.contains('d9')) _documents.add('d9');
@@ -694,24 +777,25 @@ class DemoWorkflowApi implements UiWorkflowApi {
     }
     if (t['to'] == 'approved' || t['to'] == 'rejected') {
       for (final task in _tasks) {
-        if (task['status'] == 'open') task['status'] = 'cancelled';
+        if (task['status'] == 'open' && task['entityId'] == id) task['status'] = 'cancelled';
       }
     }
-    return _recordNow();
+    return _recordNow(id);
   });
 
   @override
   Future<UiWfRecord> forceState(String entity, String id, String state, String reason, {bool skipSteps = false}) => _later(() {
-    _record['state'] = state;
-    _record['transitions'] = _transitionsFrom(state);
-    _log('lifecycle', 'forced', after: {'state': state}, data: {'reason': reason}, actor: 'Hana Ibrahim');
-    return _recordNow();
+    _onlyAdmins('move a record by force');
+    _setState(_rec(id), state);
+    _log('lifecycle', 'forced', after: {'state': state}, data: {'reason': reason}, actor: _actorName, entityId: id);
+    return _recordNow(id);
   });
 
   @override
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input}) => _later(() {
-    _tasks.add(_task('t${_tasks.length + 1}', 'Upload the missing documents', 'task', due: const Duration(days: 5)));
-    _log('task', 'created', data: {'title': 'Upload the missing documents'}, actor: 'Hana Ibrahim');
+    final task = _task('t${_tasks.length + 1}', 'Upload the missing documents', 'task', due: const Duration(days: 5));
+    _tasks.add({...task, 'entityId': id ?? '1', 'entityTitle': _records[id ?? '1']?['title']});
+    _log('task', 'created', data: {'title': 'Upload the missing documents'}, actor: _actorName, entityId: id ?? '1');
     return UiWfInstance.fromJson({'id': 'run${_tasks.length}', 'status': 'waiting'});
   });
 
@@ -719,6 +803,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<List<UiWfAuditEntry>> audit(UiWfAuditQuery q) => _later(() {
+    _onlyAdmins('read the audit log');
     final list = [
       for (final a in _audit)
         if ((q.category == null || a['category'] == q.category) && (q.entityId == null || a['entityId'] == q.entityId) && (q.before == null || (a['seq'] as int) < q.before!)) a,

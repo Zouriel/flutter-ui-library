@@ -67,7 +67,8 @@ class UiWorkflowStateBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final c = tone == null || tone == 'neutral' ? t.textSecondary : wfToneColor(t, tone);
+    // Info has the theme's own colour (themes without one give it the primary's); the rest by tone.
+    final c = tone == null || tone == 'neutral' ? t.textSecondary : tone == 'info' ? t.info : wfToneColor(t, tone);
     return Semantics(
       label: label,
       child: ExcludeSemantics(

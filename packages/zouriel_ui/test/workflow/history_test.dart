@@ -16,6 +16,12 @@ void main() {
       expect(wfActorLabel(actor('workflow', 'financeSignOff', null), (k) => k == 'financeSignOff' ? 'Pay approved scholarships' : null),
           'Workflow: Pay approved scholarships');
     });
+    test('prefers the title over a name that is only the key', () {
+      expect(wfActorLabel(actor('workflow', 'financeSignOff', 'financeSignOff'), (k) => k == 'financeSignOff' ? 'Pay approved scholarships' : null),
+          'Workflow: Pay approved scholarships');
+      // No title known: the name it was given.
+      expect(wfActorLabel(actor('workflow', 'financeSignOff', 'Finance sign-off')), 'Workflow: Finance sign-off');
+    });
     test('falls back to a readable key when the title is unknown', () {
       expect(wfActorLabel(actor('workflow', 'scholarshipReview', null)), 'Workflow: Scholarship review');
     });

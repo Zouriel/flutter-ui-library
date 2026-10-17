@@ -172,7 +172,9 @@ String wfActorLabel(UiWfAuditEntry e, [String? Function(String key)? workflowTit
   final name = e.actorName;
   if (e.actorType == 'workflow') {
     final key = e.actorId ?? '';
-    final title = (name != null && name.isNotEmpty) ? name : workflowTitle?.call(key);
+    // The title when it is known: the engine may store the key as the actor's name.
+    final known = workflowTitle?.call(key);
+    final title = known != null && known.isNotEmpty ? known : (name != null && name.isNotEmpty ? name : null);
     return 'Workflow: ${title ?? (key.isEmpty ? 'unknown' : wfHumanize(key))}';
   }
   if (name != null && name.isNotEmpty) return name;
