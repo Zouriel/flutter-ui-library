@@ -550,6 +550,11 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
+    // Escape drops nothing: the step goes back where it was, and screen readers hear "Move cancelled".
+    if (e.logicalKey == LogicalKeyboardKey.escape && _dnd.payload != null) {
+      _dnd.end(commit: false);
+      return KeyEventResult.handled;
+    }
     final typing = FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<EditableText>() != null;
     final keys = HardwareKeyboard.instance;
     final mod = keys.isControlPressed || keys.isMetaPressed;
@@ -696,7 +701,13 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     final t = context.ui;
     switch (_view) {
       case UiWorkflowBuilderView.versions:
-        return WfVersions(saved: _savedOnce, onSynced: _synced);
+        return WfVersions(
+          saved: _savedOnce,
+          onSynced: _synced,
+          onLeftError: (msg) {
+            if (mounted) setState(() => _saveError = msg);
+          },
+        );
       case UiWorkflowBuilderView.test:
         return const WfTest();
       case UiWorkflowBuilderView.build:

@@ -33,10 +33,20 @@ class _WfStepEditorState extends State<WfStepEditor> {
   bool _bodyInvalid = false;
   String? _bodyDraft;
 
+  /// The webhook body the draft goes with (as JSON): the body it wrote, or for text that isn't
+  /// JSON yet the body that was there. When the step's body is something else (undo, redo), the
+  /// draft is dropped and the step's own body shows.
+  String? _bodyDraftOf;
+
+  static String _bodyKey(UiWfStep step) {
+    final w = UiWfWebhookStep.of(step);
+    return w.hasBody ? jsonEncode(w.body) : '';
+  }
+
   @override
   void didUpdateWidget(WfStepEditor old) {
     super.didUpdateWidget(old);
-    if (old.step.id != widget.step.id) {
+    if (old.step.id != widget.step.id || (_bodyDraft != null && widget.step.type == 'webhook' && _bodyKey(widget.step) != _bodyDraftOf)) {
       _bodyInvalid = false;
       _bodyDraft = null;
     }
@@ -601,12 +611,14 @@ class _WfStepEditorState extends State<WfStepEditor> {
                   setState(() {
                     _bodyInvalid = false;
                     _bodyDraft = v;
+                    _bodyDraftOf = jsonEncode(body);
                   });
                   patch({'body': body}, 'body');
                 } catch (_) {
                   setState(() {
                     _bodyInvalid = true;
                     _bodyDraft = v;
+                    _bodyDraftOf = _bodyKey(step);
                   });
                 }
               },

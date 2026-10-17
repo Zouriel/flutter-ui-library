@@ -54,13 +54,17 @@ Widget _page(BuildContext context, double maxWidth, List<Widget> children) {
 /// Versions: what changed since publishing, publish with a note, earlier versions, roll back (the
 /// web `ui-wf-versions`).
 class WfVersions extends StatefulWidget {
-  const WfVersions({super.key, required this.saved, this.onSynced});
+  const WfVersions({super.key, required this.saved, this.onSynced, this.onLeftError});
 
   /// Whether the workflow has been saved to the engine (versions live there).
   final bool saved;
 
   /// The engine's draft now equals this definition (after publishing or rolling back).
   final ValueChanged<UiWorkflowDefinition>? onSynced;
+
+  /// An error that arrived after the panel was left (a publish that failed once the person went
+  /// back to Build), for the builder to show.
+  final ValueChanged<String>? onLeftError;
 
   @override
   State<WfVersions> createState() => _WfVersionsState();
@@ -83,6 +87,18 @@ class _WfVersionsState extends State<WfVersions> {
     super.didChangeDependencies();
     final store = WfBuilderScope.of(context).store;
     if (store.api != null && widget.saved && (store.version != _seenVersion || store.api != _seenApi)) {
+      _seenVersion = store.version;
+      _seenApi = store.api;
+      _refresh();
+    }
+  }
+
+  @override
+  void didUpdateWidget(WfVersions oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Saved for the first time while this is showing: the engine has versions to show now.
+    if (!oldWidget.saved && widget.saved) {
+      final store = WfBuilderScope.read(context).store;
       _seenVersion = store.version;
       _seenApi = store.api;
       _refresh();
@@ -160,9 +176,15 @@ class _WfVersionsState extends State<WfVersions> {
     });
     try {
       await f();
-      await _refresh();
+      // Gone meanwhile (the person went back to Build): what was done stands, there's nothing to show.
+      if (mounted) await _refresh();
     } catch (e) {
-      if (mounted) setState(() => _error = e is UiWfApiError ? e.message : 'Something went wrong.');
+      final msg = e is UiWfApiError ? e.message : 'Something went wrong.';
+      if (mounted) {
+        setState(() => _error = msg);
+      } else {
+        widget.onLeftError?.call(msg);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -199,12 +221,15 @@ class _WfVersionsState extends State<WfVersions> {
                 ? null
                 : () => _run(() async {
                     final def = store.def;
+                    // Read now: the panel may be left (Build, Test) while this is on its way, and the
+                    // rest must still happen: the published version updated and the host told.
+                    final onSynced = widget.onSynced;
                     await api.saveDraft(def);
                     final s = await api.publish(def.id, note: _note.isEmpty ? null : _note);
-                    setState(() => _note = '');
+                    if (mounted) setState(() => _note = '');
                     final pd = await api.definition(s.id);
                     if (pd.published != null) store.published = pd.published;
-                    widget.onSynced?.call(def);
+                    onSynced?.call(def);
                   }),
           ),
           if (errors > 0) FbHint('Fix $errors problem${errors == 1 ? '' : 's'} first.'),

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -98,6 +99,23 @@ class WfDnd extends ChangeNotifier {
     return box.localToGlobal(Offset.zero) & box.size;
   }
 
+  /// The part of a list that can be seen: its box cut to every scroll view it sits in and to the
+  /// builder. A list scrolled out of view (under the top bar, say) takes no drops there.
+  Rect? _visibleRectOf(GlobalKey k) {
+    final box = k.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached || !box.hasSize) return null;
+    var r = box.localToGlobal(Offset.zero) & box.size;
+    for (RenderObject? p = box.parent; p != null; p = p.parent) {
+      if (p is RenderAbstractViewport && p is RenderBox) {
+        final v = p as RenderBox;
+        if (v.hasSize) r = r.intersect(v.localToGlobal(Offset.zero) & v.size);
+      }
+    }
+    final root = _rectOf(rootKey);
+    if (root != null) r = r.intersect(root);
+    return r.width <= 0 || r.height <= 0 ? null : r;
+  }
+
   void begin(WfDragPayload payload, Offset global) {
     _payload = payload;
     _global = global;
@@ -182,7 +200,7 @@ class WfDnd extends ChangeNotifier {
     Rect? listRect;
     for (final MapEntry(key: id, value: k) in _lists.entries) {
       if (movingId != null && isInsideStep(def, id, movingId)) continue;
-      final r = _rectOf(k);
+      final r = _visibleRectOf(k);
       if (r == null || !r.contains(g)) continue;
       if (listRect == null || r.width * r.height < listRect.width * listRect.height) {
         listId = id;
