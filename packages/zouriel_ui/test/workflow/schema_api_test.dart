@@ -131,6 +131,13 @@ void main() {
       await expectLater(a.task('y'), throwsA(isA<UiWfApiError>().having((e) => e.message, 'message', 'You are not allowed to do that.').having((e) => e.code, 'code', 'http403')));
     });
 
+    test('me reads GET /me', () async {
+      final a = api((r) => http.Response('{"type":"user","id":"hana","name":"Hana","roles":["admin"],"can":{"edit":true,"publish":false}}', 200));
+      final me = await a.me();
+      expect(seen.single.url.path, '/api/workflows/me');
+      expect([me.id, me.canEdit, me.canPublish, me.roles], ['hana', true, false, ['admin']]);
+    });
+
     test('a missing user is null; 204 is fine', () async {
       final a = api((r) => r.method == 'DELETE' ? http.Response('', 204) : http.Response('{}', 404));
       expect(await a.user('nobody'), isNull);

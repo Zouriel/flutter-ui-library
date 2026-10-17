@@ -14,6 +14,7 @@ import '../forms/text/inputs.dart';
 import '../theme/theme.dart';
 import 'api.dart';
 import 'bits.dart';
+import 'clock.dart';
 import 'definition.dart';
 import 'icons.dart';
 import 'json.dart';
@@ -101,9 +102,12 @@ class _DecideState extends ChangeNotifier {
 /// null when closed.
 Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api}) {
   final st = _DecideState();
+  final formKey = GlobalKey<UiFormRendererState>();
   String outcomeLabel(String key) => task.outcomes.where((o) => o.key == key).firstOrNull?.label.toLowerCase() ?? key;
 
   Future<void> decide(BuildContext ctx, String outcome) async {
+    // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
+    if (task.form != null && formKey.currentState?.submit() == null) return;
     st.set(() {
       st.busy = true;
       st.error = '';
@@ -144,7 +148,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
           if (task.instructions != null) Text(task.instructions!, style: _body(ctx, size: 14, height: 1.5)),
           Text.rich(
             TextSpan(children: [
-              TextSpan(text: 'Due ${wfDateTime(task.dueAt)} (${wfAgo(task.dueAt)})'),
+              TextSpan(text: 'Due ${wfDateTime(task.dueAt)} (${wfAgo(task.dueAt, UiWorkflowClock.nowOf(ctx))})'),
               if (task.overdue) ...[const TextSpan(text: ' · '), TextSpan(text: 'overdue', style: TextStyle(color: t.danger, fontWeight: FontWeight.w700))],
             ]),
             style: _body(ctx, size: 12.5, color: t.textMuted),
@@ -161,7 +165,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
                 ),
             ]),
           if (task.form != null)
-            UiFormRenderer(definition: task.form!, showActions: false, showTitle: false, onValueChanged: (v) => st.answers = v),
+            UiFormRenderer(key: formKey, definition: task.form!, showActions: false, showTitle: false, onValueChanged: (v) => st.answers = v),
           FbSetting(
             label: 'Comment${rc == 'always' ? ' (required)' : rc == 'reject' ? ' (required to reject)' : ''}',
             child: UiTextarea(value: st.comment, rows: 2, autosize: true, semanticLabel: 'Comment', onChanged: (v) => st.comment = v),
@@ -294,6 +298,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
     final err = ValueNotifier<String>('');
     final busy = ValueNotifier<bool>(false);
     var input = <String, Object?>{};
+    final formKey = GlobalKey<UiFormRendererState>();
     showUiModal<void>(
       context: context,
       title: p.label,
@@ -303,7 +308,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
         builder: (ctx, e, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
           if (p.confirm != null) Text(p.confirm!, style: _body(ctx, size: 14)),
           if (p.form != null)
-            UiFormRenderer(definition: p.form!, showActions: false, showTitle: false, onValueChanged: (v) => input = v)
+            UiFormRenderer(key: formKey, definition: p.form!, showActions: false, showTitle: false, onValueChanged: (v) => input = v)
           else if (p.confirm == null)
             Text('Move this record to “${p.toLabel}”?', style: _body(ctx, size: 14)),
           if (e.isNotEmpty) WfNote(e),
@@ -320,6 +325,8 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
             onPressed: b
                 ? null
                 : () async {
+                    // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
+                    if (p.form != null && formKey.currentState?.submit() == null) return;
                     busy.value = true;
                     final ok = manual ? await _runManual(p.key, input, err) : await _apply(p.key, input, err);
                     busy.value = false;
@@ -433,7 +440,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
         Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
           if (r.state != null) ...[
             UiWorkflowStateBadge(label: r.stateLabel ?? r.state!, tone: r.stateTone),
-            Text('since ${wfAgo(r.stateEnteredAt)}', style: _body(context, size: 12, color: t.textMuted)),
+            Text('since ${wfAgo(r.stateEnteredAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
             if (r.status == 'outOfSync') const WfChip('Out of sync', tone: 'warning'),
           ] else
             const FbHint('No lifecycle for this record type.'),
@@ -477,7 +484,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
                 child: UiInteractive(
                   onTap: () => _openTask(task),
                   enabled: task.canDecide,
-                  semanticLabel: '${task.title}, ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt)}${task.canDecide ? ', your turn' : ''}',
+                  semanticLabel: '${task.title}, ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}${task.canDecide ? ', your turn' : ''}',
                   excludeChildSemantics: true,
                   pressScale: false,
                   builder: (context, s) => Container(
@@ -492,7 +499,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
                           Text(task.title, style: _body(context, size: 13.5, weight: FontWeight.w600)),
-                          Text('${task.assigneeNames.join(', ')} · due ${wfAgo(task.dueAt)}', style: _body(context, size: 12, color: t.textMuted)),
+                          Text('${task.assigneeNames.join(', ')} · due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
                         ]),
                       ),
                       if (task.canDecide) const WfChip('Your turn', tone: 'primary'),
@@ -512,7 +519,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
                 decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   WfArrowText(_describeHistory(h), style: _body(context)),
-                  Text('${h.actorName ?? h.actorType} · ${wfAgo(h.at)}', style: _body(context, size: 11.5, color: t.textMuted)),
+                  Text('${h.actorName ?? h.actorType} · ${wfAgo(h.at, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 11.5, color: t.textMuted)),
                 ]),
               ),
           ]),
@@ -647,7 +654,7 @@ class _TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     final open = task.status == 'open';
-    final due = '${task.overdue ? 'Overdue' : 'Due'} ${wfAgo(task.dueAt)}';
+    final due = '${task.overdue ? 'Overdue' : 'Due'} ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}';
     return UiInteractive(
       onTap: onTap,
       semanticLabel: '${task.title}, ${task.entityTitle ?? task.definitionKey}, ${open ? due : outcome}',
@@ -842,7 +849,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
           WfChip(_statusLabel(r.status), tone: _statusTone(r.status)),
         ]),
         Text(
-          '${r.entityTitle ?? r.entityId ?? ''} · started ${wfAgo(r.startedAt)}${r.initiatorName != null ? ' by ${r.initiatorName}' : ''}',
+          '${r.entityTitle ?? r.entityId ?? ''} · started ${wfAgo(r.startedAt, UiWorkflowClock.nowOf(context))}${r.initiatorName != null ? ' by ${r.initiatorName}' : ''}',
           style: _body(context, size: 12, color: t.textMuted),
         ),
       ]),

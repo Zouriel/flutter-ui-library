@@ -291,6 +291,24 @@ extension type const UiWfUser._(UiJson json) implements Object {
   List<String>? get groups => wfStringsOrNull(json['groups']);
 }
 
+/// The signed-in person, as the engine sees them, and what they may do (`GET /me`).
+extension type const UiWfMe._(UiJson json) implements Object {
+  UiWfMe.fromJson(Object? j) : json = wfMap(j);
+  String get type => wfStr(json['type']);
+  String? get id => wfStrOrNull(json['id']);
+  String? get name => wfStrOrNull(json['name']);
+  List<String> get roles => wfStrings(json['roles']);
+  bool _can(String k) => wfMap(json['can'])[k] == true;
+  bool get canEdit => _can('edit');
+  bool get canPublish => _can('publish');
+  bool get canSettings => _can('settings');
+  bool get canIntervene => _can('intervene');
+  bool get canAudit => _can('audit');
+
+  /// `{edit, publish, settings, intervene, audit}`.
+  UiJson get can => wfMap(json['can']);
+}
+
 extension type const UiWfTriggerOverview._(UiJson json) implements Object {
   UiWfTriggerOverview.fromJson(Object? j) : json = wfMap(j);
   String get definitionId => wfStr(json['definitionId']);
@@ -430,6 +448,9 @@ class UiWfApiError implements Exception {
 /// tests and demos can supply their own.
 abstract class UiWorkflowApi {
   Future<UiWorkflowSchema> schema();
+
+  /// The signed-in person and what they may do.
+  Future<UiWfMe> me();
   Future<({UiWorkflowSettings settings, int revision})> settings();
   Future<int> saveSettings(UiWorkflowSettings settings, int revision);
   Future<List<UiWfTriggerOverview>> triggers();
@@ -548,6 +569,8 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
 
   @override
   Future<UiWorkflowSchema> schema() async => UiWorkflowSchema.fromJson(await _call('GET', '/schema'));
+  @override
+  Future<UiWfMe> me() async => UiWfMe.fromJson(await _call('GET', '/me'));
   @override
   Future<({UiWorkflowSettings settings, int revision})> settings() async {
     final j = wfMap(await _call('GET', '/settings'));

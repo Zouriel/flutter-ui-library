@@ -4,6 +4,7 @@
 library;
 
 export '../workflow/api.dart';
+export '../workflow/clock.dart';
 export '../workflow/definition.dart';
 export '../workflow/global_settings.dart';
 export '../workflow/runtime.dart';

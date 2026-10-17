@@ -55,6 +55,32 @@ void main() {
       expect(find.text('Approved'), findsWidgets);
     });
 
+    testWidgets('a move with a form checks the form before sending anything', (tester) async {
+      final api = FakeWorkflowApi();
+      final ts = [...(api.recordJson['transitions'] as List)];
+      api.recordJson['transitions'] = ts;
+      ts[1] = <String, Object?>{
+        ...(ts[1] as Map<String, Object?>),
+        'form': {
+          'schemaVersion': 1, 'id': 'f_withdraw', 'title': 'Withdraw',
+          'pages': [{'id': 'p1', 'elements': [{'kind': 'field', 'id': 'f_reason', 'type': 'text', 'key': 'reason', 'label': 'Reason', 'required': true}]}],
+        },
+      };
+      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await tester.tap(button('Withdraw'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reason'), findsWidgets);
+      await tester.tap(button('Withdraw').last);
+      await tester.pumpAndSettle();
+      // The empty required answer stops it here; nothing reached the engine.
+      expect(api.calls.where((c) => c.startsWith('apply')), isEmpty);
+      await tester.enterText(find.byType(EditableText).first, 'Changed my mind');
+      await tester.pumpAndSettle();
+      await tester.tap(button('Withdraw').last);
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('apply:withdraw'));
+    });
+
     testWidgets('a move without confirmation or form applies straight away', (tester) async {
       final api = FakeWorkflowApi();
       await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
