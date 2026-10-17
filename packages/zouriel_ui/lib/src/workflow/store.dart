@@ -13,6 +13,9 @@ class UiWfSelection {
   const UiWfSelection._(this.kind) : id = null;
   static const workflow = UiWfSelection._('workflow');
   static const trigger = UiWfSelection._('trigger');
+
+  /// The lifecycle's reset (its settings, and the steps it runs).
+  static const reset = UiWfSelection._('reset');
   const UiWfSelection.step(String this.id) : kind = 'step';
   const UiWfSelection.state(String this.id) : kind = 'state';
   const UiWfSelection.transition(String this.id) : kind = 'transition';
@@ -279,6 +282,7 @@ class UiWorkflowBuilderController extends ChangeNotifier {
     if (s == null) return;
     final exists = switch (s.kind) {
       'workflow' || 'trigger' => true,
+      'reset' => _def.lifecycle?.reset != null,
       'step' => steps.containsKey(s.id),
       'state' => _def.lifecycle?.states.any((x) => x.id == s.id) ?? false,
       _ => _def.lifecycle?.transitions.any((x) => x.id == s.id) ?? false,
@@ -375,4 +379,21 @@ class UiWorkflowBuilderController extends ChangeNotifier {
 
   /// Forgets manual positions so the diagram lays itself out again.
   void tidyLayout() => commit(updateLifecycle(_def, (lc) => UiWfLifecycle.fromJson({...lc.json}..remove('layout'))));
+
+  /// Lets people start records over (a reset back to the starting state, nobody allowed yet) and selects it.
+  void enableReset() {
+    if (_def.lifecycle?.reset == null) {
+      commit(updateLifecycle(_def, (lc) => lc.patch({'reset': {'label': 'Reset workflow', 'who': <Object?>[], 'steps': <Object?>[]}})));
+    }
+    selection = UiWfSelection.reset;
+  }
+
+  /// Changes the reset's settings (keys set to null are removed).
+  void updateReset(UiJson patch, {String? mergeKey}) => commit(
+        updateLifecycle(_def, (lc) => lc.reset == null ? lc : lc.patch({'reset': lc.reset!.patch(patch).json})),
+        mergeKey: mergeKey == null ? null : 'reset:$mergeKey',
+      );
+
+  /// Takes the reset away (its steps too).
+  void removeReset() => commit(updateLifecycle(_def, (lc) => UiWfLifecycle.fromJson({...lc.json}..remove('reset'))));
 }

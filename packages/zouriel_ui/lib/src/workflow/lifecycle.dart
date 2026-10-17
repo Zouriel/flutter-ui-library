@@ -320,7 +320,7 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       bar,
       Expanded(child: diagram),
-      if (anyState.isNotEmpty)
+      if (anyState.isNotEmpty || lc?.reset != null)
         Container(
           padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 6),
           decoration: BoxDecoration(color: t.surface, border: Border(top: BorderSide(color: t.borderSubtle))),
@@ -332,6 +332,13 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
                 to: stateLabel(tr.to),
                 selected: sel == UiWfSelection.transition(tr.id),
                 onTap: () => _select(store, ui, UiWfSelection.transition(tr.id)),
+              ),
+            if (lc?.reset case final reset?)
+              _AnyChip(
+                label: reset.label ?? 'Reset workflow',
+                to: stateLabel(reset.to ?? states.where((x) => x.category == 'initial').firstOrNull?.id ?? ''),
+                selected: sel == UiWfSelection.reset,
+                onTap: () => _select(store, ui, UiWfSelection.reset),
               ),
           ]),
         ),
@@ -795,11 +802,12 @@ class WfLifecycleRuns extends StatefulWidget {
   static UiWfSelection? _owner(UiWorkflowBuilderController store) {
     final s = store.selection;
     if (s == null) return null;
-    if (s.kind == 'state' || s.kind == 'transition') return s;
+    if (s.kind == 'state' || s.kind == 'transition' || s.kind == 'reset') return s;
     if (s.kind == 'step') {
       final loc = store.steps[s.id];
       final root = loc?.path.first;
       if (root == null || root == 'root') return null;
+      if (root == 'reset') return UiWfSelection.reset;
       final i = root.indexOf(':');
       final kind = root.substring(0, i), id = root.substring(i + 1);
       return kind == 'transition' ? UiWfSelection.transition(id) : UiWfSelection.state(id);
@@ -811,6 +819,7 @@ class WfLifecycleRuns extends StatefulWidget {
     final o = _owner(store);
     if (o == null) return const [];
     final lc = store.def.lifecycle;
+    if (o.kind == 'reset') return lc?.reset != null ? const [(value: 'reset', label: 'On reset')] : const [];
     if (o.kind == 'transition') {
       return lc?.transitions.any((t) => t.id == o.id) ?? false ? [(value: 'transition:${o.id}', label: 'Then do')] : const [];
     }
@@ -873,11 +882,15 @@ class _WfLifecycleRunsState extends State<WfLifecycleRuns> {
     }
     final owner = WfLifecycleRuns._owner(store)!;
     final lc = store.def.lifecycle;
-    final title = owner.kind == 'transition'
+    final title = owner.kind == 'reset'
+        ? 'On “${lc?.reset?.label ?? 'Reset workflow'}”'
+        : owner.kind == 'transition'
         ? 'After “${lc?.transitions.where((x) => x.id == owner.id).firstOrNull?.label ?? ''}”'
         : 'In “${lc?.states.where((x) => x.id == owner.id).firstOrNull?.label ?? ''}”';
     final kind = active.split(':').first;
     final hint = switch (kind) {
+      'reset' =>
+        'These run after the record is back at the start, once its open tasks and runs have stopped. Change this record, related records or each item of a list (Update record, For each), tell people, or run your own actions.',
       'transition' => 'These run right after the record moves (the person who moved it is “whoever started it”).',
       'onEnter' => 'These run every time a record arrives in this state. They stop if it leaves.',
       'onExit' => 'These run every time a record leaves this state.',

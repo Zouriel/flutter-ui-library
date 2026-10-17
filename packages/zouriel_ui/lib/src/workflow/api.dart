@@ -232,6 +232,19 @@ extension type const UiWfRecord._(UiJson json) implements Object {
   List<UiWfInstance> get instances => wfList(json['instances'], UiWfInstance.fromJson);
   List<UiWfManualOption> get manual => wfList(json['manual'], UiWfManualOption.fromJson);
   List<UiWfRecordState> get states => wfList(json['states'], UiWfRecordState.fromJson);
+
+  /// Starting the workflow over, when this person may and it would change something (else null).
+  UiWfResetOption? get reset => json['reset'] is Map ? UiWfResetOption.fromJson(json['reset']) : null;
+}
+
+/// `{label, to, toLabel, confirm, form}`: the record's reset as offered to the viewer.
+extension type const UiWfResetOption._(UiJson json) implements Object {
+  UiWfResetOption.fromJson(Object? j) : json = wfMap(j);
+  String get label => wfStr(json['label']);
+  String get to => wfStr(json['to']);
+  String get toLabel => wfStr(json['toLabel']);
+  String? get confirm => wfStrOrNull(json['confirm']);
+  UiJson? get form => wfMapOrNull(json['form']);
 }
 
 extension type const UiWfAuditEntry._(UiJson json) implements Object {
@@ -493,6 +506,9 @@ abstract class UiWorkflowApi {
   Future<List<UiWfAuditEntry>> recordHistory(String entity, String id, {int take = 200});
   Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input});
   Future<UiWfRecord> forceState(String entity, String id, String state, String reason, {bool skipSteps = false});
+
+  /// Starts the record's workflow over (the lifecycle's reset), with the reset form's answers.
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input});
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input});
 
   Future<List<UiWfAuditEntry>> audit(UiWfAuditQuery q);
@@ -664,6 +680,9 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
   @override
   Future<UiWfRecord> forceState(String entity, String id, String state, String reason, {bool skipSteps = false}) async =>
       UiWfRecord.fromJson(await _call('POST', '/records/${_e(entity)}/${_e(id)}/force-state', {'state': state, 'reason': reason, 'skipSteps': skipSteps}));
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input}) async =>
+      UiWfRecord.fromJson(await _call('POST', '/records/${_e(entity)}/${_e(id)}/reset', {'input': input ?? const <String, Object?>{}}));
   @override
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input}) async {
     final path = entity != null && entity.isNotEmpty && id != null && id.isNotEmpty

@@ -519,7 +519,18 @@ class _WfRecordActionsState extends State<WfRecordActions> {
   }
 
   /// The confirmation (or form) before a move or a manual start.
-  void _confirm(UiWfTransitionOption p, {required bool manual}) {
+  /// Starting over: always confirmed (it stops work in progress), with the reset's form when it has one.
+  void _startReset(UiWfResetOption rs) {
+    if (_busy) return;
+    _confirm(
+      UiWfTransitionOption(key: '', label: rs.label, to: rs.to, toLabel: rs.toLabel, tone: 'danger',
+          confirm: rs.confirm ?? 'Start over from “${rs.toLabel}”? Open tasks and runs stop.', form: rs.form),
+      manual: false,
+      reset: true,
+    );
+  }
+
+  void _confirm(UiWfTransitionOption p, {required bool manual, bool reset = false}) {
     final err = ValueNotifier<String>('');
     final busy = ValueNotifier<bool>(false);
     var input = <String, Object?>{};
@@ -555,7 +566,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
                     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
                     if (p.form != null && formKey.currentState?.submit() == null) return;
                     busy.value = true;
-                    final ok = manual ? await _runManual(p.key, input, err) : await _apply(p.key, input, err);
+                    final ok = reset ? await _reset(input, err) : manual ? await _runManual(p.key, input, err) : await _apply(p.key, input, err);
                     busy.value = false;
                     if (ok && ctx.mounted) Navigator.of(ctx).pop();
                   },
@@ -584,6 +595,23 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       } else if (mounted) {
         setState(() => _error = msg);
       }
+      return false;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<bool> _reset(UiJson input, ValueNotifier<String> err) async {
+    final api = widget.api;
+    if (api == null) return false;
+    setState(() => _busy = true);
+    try {
+      final r = await api.resetRecord(widget.entity, widget.entityId, input: input);
+      if (mounted) setState(() => _error = '');
+      await widget.onChanged?.call(r);
+      return true;
+    } catch (e) {
+      err.value = _errorText(e, 'The workflow could not be reset.');
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -624,7 +652,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     final t = context.ui;
     final r = widget.record;
     final tasks = widget.showTasks ? r.tasks : const <UiWfTask>[];
-    final nothing = r.transitions.isEmpty && r.manual.isEmpty && tasks.isEmpty;
+    final reset = r.reset;
+    final nothing = r.transitions.isEmpty && r.manual.isEmpty && tasks.isEmpty && reset == null;
     // Small buttons with a mouse; the regular size on touch screens, where small ones look cramped.
     final size = uiTouchPlatform(context) ? UiSize.md : UiSize.sm;
     if (nothing && widget.emptyText.isEmpty && _error.isEmpty) return const SizedBox.shrink();
@@ -634,6 +663,15 @@ class _WfRecordActionsState extends State<WfRecordActions> {
           for (final tr in r.transitions) UiButton(label: tr.label, size: size, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr)),
           for (final m in r.manual) UiButton(label: m.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m)),
         ]),
+      if (reset != null)
+        Container(
+          padding: EdgeInsets.only(top: t.space2),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
+          child: Wrap(spacing: t.space2, runSpacing: t.space2, alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Text('Back to “${reset.toLabel}”: open tasks and runs stop.', style: _body(context, size: 12, color: t.textMuted)),
+            UiButton(label: reset.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startReset(reset)),
+          ]),
+        ),
       if (tasks.isNotEmpty)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
           const _Heading('Waiting for'),

@@ -341,6 +341,19 @@ class WfWorkflowEditor extends StatelessWidget {
           ),
         ),
       FbSwitch(value: def.settings?.calendar == 'working', label: 'Count deadlines in working time', onChanged: (on) => patchSettings({'calendar': on ? 'working' : null})),
+      if (def.kind == 'lifecycle')
+        WfSection(title: 'Starting over', children: [
+          FbSwitch(
+            value: def.lifecycle?.reset != null,
+            label: 'Let people reset a record\'s workflow',
+            onChanged: (on) => on ? store.enableReset() : store.removeReset(),
+          ),
+          if (def.lifecycle?.reset != null)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: FbLink(label: 'Who, where to and what changes on reset ›', fontSize: 12, onTap: () => store.selection = UiWfSelection.reset),
+            ),
+        ]),
       WfSection(title: 'Looked after by', children: [
         WfAssigneesEditor(value: def.settings?.owners ?? const [], registry: store.registry, api: store.api, emptyText: 'Nobody yet.', label: 'owners', onChanged: (v) => patchSettings({'owners': v})),
         FbSwitch(value: def.settings?.notifyOwnersOnIncident ?? false, label: 'Tell them when a run gets stuck', onChanged: (on) => patchSettings({'notifyOwnersOnIncident': on ? true : null})),
@@ -545,6 +558,63 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
 
 /// The settings panel: settings for whatever is selected, with a short header and its problems
 /// (the web `ui-wf-inspector`).
+/// The lifecycle's reset (the web `ui-wf-reset-editor`): who may start a record over, back to which
+/// state, what it asks, and what else stops.
+class WfResetEditor extends StatelessWidget {
+  const WfResetEditor({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = WfBuilderScope.of(context).store;
+    final r = store.def.lifecycle?.reset;
+    if (r == null) return const SizedBox.shrink();
+    final states = store.def.lifecycle?.states ?? const <UiWfState>[];
+    final start = states.where((s) => s.category == 'initial').firstOrNull;
+    void patch(UiJson p, [String? mergeKey]) => store.updateReset(p, mergeKey: mergeKey);
+    return WfStack(children: [
+      const FbHint('Starting over stops the record\'s open tasks and runs, moves it back, then runs the steps under the diagram (“On reset”), which can change this record, related records and each item of a list.'),
+      FbSetting(
+        label: 'Button label',
+        child: UiInput(size: UiSize.sm, value: r.label ?? '', placeholder: 'Reset workflow', semanticLabel: 'Button label', onChanged: (v) => patch({'label': v.isEmpty ? null : v}, 'label')),
+      ),
+      FbSetting(
+        label: 'Back to',
+        child: WfSelect(
+          label: 'Back to',
+          value: r.to ?? '',
+          options: [
+            (value: '', label: 'The starting state${start == null ? '' : ' (${start.label})'}'),
+            for (final s in states)
+              if (s.id != start?.id) (value: s.id, label: s.label),
+          ],
+          onChanged: (v) => patch({'to': v.isEmpty ? null : v}),
+        ),
+      ),
+      WfSection(title: 'Who can reset', children: [
+        WfAssigneesEditor(
+          value: r.who,
+          registry: store.registry,
+          api: store.api,
+          label: 'people',
+          emptyText: 'Nobody yet: choose who may start records over.',
+          onChanged: (v) => patch({'who': v}),
+        ),
+      ]),
+      WfSection(title: 'Ask for', children: [
+        WfFormField(value: r.inputForm, title: '${r.label ?? 'Reset'} form', addLabel: 'Add questions (e.g. a reason)', onChanged: (f) => patch({'input': f == null ? null : {'form': f}})),
+        FbSetting(
+          label: 'Confirmation message',
+          child: UiInput(size: UiSize.sm, value: r.confirm ?? '', placeholder: 'e.g. Start this application over?', semanticLabel: 'Confirmation message', onChanged: (v) => patch({'confirm': v.isEmpty ? null : v}, 'confirm')),
+        ),
+      ]),
+      WfSection(title: 'What else happens', children: [
+        FbSwitch(value: r.cancelAutomations, label: 'Also stop other workflows running about the record', onChanged: (on) => patch({'cancelAutomations': on ? null : false})),
+        FbSwitch(value: r.runExitEnter, label: 'Run the state\'s “on leaving” and the start\'s “on entering” steps', onChanged: (on) => patch({'runExitEnter': on ? true : null})),
+      ]),
+    ]);
+  }
+}
+
 class WfInspector extends StatelessWidget {
   const WfInspector({super.key, this.showHead = true, this.onDeleteRequest, this.scrollController});
 
@@ -564,6 +634,7 @@ class WfInspector extends StatelessWidget {
       'trigger' => 'What starts it',
       'state' => store.selectedState?.label ?? 'State',
       'transition' => store.selectedTransition?.label ?? 'Transition',
+      'reset' => store.def.lifecycle?.reset?.label ?? 'Reset workflow',
       _ => store.def.kind == 'lifecycle' ? 'Lifecycle settings' : 'Workflow settings',
     };
     final icon = switch (kind) {
@@ -571,17 +642,22 @@ class WfInspector extends StatelessWidget {
       'trigger' => WfIcons.flash,
       'state' => WfIcons.flag01,
       'transition' => WfIcons.arrowRight02,
+      'reset' => WfIcons.refresh,
       _ => WfIcons.settings02,
     };
-    final canDelete = const ['step', 'state', 'transition'].contains(kind);
-    final problems = store.problemsOf(sel == null || kind == 'workflow' || kind == 'trigger' ? null : sel.id);
+    final canDelete = const ['step', 'state', 'transition', 'reset'].contains(kind);
+    // Reset problems have no node of their own; they show with the workflow's.
+    final problems = store.problemsOf(sel == null || kind == 'workflow' || kind == 'trigger' || kind == 'reset' ? null : sel.id);
 
     // For a step inside a lifecycle run: the state or transition it belongs to.
     UiWfSelection? parent;
     String? parentLabel;
     if (kind == 'step') {
       final root = store.steps[sel!.id]?.path.firstOrNull;
-      if (root != null && root != 'root') {
+      if (root == 'reset') {
+        final reset = store.def.lifecycle?.reset;
+        if (reset != null) (parent, parentLabel) = (UiWfSelection.reset, reset.label ?? 'Reset workflow');
+      } else if (root != null && root != 'root') {
         final i = root.indexOf(':');
         final k = root.substring(0, i), id = root.substring(i + 1);
         final lc = store.def.lifecycle;
@@ -600,6 +676,7 @@ class WfInspector extends StatelessWidget {
       'trigger' => const WfTriggerEditor(),
       'state' => WfStateEditor(key: ValueKey(sel!.id)),
       'transition' => WfTransitionEditor(key: ValueKey(sel!.id)),
+      'reset' => const WfResetEditor(),
       _ => const WfWorkflowEditor(),
     };
 

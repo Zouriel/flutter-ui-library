@@ -356,6 +356,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     final s = controller.selection;
     if (s?.kind == 'transition') return 'transition:${s!.id}';
     if (s?.kind == 'state') return 'onEnter:${s!.id}';
+    if (s?.kind == 'reset') return 'reset';
     return null;
   }
 
@@ -400,7 +401,12 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   void _requestDeleteSelected() {
     if (controller.readOnly) return;
     final s = controller.selection;
-    if (s == null || s.id == null) return;
+    if (s == null) return;
+    if (s.kind == 'reset') {
+      _askDelete('reset', '');
+      return;
+    }
+    if (s.id == null) return;
     if (s.kind == 'step' || s.kind == 'state' || s.kind == 'transition') _askDelete(s.kind, s.id!);
   }
 
@@ -429,6 +435,13 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
       final n = lc!.transitions.where((t) => t.to == id || (!t.fromAny && t.from.contains(id))).length;
       name = st.label;
       detail.add(n > 0 ? 'The $n transition${n == 1 ? '' : 's'} into or out of it will be deleted too.' : 'Records in this state will be shown as out of sync.');
+    } else if (kind == 'reset') {
+      final reset = def.lifecycle?.reset;
+      if (reset == null) return;
+      name = reset.label ?? 'Reset workflow';
+      detail.add('People will no longer be able to start records over.');
+      final n = reset.steps?.length ?? 0;
+      if (n > 0) detail.add('Its $n step${n == 1 ? '' : 's'} will be deleted too.');
     } else {
       final tr = def.lifecycle?.transitions.where((x) => x.id == id).firstOrNull;
       if (tr == null) return;
@@ -459,6 +472,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
         controller.removeStep(id);
       } else if (kind == 'state') {
         controller.removeState(id);
+      } else if (kind == 'reset') {
+        controller.removeReset();
       } else {
         controller.removeTransition(id);
       }
@@ -574,6 +589,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     if (s.kind == 'trigger') return 'What starts it';
     if (s.kind == 'step') return controller.selectedStep != null ? stepName(controller.selectedStep!) : 'Step';
     if (s.kind == 'state') return controller.selectedState?.label ?? 'State';
+    if (s.kind == 'reset') return controller.def.lifecycle?.reset?.label ?? 'Reset workflow';
     return controller.selectedTransition?.label ?? 'Transition';
   }
 

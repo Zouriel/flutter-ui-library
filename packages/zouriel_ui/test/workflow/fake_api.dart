@@ -169,6 +169,16 @@ class FakeWorkflowApi extends Fake implements UiWorkflowApi {
     return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
   });
 
+  /// The input of the last reset.
+  UiJson? lastResetInput;
+
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input}) => _do('reset', () {
+    lastResetInput = input;
+    recordJson = {...recordJson, 'state': 'draft', 'stateLabel': 'Draft', 'stateTone': 'neutral', 'tasks': <Object?>[], 'reset': null};
+    return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
+  });
+
   @override
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input}) => _do('manual:$workflow', () => UiWfInstance.fromJson({'id': 'm1'}));
 

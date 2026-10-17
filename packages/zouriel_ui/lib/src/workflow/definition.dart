@@ -317,6 +317,8 @@ List<UiWfRootList> rootLists(UiWorkflowDefinition def) {
   for (final t in lc.transitions) {
     if (t.steps != null) out.add(UiWfRootList('transition:${t.id}', 'After ${t.label}', t.steps!));
   }
+  final reset = lc.reset;
+  if (reset?.steps != null) out.add(UiWfRootList('reset', 'On ${reset!.label ?? 'reset'}', reset.steps!));
   return out;
 }
 
@@ -434,7 +436,18 @@ UiWorkflowDefinition mapLists(UiWorkflowDefinition def, UiWfListMapper f) {
     lcChanged = true;
     transitions.add({...t.json, 'steps': l});
   }
-  return lcChanged ? UiWorkflowDefinition.fromJson({...def.json, 'lifecycle': {...lc.json, 'states': states, 'transitions': transitions}}) : def;
+  Object? reset = lc.json['reset'];
+  final resetSteps = lc.reset?.steps;
+  if (resetSteps != null) {
+    final l = mapList('reset', resetSteps);
+    if (!identical(l, resetSteps)) {
+      reset = {...lc.reset!.json, 'steps': l};
+      lcChanged = true;
+    }
+  }
+  return lcChanged
+      ? UiWorkflowDefinition.fromJson({...def.json, 'lifecycle': {...lc.json, 'states': states, 'transitions': transitions, 'reset': ?reset}})
+      : def;
 }
 
 /// Replaces one step (found anywhere) with `f(step)`.
@@ -448,6 +461,10 @@ UiWorkflowDefinition updateStep(UiWorkflowDefinition def, String id, UiWfStep Fu
 UiWorkflowDefinition ensureList(UiWorkflowDefinition def, String listId) {
   final lc = def.lifecycle;
   if (listSteps(def, listId) != null || lc == null) return def;
+  if (listId == 'reset') {
+    final reset = lc.reset;
+    return reset == null ? def : UiWorkflowDefinition.fromJson({...def.json, 'lifecycle': {...lc.json, 'reset': {...reset.json, 'steps': reset.steps ?? <UiWfStep>[]}}});
+  }
   final (kind, id) = _splitSlot(listId);
   if (kind == 'transition') {
     return UiWorkflowDefinition.fromJson({
@@ -649,6 +666,55 @@ class UiWfAt {
 /// A question of a form whose answers are `input.*`.
 typedef UiWfInputField = ({String key, String label});
 
+/// The questions of a form (fields on every page, inside groups too), as answer keys and labels.
+List<UiWfInputField> wfFormFields(UiJson? form) {
+  final out = <UiWfInputField>[];
+  void walk(Object? els, String prefix) {
+    if (els is! List) return;
+    for (final e in els) {
+      if (e is! Map) continue;
+      final key = e['key'];
+      if (e['kind'] == 'field' && key is String) {
+        final label = e['label'];
+        out.add((key: '$prefix$key', label: label is String && label.isNotEmpty ? label : key));
+      } else if (e['kind'] == 'group') {
+        walk(e['elements'], key is String && key.isNotEmpty ? '$prefix$key.' : prefix);
+      }
+    }
+  }
+
+  final pages = form?['pages'];
+  if (pages is List) {
+    for (final page in pages) {
+      if (page is Map) walk(page['elements'], '');
+    }
+  }
+  return out;
+}
+
+/// The form answers (`input.*`) steps at a position can read: the transition's or the reset's form.
+List<UiWfInputField> _inputFieldsAt(UiWorkflowDefinition def, UiWfAt? at) {
+  final lc = def.lifecycle;
+  if (at == null || lc == null) return const [];
+  final idx = indexSteps(def);
+  final listId = at.listId;
+  // The top-level list the position is in (a nested list belongs to the step that holds it).
+  final root = at.stepId != null
+      ? idx[at.stepId]?.path.first
+      : listId == null
+          ? null
+          : listId.contains('/')
+              ? idx[listId.split('/').first]?.path.first
+              : listId;
+  if (root == null) return const [];
+  if (root == 'reset') return wfFormFields(lc.reset?.inputForm);
+  if (root.startsWith('transition:')) {
+    final id = root.substring('transition:'.length);
+    return wfFormFields(lc.transitions.where((t) => t.id == id).firstOrNull?.inputForm);
+  }
+  return const [];
+}
+
 const List<String> _fieldTypesForPickers = ['text', 'longText', 'email', 'phone', 'url', 'number', 'currency', 'boolean', 'date', 'dateTime', 'enum', 'user', 'relation', 'json'];
 
 List<UiWfToken> _entityTokens(UiWorkflowRegistry? reg, String entityKey, String prefix, String group, [int depth = 0]) {
@@ -736,7 +802,7 @@ List<UiWfToken> tokensAt(UiWorkflowDefinition def, UiWorkflowRegistry? reg, {Map
     UiWfToken(path: 'trigger.actor', label: 'Person who started it', group: 'What started it', type: 'user'),
     UiWfToken(path: 'trigger.at', label: 'When it started', group: 'What started it', type: 'dateTime'),
   ]);
-  for (final f in inputFields ?? const <UiWfInputField>[]) {
+  for (final f in inputFields ?? _inputFieldsAt(def, at)) {
     tokens.add(UiWfToken(path: 'input.${f.key}', label: f.label, group: 'Form answers', type: 'any'));
   }
   // Inside a forEach, the current item.

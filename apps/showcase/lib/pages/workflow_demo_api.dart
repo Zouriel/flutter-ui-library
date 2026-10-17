@@ -526,7 +526,40 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   // ── Records ─────────────────────────────────────────────────────────────────────────────
 
-  UiWfRecord _recordNow() => UiWfRecord.fromJson({..._clone(_record) as Map<String, Object?>, 'tasks': [for (final t in _tasks) if (t['status'] == 'open') t]});
+  UiWfRecord _recordNow() {
+    final open = [for (final t in _tasks) if (t['status'] == 'open') t];
+    // The demo lifecycle can be started over whenever that would change something.
+    final canReset = _record['state'] != 'draft' || open.isNotEmpty;
+    return UiWfRecord.fromJson({
+      ..._clone(_record) as Map<String, Object?>,
+      'tasks': open,
+      'reset': canReset ? {'label': 'Start over', 'to': 'draft', 'toLabel': 'Draft', 'confirm': null, 'form': _resetForm} : null,
+    });
+  }
+
+  static const Map<String, Object?> _resetForm = {
+    'schemaVersion': 1, 'id': 'f_reset', 'title': 'Start over',
+    'pages': [
+      {'id': 'p1', 'elements': [
+        {'kind': 'field', 'id': 'f_reason', 'key': 'reason', 'type': 'textarea', 'label': 'Why is it starting over?', 'required': true},
+      ]},
+    ],
+  };
+
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input}) => _later(() {
+    final before = _record['state'];
+    for (final task in _tasks) {
+      if (task['status'] == 'open') task['status'] = 'cancelled';
+    }
+    _record['state'] = 'draft';
+    _record['stateLabel'] = 'Draft';
+    _record['stateTone'] = 'neutral';
+    _record['stateEnteredAt'] = _now();
+    _record['transitions'] = _transitionsFrom('draft');
+    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}}, actor: 'Hana Ibrahim');
+    return _recordNow();
+  });
 
   @override
   Future<UiWfRecord> record(String entity, String id) => _later(_recordNow);

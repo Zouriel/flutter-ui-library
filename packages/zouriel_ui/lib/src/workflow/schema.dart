@@ -519,7 +519,34 @@ extension type const UiWfLifecycle._(UiJson json) implements Object {
             if (e.value is List) e.key: [for (final n in e.value as List) if (n is num) n],
         }
       : null;
+
+  /// Lets people start a record's workflow over (spec §6 reset); null = no reset.
+  UiWfLifecycleReset? get reset => json['reset'] is Map ? UiWfLifecycleReset.fromJson(json['reset']) : null;
   UiWfLifecycle patch(UiJson p) => UiWfLifecycle._(wfPatch(json, p));
+  UiJson toJson() => json;
+}
+
+/// Starting a record's workflow over (the web `UiWfLifecycleReset`): the people in [who] move the
+/// record back to [to] (the initial state when null). Its open tasks and runs stop first; then
+/// [steps] run, which can change this record, related records (`setFields` with a relation `target`)
+/// and each item of a collection (`forEach` + `setFields` with `target: 'item'`).
+extension type const UiWfLifecycleReset._(UiJson json) implements Object {
+  UiWfLifecycleReset.fromJson(Object? j) : json = wfMap(j);
+
+  /// The button text (default "Reset workflow").
+  String? get label => wfStrOrNull(json['label']);
+
+  /// The state id to go back to; null = the initial state.
+  String? get to => wfStrOrNull(json['to']);
+  List<UiWfAssignee> get who => wfList(json['who'], UiWfAssignee.fromJson);
+  String? get confirm => wfStrOrNull(json['confirm']);
+
+  /// The form asked first (e.g. a reason); the steps read the answers as `input.*`.
+  UiJson? get inputForm => wfMapOrNull(wfMapOrNull(json['input'])?['form']);
+  bool get runExitEnter => json['runExitEnter'] == true;
+  bool get cancelAutomations => json['cancelAutomations'] != false;
+  List<UiWfStep>? get steps => wfListOrNull(json['steps'], UiWfStep.fromJson);
+  UiWfLifecycleReset patch(UiJson p) => UiWfLifecycleReset._(wfPatch(json, p));
   UiJson toJson() => json;
 }
 
