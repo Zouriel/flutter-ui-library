@@ -382,7 +382,6 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
   }
 
   List<Widget> _time() {
-    final t = context.ui;
     final zone = _s.timeZone ?? 'UTC';
     return [
       _h2('Time and working hours'),
