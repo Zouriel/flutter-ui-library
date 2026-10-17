@@ -162,4 +162,18 @@ void main() {
     expect(find.textContaining('run view'), findsNothing);
     await _done(tester);
   });
+
+  for (final w in [360.0, 320.0]) {
+    testWidgets('both workflow pages fit a ${w.toInt()}px phone (the holidays row used to overflow)', (tester) async {
+      await _pump(tester, const WorkflowComponentsPage(), size: Size(w, 760));
+      // Down to the global settings, where the holidays are.
+      await tester.scrollUntilVisible(find.text('Holidays').first, 400, scrollable: find.byType(Scrollable).first);
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.takeException(), isNull);
+      await _done(tester);
+      await _pump(tester, const WorkflowBuilderPage(), size: Size(w, 760));
+      expect(tester.takeException(), isNull);
+      await _done(tester);
+    });
+  }
 }
