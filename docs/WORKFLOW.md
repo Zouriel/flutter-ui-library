@@ -239,6 +239,18 @@ it." Summaries (the "Stopped:" line, the panel's rows, the drawer's list) read t
 `wfReadableError`, which drops the engine's exception type ("InvalidOperationException: Bank API:
 503" reads "Bank API: 503"); a step's own detail keeps the full text for whoever debugs it.
 
+**Panel reads.** The panel reads 500 history entries ("Showing the latest 500 entries." when that many
+came back) and "The history could not be loaded." when that read fails; a failed reload shows over the
+record still shown, with Try again. `onChanged` fires after any reload that finds a new state, status or
+run status. While a run is queued, running or waiting it looks again every 15 s (only while the app is in
+the foreground). The vertical layout folds what happened before the latest reset into "Earlier, before
+starting over (n)". The runs section reads "Stopped" when every listed run stopped.
+
+**Forms and remarks.** Decisions, moves, resets and manual starts send the form's submitted answers
+(defaults and prefilled values included); picked files with no upload address are refused. Remarks are
+trimmed and capped at 2,000 characters, with "n / 2,000" from 1,800. Skip asks each registry output in
+its own type and requires the required ones. The audit log offers no export for one run.
+
 **Stuck timers (spec §10).** A timer that keeps failing (a lifecycle's automatic move or time limit,
 a task's reminder or escalation) puts its instance in `incident` with an `error`, record instances
 included; Try again re-arms it (due now) and Skip drops it unrun. A run or instance needs attention
