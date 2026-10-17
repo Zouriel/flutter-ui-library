@@ -257,8 +257,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
     expect(api.calls, contains('validate'));
-    expect(find.bySemanticsLabel('1 problems to fix'), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel('1 problems to fix'));
+    expect(find.bySemanticsLabel('1 problem to fix'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('1 problem to fix'));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel(RegExp('Add who gets the message')).last);
     await tester.pumpAndSettle();

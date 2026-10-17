@@ -54,6 +54,7 @@ class UiWorkflowBuilder extends StatefulWidget {
     this.persist = false,
     this.onProblemsChanged,
     this.onSaved,
+    this.onDirtyChanged,
     this.actions,
   });
 
@@ -86,6 +87,10 @@ class UiWorkflowBuilder extends StatefulWidget {
   /// After a successful save through the API.
   final ValueChanged<UiWorkflowDefinition>? onSaved;
 
+  /// Whether there are edits not yet saved through the API (with [persist]), so the host can guard
+  /// leaving the page.
+  final ValueChanged<bool>? onDirtyChanged;
+
   /// Your own buttons at the end of the header.
   final Widget? actions;
 
@@ -111,6 +116,10 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   UiWorkflowDefinition? _sent;
   UiWorkflowApi? _loadedFor;
   int _lastVersion = -1;
+
+  /// The last check failed (offline, refused or broken), so "Ready" would be a guess.
+  bool _checkFailed = false;
+  bool? _lastDirty;
 
   UiWorkflowBuilderController get controller => widget.controller ?? (_own ??= UiWorkflowBuilderController(definition: widget.definition));
   UiWorkflowBuilderView get view => _view;
@@ -186,6 +195,9 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
       widget.onChanged?.call(d);
     }
     if (controller.version != _lastVersion) _validateSoon();
+    // A cleared selection on a phone closes the settings sheet rather than leaving it open on nothing.
+    if (controller.selection == null && _ui.layout == UiWorkflowBuilderLayout.narrow) _sheetSnap = 0;
+    _reportDirty();
     if (mounted) setState(() {});
   }
 
@@ -212,6 +224,15 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     }).catchError((Object _) {});
   }
 
+  /// Tells the host whether leaving now would lose edits.
+  void _reportDirty() {
+    final d = widget.persist && controller.api != null && _dirty;
+    if (d == _lastDirty) return;
+    _lastDirty = d;
+    final cb = widget.onDirtyChanged;
+    if (cb != null) scheduleMicrotask(() => cb(d));
+  }
+
   void _validateSoon() {
     _lastVersion = controller.version;
     _validateTimer?.cancel();
@@ -227,10 +248,12 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
       try {
         final problems = await api.validate(def);
         if (!mounted || seq != _validateSeq) return;
+        if (_checkFailed) setState(() => _checkFailed = false);
         controller.serverProblems = problems;
         widget.onProblemsChanged?.call(problems);
       } catch (_) {
-        // A failed check leaves the previous problems in place.
+        // A failed check leaves the previous problems in place and says the workflow wasn't checked.
+        if (mounted && seq == _validateSeq) setState(() => _checkFailed = true);
       } finally {
         if (mounted && seq == _validateSeq) controller.validating = false;
       }
@@ -240,7 +263,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   /// Saves the draft through the API (creates it the first time).
   Future<void> save() async {
     final api = controller.api;
-    if (api == null) return;
+    if (api == null || _saving) return;
     setState(() {
       _saving = true;
       _saveError = '';
@@ -257,6 +280,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
         _savedOnce = true;
         _lastSaved = jsonStringify(def.json);
       });
+      _reportDirty();
       widget.onSaved?.call(def);
       final others = await api.definitions().catchError((Object _) => controller.others);
       if (mounted) controller.others = others;
@@ -464,6 +488,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     final mod = keys.isControlPressed || keys.isMetaPressed;
     final k = e.logicalKey;
     if (mod && k == LogicalKeyboardKey.keyS) {
+      // Only where the host turned saving on.
+      if (!widget.persist || controller.api == null) return KeyEventResult.ignored;
       save();
       return KeyEventResult.handled;
     }
@@ -482,6 +508,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     }
     if (k == LogicalKeyboardKey.escape && _dnd.payload == null && controller.selection != null) {
       controller.selection = null;
+      setState(() => _sheetSnap = 0);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -731,6 +758,8 @@ class _TopBar extends StatelessWidget {
     final def = store.def;
     final narrow = layout == UiWorkflowBuilderLayout.narrow;
     final errors = store.errorCount;
+    final warnings = store.problems.length - errors;
+    final problemsLabel = '$errors problem${errors == 1 ? '' : 's'} to fix${warnings > 0 ? ', $warnings warning${warnings == 1 ? '' : 's'}' : ''}';
     final title = def.title.isNotEmpty ? def.title : 'Untitled workflow';
     final persist = state.widget.persist && store.api != null;
     final saveState = state._saving ? 'Saving…' : (state._dirty ? 'Unsaved changes' : (state._savedOnce ? 'Saved' : ''));
@@ -774,7 +803,7 @@ class _TopBar extends StatelessWidget {
       if (errors > 0)
         UiInteractive(
           onTap: state._showProblems,
-          semanticLabel: '$errors problems to fix',
+          semanticLabel: problemsLabel,
           excludeChildSemantics: true,
           pressScale: false,
           builder: (context, s) => Container(
@@ -788,17 +817,35 @@ class _TopBar extends StatelessWidget {
             ]),
           ),
         )
-      else if (store.api != null && !store.validating)
+      else if (state._checkFailed)
         Semantics(
-          label: 'No problems found',
+          label: 'Not checked: the engine could not check this workflow, so problems may be missing.',
           child: ExcludeSemantics(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Row(mainAxisSize: MainAxisSize.min, spacing: 3, children: [
-                UiIcon(WfIcons.tick02, size: 13, strokeWidth: 2, color: t.success),
-                if (!narrow) Text('Ready', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.success)),
+                UiIcon(WfIcons.alert02, size: 13, strokeWidth: 1.9, color: t.warning),
+                if (!narrow) Text('Not checked', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.warning)),
               ]),
             ),
+          ),
+        )
+      else if (store.api != null && !store.validating)
+        UiInteractive(
+          onTap: warnings > 0 ? state._showProblems : null,
+          enabled: true,
+          semanticLabel: warnings > 0 ? 'Ready, $warnings warning${warnings == 1 ? '' : 's'} (nothing blocks publishing)' : 'Ready, no problems found',
+          excludeChildSemantics: true,
+          pressScale: false,
+          padTouchTarget: warnings > 0,
+          cursor: warnings > 0 ? SystemMouseCursors.click : MouseCursor.defer,
+          builder: (context, s) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : null),
+            child: Row(mainAxisSize: MainAxisSize.min, spacing: 3, children: [
+              UiIcon(WfIcons.tick02, size: 13, strokeWidth: 2, color: t.success),
+              if (!narrow) Text('Ready', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.success)),
+            ]),
           ),
         ),
       if (persist) ...[
@@ -822,11 +869,9 @@ class _TopBar extends StatelessWidget {
               views,
             ])
           : Row(spacing: t.space3, children: [
-              Flexible(child: titleButton),
-              const Spacer(),
+              Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: titleButton)),
               views,
-              const Spacer(),
-              Flexible(flex: 3, child: Align(alignment: Alignment.centerRight, child: tools)),
+              Expanded(flex: 3, child: Align(alignment: Alignment.centerRight, child: tools)),
             ]),
     );
   }

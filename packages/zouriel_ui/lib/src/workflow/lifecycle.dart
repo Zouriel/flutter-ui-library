@@ -429,7 +429,7 @@ class _StateCard extends StatelessWidget {
     final tone = wfToneColor(t, s.tone ?? 'neutral');
     final terminal = s.category == 'terminal';
     final kind = s.category == 'initial' ? 'Start' : (terminal ? 'Final' : '');
-    final handleSize = touch ? 22.0 : 14.0;
+    final handleSize = touch ? 24.0 : 14.0;
     final semantic = '${s.label}${s.category == 'initial' ? ', starting state' : terminal ? ', final state' : ''}';
 
     final card = Focus(
