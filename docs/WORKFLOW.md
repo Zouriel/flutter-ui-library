@@ -151,3 +151,100 @@ survive a round trip, and every helper returns a new definition, keeping untouch
   padding and chevron need it to show "minutes" whole. On touch the amount has no steppers (48-wide
   touch steppers don't fit a 64–96 box; a number keyboard takes their place).
 - Autosized text areas refit to their width with no extra code (Flutter lays text out per width).
+
+## My tasks drawer (UiWorkflowTasksDrawer)
+
+A "My tasks" button for an app's header. It shows how many tasks are open for the signed-in person
+(`api.tasks(UiWfTaskQuery(scope: 'mine', status: ['open'], take: 100))`) and opens the task inbox
+(`UiWorkflowTasks`) in a `UiDrawer` titled with the button's label.
+
+- The badge is primary, danger when any open task is overdue, absent at 0, and reads `99+` above 99.
+- Screen readers hear the label and the count: "My tasks, 3 open, 1 overdue" or "My tasks, none open".
+- The count refreshes on start, when the API changes, when the drawer opens and closes, after a
+  decision in the drawer, and every `refreshSeconds`. A slower, older answer never overwrites a newer
+  one, and an error keeps the last count instead of showing 0.
+
+```dart
+// In the app bar.
+UiWorkflowTasksDrawer(api: api, onDecided: (_) => reloadPage())
+
+// Opened by your own control: the drawer follows `open` and reports changes (the web `[(open)]`).
+UiWorkflowTasksDrawer(
+  api: api,
+  showButton: false,
+  open: tasksOpen,
+  onOpenChanged: (v) => setState(() => tasksOpen = v),
+)
+
+// Or through a GlobalKey.
+final drawer = GlobalKey<UiWorkflowTasksDrawerState>();
+UiWorkflowTasksDrawer(key: drawer, api: api);
+drawer.currentState!.show();     // also hide() and refresh(); isOpen, count, overdue
+```
+
+| Option | Type | Default | |
+| --- | --- | --- | --- |
+| `api` | `UiWorkflowApi?` | | Nothing loads while it is null. |
+| `open` | `bool?` | null | Whether the drawer is open, when the host controls it; null leaves it to the button. |
+| `onOpenChanged` | `ValueChanged<bool>?` | | When it opens (button, `open` or `show()`) or closes (any way). |
+| `label` | `String` | `'My tasks'` | The button's and the drawer's title. |
+| `side` | `UiDrawerSide` | `right` | The edge the drawer comes from. |
+| `size` | `UiSize` | `sm` | The button's size. |
+| `variant` | `UiButtonVariant` | `outline` | The button's look. |
+| `showButton` | `bool` | `true` | Off when the app opens the drawer from its own control. |
+| `refreshSeconds` | `int` | `60` | How often the count refreshes; 0 only on start, open, close and decisions. |
+| `pageSize` | `int` | `25` | Tasks per page in the inbox. |
+| `onDecided` | `ValueChanged<UiWfTask>?` | | After a task was decided in the drawer. |
+
+There is no read-only mode: the inbox shows only the person's own tasks, and a task they may not
+decide (`canDecide` false) is listed without "Your turn" and can't be opened, as in `UiWorkflowTasks`.
+
+## Permissions (UiWorkflowPermissions)
+
+One settings page for who may do what in every published, non-archived workflow (sorted by title):
+who may make each lifecycle move, start a record over, press a start button, and decide each approval
+or task. Each row is edited with the builder's assignees editor. Saving publishes a new version that is
+the current one plus only those changes, so admins can change people without opening the builder.
+
+- `permissionRows(def)` lists the rows in reading order:
+  - lifecycle moves, except automatic ones (detail "From → To"; "Any state" for `from: '*'`);
+  - the reset (node `reset`, detail "Back to <state>");
+  - a manual trigger (node `trigger`, label "“<label>” button");
+  - approval and task steps (node = step id, detail = the step type's label).
+- Changed rows are marked with a bar on the left, and screen readers hear "Changed". Setting a row
+  back to the published value is no longer a change.
+- Each workflow's footer has a note ("Why", kept with the version), Undo and "Save N changes".
+  - Only one save runs at a time, across all workflows.
+  - After saving, the definition is reloaded, "Saved: version N is now in use." shows, and `onSaved`
+    fires.
+  - A refusal from the server shows under the footer and keeps the changes.
+- The search field filters by workflow title (all its rows) or by a row's label or detail.
+- Rows stack (label above editor) below 560 wide.
+
+```dart
+UiWorkflowPermissions(api: api, onSaved: (summary) => refresh())
+
+// The rows for your own page:
+for (final row in permissionRows(def)) print('${row.label}: ${row.detail}');
+```
+
+| Option | Type | |
+| --- | --- | --- |
+| `api` | `UiWorkflowApi?` | Loads `definitions()`, `schema()`, `me()` and each `definition(id)`; saves with `updatePermissions`. |
+| `onSaved` | `ValueChanged<UiWfDefinitionSummary>?` | After a workflow's permissions were saved (the new version's summary). |
+
+Saving calls
+`api.updatePermissions(id, [(node: 't1', who: [UiWfAssignee.role('head')])], note: 'Heads only')`,
+which the HTTP client sends as `POST /definitions/{id}/permissions`:
+
+```json
+{ "changes": [{ "node": "t1", "who": [{ "role": "head" }] }], "note": "Heads only" }
+```
+
+`node` is a transition or step id, `reset` or `trigger`; `note` is null when empty. The engine
+publishes a new version and applies the same changes to the draft, if there is one.
+
+Read-only: when `me().canPublish` is false, every row shows its people as a sentence (for example
+"Head of office") instead of an editor, and the page says "You can see who may do what; changing it
+needs the right to publish workflows." There are no Save buttons. If `me()` fails, editing is offered
+and the server's answer decides.
