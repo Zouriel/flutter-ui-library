@@ -23,6 +23,17 @@ void main() {
       expect(find.text('One'), findsOneWidget);
     });
 
+    for (final axis in Axis.values) {
+      testWidgets('dots ($axis): 30px from dot to dot, a line of 8 with 6 clear on each side, like the web', (tester) async {
+        await pumpUi(tester, UiStepper(steps: steps, active: 1, variant: UiStepperVariant.dots, axis: axis, label: 'Progress'));
+        final dots = find.descendant(of: find.byType(UiStepper), matching: find.byWidgetPredicate((w) => w is Container && w.constraints?.maxWidth == 10 && w.constraints?.maxHeight == 10));
+        expect(dots, findsNWidgets(3));
+        final a = tester.getRect(dots.at(0)), b = tester.getRect(dots.at(1));
+        // The web: a 10px dot, then 6 + 8 + 6 (the bar and its margins; vertically padding-bottom 20 with the bar from 16 to 24).
+        expect(axis == Axis.horizontal ? b.left - a.left : b.top - a.top, 30);
+      });
+    }
+
     testWidgets('golden: dots, the current ring clear of the lines', (tester) async {
       await expectThemedGolden(
         tester,
