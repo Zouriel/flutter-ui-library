@@ -173,8 +173,8 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
             Text('Now tap the state it goes to', style: context.uiText.body.copyWith(fontSize: 12.5, color: t.primary)),
             FbLink(label: 'Cancel', onTap: () => setState(() => _connectFrom = null)),
           ]),
-        UiButton(label: 'Tidy up', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.gridView), onPressed: hasManual ? () => _tidy(store) : null),
-        UiButton(label: 'State', size: UiSize.sm, variant: UiButtonVariant.outline, icon: const UiIcon(WfIcons.add01), onPressed: () => _addState(store, ui, layout)),
+        UiButton(label: 'Tidy up', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(WfIcons.gridView), onPressed: hasManual && !store.readOnly ? () => _tidy(store) : null),
+        UiButton(label: 'State', size: UiSize.sm, variant: UiButtonVariant.outline, icon: const UiIcon(WfIcons.add01), onPressed: store.readOnly ? null : () => _addState(store, ui, layout)),
       ]),
     );
 
@@ -890,7 +890,7 @@ class _WfLifecycleRunsState extends State<WfLifecycleRuns> {
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Padding(padding: const EdgeInsets.only(bottom: 4), child: FbHint(hint)),
-                  WfStepList(listId: active, steps: listSteps(store.def, active) ?? const []),
+                  WfReadOnly(readOnly: store.readOnly, child: WfStepList(listId: active, steps: listSteps(store.def, active) ?? const [])),
                 ]),
               ),
             ),

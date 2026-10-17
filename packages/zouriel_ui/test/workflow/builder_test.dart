@@ -41,7 +41,12 @@ UiWorkflowDefinition automation() => UiWorkflowDefinition.fromJson({
 });
 
 class _Api extends Fake implements UiWorkflowApi {
+  _Api({this.canEdit = true});
+  final bool canEdit;
   final calls = <String>[];
+
+  @override
+  Future<UiWfMe> me() async => UiWfMe.fromJson({'type': 'user', 'id': 'u', 'can': {'edit': canEdit}});
   List<UiWfProblem> problems = [];
 
   @override
@@ -248,7 +253,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('A record is created'));
     await tester.pumpAndSettle();
     expect(out.last.trigger!.type, 'created');
-    expect(find.bySemanticsLabel(RegExp(r'^Trigger: When a application is created')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp(r'^Trigger: When an application is created')), findsOneWidget);
   });
 
   testWidgets('with an API: problems from the engine show on the step and in the list', (tester) async {
@@ -316,6 +321,37 @@ void main() {
     await tester.pumpAndSettle();
     final draft = out.last.lifecycle!.states.first;
     expect(draft.onEnter!.single.type, 'wait');
+  });
+
+  testWidgets('read-only: View only, no Save, Publish, Versions or Test, no edits, no engine check', (tester) async {
+    final api = _Api(canEdit: false);
+    final out = await pumpBuilder(tester, api: api, persist: true);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(find.text('View only'), findsOneWidget);
+    expect(find.widgetWithText(UiButton, 'Save'), findsNothing);
+    expect(find.text('Publish…'), findsNothing);
+    expect(find.text('Versions'), findsNothing);
+    expect(api.calls, isNot(contains('validate')));
+    // The + slots and the palette take no taps.
+    await tester.tap(find.bySemanticsLabel('Add a step here').first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Wait').first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(out, isEmpty);
+    expect(find.text('Add a step'), findsOneWidget); // only the palette heading, no dialog
+  });
+
+  testWidgets('readOnly: false overrides what me() says', (tester) async {
+    await tester.pumpWidget(const SizedBox());
+    tester.view.physicalSize = const Size(1280, 860) * 2;
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(home: UiWorkflowBuilder(definition: automation(), api: _Api(canEdit: false), readOnly: false)));
+    await tester.pumpAndSettle();
+    expect(find.text('View only'), findsNothing);
+    expect(find.text('Versions'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('golden: the builder, wide and on a phone', (tester) async {

@@ -84,6 +84,7 @@ UiWorkflowBuilder(
 | `persist` | `bool` | Save and Publish through the API. |
 | `onProblemsChanged` | `List<UiWfProblem>` | The engine's problems after each check. |
 | `onSaved` | `UiWorkflowDefinition` | After a successful save. |
+| `readOnly` | `bool?` | Look without changing anything; null asks `api.me()` whether the person may edit. Shows "View only", hides Save, Publish, Versions and Test, turns controls off and skips the engine check. |
 | `onDirtyChanged` | `bool` | Whether there are edits not yet saved through the API (with `persist`). |
 | `actions` | `Widget?` | Your own buttons in the header. |
 

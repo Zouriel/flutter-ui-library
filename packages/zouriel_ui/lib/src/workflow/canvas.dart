@@ -604,7 +604,8 @@ class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
                 ),
               ]),
             );
-            return needed > room ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: flow) : Center(child: flow);
+            final shown = WfReadOnly(readOnly: store.readOnly, child: flow);
+            return needed > room ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: shown) : Center(child: shown);
           }),
         ),
       ),

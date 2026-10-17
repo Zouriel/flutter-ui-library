@@ -140,6 +140,16 @@ class UiWorkflowBuilderController extends ChangeNotifier {
     _notify();
   }
 
+  bool _readOnly = false;
+
+  /// Looking only: every edit is ignored (the person may not change workflows).
+  bool get readOnly => _readOnly;
+  set readOnly(bool v) {
+    if (v == _readOnly) return;
+    _readOnly = v;
+    _notify();
+  }
+
   /// Bumped on every commit, undo and redo.
   int get version => _version;
   bool get canUndo => _past.isNotEmpty;
@@ -224,7 +234,7 @@ class UiWorkflowBuilderController extends ChangeNotifier {
 
   /// Applies a change. Changes with the same [mergeKey] in quick succession undo as one.
   void commit(UiWorkflowDefinition next, {String? mergeKey}) {
-    if (identical(next, _def)) return;
+    if (identical(next, _def) || _readOnly) return;
     final now = _clock();
     final last = _lastMerge;
     final merge = mergeKey != null && last != null && last.key == mergeKey && now.difference(last.at) < _mergeWindow;
@@ -280,6 +290,7 @@ class UiWorkflowBuilderController extends ChangeNotifier {
 
   /// Adds a new step of [type] and selects it; its id.
   String addStep(String type, String listId, int index) {
+    if (_readOnly) return '';
     final step = createStep(type, registry);
     commit(d.insertStep(_def, listId, index, step));
     selection = UiWfSelection.step(step.id);
@@ -305,6 +316,7 @@ class UiWorkflowBuilderController extends ChangeNotifier {
   void removeStep(String id) => commit(d.removeStep(_def, id));
 
   void duplicateStep(String id) {
+    if (_readOnly) return;
     final r = d.duplicateStep(_def, id);
     if (r.id == null) return;
     commit(r.def);
@@ -315,6 +327,7 @@ class UiWorkflowBuilderController extends ChangeNotifier {
 
   /// Adds a state (placed at [at] when given) and selects it; its id.
   String addState([String label = 'New state', List<num>? at]) {
+    if (_readOnly) return '';
     final taken = {...?_def.lifecycle?.states.map((s) => s.key)};
     var key = label;
     for (var i = 2; taken.contains(key); i++) {
@@ -335,6 +348,7 @@ class UiWorkflowBuilderController extends ChangeNotifier {
 
   /// Adds a transition, named after its target, and selects it; its id.
   String addTransition(String from, String to, [String? label]) {
+    if (_readOnly) return '';
     final lc = _def.lifecycle;
     if (lc == null) return '';
     final toState = lc.states.where((s) => s.id == to).firstOrNull;

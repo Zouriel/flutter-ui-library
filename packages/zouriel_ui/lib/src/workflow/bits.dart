@@ -264,6 +264,17 @@ String wfAgo(String? iso, [DateTime? now]) {
   return s >= 0 ? '$text ago' : 'in $text';
 }
 
+/// Turns everything inside into a picture while the builder is read-only: no taps, drags or
+/// focus (the web disables a `fieldset`). Scroll views around it still scroll.
+class WfReadOnly extends StatelessWidget {
+  const WfReadOnly({super.key, required this.readOnly, required this.child});
+  final bool readOnly;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ExcludeFocus(excluding: readOnly, child: AbsorbPointer(absorbing: readOnly, child: child));
+}
+
 /// A text arrow for sentences ("Draft → Review"), built at run time so the style contract (no
 /// glyphs as icons) doesn't mistake it for an icon.
 final String wfArrow = String.fromCharCode(0x2192);

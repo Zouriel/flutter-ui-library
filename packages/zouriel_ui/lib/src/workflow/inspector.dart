@@ -617,7 +617,7 @@ class WfInspector extends StatelessWidget {
             Row(spacing: t.space2, children: [
               WfIconTile(icon, color: t.primary, size: 24, iconSize: 15),
               Expanded(child: Semantics(header: true, child: Text(heading, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, fontWeight: FontWeight.w700, color: t.text)))),
-              if (canDelete) FbIconButton(icon: WfIcons.delete02, label: 'Delete $heading', danger: true, onPressed: onDeleteRequest),
+              if (canDelete) FbIconButton(icon: WfIcons.delete02, label: 'Delete $heading', danger: true, onPressed: store.readOnly ? null : onDeleteRequest),
             ]),
           ]),
         ),
@@ -642,7 +642,7 @@ class WfInspector extends StatelessWidget {
                     ),
                 ]),
               ),
-            editor,
+            WfReadOnly(readOnly: store.readOnly, child: editor),
           ]),
         ),
       ),

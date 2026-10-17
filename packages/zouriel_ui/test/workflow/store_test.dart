@@ -126,6 +126,17 @@ void main() {
     expect(s.canUndo, isFalse);
   });
 
+  test('ignores every edit while read-only', () {
+    final s = fresh();
+    s.readOnly = true;
+    final before = s.def;
+    s.addStep('notify', 'root', 0);
+    s.patch({'title': 'Changed'});
+    expect(identical(s.def, before), isTrue);
+    expect(s.canUndo, isFalse);
+    expect(s.selection, isNull);
+  });
+
   test('a move that changes nothing is not an edit', () {
     final s = fresh();
     final a = s.addStep('notify', 'root', 0);

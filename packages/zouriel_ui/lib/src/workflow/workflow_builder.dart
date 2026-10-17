@@ -52,6 +52,7 @@ class UiWorkflowBuilder extends StatefulWidget {
     this.schema,
     this.settings,
     this.persist = false,
+    this.readOnly,
     this.onProblemsChanged,
     this.onSaved,
     this.onDirtyChanged,
@@ -80,6 +81,11 @@ class UiWorkflowBuilder extends StatefulWidget {
 
   /// Save drafts and publish through the API from the builder's own header.
   final bool persist;
+
+  /// Look without changing anything. Null (the default) asks the API (`me()`) whether this person
+  /// may edit workflows; true or false decides it here. Read-only shows "View only", hides Save,
+  /// Publish, Versions and Test, turns every control off, ignores edits and skips the engine check.
+  final bool? readOnly;
 
   /// The engine's problems after each check (empty when none or offline).
   final ValueChanged<List<UiWfProblem>>? onProblemsChanged;
@@ -119,6 +125,10 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
 
   /// The last check failed (offline, refused or broken), so "Ready" would be a guess.
   bool _checkFailed = false;
+
+  /// What `me()` said about editing; an API without it (or an error) leaves editing on, and the
+  /// server still decides.
+  bool _mayEdit = true;
   bool? _lastDirty;
 
   UiWorkflowBuilderController get controller => widget.controller ?? (_own ??= UiWorkflowBuilderController(definition: widget.definition));
@@ -167,6 +177,12 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     };
   }
 
+  void _applyReadOnly() {
+    final ro = widget.readOnly ?? !_mayEdit;
+    controller.readOnly = ro;
+    if (ro && _view != UiWorkflowBuilderView.build) _view = UiWorkflowBuilderView.build;
+  }
+
   /// Definition in; context loaded once per API.
   void _configure() {
     final c = controller;
@@ -178,6 +194,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     if (!identical(c.published, widget.published)) c.published = widget.published;
     if (widget.schema != null && !identical(c.schema, widget.schema)) c.schema = widget.schema;
     if (widget.settings != null && !identical(c.settings, widget.settings)) c.settings = widget.settings;
+    _applyReadOnly();
     final api = widget.api;
     if (!identical(c.api, api)) c.api = api;
     if (!identical(_loadedFor, api)) {
@@ -222,6 +239,15 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     api.settings().then((s) {
       if (mounted) controller.settings = s.settings;
     }).catchError((Object _) {});
+    // Whether this person may edit.
+    // Future.sync: an API without me() (one that throws) leaves editing on.
+    Future.sync(api.me).then((me) {
+      if (!mounted) return;
+      setState(() {
+        _mayEdit = me.canEdit;
+        _applyReadOnly();
+      });
+    }).catchError((Object _) {});
   }
 
   /// Tells the host whether leaving now would lose edits.
@@ -237,7 +263,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     _lastVersion = controller.version;
     _validateTimer?.cancel();
     final api = controller.api;
-    if (api == null) return;
+    // Checking needs the right to edit.
+    if (api == null || controller.readOnly) return;
     final def = controller.def;
     final seq = ++_validateSeq;
     // Not notified here: this runs while building.
@@ -245,6 +272,11 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
       if (mounted && seq == _validateSeq) controller.validating = true;
     });
     _validateTimer = Timer(const Duration(milliseconds: 450), () async {
+      // me() may have answered "only looking" meanwhile.
+      if (controller.readOnly) {
+        if (mounted && seq == _validateSeq) controller.validating = false;
+        return;
+      }
       try {
         final problems = await api.validate(def);
         if (!mounted || seq != _validateSeq) return;
@@ -358,6 +390,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   // ── Deleting ────────────────────────────────────────────────────────────────────────────
 
   void _requestDeleteSelected() {
+    if (controller.readOnly) return;
     final s = controller.selection;
     if (s == null || s.id == null) return;
     if (s.kind == 'step' || s.kind == 'state' || s.kind == 'transition') _askDelete(s.kind, s.id!);
@@ -688,7 +721,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
                     padding: EdgeInsets.only(bottom: t.space2),
                     child: Semantics(header: true, child: Text('Add a step', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: t.textSecondary))),
                   ),
-                  Expanded(child: WfStepPicker(dnd: _dnd, onChosen: _addFromPalette)),
+                  Expanded(child: WfReadOnly(readOnly: controller.readOnly, child: WfStepPicker(dnd: _dnd, onChosen: _addFromPalette))),
                 ]),
               ),
             ),
@@ -800,7 +833,8 @@ class _TopBar extends StatelessWidget {
       value: state._view,
       options: [
         const UiSegmentedOption(value: UiWorkflowBuilderView.build, label: 'Build'),
-        if (store.api != null) ...const [
+        // Publishing and test runs need the right to edit.
+        if (store.api != null && !store.readOnly) ...const [
           UiSegmentedOption(value: UiWorkflowBuilderView.versions, label: 'Versions'),
           UiSegmentedOption(value: UiWorkflowBuilderView.test, label: 'Test'),
         ],
@@ -811,7 +845,10 @@ class _TopBar extends StatelessWidget {
     final tools = Wrap(crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.end, spacing: 4, runSpacing: 4, children: [
       FbIconButton(icon: WfIcons.undo02, label: 'Undo', onPressed: store.canUndo ? store.undo : null),
       FbIconButton(icon: WfIcons.redo02, label: 'Redo', onPressed: store.canRedo ? store.redo : null),
-      if (errors > 0)
+      if (store.readOnly)
+        // Checking needs the right to edit; someone only looking gets no status.
+        const SizedBox.shrink()
+      else if (errors > 0)
         UiInteractive(
           onTap: state._showProblems,
           semanticLabel: problemsLabel,
@@ -859,7 +896,19 @@ class _TopBar extends StatelessWidget {
             ]),
           ),
         ),
-      if (persist) ...[
+      if (store.readOnly)
+        Semantics(
+          label: 'View only: you can look at this workflow but not change it.',
+          child: ExcludeSemantics(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(10)),
+              child: Text('View only', style: context.uiText.body.copyWith(fontSize: 12, color: t.textSecondary)),
+            ),
+          ),
+        )
+      else if (persist) ...[
         if (!narrow && saveState.isNotEmpty)
           Semantics(liveRegion: true, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text(saveState, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)))),
         UiButton(label: 'Save', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: state._saving || !state._dirty ? null : state.save),
