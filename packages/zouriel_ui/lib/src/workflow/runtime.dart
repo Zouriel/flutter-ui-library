@@ -29,14 +29,7 @@ import 'schema.dart';
 // view and the audit log. There is
 // no dependency injection in Flutter: each takes the engine's [UiWorkflowApi] as `api`.
 
-String _errorText(Object e, String fallback) {
-  if (e is UiWfApiError) {
-    final d = e.details;
-    final details = d is List ? [for (final x in d) if (x is Map && x['message'] is String) x['message'] as String] : const <String>[];
-    return details.isNotEmpty ? '${e.message} ${details.join(' ')}' : e.message;
-  }
-  return fallback;
-}
+const _errorText = wfErrorText;
 
 UiButtonVariant _variantOf(String? tone, {UiButtonVariant otherwise = UiButtonVariant.outline}) => switch (tone) {
   'danger' => UiButtonVariant.destructive,

@@ -82,6 +82,9 @@ class UiWfPanelStep {
 /// opens the drawer over the page (moving away closes it); tapping or clicking it opens it as a
 /// regular drawer. A record type with no lifecycle still shows its manual workflows, open tasks and
 /// history (the compact body) in every layout.
+///
+/// In the drawer layouts the host can open and close the drawer with [open] and follow it with
+/// [onOpenChanged] (the web `[(open)]`).
 class UiWorkflowPanel extends StatefulWidget {
   const UiWorkflowPanel({
     super.key,
@@ -94,6 +97,8 @@ class UiWorkflowPanel extends StatefulWidget {
     this.showHistory = true,
     this.emptyText = 'Nothing for you to do here right now.',
     this.onChanged,
+    this.open,
+    this.onOpenChanged,
   });
 
   /// The engine. Nothing loads while it is null.
@@ -115,6 +120,13 @@ class UiWorkflowPanel extends StatefulWidget {
   /// After the record moved through the panel, so the page can reload its own data.
   final ValueChanged<UiWfRecord>? onChanged;
 
+  /// Drawer layouts: whether the drawer is open, when the host controls it (true opens it as a
+  /// regular drawer, false closes it); null leaves it to the rail.
+  final bool? open;
+
+  /// Drawer layouts: the drawer opened (from the rail, a hover or [open]) or closed (in any way).
+  final ValueChanged<bool>? onOpenChanged;
+
   @override
   State<UiWorkflowPanel> createState() => UiWorkflowPanelState();
 }
@@ -133,6 +145,12 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
   bool _drawerOpen = false;
   Timer? _closeTimer;
 
+  /// The regular drawer's route, so closing it from [UiWorkflowPanel.open] never pops something else.
+  Route<void>? _drawerRoute;
+
+  /// What [UiWorkflowPanel.onOpenChanged] was last told.
+  bool _reportedOpen = false;
+
   bool get _isDrawer => widget.layout == UiWorkflowPanelLayout.sideDrawer || widget.layout == UiWorkflowPanelLayout.bottomDrawer;
   UiDrawerSide get _edge => widget.layout == UiWorkflowPanelLayout.bottomDrawer ? UiDrawerSide.bottom : widget.side;
 
@@ -145,13 +163,52 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     // Shown for good (show() may not be called during a rebuild); it draws nothing unless a drawer layout.
     _rail.show();
     reload();
+    if (widget.open == true) WidgetsBinding.instance.addPostFrameCallback((_) => _openFromHost());
   }
 
   @override
   void didUpdateWidget(UiWorkflowPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
+    if (old.entity != widget.entity || old.entityId != widget.entityId) {
+      // Another record: drop the old one at once, so its buttons and history never show for the new one.
+      _seq++;
+      _record.value = null;
+      _history.value = const [];
+      _error.value = '';
+      _openRuns.value = const {};
+      _seenStopped.clear();
+    }
     if (old.api != widget.api || old.entity != widget.entity || old.entityId != widget.entityId) reload();
+    if (old.open != widget.open) {
+      if (widget.open == true && !isOpen) WidgetsBinding.instance.addPostFrameCallback((_) => _openFromHost());
+      if (widget.open == false && isOpen) WidgetsBinding.instance.addPostFrameCallback((_) => _close());
+    }
+  }
+
+  /// Tells the host when the drawer opened or closed.
+  void _report() {
+    if (isOpen == _reportedOpen) return;
+    _reportedOpen = isOpen;
+    widget.onOpenChanged?.call(isOpen);
+  }
+
+  void _openFromHost() {
+    if (!mounted || !_isDrawer || isOpen || widget.open != true) return;
+    _toggle();
+  }
+
+  /// Closes the peek or the regular drawer (its own route, even with a dialog on top of it).
+  void _close() {
+    if (!mounted) return;
+    if (_peek) {
+      setState(() => _peek = false);
+      _report();
+    }
+    final route = _drawerRoute;
+    if (route == null || !route.isActive) return;
+    route.navigator?.popUntil((r) => r == route);
+    if (route.isCurrent) route.navigator?.pop();
   }
 
   @override
@@ -186,7 +243,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
       }
       if (_isDrawer) setState(() {}); // the rail's dots
     } catch (e) {
-      if (mounted && n == _seq) _error.value = e is UiWfApiError ? e.message : 'Could not load the record’s workflow.';
+      if (mounted && n == _seq) _error.value = wfErrorText(e, 'Could not load the record’s workflow.');
     }
   }
 
@@ -206,6 +263,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     _closeTimer?.cancel();
     if (kind != PointerDeviceKind.mouse || isOpen) return;
     setState(() => _peek = true);
+    _report();
   }
 
   /// Leaving the rail and the drawer closes a hover-opened peek, after a moment to cross the gap.
@@ -213,7 +271,9 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     if (!_peek) return;
     _closeTimer?.cancel();
     _closeTimer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _peek = false);
+      if (!mounted) return;
+      setState(() => _peek = false);
+      _report();
     });
   }
 
@@ -223,13 +283,20 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
     if (_peek) setState(() => _peek = false);
     if (_drawerOpen) return;
     setState(() => _drawerOpen = true);
+    _report();
     await showUiDrawer<void>(
       context: context,
       side: _edge,
       title: widget.title,
-      builder: (context) => _body(context, _edge == UiDrawerSide.bottom ? UiWorkflowPanelLayout.horizontal : UiWorkflowPanelLayout.vertical),
+      builder: (context) {
+        _drawerRoute = ModalRoute.of(context);
+        return _body(context, _edge == UiDrawerSide.bottom ? UiWorkflowPanelLayout.horizontal : UiWorkflowPanelLayout.vertical);
+      },
     );
-    if (mounted) setState(() => _drawerOpen = false);
+    _drawerRoute = null;
+    if (!mounted) return;
+    setState(() => _drawerOpen = false);
+    _report();
   }
 
   // ── Building ────────────────────────────────────────────────────────────────────────────
@@ -456,7 +523,10 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
       open: _peek,
       side: _edge,
       title: widget.title,
-      onClose: () => setState(() => _peek = false),
+      onClose: () {
+        setState(() => _peek = false);
+        _report();
+      },
       onPointerEnter: () => _closeTimer?.cancel(),
       onPointerExit: _hoverOut,
       drawer: (context) => _body(context, _edge == UiDrawerSide.bottom ? UiWorkflowPanelLayout.horizontal : UiWorkflowPanelLayout.vertical),

@@ -286,7 +286,7 @@ void main() {
     expect(api.queries.length, before + 2);
   });
 
-  testWidgets('hide() closes the drawer itself, even with a dialog on top of it', (tester) async {
+  testWidgets('hide() closes the drawer and what was opened over it, never what is under it', (tester) async {
     final key = GlobalKey<UiWorkflowTasksDrawerState>();
     final api = _TasksApi([_task('a')]);
     await _pump(tester, UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 0));
@@ -299,8 +299,70 @@ void main() {
     key.currentState!.hide();
     await tester.pumpAndSettle();
     expect(find.byType(WfTaskInbox), findsNothing);
-    expect(find.text('On top'), findsOneWidget, reason: 'only the drawer goes');
+    expect(find.text('On top'), findsNothing, reason: 'nothing is left floating over the page');
+    expect(find.byType(UiWorkflowTasksDrawer), findsOneWidget, reason: 'the page under the drawer stays');
     expect(key.currentState!.isOpen, isFalse);
+  });
+
+  testWidgets('hide() with a decision open closes the dialog too', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    final api = _TasksApi([_task('a')]);
+    await _pump(tester, UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 0));
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('^Task a,')));
+    await tester.pumpAndSettle();
+    expect(find.byType(UiModal), findsOneWidget);
+    key.currentState!.hide();
+    await tester.pumpAndSettle();
+    expect(find.byType(UiModal), findsNothing);
+    expect(find.byType(WfTaskInbox), findsNothing);
+  });
+
+  testWidgets('the open drawer follows the host: another scope or api reaches its list', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    final a = _TasksApi([_task('a')]);
+    final b = _TasksApi([_task('b')]);
+    final host = ValueNotifier<(UiWorkflowApi, String)>((a, 'mine'));
+    await _pump(tester, ValueListenableBuilder(valueListenable: host, builder: (_, v, _) => UiWorkflowTasksDrawer(key: key, api: v.$1, scope: v.$2, refreshSeconds: 0)));
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    expect(find.text('Task a'), findsOneWidget);
+    host.value = (b, 'all');
+    await tester.pumpAndSettle();
+    expect(find.text('Task b'), findsOneWidget);
+    expect(find.text('Task a'), findsNothing);
+    expect(b.queries.last.scope, 'all');
+  });
+
+  testWidgets('a decision reaches the host\'s onDecided as it is now, not as it was when the drawer opened', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    final api = FakeWorkflowApi();
+    final got = <String>[];
+    final host = ValueNotifier('first');
+    await _pump(tester, ValueListenableBuilder(valueListenable: host, builder: (_, v, _) => UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 0, onDecided: (_) => got.add(v))));
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    host.value = 'second';
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('^Task 1,')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(UiModal), matching: button('Approve')));
+    await tester.pumpAndSettle();
+    expect(got, ['second']);
+  });
+
+  testWidgets('the drawer goes away with its button', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    final api = _TasksApi([_task('a')]);
+    final show = ValueNotifier(true);
+    await _pump(tester, ValueListenableBuilder(valueListenable: show, builder: (_, v, _) => v ? UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 0) : const SizedBox()));
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    show.value = false;
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(WfTaskInbox), findsNothing);
   });
 
   group('stopped workflows', () {

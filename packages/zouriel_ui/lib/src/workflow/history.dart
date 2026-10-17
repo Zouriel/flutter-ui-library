@@ -8,6 +8,17 @@ import 'schema.dart' show UiWfRemarks;
 // How the runtime widgets word history and outcomes (the web `runtime-shared.ts`): shared by the
 // workflow panel and the task inbox.
 
+/// What to show for a failed call (the web `wfErrorText`): the engine's message with the details
+/// it gave (e.g. which field is wrong), else [fallback].
+String wfErrorText(Object e, String fallback) {
+  if (e is UiWfApiError) {
+    final d = e.details;
+    final details = d is List ? [for (final x in d) if (x is Map && x['message'] is String) x['message'] as String] : const <String>[];
+    return details.isNotEmpty ? '${e.message} ${details.join(' ')}' : e.message;
+  }
+  return fallback;
+}
+
 /// Parses an audit entry's JSON field; a broken one reads as empty rather than throwing.
 UiJson wfAuditJson(String? text) {
   if (text == null || text.isEmpty) return const {};

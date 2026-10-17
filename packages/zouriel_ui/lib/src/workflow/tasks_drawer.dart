@@ -95,6 +95,9 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   /// The drawer's own route, so closing it never pops something else on top.
   Route<void>? _drawerRoute;
 
+  /// The settings the open drawer shows, kept current while it is open (api, scope, page size).
+  late final ValueNotifier<UiWorkflowTasksDrawer> _config = ValueNotifier(widget);
+
   /// Whether the app is in view: polling pauses while it is in the background.
   bool _visible = true;
 
@@ -146,6 +149,10 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   void didUpdateWidget(UiWorkflowTasksDrawer oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
+    // The drawer is another route: tell it after this frame (it can't be marked dirty mid-build).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _config.value = widget;
+    });
     if (old.api != widget.api || old.scope != widget.scope) refresh();
     if (old.refreshSeconds != widget.refreshSeconds) _startTimer();
     if (old.open != widget.open) {
@@ -159,7 +166,19 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _seq++;
-    _stopped.dispose();
+    // The drawer goes with its button: close it (after this frame, when the navigator can change),
+    // then let go of what it listens to.
+    final route = _drawerRoute;
+    if (route != null && route.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _closeRoute(route);
+        _stopped.dispose();
+        _config.dispose();
+      });
+    } else {
+      _stopped.dispose();
+      _config.dispose();
+    }
     super.dispose();
   }
 
@@ -225,19 +244,27 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
       title: widget.label,
       builder: (ctx) {
         _drawerRoute = ModalRoute.of(ctx);
-        return _DrawerBody(
-          stopped: _stopped,
-          api: widget.api,
-          // After trying again, skipping or cancelling the run may no longer be stopped: count again.
-          onRunChanged: refresh,
-          inbox: WfTaskInbox(
-            api: widget.api,
-            scope: widget.scope,
-            pageSize: widget.pageSize,
-            onDecided: (t) {
-              widget.onDecided?.call(t);
-              refresh();
+        // Follows the host's settings while open: another api, scope or page size reaches the list.
+        return ValueListenableBuilder<UiWorkflowTasksDrawer>(
+          valueListenable: _config,
+          builder: (ctx, w, _) => _DrawerBody(
+            stopped: _stopped,
+            api: w.api,
+            // After trying again, skipping or cancelling the run may no longer be stopped: count again.
+            onRunChanged: () {
+              if (mounted) refresh();
             },
+            inbox: WfTaskInbox(
+              api: w.api,
+              scope: w.scope,
+              pageSize: w.pageSize,
+              onDecided: (t) {
+                // The host's callback as it is now, not as it was when the drawer opened.
+                if (!mounted) return;
+                widget.onDecided?.call(t);
+                refresh();
+              },
+            ),
           ),
         );
       },
@@ -254,11 +281,16 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   void hide() {
     final route = _drawerRoute;
     if (!_shown || route == null || !route.isActive) return;
-    if (route.isCurrent) {
-      route.navigator?.pop();
-    } else {
-      route.navigator?.removeRoute(route);
-    }
+    _closeRoute(route);
+  }
+
+  /// Closes [route] and whatever was opened over it (a decision dialog), never anything below it.
+  static void _closeRoute(Route<void> route) {
+    if (!route.isActive) return;
+    final nav = route.navigator;
+    if (nav == null) return;
+    nav.popUntil((r) => r == route);
+    if (route.isCurrent) nav.pop();
   }
 
   @override
