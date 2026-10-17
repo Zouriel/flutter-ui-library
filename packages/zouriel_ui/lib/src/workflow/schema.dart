@@ -786,13 +786,13 @@ extension type const UiWorkflowSettings._(UiJson json) implements Object {
 
   List<String> get holidays => wfStrings(calendar?['holidays']);
 
-  /// `{retry?, taskDue?, reminders?, concurrency?, maxChainDepth?, forEachMax?}`.
+  /// `{retry?, reminders?, concurrency?, maxChainDepth?, forEachMax?}` (the engine dropped `taskDue`).
   UiJson? get defaults => wfMapOrNull(json['defaults']);
 
-  /// `{delegation?, escalationDefault?}`.
+  /// `{delegation?}` (the engine dropped `escalationDefault`).
   UiJson? get people => wfMapOrNull(json['people']);
 
-  /// Per channel key: `{enabled?, sender?, footer?}`.
+  /// Per channel key: `{enabled?, footer?}` (the engine dropped `sender`).
   Map<String, UiJson>? get channels => json['channels'] is Map ? {for (final e in wfMap(json['channels']).entries) e.key: wfMap(e.value)} : null;
   List<String> get allowedOrigins => wfStrings(wfMapOrNull(json['webhooks'])?['allowedOrigins']);
   List<UiWfConnection> get connections => wfList(wfMapOrNull(json['webhooks'])?['connections'], UiWfConnection.fromJson);

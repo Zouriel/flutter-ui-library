@@ -38,6 +38,102 @@ UiWorkflowSettings _withPaused(UiWorkflowSettings st, String entity, bool on) {
   return st.patch({'paused': on ? [...list, {'entity': entity}] : (list.isNotEmpty ? list : null)});
 }
 
+/// Places one of the engine's `invalidSettings` problems (its `details` is a list of plain messages,
+/// spec §12, wording from the .NET engine) next to the field it is about (the web
+/// `wfSettingsProblemField`): `timeZone`, `days`, `hours`, `holidays`, `retry`, `reminders`,
+/// `concurrency`, `maxChainDepth`, `forEachMax`, `origins`, `retention`, `masked`, `paused`, one
+/// connection (`conn:<index>`), the connections as a whole, or `general` (the footer). A message that
+/// names a value is matched by that value.
+String wfSettingsProblemField(String message, UiWorkflowSettings st) {
+  final quoted = RegExp(r"'([^']*)'").firstMatch(message)?.group(1);
+  final conns = st.connections;
+  if (RegExp(r"^Connection key '|^Two connections are called '|^Connection '").hasMatch(message)) {
+    final i = conns.indexWhere((c) => c.key == quoted);
+    return i >= 0 ? 'conn:$i' : 'connections';
+  }
+  bool has(String pattern) => RegExp(pattern, caseSensitive: false).hasMatch(message);
+  if (has('time zone')) return 'timeZone';
+  if (has('is not a day|working day')) return 'days';
+  if (has('working hours')) return 'hours';
+  if (has('is not a date')) return 'holidays';
+  if (has('retries')) return 'retry';
+  if (has('is not a duration')) {
+    final reminders = wfStringsOrNull(st.defaults?['reminders']) ?? const <String>[];
+    return quoted != null && reminders.contains(quoted) ? 'reminders' : 'retry';
+  }
+  if (has('concurrency')) return 'concurrency';
+  if (message.contains('maxChainDepth')) return 'maxChainDepth';
+  if (message.contains('forEachMax')) return 'forEachMax';
+  if (has('is not an origin')) return 'origins';
+  if (has('must be kept at least')) return 'retention';
+  if (has('masked field')) return 'masked';
+  if (has('paused entry')) return 'paused';
+  return 'general';
+}
+
+/// The part of the settings a problem field is about (as JSON), to tell when it has changed since
+/// the save was refused.
+String _problemValue(String field, UiWorkflowSettings st) {
+  final j = st.json;
+  final cal = wfMapOrNull(j['calendar']);
+  final d = wfMapOrNull(j['defaults']);
+  final hooks = wfMapOrNull(j['webhooks']);
+  final audit = wfMapOrNull(j['audit']);
+  final Object? v;
+  if (field.startsWith('conn:')) {
+    final list = hooks?['connections'];
+    final i = int.tryParse(field.substring(5)) ?? -1;
+    v = list is List && i >= 0 && i < list.length ? list[i] : null;
+  } else {
+    v = switch (field) {
+      'timeZone' => j['timeZone'],
+      'days' => cal?['days'],
+      'hours' => cal?['hours'],
+      'holidays' => cal?['holidays'],
+      'retry' => d?['retry'],
+      'reminders' => d?['reminders'],
+      'concurrency' => d?['concurrency'],
+      'maxChainDepth' => d?['maxChainDepth'],
+      'forEachMax' => d?['forEachMax'],
+      'origins' => hooks?['allowedOrigins'],
+      'connections' => hooks?['connections'],
+      'retention' => audit?['retentionDays'],
+      'masked' => audit?['maskedFields'],
+      'paused' => j['paused'],
+      _ => null,
+    };
+  }
+  return jsonEncode(v);
+}
+
+/// The section of the page a problem field is on.
+String? _problemSection(String field) {
+  if (const ['timeZone', 'days', 'hours', 'holidays'].contains(field)) return 'time';
+  if (const ['retry', 'reminders', 'concurrency', 'maxChainDepth', 'forEachMax'].contains(field)) return 'defaults';
+  if (field == 'origins' || field == 'connections' || field.startsWith('conn:')) return 'webhooks';
+  if (field == 'retention' || field == 'masked') return 'audit';
+  if (field == 'paused') return 'watching';
+  return null;
+}
+
+/// The settings without fields the engine no longer has (`defaults.taskDue`,
+/// `people.escalationDefault`, `channels.*.sender`, removed from the spec), so settings kept from
+/// before are not sent back with them (the web `wfWithoutRemovedSettings`).
+UiWorkflowSettings wfWithoutRemovedSettings(UiWorkflowSettings st) {
+  final out = wfMap(jsonDecode(jsonEncode(st.json)));
+  final d = out['defaults'];
+  if (d is Map) d.remove('taskDue');
+  final people = out['people'];
+  if (people is Map) people.remove('escalationDefault');
+  final channels = out['channels'];
+  if (channels is Map) {
+    for (final c in channels.values) {
+      if (c is Map) c.remove('sender');
+    }
+  }
+  return UiWorkflowSettings.fromJson(out);
+}
+
 const List<WfOption> _sections = [
   (value: 'time', label: 'Time & calendar'), (value: 'defaults', label: 'Defaults'), (value: 'channels', label: 'Channels'),
   (value: 'webhooks', label: 'Webhooks'), (value: 'audit', label: 'Audit log'), (value: 'watching', label: 'Watching'), (value: 'registry', label: 'What’s available'),
@@ -89,6 +185,49 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
   String _status = '';
   String _newOrigin = '';
   String _originError = '';
+
+  /// The engine's reasons for refusing the last save (`invalidSettings`), each placed at its field
+  /// with the value it was about: a problem stops showing once that value is changed.
+  List<({String field, String message, String value})> _problems = const [];
+
+  /// The problems still showing (their field unchanged since the refused save).
+  List<({String field, String message, String value})> get _openProblems => [
+        for (final p in _problems)
+          if (p.field == 'general' || _problemValue(p.field, _s) == p.value) p,
+      ];
+
+  /// Sections with a problem showing, marked in the section list so they can be found.
+  Set<String> get _badSections => {for (final p in _openProblems) ?_problemSection(p.field)};
+
+  /// The engine's messages about one field, shown next to it.
+  List<Widget> _problemsFor(String field) => [
+        for (final p in _openProblems)
+          if (p.field == field) Text(p.message, style: context.uiText.body.copyWith(fontSize: 12.5, color: context.ui.danger)),
+      ];
+
+  /// Shows a refused save: an `invalidSettings` refusal lists each problem (`details`, a list of
+  /// messages), placed next to its field; the footer says how many and repeats those that belong to
+  /// no field.
+  void _showSaveError(Object e, UiWorkflowSettings sent) {
+    final d = e is UiWfApiError && e.code == 'invalidSettings' ? e.details : null;
+    final details = d is List ? [for (final x in d) if (x is String && x.trim().isNotEmpty) x] : const <String>[];
+    if (details.isEmpty) {
+      _problems = const [];
+      _error = e is UiWfApiError ? e.message : 'Saving failed.';
+      return;
+    }
+    _problems = [
+      for (final m in details)
+        () {
+          final field = wfSettingsProblemField(m, sent);
+          return (field: field, message: m, value: _problemValue(field, sent));
+        }(),
+    ];
+    final general = [for (final p in _problems) if (p.field == 'general') p.message];
+    final n = _problems.length - general.length;
+    final head = n == 0 ? '' : '${n == 1 ? 'One setting needs' : '$n settings need'} fixing before saving (marked in the sections).';
+    _error = [head, ...general].where((x) => x.isNotEmpty).join(' ');
+  }
   int _resetKey = 0;
 
   /// The settings as edited (not necessarily saved).
@@ -114,8 +253,8 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
   void _adoptInput() {
     final s = widget.settings;
     if (s != null && widget.api == null) {
-      _s = s;
-      _saved = jsonEncode(s.json);
+      _s = wfWithoutRemovedSettings(s);
+      _saved = jsonEncode(_s.json);
     }
   }
 
@@ -136,9 +275,10 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         triggers = const [];
       }
       if (!mounted || n != _loadSeq) return;
+      final clean = wfWithoutRemovedSettings(st.settings);
       setState(() {
-        _s = st.settings;
-        _saved = jsonEncode(st.settings.json);
+        _s = clean;
+        _saved = jsonEncode(clean.json);
         _revision = st.revision;
         if (schema != null) _registry = schema.registry;
         _triggers = triggers;
@@ -301,7 +441,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       if (mounted) {
         setState(() {
           _s = _withPaused(_s, entity, !on);
-          _error = e is UiWfApiError ? e.message : 'Saving failed.';
+          _showSaveError(e, toSave);
         });
       }
     } finally {
@@ -312,6 +452,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
   void _discard() => setState(() {
     _s = UiWorkflowSettings.fromJson(jsonDecode(_saved));
     _error = '';
+    _problems = const [];
     _resetKey++;
   });
 
@@ -337,11 +478,12 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         _revision = rev;
         // What was sent is what's saved; anything changed while it was on its way stays unsaved.
         _saved = jsonEncode(sent.json);
+        _problems = const [];
         _status = 'Saved.';
       });
       widget.onSettingsChanged?.call(sent);
     } catch (e) {
-      if (mounted) setState(() => _error = e is UiWfApiError ? e.message : 'Saving failed.');
+      if (mounted) setState(() => _showSaveError(e, sent));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -414,11 +556,14 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           onChanged: (z) => _patch({'timeZone': z}),
         ),
       ),
+      ..._problemsFor('timeZone'),
       FbSetting(label: 'Working days', child: WfChecks(label: 'Working days', options: _days, isChecked: _s.workDays.contains, onChanged: _toggleDay)),
+      ..._problemsFor('days'),
       FbPair(children: [
         FbSetting(label: 'From', child: UiTimePicker(size: UiSize.sm, label: 'From', value: _s.hours[0], onChanged: (v) => _setHours(0, v))),
         FbSetting(label: 'To', child: UiTimePicker(size: UiSize.sm, label: 'To', value: _s.hours[1], onChanged: (v) => _setHours(1, v))),
       ]),
+      ..._problemsFor('hours'),
       FbSetting(
         label: 'Holidays',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
@@ -431,6 +576,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
               child: UiDatePicker(key: ValueKey('h$_resetKey'), size: UiSize.sm, label: 'Holiday date', placeholder: 'Add a holiday', value: null, onChanged: _addHoliday),
             ),
           ),
+          ..._problemsFor('holidays'),
         ]),
       ),
     ];
@@ -441,11 +587,12 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
     final retry = wfMapOrNull(d['retry']) ?? const {};
     return [
       _h2('Defaults'),
-      FbSetting(label: 'Tasks are due within', child: WfDurationInput(value: wfStrOrNull(d['taskDue']) ?? 'P3D', label: 'Task due', onChanged: (v) => _patchDefaults({'taskDue': v}))),
+      // The engine has no "tasks are due" default: a reminder counts from when the task opens.
       FbSetting(
-        label: 'Reminder before then',
+        label: 'Remind people of an open task after',
         child: WfDurationInput(value: wfStringsOrNull(d['reminders'])?.firstOrNull ?? 'P1D', label: 'Reminder', onChanged: (v) => _patchDefaults({'reminders': [v]})),
       ),
+      ..._problemsFor('reminders'),
       FbPair(children: [
         FbSetting(
           label: 'Retry failed calls',
@@ -464,6 +611,8 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           child: UiNumberInput(size: UiSize.sm, value: wfNum(d['forEachMax']) ?? 500, min: 1, max: 500, suffix: 'items', semanticLabel: 'At most, for each', onChanged: (v) => _patchDefaults({'forEachMax': v ?? 500})),
         ),
       ]),
+      ..._problemsFor('retry'),
+      ..._problemsFor('forEachMax'),
       FbSetting(
         label: 'A workflow starts again for the same record while running',
         child: WfSelect(
@@ -473,6 +622,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           onChanged: (v) => _patchDefaults({'concurrency': v}),
         ),
       ),
+      ..._problemsFor('concurrency'),
       FbSetting(
         label: 'Stop chains of workflows starting workflows after',
         child: UiNumberInput(
@@ -485,6 +635,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           onChanged: (v) => _patchDefaults({'maxChainDepth': v ?? 5}),
         ),
       ),
+      ..._problemsFor('maxChainDepth'),
       FbSwitch(
         value: _s.people?['delegation'] == true,
         label: 'People may hand tasks to someone else',
@@ -541,6 +692,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
             FbLink(label: 'Add', onTap: _addOrigin),
           ]),
           if (_originError.isNotEmpty) WfNote(_originError),
+          ..._problemsFor('origins'),
         ]),
       ),
       FbSetting(
@@ -583,7 +735,9 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
                 style: context.uiText.body.copyWith(fontSize: 12, color: t.textSecondary),
               ),
               Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Remove', color: t.danger, onTap: () => _removeConnection(i))),
+              ..._problemsFor('conn:$i'),
             ]),
+          ..._problemsFor('connections'),
           Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Add a connection', onTap: _addConnection)),
         ]),
       ),
@@ -625,11 +779,13 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
             ),
         ]);
       }),
+      ..._problemsFor('retention'),
       FbSetting(
         label: 'Hide these values in the log and run views',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
           if (_s.maskedFields.isNotEmpty) _items(_s.maskedFields, _removeMasked, removeVerb: 'Stop hiding', labelOf: _fieldName),
           WfSelect(key: ValueKey('m$_resetKey'), label: 'Add a field to hide', placeholder: 'Add a field…', value: null, options: maskable, onChanged: _addMasked),
+          ..._problemsFor('masked'),
           const FbHint('Fields the app marks as sensitive are always hidden.'),
           SizedBox(height: t.space1),
         ]),
@@ -652,6 +808,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       _h2('What is being watched'),
       const FbHint('Every published workflow and what starts it, by record type. Pause a record type to stop new runs while you sort something out; pausing saves at once and leaves other unsaved changes as they are.'),
       if (_error.isNotEmpty) WfNote(_error) else if (_status.isNotEmpty) Semantics(liveRegion: true, child: FbHint(_status)),
+      ..._problemsFor('paused'),
       if (groups.isEmpty) const FbHint('Nothing is published yet.'),
       for (final MapEntry(key: entity, value: triggers) in groups.entries)
         () {
@@ -777,7 +934,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           UiButton(label: 'Save settings', size: UiSize.sm, onPressed: !dirty || _busy ? null : save),
         ]),
       );
-      final nav = _Nav(section: _section, wide: wide, divider: bounded, onSelect: (s) => setState(() => _section = s));
+      final nav = _Nav(section: _section, wide: wide, divider: bounded, bad: _badSections, onSelect: (s) => setState(() => _section = s));
       final main = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: bounded ? MainAxisSize.max : MainAxisSize.min,
@@ -806,7 +963,10 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
 }
 
 class _Nav extends StatelessWidget {
-  const _Nav({required this.section, required this.wide, required this.onSelect, this.divider = true});
+  const _Nav({required this.section, required this.wide, required this.onSelect, this.divider = true, this.bad = const {}});
+
+  /// Sections with a problem to fix, marked with a dot.
+  final Set<String> bad;
   final String section;
   final bool wide;
   final bool divider;
@@ -819,7 +979,7 @@ class _Nav extends StatelessWidget {
       final on = s.value == section;
       return UiInteractive(
         onTap: () => onSelect(s.value),
-        semanticLabel: s.label,
+        semanticLabel: bad.contains(s.value) ? '${s.label}, needs fixing' : s.label,
         selected: on,
         excludeChildSemantics: true,
         pressScale: false,
@@ -832,7 +992,10 @@ class _Nav extends StatelessWidget {
             borderRadius: BorderRadius.circular(t.radiusXs),
             boxShadow: st.focused ? t.focusRing : null,
           ),
-          child: Text(s.label, maxLines: 1, style: context.uiText.body.copyWith(fontSize: 13, fontWeight: on ? FontWeight.w600 : FontWeight.w400, color: on || st.hovered ? t.text : t.textSecondary)),
+          child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+            Text(s.label, maxLines: 1, style: context.uiText.body.copyWith(fontSize: 13, fontWeight: on ? FontWeight.w600 : FontWeight.w400, color: on || st.hovered ? t.text : t.textSecondary)),
+            if (bad.contains(s.value)) Container(key: ValueKey('bad-${s.value}'), width: 6, height: 6, decoration: BoxDecoration(color: t.danger, shape: BoxShape.circle)),
+          ]),
         ),
       );
     }
