@@ -285,7 +285,8 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
     ),
     footerBuilder: (ctx) => ListenableBuilder(
       listenable: st,
-      builder: (ctx, _) => Wrap(
+      // Full width, so Close sits at the start and the decisions at the end (the web `.foot`).
+      builder: (ctx, _) => SizedBox(width: double.infinity, child: Wrap(
         alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: ctx.ui.space2,
@@ -297,7 +298,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
               UiButton(label: o.label, variant: _variantOf(o.tone), onPressed: st.busy || !task.canDecide ? null : () => decide(ctx, o.key)),
           ]),
         ],
-      ),
+      )),
     ),
   );
   return future.whenComplete(st.dispose);
@@ -1639,7 +1640,12 @@ class _AuditRow extends StatelessWidget {
         toggled: open,
         excludeChildSemantics: true,
         pressScale: false,
+        // The row itself is the touch target (48 tall on touch), so its background fills it rather
+        // than leaving bands of the list's background around a shorter row.
+        padTouchTarget: false,
         builder: (context, s) => Container(
+          constraints: BoxConstraints(minHeight: uiTouchPlatform(context) ? uiMinTouchTarget : 0),
+          alignment: AlignmentDirectional.centerStart,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(color: s.hovered ? t.surfaceHover : t.surface, boxShadow: s.focused ? t.focusRing : null),
           child: LayoutBuilder(builder: (context, box) {

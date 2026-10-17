@@ -190,6 +190,19 @@ void main() {
       expect(api.calls, contains('delegate:t1:ali'));
     });
 
+    testWidgets('Close sits at the start of the footer and the decisions at its end', (tester) async {
+      final task = UiWfTask.fromJson(FakeWorkflowApi.taskJson('t1'));
+      await pumpUi(tester, Builder(builder: (ctx) => UiButton(label: 'Open', onPressed: () => showWfDecideDialog(ctx, task: task, api: FakeWorkflowApi()))), size: const Size(700, 900));
+      await tester.tap(button('Open'));
+      await tester.pumpAndSettle();
+      final modal = tester.getRect(find.byType(UiModal));
+      final dialog = find.descendant(of: find.byType(UiModal), matching: find.byType(DecoratedBox)).first;
+      final panel = tester.getRect(dialog);
+      expect(modal.contains(panel.center), isTrue);
+      expect(tester.getRect(button('Close')).left - panel.left, lessThan(40));
+      expect(panel.right - tester.getRect(button('Reject')).right, lessThan(40));
+    });
+
     testWidgets('earlier decisions read as a bulleted list', (tester) async {
       final api = FakeWorkflowApi();
       final task = UiWfTask.fromJson({
