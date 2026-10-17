@@ -27,15 +27,24 @@ Future<T?> showUiDrawer<T>({
   RouteSettings? settings,
 }) {
   final t = context.ui;
-  return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(UiDialogRoute<T>.themed(
-    context,
-    dismissible: closeOnBackdrop,
-    settings: settings,
-    duration: t.motionSlow,
-    reverse: t.motionBase,
-    transitions: (context, animation, child) => uiSheetTransition(context, animation, child, side),
-    builder: (context) => UiDrawer(side: side, title: title, closeOnEscape: closeOnEscape, glass: glass, radius: radius, child: Builder(builder: builder)),
-  ));
+  return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
+    UiDialogRoute<T>.themed(
+      context,
+      dismissible: closeOnBackdrop,
+      settings: settings,
+      duration: t.motionSlow,
+      reverse: t.motionBase,
+      transitions: (context, animation, child) => uiSheetTransition(context, animation, child, side),
+      builder: (context) => UiDrawer(
+        side: side,
+        title: title,
+        closeOnEscape: closeOnEscape,
+        glass: glass,
+        radius: radius,
+        child: Builder(builder: builder),
+      ),
+    ),
+  );
 }
 
 /// The web `ui-sheet-enter` / `ui-sheet-leave`: slides fully in from [side], decelerating in and
@@ -50,7 +59,10 @@ Widget uiSheetTransition(BuildContext context, Animation<double> animation, Widg
     UiDrawerSide.bottom => const Offset(0, 1),
   };
   final curved = _DragAwareCurve(animation, route, t.easeDecelerate, t.easeAccelerate);
-  return SlideTransition(position: Tween(begin: from, end: Offset.zero).animate(curved), child: child);
+  return SlideTransition(
+    position: Tween(begin: from, end: Offset.zero).animate(curved),
+    child: child,
+  );
 }
 
 /// Curved while the route animates on its own; linear while a finger drives it.
@@ -85,6 +97,9 @@ class UiDrawer extends StatelessWidget {
     this.glass,
     this.radius,
     this.onClose,
+    this.autofocus = true,
+    this.onPointerEnter,
+    this.onPointerExit,
   });
 
   final Widget child;
@@ -94,6 +109,14 @@ class UiDrawer extends StatelessWidget {
   final bool? glass;
   final bool? radius;
   final VoidCallback? onClose;
+
+  /// Take keyboard focus when it opens. A peek opened by hovering ([UiDrawerPeek]) leaves it where it is.
+  final bool autofocus;
+
+  /// The pointer entered or left the panel (the web `panelEnter` / `panelLeave`), for drawers that
+  /// close when it leaves.
+  final VoidCallback? onPointerEnter;
+  final VoidCallback? onPointerExit;
 
   bool get _horizontal => side == UiDrawerSide.left || side == UiDrawerSide.right;
 
@@ -151,10 +174,16 @@ class UiDrawer extends StatelessWidget {
     if (isGlass) {
       panel = ClipRRect(
         borderRadius: shape,
-        child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur, sigmaY: t.glassBlur), child: panel),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: t.glassBlur, sigmaY: t.glassBlur),
+          child: panel,
+        ),
       );
     }
-    panel = UiDialogScope(label: title, closeOnEscape: closeOnEscape, onClose: close, child: panel);
+    panel = UiDialogScope(label: title, closeOnEscape: closeOnEscape, onClose: close, autofocus: autofocus, child: panel);
+    if (onPointerEnter != null || onPointerExit != null) {
+      panel = MouseRegion(onEnter: (_) => onPointerEnter?.call(), onExit: (_) => onPointerExit?.call(), child: panel);
+    }
 
     final size = mq.size;
     final extent = _horizontal ? math.min(360.0, size.width * 0.9) : math.min(320.0, size.height * 0.8);
@@ -199,6 +228,93 @@ class _SwipeToClose extends StatelessWidget {
       onVerticalDragEnd: horizontal ? null : (d) => end(d.velocity.pixelsPerSecond.dy),
       onVerticalDragCancel: horizontal ? null : () => route.dragEnd(0),
       child: child,
+    );
+  }
+}
+
+/// A drawer over the page that doesn't block it: the web `ui-drawer` with `modal` false. No barrier,
+/// no route and no focus grab, so the page underneath stays usable; Escape (with focus inside) and
+/// the close button still call [onClose]. It slides in from [side] while [open] and out after.
+///
+/// [child] is laid out in place (the thing that opens it, e.g. a rail of dots); the drawer itself is
+/// shown in the nearest [Overlay].
+class UiDrawerPeek extends StatefulWidget {
+  const UiDrawerPeek({super.key, required this.open, required this.child, required this.drawer, this.side = UiDrawerSide.right, this.title, this.onClose, this.onPointerEnter, this.onPointerExit});
+
+  final bool open;
+  final Widget child;
+
+  /// The drawer's content.
+  final WidgetBuilder drawer;
+  final UiDrawerSide side;
+  final String? title;
+  final VoidCallback? onClose;
+  final VoidCallback? onPointerEnter;
+  final VoidCallback? onPointerExit;
+
+  @override
+  State<UiDrawerPeek> createState() => _UiDrawerPeekState();
+}
+
+class _UiDrawerPeekState extends State<UiDrawerPeek> with SingleTickerProviderStateMixin {
+  final _portal = OverlayPortalController();
+  late final AnimationController _anim = AnimationController(vsync: this);
+
+  @override
+  void initState() {
+    super.initState();
+    // Shown for good (show() may not be called during a rebuild); it draws nothing while closed.
+    _portal.show();
+    if (widget.open) _anim.value = 1;
+  }
+
+  @override
+  void didUpdateWidget(UiDrawerPeek oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final old = oldWidget;
+    if (widget.open == old.open) return;
+    final t = context.ui;
+    final animate = context.uiAnimate;
+    if (widget.open) {
+      _anim.animateTo(1, duration: animate ? t.motionSlow : Duration.zero, curve: t.easeDecelerate);
+    } else {
+      _anim.animateTo(0, duration: animate ? t.motionBase : Duration.zero, curve: t.easeAccelerate);
+    }
+  }
+
+  @override
+  void dispose() {
+    _anim.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final from = switch (widget.side) {
+      UiDrawerSide.left => const Offset(-1, 0),
+      UiDrawerSide.right => const Offset(1, 0),
+      UiDrawerSide.top => const Offset(0, -1),
+      UiDrawerSide.bottom => const Offset(0, 1),
+    };
+    return OverlayPortal(
+      controller: _portal,
+      overlayChildBuilder: (context) => AnimatedBuilder(
+        animation: _anim,
+        builder: (context, drawer) => !widget.open && _anim.value == 0 ? const SizedBox.shrink() : drawer!,
+        child: SlideTransition(
+          position: Tween(begin: from, end: Offset.zero).animate(_anim),
+          child: UiDrawer(
+            side: widget.side,
+            title: widget.title,
+            autofocus: false,
+            onClose: widget.onClose ?? () {},
+            onPointerEnter: widget.onPointerEnter,
+            onPointerExit: widget.onPointerExit,
+            child: Builder(builder: widget.drawer),
+          ),
+        ),
+      ),
+      child: widget.child,
     );
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -16,6 +15,7 @@ import 'api.dart';
 import 'bits.dart';
 import 'clock.dart';
 import 'definition.dart';
+import 'history.dart';
 import 'icons.dart';
 import 'json.dart';
 import 'schema.dart';
@@ -226,10 +226,16 @@ class UiWorkflowRecordPanel extends StatefulWidget {
 class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
   UiWfRecord? _record;
   List<UiWfAuditEntry> _history = const [];
-  bool _busy = false;
   String _error = '';
 
   UiWfRecord? get record => _record;
+
+  Future<void> _moved(UiWfRecord r) async {
+    setState(() => _record = r);
+    widget.onChanged?.call(r);
+    final api = widget.api;
+    if (api != null) await _loadHistory(api);
+  }
 
   @override
   void initState() {
@@ -277,7 +283,126 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
     return i >= 0 && here >= 0 && i < here;
   }
 
+  String _describeHistory(UiWfAuditEntry h) =>
+      wfDescribeHistory(h, (k) => _record?.states.where((s) => s.key == k).firstOrNull?.label ?? (k == null ? '' : jsString(k)));
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final r = _record;
+    if (r == null) {
+      return _error.isNotEmpty ? WfNote(_error) : const FbHint('Loading…');
+    }
+    return DefaultTextStyle.merge(
+      style: _body(context, size: 13.5),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
+        Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          if (r.state != null) ...[
+            UiWorkflowStateBadge(label: r.stateLabel ?? r.state!, tone: r.stateTone),
+            Text('since ${wfAgo(r.stateEnteredAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
+            if (r.status == 'outOfSync') const WfChip('Out of sync', tone: 'warning'),
+          ] else
+            const FbHint('No lifecycle for this record type.'),
+        ]),
+        if (r.states.length > 1)
+          Semantics(
+            container: true,
+            label: 'Lifecycle',
+            child: Wrap(spacing: 4, runSpacing: 4, children: [
+              for (final s in r.states)
+                Container(
+                  height: 22,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(color: s.key == r.state ? t.primary : t.surfaceHover, borderRadius: BorderRadius.circular(11)),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      s.label,
+                      style: context.uiText.label.copyWith(
+                        fontSize: 11.5,
+                        height: 1,
+                        fontWeight: s.key == r.state ? FontWeight.w600 : FontWeight.w500,
+                        color: s.key == r.state ? t.primaryContrast : (_passed(r, s.key) ? t.textSecondary : t.textMuted),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        WfRecordActions(
+          api: widget.api,
+          record: r,
+          entity: widget.entity,
+          entityId: widget.entityId,
+          onChanged: _moved,
+          onReload: reload,
+        ),
+        if (widget.showHistory)
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+            const _Heading('History'),
+            if (_history.isEmpty) const FbHint('Nothing yet.'),
+            for (final h in _history)
+              Container(
+                margin: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.fromLTRB(12, 4, 0, 4),
+                decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  WfArrowText(_describeHistory(h), style: _body(context)),
+                  Text('${h.actorName ?? h.actorType} · ${wfAgo(h.at, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 11.5, color: t.textMuted)),
+                ]),
+              ),
+          ]),
+        if (_error.isNotEmpty) WfNote(_error),
+      ]),
+    );
+  }
+}
+
+// ── Record actions ──────────────────────────────────────────────────────────────────────────
+
+/// The moves a person may make on a record now, its manual workflows and open tasks, with the
+/// dialogs that go with them (confirmation, transition form, decision): the web
+/// `ui-wf-record-actions`, shared by the record panel and the workflow panel.
+class WfRecordActions extends StatefulWidget {
+  const WfRecordActions({
+    super.key,
+    required this.api,
+    required this.record,
+    required this.entity,
+    required this.entityId,
+    this.showTasks = true,
+    this.emptyText = '',
+    this.onChanged,
+    this.onReload,
+  });
+
+  final UiWorkflowApi? api;
+  final UiWfRecord record;
+  final String entity;
+  final String entityId;
+
+  /// List the record's open tasks.
+  final bool showTasks;
+
+  /// Said when this person has nothing to do here (no moves, manual workflows or tasks); empty says nothing.
+  final String emptyText;
+
+  /// A move was applied: the record as it is now.
+  final Future<void> Function(UiWfRecord record)? onChanged;
+
+  /// Something changed that needs a fresh read (a decision, a manual start).
+  final Future<void> Function()? onReload;
+
+  @override
+  State<WfRecordActions> createState() => _WfRecordActionsState();
+}
+
+class _WfRecordActionsState extends State<WfRecordActions> {
+  bool _busy = false;
+  String _error = '';
+
   void _start(UiWfTransitionOption t) {
+    if (_busy) return;
     if (t.form == null && t.confirm == null) {
       _apply(t.key, const {}, null);
       return;
@@ -286,6 +411,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
   }
 
   void _startManual(UiWfManualOption m) {
+    if (_busy) return;
     if (m.form == null) {
       _runManual(m.key, const {}, null);
       return;
@@ -347,10 +473,8 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
     setState(() => _busy = true);
     try {
       final r = await api.applyTransition(widget.entity, widget.entityId, key, input: input);
-      if (!mounted) return true;
-      setState(() => _record = r);
-      widget.onChanged?.call(r);
-      await _loadHistory(api);
+      if (mounted) setState(() => _error = '');
+      await widget.onChanged?.call(r);
       return true;
     } catch (e) {
       final msg = _errorText(e, 'That did not work.');
@@ -371,7 +495,8 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
     setState(() => _busy = true);
     try {
       await api.startManual(key, widget.entity, widget.entityId, input: input);
-      await reload();
+      if (mounted) setState(() => _error = '');
+      await widget.onReload?.call();
       return true;
     } catch (e) {
       final msg = _errorText(e, 'That did not work.');
@@ -390,142 +515,58 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
     final api = widget.api;
     if (api == null) return;
     final res = await showWfDecideDialog(context, task: t, api: api);
-    if (res != null) await reload();
-  }
-
-  String _describeHistory(UiWfAuditEntry h) {
-    UiJson parse(String? s) {
-      if (s == null) return const {};
-      try {
-        return wfMap(jsonDecode(s));
-      } catch (_) {
-        return const {};
-      }
-    }
-
-    final data = parse(h.data), before = parse(h.before), after = parse(h.after);
-    String label(Object? k) => _record?.states.where((s) => s.key == k).firstOrNull?.label ?? (k == null ? '' : jsString(k));
-    String s(Object? v) => v == null ? '' : jsString(v);
-    switch ('${h.category}.${h.action}') {
-      case 'lifecycle.created':
-        return 'Started in ${label(after['state'])}';
-      case 'lifecycle.transitioned':
-        return '${s(data['label'] ?? data['transition'] ?? 'Moved')}: ${label(before['state'])} $wfArrow ${label(after['state'])}';
-      case 'lifecycle.autoTransitioned':
-        return 'Moved automatically: ${label(before['state'])} $wfArrow ${label(after['state'])}';
-      case 'lifecycle.forced':
-        return 'Moved by an admin to ${label(after['state'])}: ${s(data['reason'])}';
-      case 'lifecycle.writeRefused':
-        return 'A direct change to the state was refused';
-      case 'task.decided':
-        final c = data['comment'];
-        return 'Decided: ${s(data['outcome'])}${c != null && c != '' ? ' (“${s(c)}”)' : ''}';
-      case 'task.created':
-        return 'Task created: ${s(data['title'])}';
-      default:
-        return '${h.category} ${h.action}';
-    }
+    if (res != null) await widget.onReload?.call();
   }
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final r = _record;
-    if (r == null) {
-      return _error.isNotEmpty ? WfNote(_error) : const FbHint('Loading…');
-    }
-    return DefaultTextStyle.merge(
-      style: _body(context, size: 13.5),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
-        Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          if (r.state != null) ...[
-            UiWorkflowStateBadge(label: r.stateLabel ?? r.state!, tone: r.stateTone),
-            Text('since ${wfAgo(r.stateEnteredAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
-            if (r.status == 'outOfSync') const WfChip('Out of sync', tone: 'warning'),
-          ] else
-            const FbHint('No lifecycle for this record type.'),
+    final r = widget.record;
+    final tasks = widget.showTasks ? r.tasks : const <UiWfTask>[];
+    final nothing = r.transitions.isEmpty && r.manual.isEmpty && tasks.isEmpty;
+    if (nothing && widget.emptyText.isEmpty && _error.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
+      if (r.transitions.isNotEmpty || r.manual.isNotEmpty)
+        Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          for (final tr in r.transitions) UiButton(label: tr.label, size: UiSize.sm, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr)),
+          for (final m in r.manual) UiButton(label: m.label, size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m)),
         ]),
-        if (r.states.length > 1)
-          Semantics(
-            container: true,
-            label: 'Lifecycle',
-            child: Wrap(spacing: 4, runSpacing: 4, children: [
-              for (final s in r.states)
-                Container(
-                  height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(color: s.key == r.state ? t.primary : t.surfaceHover, borderRadius: BorderRadius.circular(11)),
-                  child: Center(
-                    widthFactor: 1,
-                    child: Text(
-                      s.label,
-                      style: context.uiText.label.copyWith(
-                        fontSize: 11.5,
-                        height: 1,
-                        fontWeight: s.key == r.state ? FontWeight.w600 : FontWeight.w500,
-                        color: s.key == r.state ? t.primaryContrast : (_passed(r, s.key) ? t.textSecondary : t.textMuted),
-                      ),
-                    ),
+      if (tasks.isNotEmpty)
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          const _Heading('Waiting for'),
+          for (final task in tasks)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: UiInteractive(
+                onTap: () => _openTask(task),
+                enabled: task.canDecide,
+                semanticLabel: '${task.title}, ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}${task.canDecide ? ', your turn' : ''}',
+                excludeChildSemantics: true,
+                pressScale: false,
+                builder: (context, s) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: t.surface,
+                    border: Border.all(color: s.hovered && !s.disabled ? t.primary : t.border),
+                    borderRadius: BorderRadius.circular(t.radius),
+                    boxShadow: s.focused ? t.focusRing : null,
                   ),
-                ),
-            ]),
-          ),
-        if (r.transitions.isNotEmpty || r.manual.isNotEmpty)
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            for (final tr in r.transitions) UiButton(label: tr.label, size: UiSize.sm, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr)),
-            for (final m in r.manual) UiButton(label: m.label, size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: _busy ? null : () => _startManual(m)),
-          ]),
-        if (r.tasks.isNotEmpty)
-          Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-            const _Heading('Waiting for'),
-            for (final task in r.tasks)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: UiInteractive(
-                  onTap: () => _openTask(task),
-                  enabled: task.canDecide,
-                  semanticLabel: '${task.title}, ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}${task.canDecide ? ', your turn' : ''}',
-                  excludeChildSemantics: true,
-                  pressScale: false,
-                  builder: (context, s) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: t.surface,
-                      border: Border.all(color: s.hovered && !s.disabled ? t.primary : t.border),
-                      borderRadius: BorderRadius.circular(t.radius),
-                      boxShadow: s.focused ? t.focusRing : null,
+                  child: Row(spacing: 8, children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
+                        Text(task.title, style: _body(context, size: 13.5, weight: FontWeight.w600)),
+                        Text('${task.assigneeNames.join(', ')} · due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
+                      ]),
                     ),
-                    child: Row(spacing: 8, children: [
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-                          Text(task.title, style: _body(context, size: 13.5, weight: FontWeight.w600)),
-                          Text('${task.assigneeNames.join(', ')} · due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
-                        ]),
-                      ),
-                      if (task.canDecide) const WfChip('Your turn', tone: 'primary'),
-                    ]),
-                  ),
+                    if (task.canDecide) const WfChip('Your turn', tone: 'primary'),
+                  ]),
                 ),
               ),
-          ]),
-        if (widget.showHistory)
-          Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-            const _Heading('History'),
-            if (_history.isEmpty) const FbHint('Nothing yet.'),
-            for (final h in _history)
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.fromLTRB(12, 4, 0, 4),
-                decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  WfArrowText(_describeHistory(h), style: _body(context)),
-                  Text('${h.actorName ?? h.actorType} · ${wfAgo(h.at, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 11.5, color: t.textMuted)),
-                ]),
-              ),
-          ]),
-        if (_error.isNotEmpty) WfNote(_error),
-      ]),
-    );
+            ),
+        ]),
+      if (nothing && widget.emptyText.isNotEmpty) FbHint(widget.emptyText),
+      if (_error.isNotEmpty) WfNote(_error),
+    ]);
   }
 }
 

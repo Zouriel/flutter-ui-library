@@ -103,11 +103,19 @@ pans or zooms (a refit that comes up mid-drag waits for the pointer to lift) and
 
 ```dart
 UiWorkflowRecordPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
+UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)
 UiWorkflowTasks(api: api, onDecided: (_) => refresh())
 UiWorkflowRun(api: api, instanceId: runId, canIntervene: isAdmin)
 UiWorkflowAudit(api: api, entity: 'application', entityId: app.id, onExport: (bytes, format) => save(bytes))
 UiWorkflowGlobalSettings(api: api)
 ```
+
+`UiWorkflowPanel` is the record's workflow to attach to its page, like the web `ui-workflow-panel`:
+the states as a stepper (green for passed, dark for not reached), what happened in each, and in the
+current state the person's moves, tasks and manual workflows (or "Nothing for you to do here right
+now."). `layout` picks `vertical`, `horizontal`, `sideDrawer` or `bottomDrawer`. The drawer layouts
+put a rail of dots on the screen's edge through the overlay, wherever the widget sits: a mouse hover
+opens a `UiDrawerPeek` over the page (moving away closes it), a tap opens a regular `showUiDrawer`.
 
 ## Working with definitions in code
 
@@ -130,3 +138,7 @@ survive a round trip, and every helper returns a new definition, keeping untouch
 - Token pickers read "Group › Label" (the library's select has no option groups).
 - Arrows in sentences are drawn as an icon: the bundled fonts have no arrow glyph.
 - `optionLabel` is `wfOptionLabel` (the form engine already exports `optionLabel`).
+- The web `ui-drawer` has `modal=false`; Flutter drawers are routes, which always block the page, so
+  the non-modal drawer is a separate widget, `UiDrawerPeek` (an overlay with no barrier or focus grab).
+- The web stepper's orientation is explicit; here `axis` stays optional (horizontal when it fits), and
+  the workflow panel passes `Axis.vertical` for step bodies.

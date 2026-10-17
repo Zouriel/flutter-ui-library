@@ -19,6 +19,7 @@ import 'overview_page.dart';
 import 'typography_page.dart';
 import 'window_page.dart';
 import 'workflow_builder_page.dart';
+import 'workflow_panel_page.dart';
 
 /// A showcase page in the side menu, grouped like the web docs.
 class ShowcasePage {
@@ -45,6 +46,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('file-viewer', 'Flagship', 'File viewer', HugeIcons.strokeRoundedFile02, (_) => const FileViewerPage()),
   ShowcasePage('form-builder', 'Flagship', 'Form builder', HugeIcons.strokeRoundedTask01, (_) => const FormBuilderPage()),
   ShowcasePage('workflow-builder', 'Flagship', 'Workflow builder', HugeIcons.strokeRoundedWorkflowSquare01, (_) => const WorkflowBuilderPage()),
+  ShowcasePage('workflow-panel', 'Flagship', 'Workflow panel', HugeIcons.strokeRoundedWorkflowCircle01, (_) => const WorkflowPanelPage()),
   ShowcasePage('window', 'Flagship', 'Window system', HugeIcons.strokeRoundedBrowser, (_) => const WindowPage()),
   ShowcasePage('design-tools', 'Flagship', 'Design tools', HugeIcons.strokeRoundedPenTool01, (_) => const DesignToolsPage()),
   ShowcasePage('fx', 'Motion', 'Motion & FX', HugeIcons.strokeRoundedMagicWand01, (_) => const FxPage()),

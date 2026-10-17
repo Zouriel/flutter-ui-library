@@ -1512,6 +1512,16 @@ File: `workflow/src/runtime.ts`
 A record's state, moves, tasks, manual workflows and history.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiWorkflowPanel (component, `ui-workflow-panel`)
+File: `workflow/src/panel.ts`  
+A record's workflow as a vertical or horizontal panel, or an edge drawer behind a rail of dots (hover peeks, tap opens).  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### WfRecordActions (component, `ui-wf-record-actions`)
+File: `workflow/src/runtime.ts`  
+A record's moves, manual workflows and tasks with their dialogs, shared by the record panel and the workflow panel.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiWorkflowTasks (component, `ui-workflow-tasks`)
 File: `workflow/src/runtime.ts`  
 The signed-in person's approvals and tasks, with the decide dialog.  
