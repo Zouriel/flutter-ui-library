@@ -329,7 +329,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
       _busy = id;
       _errors[id] = '';
     });
-    final UiWfDefinitionSummary summary;
+    final UiWfPermissionsSummary summary;
     try {
       // Someone else may have published since this page loaded: saving would quietly undo their change.
       final now = await api.definition(id);
@@ -364,7 +364,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
       if (!mounted) return;
       setState(() {
         _replace(id, summary, d.published ?? w.def);
-        _saved[id] = 'Saved: version ${summary.version} is now in use.';
+        _saved[id] = _savedMessage(summary, w.rows);
       });
     } catch (_) {
       // Show what was saved from the edits themselves; the definition catches up on the next load.
@@ -372,11 +372,22 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
       final full = _workflows.firstWhere((x) => x.summary.id == id, orElse: () => w);
       setState(() {
         _replace(id, summary, full.def, [for (final r in full.rows) pending.containsKey(r.node) ? r.withWho(pending[r.node]!) : r]);
-        _saved[id] = 'Saved: version ${summary.version} is now in use. The page couldn’t load it again; reload to see the latest.';
+        _saved[id] = '${_savedMessage(summary, w.rows)} The page couldn’t load it again; reload to see the latest.';
       });
     } finally {
       if (mounted) setState(() => _busy = null);
     }
+  }
+
+  /// What a save did, in words: the version in use, records that now follow it, and draft steps it
+  /// couldn't change.
+  String _savedMessage(UiWfPermissionsSummary summary, List<UiWfPermissionRow> rows) {
+    if (summary.changed == false) return 'Nothing changed: version ${summary.version} stays in use.';
+    final moved = summary.recordsMoved;
+    final parts = ['Saved: version ${summary.version} is now in use${moved > 0 ? ', and $moved existing record${moved == 1 ? '' : 's'} follow${moved == 1 ? 's' : ''} it' : ''}.'];
+    final skipped = [for (final n in summary.draftSkipped) '“${rows.where((r) => r.node == n).firstOrNull?.label ?? n}”'];
+    if (skipped.isNotEmpty) parts.add('Your draft no longer has ${skipped.join(', ')}, so the draft kept ${skipped.length == 1 ? 'it' : 'them'} as before.');
+    return parts.join(' ');
   }
 
   @override

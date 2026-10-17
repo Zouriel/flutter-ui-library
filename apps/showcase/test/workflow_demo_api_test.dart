@@ -18,7 +18,8 @@ void main() {
     expect(api.reviewer, isNull, reason: 'the reviewer is really put back');
     expect(api.hasChecklist, isFalse);
     expect(api.budget, 42000, reason: 'unticked: left as it is');
-    expect((await api.resetPreview('application', '1')).items, isEmpty);
+    // A Draft application with nothing open: no reset is offered, so its list is refused.
+    expect(() => api.resetPreview('application', '1'), throwsA(isA<UiWfApiError>().having((e) => e.code, 'code', 'notAllowed')));
 
     // Submitted again: the workflow assigns a reviewer and opens a checklist, which can be taken back again.
     api.actingAs = 'ali'; // the applicant submits it
@@ -66,5 +67,34 @@ void main() {
     await api.applyTransition('application', '1', 'reject', comment: 'Missing transcript');
     final h = await api.recordHistory('application', '1');
     expect(h.any((e) => wfDescribeHistory(e, (k) => '$k').contains('(“Missing transcript”)')), isTrue);
+  });
+
+  test('the reset list has a token: a reset with an older one is refused as changed', () async {
+    final api = DemoWorkflowApi();
+    final preview = await api.resetPreview('application', '1');
+    expect(preview.token, isNotNull);
+    expect(preview.items.where((i) => i.kind == 'move').single.undoable, isFalse);
+    await expectLater(api.resetRecord('application', '1', token: 'tk-old'), throwsA(isA<UiWfApiError>().having((e) => e.code, 'code', 'resetChanged')));
+    await api.resetRecord('application', '1', undo: ['field:programme:p1:budget'], token: preview.token);
+    expect(api.budget, 50000);
+  });
+
+  test('another lifecycle\'s records are refused as wrongLifecycle', () async {
+    final api = DemoWorkflowApi();
+    await expectLater(api.applyTransition('visa', '1', 'approve'), throwsA(isA<UiWfApiError>().having((e) => e.code, 'code', 'wrongLifecycle')));
+  });
+
+  test('saving permissions says what it did', () async {
+    final api = DemoWorkflowApi();
+    final def = (await api.definition('wf_status')).published!;
+    final submit = def.lifecycle!.transitions.first;
+    final same = await api.updatePermissions('wf_status', [(node: submit.id, who: submit.who!)]);
+    expect(same.changed, isFalse);
+    expect(same.version, 1);
+    final saved = await api.updatePermissions('wf_status', [(node: submit.id, who: [UiWfAssignee.role('reviewer')])]);
+    expect((saved.changed, saved.version, saved.recordsMoved), (true, 2, 3));
+    expect(saved.draftSkipped, isEmpty);
+    api.actingAs = 'ali';
+    await expectLater(api.updatePermissions('wf_status', const []), throwsA(isA<UiWfApiError>().having((e) => e.status, 'status', 403)));
   });
 }

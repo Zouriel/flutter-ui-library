@@ -174,10 +174,14 @@ class FakeWorkflowApi extends Fake implements UiWorkflowApi {
     return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
   });
 
-  /// The input, the ids taken back and the remarks of the last reset.
+  /// The input, the ids taken back, the remarks and the list's token of the last reset.
   UiJson? lastResetInput;
   List<String>? lastResetUndo;
   String? lastResetComment;
+  String? lastResetToken;
+
+  /// The token [resetPreview] hands out with its list.
+  String? resetToken;
 
   /// What [resetPreview] lists; null: the API can't list it.
   List<Map<String, Object?>>? resetItems;
@@ -203,16 +207,17 @@ class FakeWorkflowApi extends Fake implements UiWorkflowApi {
     final gate = previewGate;
     if (gate != null) await gate.future;
     if (items == null) throw UnimplementedError();
-    return UiWfResetPreview.fromJson({'reset': recordJson['reset'], 'items': items});
+    return UiWfResetPreview.fromJson({'reset': recordJson['reset'], 'items': items, 'token': ?resetToken});
   }
 
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment}) async {
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment, String? token}) async {
     await resetGate?.future;
-    return _resetNow(input, undo, comment);
+    return _resetNow(input, undo, comment, token);
   }
 
-  Future<UiWfRecord> _resetNow(UiJson? input, List<String>? undo, String? comment) => _do('reset', () {
+  Future<UiWfRecord> _resetNow(UiJson? input, List<String>? undo, String? comment, String? token) => _do('reset', () {
+    lastResetToken = token;
     lastResetInput = input;
     lastResetUndo = undo;
     lastResetComment = comment;

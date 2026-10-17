@@ -554,6 +554,9 @@ class _ActionDialog extends ChangeNotifier {
   bool loaded = false;
   String listError = '';
 
+  /// The list's token, sent back so a reset fails if the list changed since it was read.
+  String? token;
+
   bool _disposed = false;
   bool get disposed => _disposed;
 
@@ -658,6 +661,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     d.set(() {
       d.items = const [];
       d.chosen = const {};
+      d.token = null;
       d.listError = '';
       d.loaded = false;
     });
@@ -669,6 +673,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       if (seq != _resetSeq) return;
       d.set(() {
         d.items = preview.items;
+        d.token = preview.token;
         d.chosen = {
           for (final i in preview.items)
             if (i.undoable && (keepChoices && beforeItems.contains(i.id) ? beforeChosen.contains(i.id) : i.selected)) i.id,
@@ -808,7 +813,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     try {
       final undo = [for (final i in d.items) if (d.chosen.contains(i.id)) i.id];
       final remark = d.remark.trim();
-      final r = await api.resetRecord(widget.entity, widget.entityId, input: d.input, undo: undo.isEmpty ? null : undo, comment: remark.isEmpty ? null : remark);
+      final r = await api.resetRecord(widget.entity, widget.entityId, input: d.input, undo: undo.isEmpty ? null : undo, comment: remark.isEmpty ? null : remark, token: d.token);
       if (mounted) setState(() => _error = '');
       await widget.onChanged?.call(r);
       return true;
@@ -1670,7 +1675,7 @@ class _WfResetUndoList extends StatelessWidget {
   final _ActionDialog dialog;
 
   static String _kindLabel(String kind) =>
-      const {'field': 'Field', 'created': 'New record', 'action': 'Action', 'message': 'Message', 'webhook': 'Webhook'}[kind] ?? wfHumanize(kind);
+      const {'field': 'Field', 'created': 'New record', 'action': 'Action', 'message': 'Message', 'webhook': 'Webhook', 'move': 'Move'}[kind] ?? wfHumanize(kind);
 
   @override
   Widget build(BuildContext context) {

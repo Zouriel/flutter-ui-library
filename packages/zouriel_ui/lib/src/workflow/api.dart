@@ -261,7 +261,8 @@ extension type const UiWfResetItem._(UiJson json) implements Object {
   /// Send back in [UiWorkflowApi.resetRecord]'s `undo` to take it back.
   String get id => wfStr(json['id']);
 
-  /// `field` (a field it changed), `created` (a record it created), `action`, `message` or `webhook`.
+  /// `field` (a field it changed), `created` (a record it created), `action`, `message`, `webhook` or
+  /// `move` (another record the workflow moved; never undoable, with a warning).
   String get kind => wfStr(json['kind']);
 
   /// What taking it back does, in words.
@@ -287,6 +288,25 @@ extension type const UiWfResetPreview._(UiJson json) implements Object {
   UiWfResetPreview.fromJson(Object? j) : json = wfMap(j);
   UiWfResetOption get reset => UiWfResetOption.fromJson(json['reset']);
   List<UiWfResetItem> get items => wfList(json['items'], UiWfResetItem.fromJson);
+
+  /// Send back with the reset ([UiWorkflowApi.resetRecord]'s `token`): if the list changed since, the
+  /// reset fails with `resetChanged`. Older engines omit it.
+  String? get token => wfStrOrNull(json['token']);
+}
+
+/// What [UiWorkflowApi.updatePermissions] returns: the published version's summary, and what the
+/// change did.
+extension type const UiWfPermissionsSummary._(UiJson json) implements UiWfDefinitionSummary {
+  UiWfPermissionsSummary.fromJson(Object? j) : json = wfMap(j);
+
+  /// False when nothing changed (no new version was published); null from older engines.
+  bool? get changed => json['changed'] is bool ? json['changed'] as bool : null;
+
+  /// Steps or moves the draft no longer has, so the draft kept them as they were.
+  List<String> get draftSkipped => wfStrings(json['draftSkipped']);
+
+  /// Records moved onto the new version, so the new permissions apply to them too.
+  int get recordsMoved => wfInt(json['recordsMoved']) ?? 0;
 }
 
 extension type const UiWfAuditEntry._(UiJson json) implements Object {
@@ -527,7 +547,7 @@ abstract class UiWorkflowApi {
   /// Changes who may do what in a published workflow at once: publishes a new version that is the
   /// current one plus only these changes (and applies them to the draft, if any). `node` is a
   /// transition or step id, `reset` or `trigger`.
-  Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note});
+  Future<UiWfPermissionsSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note});
   Future<UiWorkflowDefinition> version(String id, int version);
   Future<List<String>> diff(String id);
   Future<List<UiWfProblem>> validate(UiWorkflowDefinition def);
@@ -563,8 +583,9 @@ abstract class UiWorkflowApi {
   Future<UiWfResetPreview> resetPreview(String entity, String id);
 
   /// Starts the record's workflow over (the lifecycle's reset), with the reset form's answers, the
-  /// ids of the [resetPreview] items to take back and the person's remarks ([comment]).
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment});
+  /// ids of the [resetPreview] items to take back, the person's remarks ([comment]) and the list's
+  /// [token] (so a list that changed since fails with `resetChanged` instead of overwriting).
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment, String? token});
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input});
 
   Future<List<UiWfAuditEntry>> audit(UiWfAuditQuery q);
@@ -686,7 +707,7 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
   @override
   Future<UiWfDefinitionSummary> rollback(String id, int version) async => UiWfDefinitionSummary.fromJson(await _call('POST', '/definitions/${_e(id)}/rollback', {'version': version}));
   @override
-  Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) async => UiWfDefinitionSummary.fromJson(await _call('POST', '/definitions/${_e(id)}/permissions', {
+  Future<UiWfPermissionsSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) async => UiWfPermissionsSummary.fromJson(await _call('POST', '/definitions/${_e(id)}/permissions', {
         'changes': [for (final c in changes) {'node': c.node, 'who': [for (final a in c.who) a.json]}],
         'note': note,
       }));
@@ -749,11 +770,12 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
       UiWfResetPreview.fromJson(await _call('GET', '/records/${_e(entity)}/${_e(id)}/reset'));
 
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment}) async =>
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment, String? token}) async =>
       UiWfRecord.fromJson(await _call('POST', '/records/${_e(entity)}/${_e(id)}/reset', {
         'input': input ?? const <String, Object?>{},
         if (undo != null && undo.isNotEmpty) 'undo': undo,
         if (comment != null && comment.trim().isNotEmpty) 'comment': comment.trim(),
+        if (token != null && token.isNotEmpty) 'token': token,
       }));
   @override
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input}) async {

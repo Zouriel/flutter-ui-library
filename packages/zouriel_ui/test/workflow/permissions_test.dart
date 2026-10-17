@@ -47,7 +47,7 @@ UiWfDefinitionSummary _summary(UiWorkflowDefinition def, {int version = 1, Strin
 });
 
 class _Api extends Fake implements UiWorkflowApi {
-  _Api({required this.canPublish, UiWorkflowDefinition? lifecycle, UiWorkflowDefinition? automation, this.users = const {}, this.failDefinitionAfter})
+  _Api({required this.canPublish, UiWorkflowDefinition? lifecycle, UiWorkflowDefinition? automation, this.users = const {}, this.failDefinitionAfter, this.saved = const {}})
     : lc = lifecycle ?? _lifecycle,
       auto = automation ?? _automation;
   final bool canPublish;
@@ -59,6 +59,9 @@ class _Api extends Fake implements UiWorkflowApi {
 
   /// `definition(id)` fails once this many calls were made (a failed reload).
   final int? failDefinitionAfter;
+
+  /// Extra fields of the engine's answer to a permissions change (`changed`, `draftSkipped`, `recordsMoved`).
+  final Map<String, Object?> saved;
 
   /// The published version the server reports for every workflow (another admin can bump it).
   int publishedVersion = 1;
@@ -108,13 +111,13 @@ class _Api extends Fake implements UiWorkflowApi {
   }
 
   @override
-  Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) async {
+  Future<UiWfPermissionsSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) async {
     saves.add((id: id, changes: changes, note: note));
     await gate?.future;
     final e = failSave;
     if (e != null) throw e;
-    publishedVersion++;
-    return _summary(lc, version: publishedVersion);
+    if (saved['changed'] != false) publishedVersion++;
+    return UiWfPermissionsSummary.fromJson({..._summary(lc, version: publishedVersion).json, ...saved});
   }
 }
 
@@ -441,5 +444,49 @@ void main() {
   testWidgets('uses the library search field', (tester) async {
     await _pump(tester);
     expect(tester.widget<UiSearchInput>(find.byType(UiSearchInput)).label, 'Find a workflow or step');
+  });
+
+  testWidgets('says how many existing records follow the new version, and which moves the draft no longer has', (tester) async {
+    await _pump(tester, api: _Api(canPublish: true, saved: {'recordsMoved': 3, 'draftSkipped': ['t1']}));
+    tester.widget<WfAssigneesEditor>(_editor('Submit')).onChanged([UiWfAssignee.role('head')]);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(UiButton, 'Save 1 change'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Saved: version 2 is now in use, and 3 existing records follow it. Your draft no longer has “Submit”, so the draft kept it as before.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('one record and several skipped moves read in the singular and plural', (tester) async {
+    await _pump(tester, api: _Api(canPublish: true, saved: {'recordsMoved': 1, 'draftSkipped': ['t1', 'reset']}));
+    tester.widget<WfAssigneesEditor>(_editor('Submit')).onChanged([UiWfAssignee.role('head')]);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(UiButton, 'Save 1 change'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('and 1 existing record follows it.'), findsOneWidget);
+    expect(find.textContaining('Your draft no longer has “Submit”, “Start over”, so the draft kept them as before.'), findsOneWidget);
+  });
+
+  testWidgets('says so when the engine found nothing to change', (tester) async {
+    await _pump(tester, api: _Api(canPublish: true, saved: {'changed': false}));
+    tester.widget<WfAssigneesEditor>(_editor('Submit')).onChanged([UiWfAssignee.role('head')]);
+    await tester.pump();
+    await tester.tap(find.widgetWithText(UiButton, 'Save 1 change'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nothing changed: version 1 stays in use.'), findsOneWidget);
+  });
+
+  test('the HTTP client reads what a permissions change did', () async {
+    final api = UiWorkflowHttpApi(
+      baseUrl: 'https://app.example/api/workflows',
+      client: MockClient((r) async => http.Response('{"id":"wf","version":4,"changed":true,"draftSkipped":["t9"],"recordsMoved":12}', 200)),
+    );
+    final s = await api.updatePermissions('wf', const []);
+    expect((s.version, s.changed, s.recordsMoved), (4, true, 12));
+    expect(s.draftSkipped, ['t9']);
+    final old = UiWfPermissionsSummary.fromJson({'id': 'wf', 'version': 4});
+    expect((old.changed, old.recordsMoved), (null, 0));
+    expect(old.draftSkipped, isEmpty);
   });
 }

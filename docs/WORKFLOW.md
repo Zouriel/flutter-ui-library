@@ -46,15 +46,19 @@ UiWorkflowHttpApi          // connects the widgets to the engine's REST API
   and every state after it, final states included: `wfStatesFrom(def, stateId)`), with a checklist
   to adjust. Without it the reset is offered in every state where it would change something.
   The reset dialog lists what the workflow did since the record last started over
-  (`api.resetPreview`): fields it changed on this or other records, records it created, actions,
-  messages and webhooks. Everything that can be undone is ticked, except items someone changed
-  again since, which start unticked; sent messages and webhooks can't be taken back. People untick
+  (`api.resetPreview`): fields it changed on this or other records, records it created, other
+  records it moved ("Move"), actions, messages and webhooks. Everything that can be undone is ticked,
+  except items someone changed again since, which start unticked; sent messages, webhooks and moves
+  can't be taken back (a move comes with a warning: start that record over instead). People untick
   anything that should stay; the ticked ids go to `resetRecord(..., undo: [...])`, which deletes
   created records, puts fields back and undoes app actions when the app supports it. The reset
   can't be confirmed until the list has arrived; an empty list says "Nothing the workflow did needs
   taking back." If someone changed what the workflow did in the meantime, the engine refuses with
   `resetChanged` and the dialog reads the list again, keeping the person's ticks for the items still
-  listed. `UiWorkflowHttpApi.resetPreview` always asks the engine (`GET /records/{entity}/{id}/reset`);
+  listed. The list comes with a `token` (`UiWfResetPreview.token`) that goes back with the reset
+  (`resetRecord(..., token:)`), so a list that changed since it was read fails with `resetChanged`
+  instead of overwriting; the token is dropped whenever the list is cleared or read again, and older
+  engines that send none are still reset without one. `UiWorkflowHttpApi.resetPreview` always asks the engine (`GET /records/{entity}/{id}/reset`);
   when that call fails, the dialog says the list couldn't be read and the reset leaves those things
   as they are. A custom API that can't list them throws `UnimplementedError` from `resetPreview`,
   and the dialog then only confirms.
@@ -103,6 +107,12 @@ client; a few are optional or only needed by some widgets:
 - `resetPreview` (optional): lists what a reset would take back. Throw `UnimplementedError` when
   there is no such list; the reset dialog then only asks for confirmation.
 - `updatePermissions`: needed by `UiWorkflowPermissions` to save.
+
+The engine's refusals reach people through the usual error text (`UiWfApiError.message`), with no
+special screens: `wrongLifecycle` (409, the record follows another lifecycle), `commentRequired`
+(400, remarks the move or reset requires), `notAllowed` (a reset outside the states it is offered
+in), `resetChanged` (409, the list changed) and a reset list refused because no reset is offered
+(the dialog then says the list couldn't be read).
 - `me` (optional): who is signed in and what they may do. `UiWorkflowApi.me()` has a default that
   answers null ("not known"); a class that `extends UiWorkflowApi` can leave it out, and one that
   `implements` it can return null. Without an answer the builder and the permissions page offer
@@ -288,8 +298,12 @@ the current one plus only those changes, so admins can change people without ope
   - Only one save runs at a time, across all workflows.
   - Before saving, the page checks that the published version is still the one it loaded. If
     someone else published since, it says so and offers Reload instead of overwriting their change.
-  - After saving, the definition is reloaded, "Saved: version N is now in use." shows, and `onSaved`
-    fires. Once published, the changes are never offered again: if the reload fails, the rows show
+  - After saving, the definition is reloaded, a message says what the save did, and `onSaved`
+    fires. `updatePermissions` answers a `UiWfPermissionsSummary`: the summary plus `changed`,
+    `draftSkipped` (node ids) and `recordsMoved`. The message reads "Nothing changed: version N stays
+    in use." when `changed` is false; otherwise "Saved: version N is now in use", with ", and M
+    existing records follow it" when records moved onto it, then "Your draft no longer has “…”, so
+    the draft kept it as before." when the draft no longer has a changed row. Once published, the changes are never offered again: if the reload fails, the rows show
     what was saved and the note asks to reload for the latest.
   - A refusal from the server shows under the footer and keeps the changes.
 - The search field (the library's `UiSearchInput`) filters by workflow title (all its rows) or by a
