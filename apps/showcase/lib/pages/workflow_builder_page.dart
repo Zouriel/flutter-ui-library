@@ -157,7 +157,7 @@ UiWorkflowBuilder(definition: workflow, schema: UiWorkflowSchema(registry: regis
         DocSection(
           name: 'Using workflows in your app',
           widget: 'Workflow components',
-          summary: 'The widgets an app puts on its own pages once workflows run (the workflow panel and record panel, the My tasks drawer, '
+          summary: 'The widgets an app puts on its own pages once workflows run (the workflow panel, the My tasks drawer, '
               'the task inbox, run and audit views, the state badge, permissions and global settings) have their own page, with a live demo '
               'of each acting as different people.',
           demo: Align(

@@ -31,10 +31,11 @@ void main() {
     });
   });
 
-  group('UiWorkflowRecordPanel', () {
+  // What the record panel was: the workflow panel's compact layout.
+  group('UiWorkflowPanel (compact)', () {
     testWidgets('shows the state, track, moves, tasks and history', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       expect(api.calls, containsAll(['record:application/1', 'history']));
       expect(find.text('In review'), findsNWidgets(2)); // the badge and the track
       expect(find.textContaining('since 3 hours ago'), findsOneWidget);
@@ -49,7 +50,7 @@ void main() {
     testWidgets('a move with a confirmation asks first, then applies and reports the change', (tester) async {
       final api = FakeWorkflowApi();
       UiWfRecord? changed;
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1', onChanged: (r) => changed = r));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact, onChanged: (r) => changed = r));
       await tester.tap(button('Approve'));
       await tester.pumpAndSettle();
       expect(find.text('Approve this application?'), findsOneWidget);
@@ -74,7 +75,7 @@ void main() {
           'pages': [{'id': 'p1', 'elements': [{'kind': 'field', 'id': 'f_reason', 'type': 'text', 'key': 'reason', 'label': 'Reason', 'required': true}]}],
         },
       };
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       await tester.tap(button('Withdraw'));
       await tester.pumpAndSettle();
       expect(find.text('Reason'), findsWidgets);
@@ -91,7 +92,7 @@ void main() {
 
     testWidgets('a move without confirmation or form applies straight away', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       await tester.tap(button('Withdraw'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('apply:withdraw'));
@@ -99,7 +100,7 @@ void main() {
 
     testWidgets('a refusal from the engine shows in the confirm dialog', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       await tester.tap(button('Approve'));
       await tester.pumpAndSettle();
       api.failNext = const UiWfApiError(403, 'notAllowed', 'You are not allowed to “Approve”.');
@@ -110,7 +111,7 @@ void main() {
 
     testWidgets('deciding a task through the decide dialog sends the outcome and comment, then reloads', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       await tester.tap(find.text('Finance sign-off'));
       await tester.pumpAndSettle();
       expect(find.text('Check the amount.'), findsOneWidget);
@@ -127,7 +128,7 @@ void main() {
 
     testWidgets('a manual workflow without a form starts at once', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       await tester.tap(button('Ask for documents'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('manual:escalate'));
@@ -135,7 +136,7 @@ void main() {
 
     testWidgets('meets the tap target and label guidelines', (tester) async {
       final h = tester.ensureSemantics();
-      await pumpPage(tester, UiWorkflowRecordPanel(api: FakeWorkflowApi(), entity: 'application', entityId: '1'));
+      await pumpPage(tester, UiWorkflowPanel(api: FakeWorkflowApi(), entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact));
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(textContrastGuideline));
@@ -144,7 +145,7 @@ void main() {
 
     testWidgets('golden', (tester) async {
       final api = FakeWorkflowApi();
-      await expectThemedGolden(tester, 'workflow_record_panel', (_) => UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'), height: 560);
+      await expectThemedGolden(tester, 'workflow_panel_compact', (_) => UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact), height: 560);
     });
   });
 

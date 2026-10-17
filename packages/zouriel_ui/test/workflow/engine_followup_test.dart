@@ -22,7 +22,7 @@ Future<FakeWorkflowApi> _pump(WidgetTester tester, {List<Map<String, Object?>>? 
   api.recordJson['reset'] = {'label': 'Start over', 'to': 'draft', 'toLabel': 'Draft', 'confirm': null, 'form': null};
   api.resetItems = items ?? [_item('created:document:d9', 'Delete Document “Checklist”')];
   api.resetToken = token;
-  await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'))), size: const Size(420, 900));
+  await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact))), size: const Size(420, 900));
   await tester.pumpAndSettle();
   return api;
 }

@@ -11,8 +11,9 @@ Material), accessible, and tested component by component. Web docs for the Angul
 - **Form builder:** the engine reads and writes the **same JSON** as the web builder; shared JSON
   fixtures run in both test suites so the two behave identically. Includes the renderer (fill / edit /
   view), the searchable paginated source picker and the editor.
-- **Workflow builder:** the builder, lifecycle diagram and runtime widgets (record panel, task inbox,
-  run view, audit log, global settings) read and write the same Zouriel Workflows JSON as the web;
+- **Workflow builder:** the builder, lifecycle diagram and runtime widgets (workflow panel, task inbox
+  and My tasks drawer, run view, audit log, permissions, global settings) read and write the same
+  Zouriel Workflows JSON as the web;
   the lifecycle layout runs the same fixtures in both suites. See `docs/WORKFLOW.md`.
 
 ## Layout

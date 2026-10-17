@@ -81,7 +81,7 @@ Future<UiWorkflowBuilderController> _pumpEditor(WidgetTester tester, UiWorkflowD
 }
 
 Future<void> _pumpPanel(WidgetTester tester, FakeWorkflowApi api, {String entityId = '1'}) async {
-  await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowRecordPanel(api: api, entity: 'application', entityId: entityId))), size: const Size(420, 900));
+  await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowPanel(api: api, entity: 'application', entityId: entityId, layout: UiWorkflowPanelLayout.compact))), size: const Size(420, 900));
   await tester.pumpAndSettle();
 }
 

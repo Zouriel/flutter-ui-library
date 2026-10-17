@@ -6,7 +6,7 @@ import 'json.dart';
 import 'schema.dart' show UiWfRemarks;
 
 // How the runtime widgets word history and outcomes (the web `runtime-shared.ts`): shared by the
-// record panel and the workflow panel.
+// workflow panel and the task inbox.
 
 /// Parses an audit entry's JSON field; a broken one reads as empty rather than throwing.
 UiJson wfAuditJson(String? text) {
@@ -137,7 +137,7 @@ String wfTaskResult(UiWfTask t) {
   return wfOutcomeLabel(t.outcome, [for (final o in t.outcomes) (key: o.key, label: o.label)]);
 }
 
-/// A run's status as people read it; the run view, run lists and the record panel all use it.
+/// A run's status as people read it; the run view, run lists and the workflow panel all use it.
 String wfRunStatusLabel(String? s) {
   if (s == null || s.isEmpty) return '';
   return const {

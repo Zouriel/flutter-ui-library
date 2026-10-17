@@ -83,7 +83,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
     if (!_isAdmin) throw UiWfApiError(403, 'forbidden', 'Only admins can $what.');
   }
 
-  /// The lifecycle the record panel uses (published, so automations can be triggered by it).
+  /// The lifecycle the workflow panel shows (published, so automations can be triggered by it).
   static UiWorkflowDefinition statusLifecycle() => UiWorkflowDefinition.fromJson({
     'specVersion': 1, 'id': 'wf_status', 'key': 'applicationStatus', 'kind': 'lifecycle', 'title': 'Application status', 'entity': 'application',
     'lifecycle': {

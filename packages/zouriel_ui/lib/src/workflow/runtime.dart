@@ -24,7 +24,8 @@ import 'json.dart';
 import 'schema.dart';
 
 // The widgets that run workflows in an app (the web `runtime.ts`): a record's state badge, the
-// record panel, the task inbox (with the decide dialog), one run's view and the audit log. There is
+// record actions (used by the workflow panel), the task inbox (with the decide dialog), one run's
+// view and the audit log. There is
 // no dependency injection in Flutter: each takes the engine's [UiWorkflowApi] as `api`.
 
 String _errorText(Object e, String fallback) {
@@ -86,7 +87,7 @@ class UiWorkflowStateBadge extends StatelessWidget {
   }
 }
 
-// ── Task decision (shared by the inbox and the record panel) ─────────────────────────────────
+// ── Task decision (shared by the inbox and the workflow panel) ───────────────────────────────
 
 class _DecideState extends ChangeNotifier {
   String comment = '';
@@ -315,175 +316,11 @@ class _PersonOption extends StatelessWidget {
   }
 }
 
-// ── Record panel ────────────────────────────────────────────────────────────────────────────
-
-/// `ui-workflow-record-panel`: drop onto a record's page: its lifecycle state, the moves the
-/// signed-in person may make (with their forms), open tasks, buttons for manual workflows, and the
-/// history of what happened.
-class UiWorkflowRecordPanel extends StatefulWidget {
-  const UiWorkflowRecordPanel({super.key, required this.api, required this.entity, required this.entityId, this.showHistory = true, this.onChanged});
-
-  /// The engine. Nothing loads while it is null.
-  final UiWorkflowApi? api;
-  final String entity;
-  final String entityId;
-  final bool showHistory;
-
-  /// After the record changed through the panel (so the page can reload its own data).
-  final ValueChanged<UiWfRecord>? onChanged;
-
-  @override
-  State<UiWorkflowRecordPanel> createState() => UiWorkflowRecordPanelState();
-}
-
-class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
-  UiWfRecord? _record;
-  List<UiWfAuditEntry> _history = const [];
-  String _error = '';
-
-  /// Bumped by every load and change, so a slower older answer never replaces a newer one.
-  int _seq = 0;
-
-  UiWfRecord? get record => _record;
-
-  Future<void> _moved(UiWfRecord r) async {
-    final n = ++_seq;
-    setState(() {
-      _record = r;
-      _error = '';
-    });
-    widget.onChanged?.call(r);
-    final api = widget.api;
-    if (api != null) await _loadHistory(api, n);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    reload();
-  }
-
-  @override
-  void didUpdateWidget(UiWorkflowRecordPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final old = oldWidget;
-    if (old.api != widget.api || old.entity != widget.entity || old.entityId != widget.entityId) reload();
-  }
-
-  /// Reloads the panel (e.g. after the page changed the record itself).
-  Future<void> reload() async {
-    final api = widget.api;
-    if (api == null) return;
-    final n = ++_seq;
-    try {
-      final r = await api.record(widget.entity, widget.entityId);
-      if (!mounted || n != _seq) return;
-      setState(() {
-        _record = r;
-        _error = '';
-      });
-      await _loadHistory(api, n);
-    } catch (e) {
-      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load the record’s workflow.'));
-    }
-  }
-
-  Future<void> _loadHistory(UiWorkflowApi api, int n) async {
-    if (!widget.showHistory) return;
-    try {
-      final h = await api.recordHistory(widget.entity, widget.entityId, take: 50);
-      if (mounted && n == _seq) setState(() => _history = h);
-    } catch (_) {
-      // A failed history load leaves the last one in place.
-    }
-  }
-
-  bool _passed(UiWfRecord r, String key) {
-    final i = r.states.indexWhere((s) => s.key == key);
-    final here = r.states.indexWhere((s) => s.key == r.state);
-    return i >= 0 && here >= 0 && i < here;
-  }
-
-  String _describeHistory(UiWfAuditEntry h) =>
-      wfDescribeHistory(h, (k) => _record?.states.where((s) => s.key == k).firstOrNull?.label ?? (k == null ? '' : jsString(k)));
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.ui;
-    final r = _record;
-    if (r == null) {
-      return _error.isNotEmpty ? WfNote(_error) : const FbHint('Loading…');
-    }
-    return DefaultTextStyle.merge(
-      style: _body(context, size: 13.5),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
-        Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          if (r.state != null) ...[
-            UiWorkflowStateBadge(label: r.stateLabel ?? r.state!, tone: r.stateTone),
-            Text('since ${wfAgo(r.stateEnteredAt, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 12, color: t.textMuted)),
-            if (r.status == 'outOfSync') const WfChip('Out of sync', tone: 'warning'),
-          ] else
-            const FbHint('No lifecycle for this record type.'),
-        ]),
-        if (r.states.length > 1)
-          Semantics(
-            container: true,
-            label: 'Lifecycle',
-            child: Wrap(spacing: 4, runSpacing: 4, children: [
-              for (final s in r.states)
-                Container(
-                  height: 22,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(color: s.key == r.state ? t.primary : t.surfaceHover, borderRadius: BorderRadius.circular(11)),
-                  child: Center(
-                    widthFactor: 1,
-                    child: Text(
-                      s.label,
-                      style: context.uiText.label.copyWith(
-                        fontSize: 11.5,
-                        height: 1,
-                        fontWeight: s.key == r.state ? FontWeight.w600 : FontWeight.w500,
-                        color: s.key == r.state ? t.primaryContrast : (_passed(r, s.key) ? t.textSecondary : t.textMuted),
-                      ),
-                    ),
-                  ),
-                ),
-            ]),
-          ),
-        WfRecordActions(
-          api: widget.api,
-          record: r,
-          entity: widget.entity,
-          entityId: widget.entityId,
-          onChanged: _moved,
-          onReload: reload,
-        ),
-        if (widget.showHistory)
-          Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-            const _Heading('History'),
-            if (_history.isEmpty) const FbHint('Nothing yet.'),
-            for (final h in _history)
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                padding: const EdgeInsets.fromLTRB(12, 4, 0, 4),
-                decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  WfArrowText(_describeHistory(h), style: _body(context)),
-                  Text('${wfActorLabel(h, (k) => _record?.instances.where((i) => i.definitionKey == k).firstOrNull?.title)} · ${wfAgo(h.at, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 11.5, color: t.textMuted)),
-                ]),
-              ),
-          ]),
-        if (_error.isNotEmpty) WfNote(_error),
-      ]),
-    );
-  }
-}
-
 // ── Record actions ──────────────────────────────────────────────────────────────────────────
 
 /// The moves a person may make on a record now, its manual workflows and open tasks, with the
 /// dialogs that go with them (confirmation, transition form, decision): the web
-/// `ui-wf-record-actions`, shared by the record panel and the workflow panel.
+/// `ui-wf-record-actions`, used by the workflow panel.
 class WfRecordActions extends StatefulWidget {
   const WfRecordActions({
     super.key,

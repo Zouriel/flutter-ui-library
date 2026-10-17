@@ -1,6 +1,6 @@
-/// Exports for the workflow area: the workflow builder, the runtime widgets (record panel, task
-/// inbox, run view, audit log, global settings), and the definition model, helpers and REST client
-/// they share. It reads and writes the same JSON as the web `@zouriel/ui/workflow`.
+/// Exports for the workflow area: the workflow builder, the runtime widgets (workflow panel, task
+/// inbox and drawer, run view, audit log, permissions, global settings), and the definition model,
+/// helpers and REST client they share. It reads and writes the same JSON as the web `@zouriel/ui/workflow`.
 library;
 
 export '../workflow/api.dart';

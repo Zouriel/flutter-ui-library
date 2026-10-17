@@ -32,11 +32,11 @@ void main() {
     expect(find.textContaining('Start over shows to the head of office once an application has moved on from Draft.'), findsOneWidget);
     final sections = [for (final s in tester.widgetList<DocSection>(find.byType(DocSection))) s.name];
     expect(sections, [
-      'Workflow panel', 'Record panel', 'My tasks drawer', 'Task inbox', 'Run', 'Audit log', 'State badge', 'Permissions', 'Global settings',
+      'Workflow panel', 'My tasks drawer', 'Task inbox', 'Run', 'Audit log', 'State badge', 'Permissions', 'Global settings',
       'Putting a settings page together',
     ]);
-    // The head of office may start this application over, in the panel and the record panel.
-    expect(button('Start over'), findsNWidgets(2));
+    // The head of office may start this application over.
+    expect(button('Start over'), findsOneWidget);
     // Every tone of the state badge.
     for (final label in ['Draft', 'Submitted', 'In progress', 'Under review', 'Approved', 'Rejected']) {
       expect(find.descendant(of: find.byType(UiWorkflowStateBadge), matching: find.text(label)), findsWidgets);
@@ -85,6 +85,19 @@ void main() {
     expect(opened, ['workflow-components']);
     expect(showcasePageById('workflow-panel')?.id, 'workflow-components');
     expect(showcasePageById('workflow-components')?.label, 'Workflow components');
+    await _done(tester);
+  });
+
+  testWidgets('the panel demo offers the compact layout (what the record panel was)', (tester) async {
+    await _pump(tester, const WorkflowComponentsPage());
+    final picker = tester.widget<UiSegmented<UiWorkflowPanelLayout>>(find.byWidgetPredicate((w) => w is UiSegmented<UiWorkflowPanelLayout>));
+    expect([for (final o in picker.options) o.label], ['Vertical', 'Horizontal', 'Compact', 'Side drawer', 'Bottom drawer']);
+    picker.onChanged!(UiWorkflowPanelLayout.compact);
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.widget<UiWorkflowPanel>(find.byType(UiWorkflowPanel)).layout, UiWorkflowPanelLayout.compact);
+    expect(find.byKey(const ValueKey('wf-track')), findsOneWidget);
+    expect(button('Start over'), findsOneWidget);
     await _done(tester);
   });
 }

@@ -31,7 +31,7 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   int _rev = 0;
 
   final Map<String, GlobalKey> _anchors = {
-    for (final a in ['panel', 'record-panel', 'tasks-drawer', 'tasks', 'run', 'audit', 'state-badge', 'permissions', 'global-settings', 'settings-page']) a: GlobalKey(),
+    for (final a in ['panel', 'tasks-drawer', 'tasks', 'run', 'audit', 'state-badge', 'permissions', 'global-settings', 'settings-page']) a: GlobalKey(),
   };
 
   @override
@@ -128,8 +128,10 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
           widget: 'UiWorkflowPanel',
           summary: 'The record\'s workflow on the record\'s own page: its states as a stepper (green for states it has been through), what '
               'happened in each, and in the current state the moves this person may make, with their forms and confirmations, open tasks '
-              'and manual workflows. Use it when the workflow is part of the page\'s story; choose a vertical or horizontal panel, or a '
-              'drawer that waits on the screen\'s edge as a rail of dots when the page is busy.',
+              'and manual workflows. Use it when the workflow is part of the page\'s story; choose a vertical or horizontal panel, a compact '
+              'one for a side column or details card (a badge with a strip of states, the actions and one history), or a drawer that waits '
+              'on the screen\'s edge as a rail of dots when the page is busy. A record type with no lifecycle still shows its manual '
+              'workflows, open tasks and history.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             UiSegmented<UiWorkflowPanelLayout>(
               label: 'Layout',
@@ -139,6 +141,7 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
               options: const [
                 UiSegmentedOption(value: UiWorkflowPanelLayout.vertical, label: 'Vertical'),
                 UiSegmentedOption(value: UiWorkflowPanelLayout.horizontal, label: 'Horizontal'),
+                UiSegmentedOption(value: UiWorkflowPanelLayout.compact, label: 'Compact'),
                 UiSegmentedOption(value: UiWorkflowPanelLayout.sideDrawer, label: 'Side drawer'),
                 UiSegmentedOption(value: UiWorkflowPanelLayout.bottomDrawer, label: 'Bottom drawer'),
               ],
@@ -150,7 +153,7 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
             ] else
               frame(
                 UiWorkflowPanel(key: _k('panel-${_layout.name}', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
-                maxWidth: _layout == UiWorkflowPanelLayout.vertical ? 460 : null,
+                maxWidth: _layout == UiWorkflowPanelLayout.horizontal ? null : 460,
               ),
           ]),
           code: '''// on the record's page
@@ -158,6 +161,9 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_
 
 // states left to right, details below
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.horizontal)
+
+// a side column: a badge with a strip of states, the actions and one history (title: '' hides the heading)
+UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.compact, title: '')
 
 // a rail of dots on the right edge; hover (desktop) or tap opens the drawer
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)
@@ -168,32 +174,13 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
             ApiRow('api', 'UiWorkflowApi?', 'The engine. Nothing loads while it is null.'),
             ApiRow('entity', 'String', 'The record type key, as registered.'),
             ApiRow('entityId', 'String', 'The record id.'),
-            ApiRow('layout', 'UiWorkflowPanelLayout', 'vertical, horizontal, sideDrawer or bottomDrawer.', def: 'vertical'),
+            ApiRow('layout', 'UiWorkflowPanelLayout', 'vertical, horizontal, compact, sideDrawer or bottomDrawer.', def: 'vertical'),
             ApiRow('side', 'UiDrawerSide', 'Which edge the side drawer opens from (left or right).', def: 'right'),
-            ApiRow('title', 'String', 'The heading (and the drawer title).', def: "'Workflow'"),
+            ApiRow('title', 'String', 'The heading (and the drawer title); empty hides the heading.', def: "'Workflow'"),
             ApiRow('showHistory', 'bool', 'Show what happened in each state.', def: 'true'),
             ApiRow('emptyText', 'String', 'Said when the person has nothing to do in the current state; empty hides it.', def: "'Nothing for you to do here right now.'"),
           ],
           callbacks: const [ApiRow('onChanged', 'ValueChanged<UiWfRecord>', 'After the record moved through the panel, so the page can reload its own data.')],
-        ),
-        DocSection(
-          key: _anchors['record-panel'],
-          name: 'Record panel',
-          widget: 'UiWorkflowRecordPanel',
-          summary: 'A compact card for a record\'s page: the state as a badge, the moves this person may make, open tasks they can decide, '
-              'manual workflow buttons and the history. Use it in a side column or a details card, where a full stepper would take too much room.',
-          demo: frame(UiWorkflowRecordPanel(key: _k('record', live: false), api: _api, entity: 'application', entityId: _appId, onChanged: (_) async => _changed()), maxWidth: 460),
-          code: "UiWorkflowRecordPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())",
-          api: const [
-            ApiRow('api', 'UiWorkflowApi?', 'The engine. Nothing loads while it is null.'),
-            ApiRow('entity', 'String', 'The record type key, as registered.'),
-            ApiRow('entityId', 'String', 'The record id.'),
-            ApiRow('showHistory', 'bool', 'Show the history of what happened.', def: 'true'),
-          ],
-          callbacks: const [
-            ApiRow('onChanged', 'ValueChanged<UiWfRecord>', 'After the record changed through the panel.'),
-            ApiRow('reload()', 'state', 'Loads the record again (e.g. after your page changed it).'),
-          ],
         ),
         DocSection(
           key: _anchors['tasks-drawer'],
@@ -453,7 +440,7 @@ class _Where extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
         Semantics(header: true, child: UiText('Which component goes where', variant: UiTextVariant.h4)),
         Wrap(spacing: t.space4, runSpacing: t.space3, children: [
-          row('A record\'s page', [link('Workflow panel', 'panel'), link('Record panel', 'record-panel')]),
+          row('A record\'s page', [link('Workflow panel', 'panel')]),
           row('The app\'s header', [link('My tasks drawer', 'tasks-drawer')]),
           row('An inbox page', [link('Task inbox', 'tasks')]),
           row('Admin pages', [link('Run', 'run'), link('Audit log', 'audit')]),

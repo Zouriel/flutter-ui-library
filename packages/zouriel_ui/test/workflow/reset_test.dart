@@ -77,7 +77,7 @@ void main() {
   testWidgets('the record panel offers the reset: confirm, then the engine starts it over', (tester) async {
     final api = FakeWorkflowApi();
     api.recordJson['reset'] = {'label': 'Start over', 'to': 'draft', 'toLabel': 'Draft', 'confirm': 'Start this application over?', 'form': null};
-    await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'))), size: const Size(420, 900));
+    await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact))), size: const Size(420, 900));
     await tester.pumpAndSettle();
     expect(find.textContaining('Back to “Draft”'), findsOneWidget);
     await tester.tap(button('Start over'));
@@ -101,7 +101,7 @@ void main() {
           warning: 'Changed again since the workflow set it to 60000; ticking it overwrites that.'),
       item('message:s3', 'message', 'Message to Ali', undoable: false, selected: false, warning: "Already sent; it can't be taken back."),
     ];
-    await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1'))), size: const Size(420, 900));
+    await pumpUi(tester, SizedBox(width: 420, height: 900, child: SingleChildScrollView(child: UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact))), size: const Size(420, 900));
     await tester.pumpAndSettle();
     await tester.tap(button('Start over'));
     await tester.pumpAndSettle();
@@ -137,7 +137,7 @@ void main() {
     ];
     debugDisableShadows = false;
     tester.view.devicePixelRatio = 2;
-    await pumpUi(tester, SizedBox(width: 390, child: UiWorkflowRecordPanel(api: api, entity: 'application', entityId: '1')), size: const Size(390, 900));
+    await pumpUi(tester, SizedBox(width: 390, child: UiWorkflowPanel(api: api, entity: 'application', entityId: '1', layout: UiWorkflowPanelLayout.compact)), size: const Size(390, 900));
     await tester.tap(button('Start over'));
     await tester.pumpAndSettle();
     try {

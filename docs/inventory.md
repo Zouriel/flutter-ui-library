@@ -1507,19 +1507,14 @@ File: `workflow/src/workflow-builder.ts`
 Design automations and lifecycles; two-way definition, API, schema, settings, persist.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
-### UiWorkflowRecordPanel (component, `ui-workflow-record-panel`)
-File: `workflow/src/runtime.ts`  
-A record's state, moves, tasks, manual workflows and history.  
-- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
-
 ### UiWorkflowPanel (component, `ui-workflow-panel`)
 File: `workflow/src/panel.ts`  
-A record's workflow as a vertical or horizontal panel, or an edge drawer behind a rail of dots (hover peeks, tap opens).  
+A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens). Record types with no lifecycle still show their manual workflows, tasks and history.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### WfRecordActions (component, `ui-wf-record-actions`)
 File: `workflow/src/runtime.ts`  
-A record's moves, manual workflows and tasks with their dialogs, shared by the record panel and the workflow panel.  
+A record's moves, manual workflows and tasks with their dialogs, used by the workflow panel.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiWorkflowTasks (component, `ui-workflow-tasks`)

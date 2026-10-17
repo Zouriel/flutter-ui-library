@@ -2,7 +2,8 @@
 
 The Flutter port of `@zouriel/ui/workflow` (see `projects/ui/workflow/README.md` in the Angular
 repo): a builder where admins design workflows without code, and the widgets that run them in
-your app: a record panel, a task inbox, a run view, an audit log and a settings screen. Workflows
+your app: a workflow panel, a task inbox and My tasks drawer, a run view, an audit log, a
+permissions page and a settings screen. Workflows
 are JSON in the Zouriel Workflows format, run by an engine on your server (the .NET engine first;
 Laravel and Go engines follow the same spec and REST API).
 
@@ -11,11 +12,13 @@ Code: `packages/zouriel_ui/lib/src/workflow/` (and `lib/src/canvas/viewport.dart
 
 ```dart
 UiWorkflowBuilder          // where admins design workflows
-UiWorkflowRecordPanel      // a record's state, moves, tasks and history
+UiWorkflowPanel            // a record's workflow: a stepper, a compact card or an edge drawer
 UiWorkflowTasks            // the signed-in person's approvals and tasks
+UiWorkflowTasksDrawer      // a "My tasks" button with a count, opening the inbox in a drawer
 UiWorkflowRun              // one run over its workflow, with retry/skip/cancel
 UiWorkflowAudit            // the tamper-evident log: filter, export, verify
 UiWorkflowGlobalSettings   // working hours, channels, webhooks, retention
+UiWorkflowPermissions      // who may do what in every published workflow
 UiWorkflowStateBadge       // a state as a coloured chip
 UiWorkflowHttpApi          // connects the widgets to the engine's REST API
 ```
@@ -40,7 +43,7 @@ UiWorkflowHttpApi          // connects the widgets to the engine's REST API
   A lifecycle can also let chosen people **reset** a record (`lifecycle.reset`): its open tasks and
   runs stop, it goes back to the starting state (or another you pick), and the reset's own steps run,
   which can change the record, related records and each item of a list. The builder sets it up under
-  "Starting over"; `UiWorkflowRecordPanel` and `UiWorkflowPanel` show the button to those allowed
+  "Starting over"; `UiWorkflowPanel` (in every layout) shows the button to those allowed
   (`record.reset`, `api.resetRecord`).
   "Offer it" (`reset.states`) limits it to some states: from a state you pick onwards (that state
   and every state after it, final states included: `wfStatesFrom(def, stateId)`), with a checklist
@@ -166,7 +169,8 @@ person gets: the head of office sees every button (Start over once an applicatio
 Draft), the applicant only their own moves, finance only the sign-off.
 
 ```dart
-UiWorkflowRecordPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
+UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
+UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.compact, title: '')
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)
 UiWorkflowTasks(api: api, onDecided: (_) => refresh())
 UiWorkflowRun(api: api, instanceId: runId, canIntervene: isAdmin)
@@ -177,9 +181,25 @@ UiWorkflowGlobalSettings(api: api)
 `UiWorkflowPanel` is the record's workflow to attach to its page, like the web `ui-workflow-panel`:
 the states as a stepper (green for passed, dark for not reached), what happened in each, and in the
 current state the person's moves, tasks and manual workflows (or "Nothing for you to do here right
-now."). `layout` picks `vertical`, `horizontal`, `sideDrawer` or `bottomDrawer`. The drawer layouts
-put a rail of dots on the screen's edge through the overlay, wherever the widget sits: a mouse hover
-opens a `UiDrawerPeek` over the page (moving away closes it), a tap opens a regular `showUiDrawer`.
+now."). `layout` picks `vertical`, `horizontal`, `compact`, `sideDrawer` or `bottomDrawer`. The drawer
+layouts put a rail of dots on the screen's edge through the overlay, wherever the widget sits: a
+mouse hover opens a `UiDrawerPeek` over the page (moving away closes it), a tap opens a regular
+`showUiDrawer`.
+
+`compact` is for a side column or a details card: the state as a badge with "since" (and "Out of
+sync" when it is), a strip of the lifecycle's states (the current one filled, passed ones in a
+stronger grey), the moves, tasks and manual workflows, and one flat history, newest first ("Nothing
+yet." when empty). The panel's own gap (`space2`) is the only spacing between those blocks. An empty
+`title` hides the heading in any in-page layout.
+
+A record type with no lifecycle shows that same body in every layout: "No lifecycle for this record
+type.", then its manual workflows and open tasks (with no "nothing to do" text), then the history. A
+drawer's rail keeps one dot (named by the title) so it can still open.
+
+**Breaking (0.27.0):** `UiWorkflowRecordPanel` is removed. Use
+`UiWorkflowPanel(layout: UiWorkflowPanelLayout.compact)`, which shows what it did: the badge, the
+strip of states, the moves, tasks and manual workflows, and the history (`title: ''` hides the
+panel's heading). Its `onChanged` is the same; its `reload()` is on `UiWorkflowPanelState`.
 
 ## Working with definitions in code
 
@@ -218,6 +238,8 @@ survive a round trip, and every helper returns a new definition, keeping untouch
   web adds visually hidden text inside the label).
 - "Create record" says the kind is unknown only once the registry has loaded (the web also says it
   while there is no registry yet).
+- The record actions' dialogs are routes on the navigator, so closed ones never take room in the
+  panel's column (the web hides their empty host elements).
 
 ## My tasks drawer (UiWorkflowTasksDrawer)
 
