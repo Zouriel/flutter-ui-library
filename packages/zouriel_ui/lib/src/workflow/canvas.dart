@@ -78,13 +78,34 @@ class WfTriggerCard extends StatelessWidget {
   }
 }
 
+/// Takes taps on a part of the canvas that isn't its background (a branch column, a connector, a
+/// "+" row), so they don't fall through and select the workflow's settings. Taps on controls inside
+/// still reach them (the innermost wins).
+class _NotBackground extends StatelessWidget {
+  const _NotBackground({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(behavior: HitTestBehavior.opaque, excludeFromSemantics: true, onTap: () {}, child: child);
+}
+
 /// One step: grip, icon, name, one-line summary, problems, and a menu (the web `ui-wf-step-card`).
-class WfStepCard extends StatelessWidget {
+/// The border warms under the mouse; the grip shows on hover or when selected (always on touch).
+/// Read-only keeps the grip's and menu's room, so cards don't shift.
+class WfStepCard extends StatefulWidget {
   const WfStepCard({super.key, required this.step});
   final UiWfStep step;
 
   @override
+  State<WfStepCard> createState() => _WfStepCardState();
+}
+
+class _WfStepCardState extends State<WfStepCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final step = widget.step;
     final t = context.ui;
     final ctx = WfBuilderScope.of(context);
     final store = ctx.store;
@@ -126,20 +147,29 @@ class WfStepCard extends StatelessWidget {
       }
     }
 
+    final ro = store.readOnly;
+    final gripShown = touch || _hovered || selected;
     Widget grip = Semantics(
       label: 'Move $name (or use the menu)',
       child: ExcludeSemantics(
         child: MouseRegion(
           cursor: SystemMouseCursors.grab,
           child: SizedBox(
+            key: const ValueKey('wf-grip'),
             width: touch ? 30 : 20,
-            child: Center(child: UiIcon(WfIcons.dragDropVertical, size: 14, color: t.textMuted)),
+            child: AnimatedOpacity(
+              opacity: gripShown ? 1 : 0,
+              duration: context.uiAnimate ? t.motionFast : Duration.zero,
+              child: Center(child: UiIcon(WfIcons.dragDropVertical, size: 14, color: t.textMuted)),
+            ),
           ),
         ),
       ),
     );
-    final ro = store.readOnly;
-    if (dnd != null) grip = WfDragSource(dnd: dnd, immediate: true, payload: payload, child: grip);
+    if (dnd != null && !ro) grip = WfDragSource(dnd: dnd, immediate: true, payload: payload, child: grip);
+    // Someone only looking can inspect a step but not move or change it: the grip and the menu keep
+    // their room (nothing shifts) but are hidden and can't be used.
+    if (ro) grip = Visibility(visible: false, maintainSize: true, maintainAnimation: true, maintainState: true, child: grip);
 
     Widget body = UiInteractive(
       onTap: select,
@@ -169,7 +199,10 @@ class WfStepCard extends StatelessWidget {
 
     // Long titles never widen the canvas: cards take their column's width and truncate. On a canvas
     // widened by a branch further down, top-level cards stay readable and centred, menus in reach.
-    return _CardWidth(child: Opacity(
+    return _CardWidth(child: MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Opacity(
       opacity: step.disabled ? 0.6 : 1,
       child: Container(
         constraints: const BoxConstraints(minHeight: 46),
@@ -181,6 +214,8 @@ class WfStepCard extends StatelessWidget {
                 ? t.primary
                 : errors.isNotEmpty
                 ? Color.lerp(t.border, t.danger, 0.55)!
+                : _hovered
+                ? Color.lerp(t.border, t.primary, 0.4)!
                 : t.border,
           ),
           borderRadius: BorderRadius.circular(t.radius),
@@ -188,15 +223,18 @@ class WfStepCard extends StatelessWidget {
         ),
         child: IntrinsicHeight(
           child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
-            // Someone only looking can inspect a step but not move or change it.
-            if (ro) const SizedBox(width: 6) else grip,
+            grip,
             Expanded(child: body),
             if (errors.isNotEmpty)
               Center(child: WfChip('${errors.length}', tone: 'danger', tooltip: errors.first.message))
             else if (warnings.isNotEmpty)
               Center(child: WfChip('!', tone: 'warning', tooltip: warnings.first.message)),
-            if (!ro)
-              Center(
+            Visibility(
+              visible: !ro,
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: Center(
               child: UiMenu(
                 placement: UiPlacement.bottomEnd,
                 items: [
@@ -210,10 +248,11 @@ class WfStepCard extends StatelessWidget {
                 builder: (context, toggle, open) => FbIconButton(icon: WfIcons.moreHorizontal, label: 'More for $name', onPressed: toggle),
               ),
             ),
+            ),
           ]),
         ),
       ),
-    ));
+    )));
   }
 }
 
@@ -244,7 +283,7 @@ class WfAddSlot extends StatelessWidget {
     final touch = uiTouchPlatform(context);
     final h = touch ? 34.0 : 26.0;
     final d = touch ? 28.0 : 20.0;
-    return SizedBox(
+    return _NotBackground(child: SizedBox(
       height: h,
       child: Stack(alignment: Alignment.center, children: [
         Positioned(top: first ? h / 2 : 0, bottom: 0, child: Container(width: 2, color: t.border)),
@@ -275,7 +314,7 @@ class WfAddSlot extends StatelessWidget {
           },
         ),
       ]),
-    );
+    ));
   }
 }
 
@@ -401,12 +440,13 @@ class _Fork extends StatelessWidget {
       Padding(padding: const EdgeInsets.only(bottom: 4), child: child),
     ]);
 
-    if (stacked) return connector(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final s in slots) lane(s)]));
+    // The columns and their connector aren't the canvas background: a tap there selects nothing.
+    if (stacked) return _NotBackground(child: connector(Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final s in slots) lane(s)])));
     // Columns never shrink below a readable width: the canvas as a whole widens and scrolls
     // sideways instead (see wfListWidth). Wider branches get a bigger share.
-    return connector(Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: wfForkGap, children: [
+    return _NotBackground(child: connector(Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: wfForkGap, children: [
       for (final s in slots) Expanded(flex: _laneWidth(s.steps).round(), child: lane(s)),
-    ]));
+    ])));
   }
 }
 

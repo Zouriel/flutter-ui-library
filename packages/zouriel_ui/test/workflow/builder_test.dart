@@ -362,8 +362,9 @@ void main() {
     // Nothing to add with: no palette, no + slots, no grips or step menus.
     expect(find.text('Add a step'), findsNothing);
     expect(find.bySemanticsLabel('Add a step here'), findsNothing);
-    expect(find.bySemanticsLabel('Move Tell the applicant (or use the menu)'), findsNothing);
-    expect(find.bySemanticsLabel('More for Tell the applicant'), findsNothing);
+    // (Their room is kept so nothing shifts, but they are hidden from screen readers and taps.)
+    expect(find.semantics.byLabel('Move Tell the applicant (or use the menu)'), findsNothing);
+    expect(find.semantics.byLabel('More for Tell the applicant'), findsNothing);
     // Cards still open their settings, which can be read but not changed.
     await tester.tap(find.text('Tell the applicant'));
     await tester.pumpAndSettle();

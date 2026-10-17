@@ -255,4 +255,91 @@ void main() {
     expect(tester.widget<EditableText>(textarea('Body')).controller.text, '{"a": ');
     expect(find.text('That isn’t valid JSON yet.'), findsOneWidget);
   });
+
+  group('step cards', () {
+    UiWorkflowDefinition branched() => UiWorkflowDefinition.fromJson({
+          'specVersion': 1, 'id': 'wf_b', 'key': 'b', 'kind': 'automation', 'title': 'B', 'entity': 'application',
+          'trigger': {'type': 'created'},
+          'steps': [
+            {'id': 'a', 'type': 'notify', 'title': 'Tell the applicant', 'channel': 'email', 'to': [{'initiator': true}], 'body': 'Thanks'},
+            {
+              'id': 'b', 'type': 'branch', 'title': 'Big amount?',
+              'paths': [{'id': 'p', 'label': 'Over 5,000', 'when': {'match': 'all', 'conditions': <Object?>[]}, 'steps': [{'id': 'c', 'type': 'end', 'result': 'completed', 'title': 'Stop'}]}],
+              'otherwise': {'id': 'o', 'label': 'Otherwise', 'steps': <Object?>[]},
+            },
+          ],
+        });
+    double gripOpacity(WidgetTester tester, String stepTitle) {
+      final card = find.ancestor(of: find.text(stepTitle), matching: find.byType(WfStepCard));
+      return tester.widget<AnimatedOpacity>(find.descendant(of: find.descendant(of: card, matching: find.byKey(const ValueKey('wf-grip'))), matching: find.byType(AnimatedOpacity))).opacity;
+    }
+    Color border(WidgetTester tester, String stepTitle) {
+      final card = find.ancestor(of: find.text(stepTitle), matching: find.byType(WfStepCard));
+      final box = tester.widget<Container>(find.descendant(of: card, matching: find.byWidgetPredicate((w) => w is Container && w.constraints?.minHeight == 46)));
+      return ((box.decoration! as BoxDecoration).border! as Border).top.color;
+    }
+
+    testWidgets('with a mouse: the grip shows on hover or when selected, and the border warms under the mouse', variant: TargetPlatformVariant.only(TargetPlatform.macOS), (tester) async {
+      await setup(tester, Host(initial: branched()));
+      expect(gripOpacity(tester, 'Tell the applicant'), 0);
+      final rest = border(tester, 'Tell the applicant');
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.text('Tell the applicant')));
+      await tester.pumpAndSettle();
+      expect(gripOpacity(tester, 'Tell the applicant'), 1);
+      expect(border(tester, 'Tell the applicant'), isNot(rest));
+      await mouse.moveTo(const Offset(1, 400));
+      await tester.pumpAndSettle();
+      expect(gripOpacity(tester, 'Tell the applicant'), 0);
+      expect(border(tester, 'Tell the applicant'), rest);
+      await tester.tap(find.text('Tell the applicant'));
+      await mouse.moveTo(const Offset(1, 400));
+      await tester.pumpAndSettle();
+      expect(gripOpacity(tester, 'Tell the applicant'), 1, reason: 'selected');
+    });
+
+    testWidgets('on touch the grip is always there', (tester) async {
+      await setup(tester, Host(initial: branched()));
+      expect(gripOpacity(tester, 'Tell the applicant'), 1);
+    });
+
+    testWidgets('read-only keeps the layout: the text sits where it does when editing', (tester) async {
+      // Where the text sits inside its card, and the card's size.
+      (Offset, Size) place() {
+        final card = find.ancestor(of: find.text('Tell the applicant'), matching: find.byType(WfStepCard));
+        final box = find.descendant(of: card, matching: find.byWidgetPredicate((w) => w is Container && w.constraints?.minHeight == 46));
+        return (tester.getTopLeft(find.text('Tell the applicant')) - tester.getTopLeft(box), tester.getSize(box));
+      }
+      await setup(tester, Host(initial: branched()));
+      final editing = place();
+      await setup(tester, Host(key: const ValueKey('ro'), initial: branched(), readOnly: true));
+      final reading = place();
+      expect(reading.$1, editing.$1);
+      expect(reading.$2.height, editing.$2.height);
+    });
+
+    testWidgets('only the canvas background shows the workflow\'s settings, not a branch column or a connector', (tester) async {
+      await setup(tester, Host(initial: branched()));
+      await tester.tap(find.text('Tell the applicant'));
+      await tester.pumpAndSettle();
+      final store = WfBuilderScope.read(tester.element(find.byType(WfAutomationCanvas))).store;
+      expect(store.selection?.kind, 'step');
+      // A branch column's empty background.
+      final lane = tester.getRect(find.ancestor(of: find.text('Otherwise'), matching: find.byWidgetPredicate((w) => w is Container && w.margin == const EdgeInsets.only(top: 10))).first);
+      await tester.tapAt(lane.topLeft + const Offset(3, 3));
+      await tester.pumpAndSettle();
+      expect(store.selection?.kind, 'step');
+      // Beside a + slot's connector.
+      final slot = tester.getRect(find.byType(WfAddSlot).at(1));
+      await tester.tapAt(slot.centerLeft + const Offset(4, 0));
+      await tester.pumpAndSettle();
+      expect(store.selection?.kind, 'step');
+      // The background itself.
+      await tester.tapAt(tester.getTopLeft(find.byType(WfAutomationCanvas)) + const Offset(6, 300));
+      await tester.pumpAndSettle();
+      expect(store.selection?.kind, 'workflow');
+    });
+  });
 }
