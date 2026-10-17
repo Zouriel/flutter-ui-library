@@ -36,6 +36,10 @@ void main() {
     expect(await _NoMe().me(), isNull);
   });
 
+  test('resetPreview is optional too (the web `resetPreview?`): left out, it says it isn\'t implemented', () async {
+    await expectLater(_NoMe().resetPreview('application', '1'), throwsA(isA<UnimplementedError>()));
+  });
+
   testWidgets('the permissions page offers editing when me() is not known', (tester) async {
     await pumpUi(tester, SingleChildScrollView(child: UiWorkflowPermissions(api: _NoMe())), size: const Size(900, 700));
     expect(find.byType(WfAssigneesEditor), findsOneWidget);

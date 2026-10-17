@@ -578,9 +578,10 @@ abstract class UiWorkflowApi {
   Future<UiWfRecord> forceState(String entity, String id, String state, String reason, {bool skipSteps = false});
 
   /// What starting the record over would take back: every change its workflows made since it last
-  /// started over. Throw [UnimplementedError] when the API can't list it; the reset dialog then only
-  /// confirms.
-  Future<UiWfResetPreview> resetPreview(String entity, String id);
+  /// started over. Optional (the web's `resetPreview?`): this default throws [UnimplementedError],
+  /// and then the reset dialog only confirms. An API that `extends UiWorkflowApi` can leave it out;
+  /// one that `implements` it throws [UnimplementedError] itself.
+  Future<UiWfResetPreview> resetPreview(String entity, String id) async => throw UnimplementedError('resetPreview');
 
   /// Starts the record's workflow over (the lifecycle's reset), with the reset form's answers, the
   /// ids of the [resetPreview] items to take back, the person's remarks ([comment]) and the list's
