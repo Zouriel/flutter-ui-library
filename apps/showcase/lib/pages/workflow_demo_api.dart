@@ -56,7 +56,9 @@ class DemoWorkflowApi implements UiWorkflowApi {
       {'key': 'payment.received', 'label': 'Payment received', 'entity': 'application', 'fields': [{'key': 'amount', 'label': 'Amount paid', 'type': 'currency'}]},
     ],
     'channels': [{'key': 'email', 'label': 'Email'}, {'key': 'inApp', 'label': 'In-app message'}],
-    'roles': [{'key': 'reviewer', 'label': 'Reviewers'}, {'key': 'finance', 'label': 'Finance'}, {'key': 'admin', 'label': 'Admins'}],
+    'roles': [
+      {'key': 'reviewer', 'label': 'Reviewers'}, {'key': 'finance', 'label': 'Finance'}, {'key': 'head', 'label': 'Head of office'}, {'key': 'admin', 'label': 'Admins'},
+    ],
     'groups': [{'key': 'committee', 'label': 'Scholarship committee'}],
   });
 
@@ -101,6 +103,11 @@ class DemoWorkflowApi implements UiWorkflowApi {
         {'id': 'tr_back', 'key': 'sendBack', 'label': 'Send back', 'from': ['st_review'], 'to': 'st_draft', 'who': [{'role': 'reviewer'}]},
         {'id': 'tr_withdraw', 'key': 'withdraw', 'label': 'Withdraw', 'from': '*', 'to': 'st_rejected', 'who': [{'field': 'entity.applicant'}]},
       ],
+      // Starting over: the head of office sends an application back to Draft, giving a reason.
+      'reset': {
+        'label': 'Start over', 'to': 'st_draft', 'who': [{'role': 'head'}], 'cancelAutomations': true,
+        'input': {'form': _resetForm},
+      },
     },
   });
 
@@ -160,7 +167,10 @@ class DemoWorkflowApi implements UiWorkflowApi {
   bool get hasChecklist => _documents.contains('d9');
   late List<Map<String, Object?>> _tasks;
   late List<Map<String, Object?>> _audit;
-  late Map<String, Object?> _run;
+
+  /// The finance checks run so far, by run id ("run1" is application 1's).
+  late Map<String, Map<String, Object?>> _runs;
+  int _runCount = 0;
 
   /// The sample's demo bank (the engine sample's `GET`/`POST /api/demo/bank {down}`): while it is
   /// down, the finance check's Create invoice step fails with "Bank API: 503 Service Unavailable"; it
@@ -188,7 +198,6 @@ class DemoWorkflowApi implements UiWorkflowApi {
     _records['1'] = {
       'entity': 'application', 'id': '1', 'title': 'Marine biology degree, Ali Rasheed', 'lifecycle': 'applicationStatus', 'lifecycleTitle': 'Application status',
       'state': 'review', 'stateLabel': 'In review', 'stateTone': 'info', 'status': 'active', 'stateEnteredAt': _ago(const Duration(hours: 3)),
-      'transitions': _transitionsFrom('review'),
       'instances': <Object?>[],
       'manual': [{'key': 'askDocuments', 'label': 'Ask for documents', 'form': null}],
       'states': [
@@ -205,27 +214,51 @@ class DemoWorkflowApi implements UiWorkflowApi {
       _task('t1', 'Finance sign-off', 'approval', due: const Duration(days: 2)),
       _task('t2', 'Check the transcript', 'task', due: const Duration(hours: -5), overdue: true),
     ];
+    _runCount = 1;
     _audit = [];
     _log('lifecycle', 'created', after: {'state': 'draft'}, actor: 'Ali Rasheed', at: _ago(const Duration(days: 1)));
     _log('lifecycle', 'transitioned', before: {'state': 'draft'}, after: {'state': 'review'}, data: {'transition': 'submit', 'label': 'Submit'}, actor: 'Ali Rasheed', at: _ago(const Duration(hours: 3)));
     _log('task', 'created', data: {'title': 'Finance sign-off'}, at: _ago(const Duration(hours: 3)));
-    _run = {
-      'id': 'run1', 'definitionId': finance.id, 'definitionKey': finance.key, 'title': finance.title, 'version': 1, 'kind': 'automation',
-      'entity': 'application', 'entityId': '1', 'entityTitle': _record['title'], 'status': 'waiting', 'initiatorName': 'Ali Rasheed',
-      'startedAt': _ago(const Duration(hours: 3)), 'updatedAt': _ago(const Duration(hours: 3)),
-      'steps': <Map<String, Object?>>[
-        {'id': 'r1', 'nodeId': 's_big', 'type': 'branch', 'attempt': 1, 'status': 'completed', 'startedAt': _ago(const Duration(hours: 3))},
-        {'id': 'r2', 'nodeId': 's_fin', 'type': 'approval', 'attempt': 1, 'status': 'waiting', 'startedAt': _ago(const Duration(hours: 3))},
-      ],
-      'tokens': [{'id': 'tok1', 'status': 'waiting', 'waiting': 'task', 'stepId': 's_fin'}],
-      'tasks': [_tasks.first],
-    };
+    _runs = {'run1': _financeRun('run1', '1', _tasks.first, startedAt: _ago(const Duration(hours: 3)))};
     _settings = UiWorkflowSettings.fromJson({
       'version': 1, 'timeZone': 'Indian/Maldives',
       'calendar': {'days': ['sun', 'mon', 'tue', 'wed', 'thu'], 'hours': ['08:00', '16:00'], 'holidays': ['2026-12-25']},
       'webhooks': {'allowedOrigins': ['https://erp.example.com'], 'connections': [{'key': 'erp', 'label': 'ERP', 'baseUrl': 'https://erp.example.com/api', 'auth': 'secret', 'secretName': 'ERP_TOKEN'}]},
     });
     _settingsRevision = 1;
+  }
+
+  /// A finance check waiting on its sign-off [task] for application [recordId].
+  Map<String, Object?> _financeRun(String id, String recordId, Map<String, Object?> task, {String? startedAt}) {
+    final at = startedAt ?? _now();
+    return {
+      'id': id, 'definitionId': 'wf_finance', 'definitionKey': 'financeCheck', 'title': 'Finance check', 'version': 1, 'kind': 'automation',
+      'entity': 'application', 'entityId': recordId, 'entityTitle': _records[recordId]?['title'], 'status': 'waiting', 'initiatorName': 'Ali Rasheed',
+      'startedAt': at, 'updatedAt': at,
+      'steps': <Map<String, Object?>>[
+        {'id': '$id-1', 'nodeId': 's_big', 'type': 'branch', 'attempt': 1, 'status': 'completed', 'startedAt': at},
+        {'id': '$id-2', 'nodeId': 's_fin', 'type': 'approval', 'attempt': 1, 'status': 'waiting', 'startedAt': at},
+      ],
+      'tokens': [{'id': '$id-tok', 'status': 'waiting', 'waiting': 'task', 'stepId': 's_fin'}],
+      'tasks': [task],
+    };
+  }
+
+  /// Runs still going (or stopped) are live: a reset or a final decision cancels them.
+  static const Set<String> _live = {'queued', 'running', 'waiting', 'incident'};
+
+  /// Cancels application [recordId]'s live runs and open tasks (Start over, or a final move): the
+  /// engine stops what was going for a record whose workflow is over or begins again.
+  void _stopWork(String recordId, String why) {
+    for (final run in _runs.values) {
+      if (run['entityId'] == recordId && _live.contains(run['status'])) {
+        run.addAll({'status': 'cancelled', 'error': null, 'errorStepId': null, 'tokens': <Object?>[], 'endedAt': _now(), 'updatedAt': _now()});
+        _log('instance', 'cancelled', data: {'reason': why}, entityId: recordId, instanceId: run['id']! as String);
+      }
+    }
+    for (final task in _tasks) {
+      if (task['status'] == 'open' && task['entityId'] == recordId) task['status'] = 'cancelled';
+    }
   }
 
   /// An application the workflows haven't done anything to yet, in [state].
@@ -239,14 +272,13 @@ class DemoWorkflowApi implements UiWorkflowApi {
     return r;
   }
 
-  /// Moves a record to [state] (its label, tone and the moves from there).
+  /// Moves a record to [state] (its label and tone; its moves are read from the lifecycle when asked).
   void _setState(Map<String, Object?> r, String state) {
     final s = (r['states']! as List).cast<Map>().firstWhere((x) => x['key'] == state);
     r['state'] = state;
     r['stateLabel'] = s['label'];
     r['stateTone'] = s['tone'];
     r['stateEnteredAt'] = _now();
-    r['transitions'] = _transitionsFrom(state);
   }
 
   Map<String, Object?> _rec(String id) => _records[id] ?? (throw const UiWfApiError(404, 'notFound', 'There is no such application.'));
@@ -262,10 +294,10 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   Map<String, Object?> _version(int v, String note) => {'version': v, 'note': note, 'publishedAt': _now(), 'publishedBy': 'Hana Ibrahim', 'instances': v == 1 ? 3 : 0};
 
-  Map<String, Object?> _task(String id, String title, String kind, {required Duration due, bool overdue = false}) => {
-    'id': id, 'instanceId': 'run1', 'kind': kind, 'title': title,
+  Map<String, Object?> _task(String id, String title, String kind, {required Duration due, bool overdue = false, String instanceId = 'run1', String recordId = '1'}) => {
+    'id': id, 'instanceId': instanceId, 'kind': kind, 'title': title,
     'instructions': kind == 'approval' ? 'The amount is over 5,000. Check the budget line before approving.' : 'Make sure the transcript is certified.',
-    'definitionKey': 'financeCheck', 'entity': 'application', 'entityId': '1', 'entityTitle': 'Marine biology degree, Ali Rasheed',
+    'definitionKey': 'financeCheck', 'entity': 'application', 'entityId': recordId, 'entityTitle': _records[recordId]?['title'] ?? 'Marine biology degree, Ali Rasheed',
     'status': 'open', 'assignees': [kind == 'approval' ? 'mariyam' : 'hana'], 'assigneeNames': [kind == 'approval' ? 'Finance' : 'Hana Ibrahim'],
     'rule': kind == 'approval' ? {'type': 'any'} : null,
     'outcomes': kind == 'approval'
@@ -291,11 +323,11 @@ class DemoWorkflowApi implements UiWorkflowApi {
     ];
   }
 
-  void _log(String category, String action, {Object? before, Object? after, Object? data, String? actor, String? at, String entityId = '1'}) {
+  void _log(String category, String action, {Object? before, Object? after, Object? data, String? actor, String? at, String entityId = '1', String instanceId = 'run1'}) {
     _seq++;
     _audit.insert(0, {
       'seq': _seq, 'id': 'a$_seq', 'at': at ?? _now(), 'actorType': actor == null ? 'workflow' : 'user', 'actorName': actor, 'actorId': actor == null ? null : 'u',
-      'category': category, 'action': action, 'subjectType': category, 'subjectId': entityId, 'entity': 'application', 'entityId': entityId, 'instanceId': 'run1',
+      'category': category, 'action': action, 'subjectType': category, 'subjectId': entityId, 'entity': 'application', 'entityId': entityId, 'instanceId': instanceId,
       'before': before == null ? null : jsonEncode(before), 'after': after == null ? null : jsonEncode(after), 'data': data == null ? null : jsonEncode(data),
       'correlationId': 'c$_seq', 'prevHash': 'h${_seq - 1}', 'hash': 'h$_seq',
     });
@@ -367,6 +399,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfDefinitionSummary> createDefinition(UiWorkflowDefinition def) => _later(() {
+    _onlyAdmins('create workflows');
     _defs[def.id] = {'draft': _clone(def.json), 'published': null, 'status': 'draft', 'version': 0, 'versions': <Object?>[], 'updatedAt': _now()};
     _log('definition', 'created', actor: 'Hana Ibrahim');
     return _summary(def.id);
@@ -374,6 +407,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfDefinitionSummary> saveDraft(UiWorkflowDefinition def) => _later(() {
+    _onlyAdmins('change workflows');
     final d = _defs[def.id];
     if (d == null) throw const UiWfApiError(404, 'notFound', 'Save it once first.');
     d['draft'] = _clone(def.json);
@@ -382,10 +416,14 @@ class DemoWorkflowApi implements UiWorkflowApi {
   });
 
   @override
-  Future<void> deleteDefinition(String id) => _later(() => _defs.remove(id));
+  Future<void> deleteDefinition(String id) => _later(() {
+    _onlyAdmins('delete workflows');
+    _defs.remove(id);
+  });
 
   @override
   Future<UiWfDefinitionSummary> publish(String id, {String? note}) => _later(() {
+    _onlyAdmins('publish workflows');
     final d = _defs[id]!;
     final problems = _lint(UiWorkflowDefinition.fromJson(d['draft']));
     if (problems.any((p) => p.isError)) throw UiWfApiError(422, 'invalid', 'Fix the problems first.', [for (final p in problems) p.json]);
@@ -400,18 +438,21 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfDefinitionSummary> archive(String id) => _later(() {
+    _onlyAdmins('archive workflows');
     _defs[id]!['status'] = 'archived';
     return _summary(id);
   });
 
   @override
   Future<UiWfDefinitionSummary> restore(String id) => _later(() {
+    _onlyAdmins('restore workflows');
     _defs[id]!['status'] = 'published';
     return _summary(id);
   });
 
   @override
   Future<UiWfDefinitionSummary> rollback(String id, int version) => _later(() {
+    _onlyAdmins('roll a workflow back');
     final d = _defs[id]!;
     d['draft'] = _clone(d['published']);
     return _summary(id);
@@ -473,7 +514,9 @@ class DemoWorkflowApi implements UiWorkflowApi {
     (d['versions'] as List).insert(0, _version(v, note ?? 'Changed who may do what'));
     _log('definition', 'published', data: {'version': v}, actor: _actorName);
     // Records (or runs) on the old version move onto the new one.
-    final moved = id == 'wf_status' ? _records.length : (_run['status'] == 'waiting' ? 1 : 0);
+    // Every application follows the lifecycle's new version at once (their moves are read from it); a
+    // finance check still going moves onto the new version too.
+    final moved = id == 'wf_status' ? _records.length : _runs.values.where((r) => r['definitionId'] == id && _live.contains(r['status'])).length;
     return UiWfPermissionsSummary.fromJson({..._summary(id).json, 'changed': true, 'draftSkipped': skipped, 'recordsMoved': moved});
   });
 
@@ -610,48 +653,111 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfPage<UiWfInstance>> instances(UiWfInstanceQuery q) => _later(() {
-    final mine = (q.entityId == null || q.entityId == '1') && (q.status == null || q.status!.contains(_run['status']));
-    return mine ? UiWfPage([UiWfInstance.fromJson(_clone(_run))], 1) : const UiWfPage(<UiWfInstance>[], 0);
+    final list = [
+      for (final r in _runs.values)
+        if ((q.entityId == null || q.entityId == r['entityId']) && (q.status == null || q.status!.contains(r['status']))) r,
+    ];
+    return UiWfPage([for (final r in list.take(q.take ?? 25)) UiWfInstance.fromJson(_clone(r))], list.length);
   });
 
-  /// The run's steps, changed in place (created as a `List<Map<String, Object?>>` in [reset]).
-  List<Map<String, Object?>> get _runSteps => _run['steps']! as List<Map<String, Object?>>;
+  Map<String, Object?> _runOf(String id) => _runs[id] ?? (throw const UiWfApiError(404, 'notFound', 'There is no such run.'));
+
+  /// A run's steps, changed in place (created as a `List<Map<String, Object?>>` in [_financeRun]).
+  static List<Map<String, Object?>> _stepsOf(Map<String, Object?> run) => run['steps']! as List<Map<String, Object?>>;
 
   /// Runs the finance check's payment step (Create invoice): done while the bank is up; while it is
   /// down, failed and tried again on a timer, stopping after the fourth attempt (or at once when an
   /// admin tries it again by hand).
-  void _pay({bool byHand = false}) {
-    final steps = _runSteps;
+  void _pay(Map<String, Object?> run, {bool byHand = false}) {
+    final steps = _stepsOf(run);
+    final id = run['id']! as String;
+    final recordId = run['entityId']! as String;
     final prev = steps.where((x) => x['nodeId'] == 's_inv').lastOrNull;
     final attempt = (prev?['attempt'] as int? ?? 0) + 1;
     steps.removeWhere((x) => x['nodeId'] == 's_inv');
-    _run['updatedAt'] = _now();
+    run['updatedAt'] = _now();
     if (!bankDown) {
-      steps.add({'id': 'r3', 'nodeId': 's_inv', 'type': 'action', 'attempt': attempt, 'status': 'completed', 'output': {'invoiceNo': 'INV-1042'}, 'startedAt': _now()});
-      _run.addAll({'status': 'completed', 'error': null, 'errorStepId': null, 'tokens': <Object?>[]});
-      _log('instance', 'completed');
+      steps.add({'id': '$id-3', 'nodeId': 's_inv', 'type': 'action', 'attempt': attempt, 'status': 'completed', 'output': {'invoiceNo': 'INV-1042'}, 'startedAt': _now()});
+      run.addAll({'status': 'completed', 'error': null, 'errorStepId': null, 'tokens': <Object?>[]});
+      _log('instance', 'completed', entityId: recordId, instanceId: id);
       return;
     }
-    steps.add({'id': 'r3', 'nodeId': 's_inv', 'type': 'action', 'attempt': attempt, 'status': 'failed', 'error': _bankError, 'startedAt': _now()});
+    steps.add({'id': '$id-3', 'nodeId': 's_inv', 'type': 'action', 'attempt': attempt, 'status': 'failed', 'error': _bankError, 'startedAt': _now()});
     if (attempt < _payAttempts && !byHand) {
-      _run.addAll({'status': 'waiting', 'error': null, 'errorStepId': null, 'tokens': [{'id': 'tok1', 'status': 'waiting', 'waiting': 'retry', 'stepId': 's_inv'}]});
+      run.addAll({'status': 'waiting', 'error': null, 'errorStepId': null, 'tokens': [{'id': '$id-tok', 'status': 'waiting', 'waiting': 'retry', 'stepId': 's_inv'}]});
     } else {
-      _run.addAll({'status': 'incident', 'error': _bankError, 'errorStepId': 's_inv', 'tokens': [{'id': 'tok1', 'status': 'waiting', 'waiting': 'incident', 'stepId': 's_inv'}]});
-      _log('instance', 'incident', data: {'error': _bankError});
+      run.addAll({'status': 'incident', 'error': _bankError, 'errorStepId': 's_inv', 'tokens': [{'id': '$id-tok', 'status': 'waiting', 'waiting': 'incident', 'stepId': 's_inv'}]});
+      _log('instance', 'incident', data: {'error': _bankError}, entityId: recordId, instanceId: id);
     }
   }
 
-  /// Whether the finance sign-off on application 1 is still open (its payment hasn't run yet).
-  bool get signOffOpen => _tasks.any((t) => t['id'] == 't1' && t['status'] == 'open');
+  /// The open finance sign-offs on application [recordId] (each waiting in a run).
+  List<Map<String, Object?>> _openSignOffs(String recordId) => [
+        for (final t in _tasks)
+          if (t['status'] == 'open' && t['kind'] == 'approval' && t['entityId'] == recordId && _runs.containsKey(t['instanceId'])) t,
+      ];
+
+  /// Whether application [recordId] has a finance sign-off still open (its payment hasn't run yet).
+  bool signOffOpen([String recordId = '1']) => _openSignOffs(recordId).isNotEmpty;
+
+  /// What became of application [recordId]'s finance check: `open` (waiting for its sign-off),
+  /// `cancelled` (Start over or a final decision stopped it), `decided` (signed off or turned down),
+  /// or `none` (it never ran).
+  String financeCheckState(String recordId) {
+    if (signOffOpen(recordId)) return 'open';
+    final runs = [for (final r in _runs.values) if (r['entityId'] == recordId) r];
+    if (runs.isEmpty) return 'none';
+    return runs.last['status'] == 'cancelled' ? 'cancelled' : 'decided';
+  }
 
   /// Moves the demo clock on (the sandbox's "advance"): a payment waiting for its next attempt tries again.
   void advance(Duration by) {
-    final tokens = (_run['tokens'] as List? ?? const []).cast<Map>();
-    if (_run['status'] == 'waiting' && tokens.any((t) => t['waiting'] == 'retry')) _pay();
+    for (final run in [..._runs.values]) {
+      final tokens = (run['tokens'] as List? ?? const []).cast<Map>();
+      if (run['status'] == 'waiting' && tokens.any((t) => t['waiting'] == 'retry')) _pay(run);
+    }
+  }
+
+  /// The docs' scenario, all at once and without changing who the API acts as: with the demo bank
+  /// down, finance signs application [recordId]'s sign-off off; creating the invoice fails, and after
+  /// its retries (the clock moved on 5 minutes, four times) the run stops. The bank is back up
+  /// afterwards, so Try again works. False when there was no open sign-off to approve.
+  bool stopPayment(String recordId) {
+    final signOffs = _openSignOffs(recordId);
+    if (signOffs.isEmpty) return false;
+    bankDown = true;
+    try {
+      for (final t in signOffs) {
+        _decideAs((t['assignees']! as List).first as String, t, 'approved', 'Signed off.', null);
+      }
+      for (var i = 0; i < _payAttempts; i++) {
+        advance(const Duration(minutes: 5));
+      }
+    } finally {
+      bankDown = false;
+    }
+    return true;
+  }
+
+  /// Sends another application (not [exceptId]) that is still a draft for review, which starts its
+  /// finance check and so a sign-off task for finance. Answers the application's id, or null when
+  /// none is left in Draft.
+  String? sendAnotherForReview(String exceptId) {
+    final id = _records.entries.where((e) => e.key != exceptId && e.value['state'] == 'draft').firstOrNull?.key;
+    if (id == null) return null;
+    final r = _records[id]!;
+    _setState(r, 'review');
+    _log('lifecycle', 'transitioned', before: {'state': 'draft'}, after: {'state': 'review'}, data: {'transition': 'submit', 'label': 'Submit'}, actor: 'Ali Rasheed', entityId: id);
+    final runId = 'run${++_runCount}';
+    final task = {..._task('t${_tasks.length + 1}', 'Finance sign-off', 'approval', due: const Duration(days: 3), instanceId: runId, recordId: id), 'createdAt': _now()};
+    _tasks.add(task);
+    _runs[runId] = _financeRun(runId, id, task);
+    _log('task', 'created', data: {'title': 'Finance sign-off'}, entityId: id, instanceId: runId);
+    return id;
   }
 
   @override
-  Future<UiWfInstance> instance(String id) => _later(() => UiWfInstance.fromJson(_clone(_run)));
+  Future<UiWfInstance> instance(String id) => _later(() => UiWfInstance.fromJson(_clone(_runOf(id))));
 
   @override
   Future<UiWorkflowDefinition> instanceDefinition(String id) => _later(() => UiWorkflowDefinition.fromJson(_clone(_defs['wf_finance']!['published'])));
@@ -659,31 +765,37 @@ class DemoWorkflowApi implements UiWorkflowApi {
   @override
   Future<UiWfInstance> cancel(String id, {String? reason}) => _later(() {
     _onlyAdmins('cancel a workflow');
-    _run.addAll({'status': 'cancelled', 'tokens': <Object?>[], 'endedAt': _now()});
-    _log('instance', 'cancelled', data: {'reason': ?reason}, actor: _actorName);
-    return UiWfInstance.fromJson(_clone(_run));
+    final run = _runOf(id);
+    run.addAll({'status': 'cancelled', 'tokens': <Object?>[], 'endedAt': _now()});
+    for (final task in _tasks) {
+      if (task['status'] == 'open' && task['instanceId'] == id) task['status'] = 'cancelled';
+    }
+    _log('instance', 'cancelled', data: {'reason': ?reason}, actor: _actorName, entityId: run['entityId']! as String, instanceId: id);
+    return UiWfInstance.fromJson(_clone(run));
   });
 
   @override
   Future<UiWfInstance> retry(String id, {String? target}) => _later(() {
     _onlyAdmins('try a workflow again');
-    if (_run['status'] == 'incident') {
-      _log('instance', 'retried', actor: _actorName);
-      _pay(byHand: true);
+    final run = _runOf(id);
+    if (run['status'] == 'incident') {
+      _log('instance', 'retried', actor: _actorName, entityId: run['entityId']! as String, instanceId: id);
+      _pay(run, byHand: true);
     }
-    return UiWfInstance.fromJson(_clone(_run));
+    return UiWfInstance.fromJson(_clone(run));
   });
 
   @override
   Future<UiWfInstance> skip(String id, {UiJson? outputs, String? target}) => _later(() {
     _onlyAdmins('skip a step');
-    if (_run['status'] == 'incident') {
-      final steps = _runSteps..removeWhere((x) => x['nodeId'] == 's_inv');
-      steps.add({'id': 'r3', 'nodeId': 's_inv', 'type': 'action', 'attempt': 1, 'status': 'skipped', 'output': outputs, 'startedAt': _now()});
-      _run.addAll({'status': 'completed', 'error': null, 'errorStepId': null, 'tokens': <Object?>[]});
-      _log('instance', 'skipped', data: {'outputs': ?outputs}, actor: _actorName);
+    final run = _runOf(id);
+    if (run['status'] == 'incident') {
+      final steps = _stepsOf(run)..removeWhere((x) => x['nodeId'] == 's_inv');
+      steps.add({'id': '$id-3', 'nodeId': 's_inv', 'type': 'action', 'attempt': 1, 'status': 'skipped', 'output': outputs, 'startedAt': _now()});
+      run.addAll({'status': 'completed', 'error': null, 'errorStepId': null, 'tokens': <Object?>[]});
+      _log('instance', 'skipped', data: {'outputs': ?outputs}, actor: _actorName, entityId: run['entityId']! as String, instanceId: id);
     }
-    return UiWfInstance.fromJson(_clone(_run));
+    return UiWfInstance.fromJson(_clone(run));
   });
 
   @override
@@ -712,30 +824,38 @@ class DemoWorkflowApi implements UiWorkflowApi {
 
   @override
   Future<UiWfTask> decide(String id, String outcome, {String? comment, UiJson? data}) => _later(() {
-    final t = _tasks.firstWhere((x) => x['id'] == id);
+    final t = _tasks.where((x) => x['id'] == id).firstOrNull ?? (throw const UiWfApiError(404, 'notFound', 'There is no such task.'));
     if (!(t['assignees']! as List).contains(actingAs)) throw const UiWfApiError(403, 'notAllowed', 'This task is for someone else.');
+    // Like the engine: a task that was decided, cancelled (Start over, a final move) or ran out of time takes no decision.
+    if (t['status'] != 'open') throw const UiWfApiError(409, 'taskClosed', 'This task is no longer open.');
     if (t['requireComment'] == 'reject' && outcome == 'rejected' && (comment ?? '').trim().isEmpty) {
-      throw const UiWfApiError(422, 'commentRequired', 'Say why you are rejecting it.');
+      throw const UiWfApiError(400, 'commentRequired', 'Say why you are rejecting it.');
     }
+    _decideAs(actingAs, t, outcome, comment, data);
+    return _asSeen(t);
+  });
+
+  /// Records [userId]'s decision on [t] and carries its run on: a sign-off approved goes on to the
+  /// payment (Create invoice); turned down, the applicant is told and the run ends.
+  void _decideAs(String userId, Map<String, Object?> t, String outcome, String? comment, UiJson? data) {
+    final name = _users.where((u) => u['id'] == userId).firstOrNull?['name'] as String? ?? userId;
     t['status'] = 'completed';
     t['outcome'] = outcome;
     t['canDecide'] = false;
     t['completedAt'] = _now();
-    t['decisions'] = [{'userId': actingAs, 'name': _actorName, 'outcome': outcome, 'comment': comment, 'data': data, 'at': _now()}];
-    _log('task', 'decided', data: {'outcome': outcome, 'comment': comment}, actor: _actorName);
-    if (id == 't1') {
-      final steps = _runSteps;
-      final i = steps.indexWhere((x) => x['nodeId'] == 's_fin');
-      if (i >= 0) steps[i] = {...steps[i], 'status': 'completed', 'output': {'outcome': outcome}};
-      // Approved: the payment (Create invoice) runs next; rejected: the applicant is told and it ends.
-      if (outcome == 'approved') {
-        _pay();
-      } else {
-        _run.addAll({'status': 'completed', 'tokens': <Object?>[]});
-      }
+    t['decisions'] = [{'userId': userId, 'name': name, 'outcome': outcome, 'comment': comment, 'data': data, 'at': _now()}];
+    _log('task', 'decided', data: {'outcome': outcome, 'comment': comment}, actor: name, entityId: t['entityId']! as String, instanceId: t['instanceId']! as String);
+    final run = _runs[t['instanceId']];
+    if (t['kind'] != 'approval' || run == null || run['status'] != 'waiting') return;
+    final steps = _stepsOf(run);
+    final i = steps.indexWhere((x) => x['nodeId'] == 's_fin');
+    if (i >= 0) steps[i] = {...steps[i], 'status': 'completed', 'output': {'outcome': outcome}};
+    if (outcome == 'approved') {
+      _pay(run);
+    } else {
+      run.addAll({'status': 'completed', 'tokens': <Object?>[]});
     }
-    return _asSeen(t);
-  });
+  }
 
   @override
   Future<UiWfTask> delegate(String id, String to, {String? note}) => _later(() {
@@ -755,19 +875,32 @@ class DemoWorkflowApi implements UiWorkflowApi {
   UiWfRecord _recordNow(String id) {
     final r = _rec(id);
     final open = [for (final t in _tasks) if (t['status'] == 'open' && t['entityId'] == id) t];
-    final canReset = _hasRole('head') && (r['state'] != 'draft' || open.isNotEmpty);
     return UiWfRecord.fromJson({
       ..._clone(r) as Map<String, Object?>,
+      // Read from the lifecycle as published now, so a change to who may move reaches every application.
       'transitions': [
-        for (final t in (r['transitions']! as List).cast<Map<String, Object?>>())
+        for (final t in _transitionsFrom(r['state']! as String))
           if (_mayMove(t, id)) {...t}..remove('_who'),
       ],
       'manual': _isAdmin ? r['manual'] : <Object?>[],
       'tasks': [for (final t in open) _asSeen(t).json],
-      // The finance check runs about application 1.
-      'instances': id == '1' ? [_clone(_run)] : <Object?>[],
-      'reset': canReset ? {'label': 'Start over', 'to': 'draft', 'toLabel': 'Draft', 'confirm': null, 'form': _resetForm} : null,
+      'instances': [for (final run in _runs.values) if (run['entityId'] == id) _clone(run)],
+      'reset': _resetFor(r, open.isNotEmpty),
     });
+  }
+
+  /// The lifecycle's Start over as offered to the acting person on [r] (the published reset's `who`,
+  /// label, target and form), or null: not theirs, or it would change nothing.
+  Map<String, Object?>? _resetFor(Map<String, Object?> r, bool hasOpenTasks) {
+    final lc = UiWorkflowDefinition.fromJson(_defs['wf_status']!['published']).lifecycle;
+    final reset = lc?.reset;
+    if (lc == null || reset == null) return null;
+    final to = lc.states.where((s) => s.id == (reset.to ?? lc.states.first.id)).firstOrNull ?? lc.states.first;
+    final mayReset = _mayMove({'_who': [for (final w in reset.who) w.json]}, r['id']! as String);
+    final offered = reset.states == null || reset.states!.contains(lc.states.where((s) => s.key == r['state']).firstOrNull?.id);
+    final changes = r['state'] != to.key || hasOpenTasks || _runs.values.any((x) => x['entityId'] == r['id'] && _live.contains(x['status']));
+    if (!mayReset || !offered || !changes) return null;
+    return {'label': reset.label ?? 'Reset workflow', 'to': to.key, 'toLabel': to.label, 'confirm': reset.confirm, 'form': reset.inputForm, 'comment': ?reset.comment?.name};
   }
 
   static const Map<String, Object?> _resetForm = {
@@ -835,7 +968,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
   Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo, String? comment, String? token}) => _later(() {
     _sameLifecycle(entity);
     final r = _rec(id);
-    if (_recordNow(id).reset == null) throw const UiWfApiError(403, 'notAllowed', 'You can’t start this application over.');
+    final reset = _recordNow(id).reset;
+    if (reset == null) throw const UiWfApiError(403, 'notAllowed', 'You can’t start this application over.');
     if (token != null && token != _resetToken(id)) throw const UiWfApiError(409, 'resetChanged', 'What the workflow did has changed; check the list again.');
     final before = r['state'];
     final items = _resetItems(id);
@@ -848,11 +982,10 @@ class DemoWorkflowApi implements UiWorkflowApi {
     }
     // Starting over: from here the list holds only what the workflow does next.
     if (id == '1') _done = [];
-    for (final task in _tasks) {
-      if (task['status'] == 'open' && task['entityId'] == id) task['status'] = 'cancelled';
-    }
-    _setState(r, 'draft');
-    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}, 'undone': undone, 'comment': ?comment},
+    // Its open tasks and runs stop first (the finance check included).
+    _stopWork(id, 'Started over');
+    _setState(r, reset.to);
+    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': reset.to}, data: {'label': reset.label, 'input': input ?? const {}, 'undone': undone, 'comment': ?comment},
         actor: _actorName, entityId: id);
     return _recordNow(id);
   });
@@ -869,7 +1002,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
   Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input, String? comment}) => _later(() {
     final r = _rec(id);
     _sameLifecycle(entity);
-    final t = (r['transitions']! as List).cast<Map<String, Object?>>().where((x) => x['key'] == key).firstOrNull;
+    final t = _transitionsFrom(r['state']! as String).where((x) => x['key'] == key).firstOrNull;
     if (t == null || !_mayMove(t, id)) throw const UiWfApiError(403, 'notAllowed', 'That move isn’t possible from here.');
     if (t['comment'] == 'required' && (comment ?? '').trim().isEmpty) throw const UiWfApiError(400, 'commentRequired', 'Add remarks to make this move.');
     final before = r['state'];
@@ -882,11 +1015,8 @@ class DemoWorkflowApi implements UiWorkflowApi {
       if (!_documents.contains('d9')) _documents.add('d9');
       _done = ['field:application:1:reviewer', 'created:document:d9', ..._done.where((d) => !d.startsWith('field:application:1:reviewer') && d != 'created:document:d9')];
     }
-    if (t['to'] == 'approved' || t['to'] == 'rejected') {
-      for (final task in _tasks) {
-        if (task['status'] == 'open' && task['entityId'] == id) task['status'] = 'cancelled';
-      }
-    }
+    // A final decision: what was still going for the application (its finance check, open tasks) stops.
+    if (t['to'] == 'approved' || t['to'] == 'rejected') _stopWork(id, 'The application was ${t['label']}');
     return _recordNow(id);
   });
 

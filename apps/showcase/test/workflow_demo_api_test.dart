@@ -136,4 +136,119 @@ void main() {
     final cancelled = await api.cancel('run1', reason: 'Withdrawn');
     expect(cancelled.status, 'cancelled');
   });
+
+  group('audit fixes', () {
+    const live = {'queued', 'running', 'waiting', 'incident'};
+    Future<List<String>> runs(DemoWorkflowApi api, String id) async => [for (final i in (await api.record('application', id)).instances) i.status];
+
+    test('Start over stops the finance check and its sign-off', () async {
+      final api = DemoWorkflowApi();
+      await api.resetRecord('application', '1');
+      expect(await runs(api, '1'), ['cancelled']);
+      expect((await api.instances(const UiWfInstanceQuery(status: ['waiting', 'incident']))).total, 0);
+      expect((await api.record('application', '1')).tasks, isEmpty);
+    });
+
+    test('Start over after a stopped payment cancels the stopped run too', () async {
+      final api = DemoWorkflowApi();
+      expect(api.stopPayment('1'), isTrue);
+      expect(await runs(api, '1'), ['incident']);
+      await api.resetRecord('application', '1');
+      expect(await runs(api, '1'), ['cancelled']);
+    });
+
+    test('a final move (approve or reject) stops the finance check', () async {
+      for (final move in ['approve', 'reject']) {
+        final api = DemoWorkflowApi();
+        await api.applyTransition('application', '1', move, comment: 'Done');
+        expect((await runs(api, '1')).where(live.contains), isEmpty, reason: move);
+        expect((await api.instances(const UiWfInstanceQuery(status: ['waiting']))).total, 0, reason: move);
+        expect((await api.record('application', '1')).tasks, isEmpty, reason: move);
+      }
+    });
+
+    test('a permissions change reaches every application at once', () async {
+      final api = DemoWorkflowApi();
+      // Approving becomes finance's only.
+      final saved = await api.updatePermissions('wf_status', [(node: 'tr_approve', who: [UiWfAssignee.role('finance')])]);
+      expect(saved.recordsMoved, 3);
+      expect([for (final t in (await api.record('application', '1')).transitions) t.key], isNot(contains('approve')));
+      await expectLater(api.applyTransition('application', '1', 'approve'), throwsA(isA<UiWfApiError>().having((e) => e.code, 'code', 'notAllowed')));
+      api.actingAs = 'mariyam';
+      expect([for (final t in (await api.record('application', '1')).transitions) t.key], ['approve']);
+    });
+
+    test('a task no longer open takes no decision', () async {
+      final api = DemoWorkflowApi();
+      await api.resetRecord('application', '1');
+      api.actingAs = 'mariyam';
+      await expectLater(api.decide('t1', 'approved'), throwsA(isA<UiWfApiError>().having((e) => (e.status, e.code), 'error', (409, 'taskClosed'))));
+    });
+
+    test('rejecting without remarks is refused with 400, as the engine does', () async {
+      final api = DemoWorkflowApi()..actingAs = 'mariyam';
+      await expectLater(api.decide('t1', 'rejected'), throwsA(isA<UiWfApiError>().having((e) => (e.status, e.code), 'error', (400, 'commentRequired'))));
+    });
+
+    test('Start over comes from the lifecycle\'s own reset: its who, target and form', () async {
+      final api = DemoWorkflowApi();
+      final lc = (await api.definition('wf_status')).published!.lifecycle!;
+      expect(lc.reset, isNotNull);
+      expect([for (final w in lc.reset!.who) w.json], [{'role': 'head'}]);
+      final reset = (await api.record('application', '1')).reset!;
+      expect((reset.label, reset.to, reset.toLabel), ('Start over', 'draft', 'Draft'));
+      expect(reset.form, isNotNull);
+      // Given to finance instead: the head of office loses it, finance gets it.
+      await api.updatePermissions('wf_status', [(node: 'reset', who: [UiWfAssignee.role('finance')])]);
+      expect((await api.record('application', '1')).reset, isNull, reason: 'Hana is not in finance');
+      api.actingAs = 'mariyam';
+      expect((await api.record('application', '1')).reset, isNotNull);
+    });
+
+    test('a stopped payment is made without changing who the API acts as', () async {
+      final api = DemoWorkflowApi()..actingAs = 'ali';
+      expect(api.financeCheckState('1'), 'open');
+      expect(api.stopPayment('1'), isTrue);
+      expect(api.actingAs, 'ali');
+      expect(api.bankDown, isFalse);
+      expect(api.financeCheckState('1'), 'decided');
+      expect(api.stopPayment('1'), isFalse);
+    });
+
+    test('says when the finance check was cancelled rather than decided', () async {
+      final api = DemoWorkflowApi();
+      await api.resetRecord('application', '1');
+      expect(api.financeCheckState('1'), 'cancelled');
+      expect(api.financeCheckState('3'), 'none');
+    });
+
+    test('sending another application for review starts its own finance sign-off', () async {
+      final api = DemoWorkflowApi()..actingAs = 'mariyam';
+      final id = api.sendAnotherForReview('1');
+      expect(id, '2');
+      expect((await api.record('application', '2')).state, 'review');
+      final mine = (await api.tasks(const UiWfTaskQuery(scope: 'mine', status: ['open']))).items;
+      final signOff = mine.singleWhere((t) => t.entityId == '2');
+      expect(signOff.canDecide, isTrue);
+      await api.decide(signOff.id, 'approved');
+      expect(await runs(api, '2'), ['completed']);
+      expect(await runs(api, '1'), ['waiting'], reason: 'application 1\'s run is its own');
+      expect(api.sendAnotherForReview('1'), isNull, reason: 'no other application is a draft now');
+    });
+
+    test('only admins change definitions', () async {
+      final api = DemoWorkflowApi()..actingAs = 'ali';
+      final def = DemoWorkflowApi.financeCheck();
+      Matcher refused() => throwsA(isA<UiWfApiError>().having((e) => e.status, 'status', 403));
+      await expectLater(api.saveDraft(def), refused());
+      await expectLater(api.publish(def.id), refused());
+      await expectLater(api.createDefinition(createWorkflow('automation')), refused());
+      await expectLater(api.archive(def.id), refused());
+      await expectLater(api.restore(def.id), refused());
+      await expectLater(api.rollback(def.id, 1), refused());
+      await expectLater(api.deleteDefinition(def.id), refused());
+      api.actingAs = 'hana';
+      await api.saveDraft(def);
+    });
+  });
 }

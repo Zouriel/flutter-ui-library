@@ -62,11 +62,15 @@ void main() {
     await _pump(tester, const WorkflowComponentsPage());
     final scroll = Scrollable.of(tester.element(find.text('Which component goes where'))).position;
     expect(scroll.pixels, 0);
-    tester.widget<UiButton>(button('Put together')).onPressed!();
+    tester.widget<UiButton>(button('(put together)')).onPressed!();
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(seconds: 1));
     expect(scroll.pixels, greaterThan(0));
     expect(tester.getTopLeft(find.text('Putting a settings page together')).dy, lessThan(900));
+    // Worded as on the web.
+    expect(find.text('(in the app\'s header; everyone\'s tasks for admins)'), findsOneWidget);
+    expect(button('global settings'), findsOneWidget);
+    expect(find.text('See'), findsOneWidget);
     await _done(tester);
   });
 
@@ -120,6 +124,42 @@ void main() {
     }
     expect(find.text('Bank API: 503 Service Unavailable'), findsNothing);
     expect(tester.widget<UiButton>(button('Show a stopped payment')).onPressed, isNull, reason: 'the sign-off was decided');
+    await _done(tester);
+  });
+
+  testWidgets('the stopped-payment note says what became of the picked application\'s finance check', (tester) async {
+    await _pump(tester, const WorkflowComponentsPage());
+    expect(find.textContaining('Has finance sign this application off'), findsOneWidget);
+    tester.widget<UiSelect>(find.byWidgetPredicate((w) => w is UiSelect && w.label == 'Application')).onChanged!('3');
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('No finance check runs for this application'), findsOneWidget);
+    expect(tester.widget<UiButton>(button('Show a stopped payment')).onPressed, isNull);
+    await _done(tester);
+  });
+
+  testWidgets('Send another application for review gives finance a new sign-off', (tester) async {
+    await _pump(tester, const WorkflowComponentsPage());
+    tester.widget<UiButton>(button('Send another application for review')).onPressed!();
+    await tester.pump(const Duration(seconds: 1));
+    final apps = tester.widget<UiSelect>(find.byWidgetPredicate((w) => w is UiSelect && w.label == 'Application'));
+    expect([for (final o in apps.options) o.label], contains('Nursing diploma, Ali Rasheed (In review)'));
+    tester.widget<UiButton>(button('Send another application for review')).onPressed!();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('Every other application is past Draft'), findsOneWidget);
+    await _done(tester);
+  });
+
+  testWidgets('the API tables list what the widgets take; no page speaks of the internal inbox or run view', (tester) async {
+    await _pump(tester, const WorkflowBuilderPage());
+    final builderRows = [for (final d in tester.widgetList<DocSection>(find.byType(DocSection))) for (final r in [...d.api, ...d.callbacks]) r.name];
+    expect(builderRows, containsAll(['readOnly', 'onDirtyChanged']));
+    expect(find.textContaining('inbox'), findsNothing);
+    await _done(tester);
+    await _pump(tester, const WorkflowComponentsPage());
+    final rows = [for (final d in tester.widgetList<DocSection>(find.byType(DocSection))) for (final r in [...d.api, ...d.callbacks]) r.name];
+    expect(rows, containsAll(['open', 'onOpenChanged']));
+    expect(find.textContaining('inbox'), findsNothing);
+    expect(find.textContaining('run view'), findsNothing);
     await _done(tester);
   });
 }

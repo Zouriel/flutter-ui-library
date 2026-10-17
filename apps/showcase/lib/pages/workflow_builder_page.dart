@@ -145,21 +145,22 @@ UiWorkflowBuilder(definition: workflow, schema: UiWorkflowSchema(registry: regis
             ApiRow('schema', 'UiWorkflowSchema?', 'Registry and step outputs, when there is no API.', def: 'null'),
             ApiRow('settings', 'UiWorkflowSettings?', 'Global settings (webhook connections), when there is no API.', def: 'null'),
             ApiRow('persist', 'bool', 'Show Save and Publish and save drafts through the API.', def: 'false'),
+            ApiRow('readOnly', 'bool?', 'Look without changing anything. Null asks the API (me().canEdit); true or false decides here. Nothing can be edited, deleted, dragged or saved.', def: 'null'),
             ApiRow('actions', 'Widget?', 'Your own buttons at the end of the header.'),
           ],
           callbacks: const [
             ApiRow('onChanged', 'ValueChanged<UiWorkflowDefinition>', 'Every edit, as a new definition (the old one is never changed).'),
             ApiRow('onProblemsChanged', 'ValueChanged<List<UiWfProblem>>', 'The engine’s problems after each check.'),
             ApiRow('onSaved', 'ValueChanged<UiWorkflowDefinition>', 'After a successful save through the API.'),
+            ApiRow('onDirtyChanged', 'ValueChanged<bool>', 'With persist: true while there are edits not saved through the API (guard leaving the page with it).'),
             ApiRow('save()', 'UiWorkflowBuilderState', 'Saves the draft (creates it the first time). Ctrl/Cmd+S does the same.'),
           ],
         ),
         DocSection(
           name: 'Using workflows in your app',
           widget: 'Workflow components',
-          summary: 'The widgets an app puts on its own pages once workflows run (the workflow panel, the My tasks drawer, '
-              'the task inbox, run and audit views, the state badge, permissions and global settings) have their own page, with a live demo '
-              'of each acting as different people.',
+          summary: 'The widgets an app puts on its own pages once workflows run (the workflow panel, the My tasks drawer, the audit '
+              'log, the state badge, permissions and global settings) have their own page, with a live demo of each acting as different people.',
           demo: Align(
             alignment: AlignmentDirectional.centerStart,
             child: UiButton(

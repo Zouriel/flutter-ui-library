@@ -33,48 +33,46 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   /// Bumped when the page itself changes the application (Show a stopped payment, Reset), so the
   /// panel is drawn again; the panel's own changes it shows already.
   int _panelRev = 0;
-  bool _busy = false;
   String _prepError = '';
 
+  /// Why "Send another application for review" did nothing, shown next to it.
+  String _sendError = '';
+
   /// Whether the picked application's finance sign-off is still open, so its payment can be made to fail.
-  bool get _stoppable => _appId == '1' && _api.signOffOpen;
+  bool get _stoppable => _api.signOffOpen(_appId);
 
   /// The scenario from the docs: with the demo bank down, finance signs this application off.
   /// Creating the invoice fails; after its retries (the clock moved on 5 minutes, four times) the run
   /// stops and the panel shows it under Running. The bank is switched back on, so Try again works.
-  Future<void> _stopPayment() async {
-    if (!_stoppable || _busy) return;
-    final who = _api.actingAs;
+  /// The demo engine does it in one go, without changing who the page acts as.
+  void _stopPayment() {
+    if (!_stoppable) return;
+    final done = _api.stopPayment(_appId);
     setState(() {
-      _busy = true;
-      _prepError = '';
+      _prepError = done ? '' : 'There was no open finance sign-off to approve.';
+      _rev++;
+      _panelRev++;
     });
-    _api.bankDown = true;
-    try {
-      // Everyone with a sign-off on it approves.
-      for (final u in DemoWorkflowApi.people) {
-        _api.actingAs = u.id;
-        final open = (await _api.tasks(const UiWfTaskQuery(scope: 'mine', status: ['open']))).items;
-        for (final task in open.where((x) => x.canDecide && x.kind == 'approval' && x.entityId == _appId)) {
-          await _api.decide(task.id, 'approved', comment: 'Signed off.');
-        }
-      }
-      for (var i = 0; i < 4; i++) {
-        _api.advance(const Duration(minutes: 5));
-      }
-    } catch (e) {
-      _prepError = 'Couldn’t stop a payment: ${e is UiWfApiError ? e.message : e}';
-    } finally {
-      _api.bankDown = false;
-      _api.actingAs = who;
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _rev++;
-          _panelRev++;
-        });
-      }
-    }
+  }
+
+  /// What the note next to "Show a stopped payment" says, by what became of the finance check.
+  String get _stopNote => switch (_api.financeCheckState(_appId)) {
+        'open' => 'Has finance sign this application off while the demo bank is down: the payment fails, and the panel shows it under '
+            'Running with Try again, Skip and Cancel (the bank is back by then).',
+        'cancelled' => 'This application\'s finance check was cancelled (it started over, or was approved or rejected): Reset the office '
+            '(above) to show a stopped payment again.',
+        'decided' => 'The finance sign-off has been decided: Reset the office (above) to show a stopped payment again.',
+        _ => 'No finance check runs for this application: pick “Marine biology degree”, or send another application for review below.',
+      };
+
+  /// Sends another application for review, which starts its finance sign-off (a task for Mariyam).
+  void _sendAnother() {
+    final id = _api.sendAnotherForReview(_appId);
+    setState(() {
+      _sendError = id == null ? 'Every other application is past Draft: Reset the office (above) to send one for review again.' : '';
+      _rev++;
+      _panelRev++;
+    });
   }
 
   final Map<String, GlobalKey> _anchors = {
@@ -184,14 +182,8 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
               'giving what it would have produced, or cancel it, right there.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              UiButton(label: 'Show a stopped payment', size: UiSize.sm, variant: UiButtonVariant.outline, loading: _busy, onPressed: _stoppable && !_busy ? _stopPayment : null),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: note(_stoppable
-                    ? 'Has finance sign this application off while the demo bank is down: the payment fails, and the panel shows it under '
-                          'Running with Try again, Skip and Cancel (the bank is back by then).'
-                    : 'The finance sign-off has been decided: Reset the office (above) to show a stopped payment again.'),
-              ),
+              UiButton(label: 'Show a stopped payment', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _stoppable ? _stopPayment : null),
+              ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: note(_stopNote)),
             ]),
             if (_prepError.isNotEmpty) UiText(_prepError, color: t.danger),
             UiSegmented<UiWorkflowPanelLayout>(
@@ -240,8 +232,13 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
             ApiRow('title', 'String', 'The heading (and the drawer title); empty hides the heading.', def: "'Workflow'"),
             ApiRow('showHistory', 'bool', 'Show what happened in each state.', def: 'true'),
             ApiRow('emptyText', 'String', 'Said when the person has nothing to do in the current state; empty hides it.', def: "'Nothing for you to do here right now.'"),
+            ApiRow('open', 'bool?', 'Drawer layouts: whether the drawer is open, when you control it; with onOpenChanged it is the web [(open)].'),
           ],
-          callbacks: const [ApiRow('onChanged', 'ValueChanged<UiWfRecord>', 'After the record moved through the panel, so the page can reload its own data.')],
+          callbacks: const [
+            ApiRow('onChanged', 'ValueChanged<UiWfRecord>', 'After the record moved through the panel, so the page can reload its own data.'),
+            ApiRow('onOpenChanged', 'ValueChanged<bool>', 'Drawer layouts: when the drawer opens or closes (the rail, a hover, open, or closing it).'),
+            ApiRow('reload()', 'UiWorkflowPanelState', 'Reads the record again (after the page changed it), through a GlobalKey.'),
+          ],
         ),
         DocSection(
           key: _anchors['tasks-drawer'],
@@ -263,6 +260,14 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
             ),
             note('The finance sign-off is Mariyam\'s (finance); checking the transcript is Hana\'s. Pick “You are” to see each person\'s count; '
                 'the applicant has none.'),
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiButton(label: 'Send another application for review', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _sendAnother),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: note('No tasks yet? Sending a draft application for review starts its finance sign-off: a task for Mariyam (finance).'),
+              ),
+            ]),
+            if (_sendError.isNotEmpty) UiText(_sendError, color: t.danger),
           ]),
           code: '''// in the app bar
 UiWorkflowTasksDrawer(api: api, onDecided: (_) => reload())
@@ -294,9 +299,9 @@ UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks', pageSize: 50)'
           key: _anchors['audit'],
           name: 'Audit log',
           widget: 'UiWorkflowAudit',
-          summary: 'The tamper-evident audit log: filter by kind, open an entry for its before and after values, export it, and check the hash '
-              'chain. Use it on an admin page, or scoped to one record (as here) on that record\'s page. Reading it needs admin rights, so the '
-              'applicant and finance see the engine\'s refusal.',
+          summary: 'The tamper-evident audit log: filter by record or kind, page back through older entries, open an entry for its before and '
+              'after values, export it as CSV, and check the hash chain. Use it on an admin page, or scoped to one record (as here) on that '
+              'record\'s page. Reading it needs admin rights, so the applicant and finance see the engine\'s refusal.',
           demo: frame(UiWorkflowAudit(key: _k('audit'), api: _api, entity: 'application', entityId: _appId, pageSize: 20), height: 560),
           code: '''// everything, on an admin page
 UiWorkflowAudit(api: api, onExport: (bytes, format) => saveFile('audit.\$format', bytes))
@@ -472,13 +477,21 @@ class _Where extends StatelessWidget {
         Semantics(header: true, child: UiText('Which component goes where', variant: UiTextVariant.h4)),
         Wrap(spacing: t.space4, runSpacing: t.space3, children: [
           row('A record\'s page', [link('Workflow panel', 'panel')]),
-          row('Approvals and tasks', [link('My tasks drawer', 'tasks-drawer')]),
+          row('Approvals and tasks', [
+            link('My tasks drawer', 'tasks-drawer'),
+            UiText('(in the app\'s header; everyone\'s tasks for admins)', color: t.textMuted),
+          ]),
           row('Admin pages', [
             link('Audit log', 'audit'),
             UiText('(a stopped workflow is fixed from the record\'s panel or the tasks drawer)', color: t.textMuted),
           ]),
-          row('A settings page', [link('Permissions', 'permissions'), link('Global settings', 'global-settings'), link('Put together', 'settings-page')]),
-          row('The builder page', [UiButton(label: 'Workflow builder', size: UiSize.sm, variant: UiButtonVariant.link, onPressed: onBuilder)]),
+          row('A settings page', [
+            link('Permissions', 'permissions'),
+            UiText('and', color: t.textMuted),
+            link('global settings', 'global-settings'),
+            link('(put together)', 'settings-page'),
+          ]),
+          row('The builder page', [UiText('See', color: t.textMuted), UiButton(label: 'Workflow builder', size: UiSize.sm, variant: UiButtonVariant.link, onPressed: onBuilder)]),
         ]),
       ]),
     );
