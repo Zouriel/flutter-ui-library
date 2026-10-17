@@ -101,6 +101,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(when().value, '0 9 * * *');
   });
+
+  group('phone inspector sheet', _phoneSheetTests);
 }
 
 class _FailingDefinition extends FakeWorkflowApi {
@@ -110,4 +112,56 @@ class _FailingDefinition extends FakeWorkflowApi {
     asked++;
     throw const UiWfApiError(500, 'boom', 'Down');
   }
+}
+
+UiWorkflowDefinition _lifecycle() => UiWorkflowDefinition.fromJson({
+      'specVersion': 1, 'id': 'wf_life', 'key': 'life', 'kind': 'lifecycle', 'title': 'Application', 'entity': 'application',
+      'lifecycle': {
+        'field': 'status', 'mode': 'enforce',
+        'states': [
+          {'id': 'draft', 'key': 'Draft', 'label': 'Draft', 'category': 'initial'},
+          {'id': 'done', 'key': 'Done', 'label': 'Done', 'category': 'terminal'},
+        ],
+        'transitions': [
+          {'id': 'submit', 'key': 'submit', 'label': 'Submit', 'from': ['draft'], 'to': 'done', 'who': <Object?>[],
+            'steps': [{'id': 'n1', 'type': 'end', 'result': 'completed', 'title': 'Finish'}]},
+        ],
+        'reset': {'label': 'Start over', 'to': 'draft', 'who': <Object?>[]},
+      },
+    });
+
+void _phoneSheetTests() {
+  Future<(UiWorkflowBuilderController, List<String>)> pumpSheet(WidgetTester tester, UiWfSelection sel) async {
+    final store = UiWorkflowBuilderController(definition: _lifecycle())..selection = sel;
+    final deleted = <String>[];
+    await pumpUi(
+      tester,
+      SizedBox(width: 380, height: 700, child: WfBuilderScope(controller: store, child: WfInspector(showHead: false, onDeleteRequest: () => deleted.add('${store.selection?.kind}')))),
+      size: const Size(380, 700),
+    );
+    return (store, deleted);
+  }
+
+  for (final (sel, name) in [(const UiWfSelection.state('done'), 'Done'), (const UiWfSelection.transition('submit'), 'Submit'), (UiWfSelection.reset, 'Start over')]) {
+    testWidgets('in a bottom sheet (no header) a ${sel.kind} can still be deleted', (tester) async {
+      final (_, deleted) = await pumpSheet(tester, sel);
+      await tester.tap(find.bySemanticsLabel('Delete $name'));
+      expect(deleted, [sel.kind]);
+    });
+  }
+
+  testWidgets('in a bottom sheet a step in a transition\'s run still links back to its transition', (tester) async {
+    final (store, _) = await pumpSheet(tester, const UiWfSelection.step('n1'));
+    await tester.tap(find.bySemanticsLabel('‹ Submit'));
+    await tester.pumpAndSettle();
+    expect(store.selection, const UiWfSelection.transition('submit'));
+  });
+
+  testWidgets('read-only: no Delete in the sheet', (tester) async {
+    final store = UiWorkflowBuilderController(definition: _lifecycle())
+      ..selection = const UiWfSelection.state('done')
+      ..readOnly = true;
+    await pumpUi(tester, SizedBox(width: 380, height: 700, child: WfBuilderScope(controller: store, child: const WfInspector(showHead: false))), size: const Size(380, 700));
+    expect(find.bySemanticsLabel('Delete Done'), findsNothing);
+  });
 }

@@ -804,6 +804,17 @@ class WfInspector extends StatelessWidget {
           controller: scrollController,
           padding: EdgeInsets.all(t.space3),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // In a bottom sheet (no header) the way back to the parent and Delete still have to be
+            // somewhere: a small row above the settings.
+            if (!showHead && (parent != null || (canDelete && !store.readOnly)))
+              Padding(
+                padding: EdgeInsets.only(bottom: t.space2),
+                child: Row(spacing: t.space2, children: [
+                  if (parent != null) FbLink(label: '‹ $parentLabel', fontSize: 12, onTap: () => store.selection = parent),
+                  const Spacer(),
+                  if (canDelete && !store.readOnly) FbIconButton(icon: WfIcons.delete02, label: 'Delete $heading', danger: true, onPressed: onDeleteRequest),
+                ]),
+              ),
             if (problems.isNotEmpty)
               Padding(
                 padding: EdgeInsets.only(bottom: t.space3),
