@@ -19,6 +19,8 @@ class _WorkflowBuilderPageState extends State<WorkflowBuilderPage> {
   String _kind = 'automation';
   int _epoch = 0;
   String _exported = '';
+  bool _tasksOpen = false;
+  String _permissionsSaved = '';
 
   void _setKind(String kind) => setState(() {
     _kind = kind;
@@ -215,6 +217,64 @@ UiWorkflowGlobalSettings(api: api)                                 // your setti
             ApiRow('UiWorkflowAudit', 'api, entity, entityId, instanceId, pageSize, onExport', 'onExport gets the CSV bytes; the button shows only when it is set (there is no browser download on a phone).'),
             ApiRow('UiWorkflowGlobalSettings', 'api, registry, settings, onSettingsChanged', 'With an API it loads and saves (with a revision check); without one it edits settings and reports them.'),
             ApiRow('UiWorkflowStateBadge', 'label, tone', 'A state as a small coloured chip.'),
+          ],
+        ),
+        DocSection(
+          name: 'My tasks drawer',
+          widget: 'UiWorkflowTasksDrawer',
+          summary: 'A “My tasks” button for an app’s header: it shows how many tasks are open for the signed-in person (red when one is '
+              'overdue, read out for screen readers) and opens the task inbox in a drawer. Open it from code with open and onOpenChanged, '
+              'or hide the button and use your own control. The count refreshes on open, close, after a decision and every minute.',
+          demo: Wrap(spacing: t.space3, runSpacing: t.space3, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            UiWorkflowTasksDrawer(key: ValueKey('drawer$_epoch'), api: _api, open: _tasksOpen, onOpenChanged: (v) => setState(() => _tasksOpen = v)),
+            UiButton(label: 'Open from code', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _tasksOpen = true)),
+          ]),
+          code: '''UiWorkflowTasksDrawer(api: api)                                   // in the app bar
+UiWorkflowTasksDrawer(api: api, showButton: false,                 // opened by your own control
+    open: tasksOpen, onOpenChanged: (v) => setState(() => tasksOpen = v))''',
+          api: const [
+            ApiRow('api', 'UiWorkflowApi?', 'The engine API.'),
+            ApiRow('open', 'bool?', 'Whether the drawer is open, when you control it; with onOpenChanged it is the web [(open)].'),
+            ApiRow('label', 'String', 'The button’s and the drawer’s title.', def: "'My tasks'"),
+            ApiRow('side', 'UiDrawerSide', 'Which edge the drawer comes from.', def: 'right'),
+            ApiRow('size · variant', 'UiSize · UiButtonVariant', 'The button’s look.', def: 'sm · outline'),
+            ApiRow('showButton', 'bool', 'Show the built-in button.', def: 'true'),
+            ApiRow('refreshSeconds', 'int', 'How often the count refreshes; 0 only on open, close and decisions.', def: '60'),
+            ApiRow('pageSize', 'int', 'Tasks per page in the inbox.', def: '25'),
+          ],
+          callbacks: const [
+            ApiRow('onOpenChanged', 'ValueChanged<bool>', 'When the drawer opens or closes.'),
+            ApiRow('onDecided', 'ValueChanged<UiWfTask>', 'After a task was decided in the drawer.'),
+            ApiRow('show() · hide() · refresh()', 'state', 'Through a GlobalKey<UiWorkflowTasksDrawerState>.'),
+          ],
+        ),
+        DocSection(
+          name: 'Permissions',
+          widget: 'UiWorkflowPermissions',
+          summary: 'Who may do what in every published workflow, on one settings page: who may make each lifecycle move, start a record '
+              'over, press a start button, and decide each approval or task. Saving publishes a new version with only those changes, '
+              'so admins change people without opening the builder. People without the right to publish see it read-only.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            Container(
+              constraints: const BoxConstraints(maxWidth: 820),
+              child: UiWorkflowPermissions(
+                key: ValueKey('permissions$_epoch'),
+                api: _api,
+                onSaved: (s) => setState(() => _permissionsSaved = '${s.title} is now at version ${s.version}.'),
+              ),
+            ),
+            if (_permissionsSaved.isNotEmpty) UiText(_permissionsSaved, color: t.textMuted),
+          ]),
+          code: '''UiWorkflowPermissions(api: api, onSaved: (summary) => refresh())
+
+// The rows themselves, for your own page:
+for (final row in permissionRows(def)) print('\${row.label}: \${row.detail}');''',
+          api: const [
+            ApiRow('api', 'UiWorkflowApi?', 'Loads every published workflow; saves with updatePermissions (POST /definitions/{id}/permissions).'),
+            ApiRow('permissionRows(def)', 'List<UiWfPermissionRow>', 'Moves (not automatic ones), the reset, a start button and approval/task steps, in reading order.'),
+          ],
+          callbacks: const [
+            ApiRow('onSaved', 'ValueChanged<UiWfDefinitionSummary>', 'After a workflow’s permissions were saved (the new version).'),
           ],
         ),
         const DocSection(

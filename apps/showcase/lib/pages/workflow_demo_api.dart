@@ -324,6 +324,47 @@ class DemoWorkflowApi implements UiWorkflowApi {
   });
 
   @override
+  Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) => _later(() {
+    final d = _defs[id]!;
+    if (d['published'] == null) throw const UiWfApiError(409, 'not_published', 'Publish the workflow first.');
+    // Apply each change to a JSON definition: a transition's or the reset's/start button's "who",
+    // or a person step's assignees.
+    void apply(Object? json) {
+      if (json is! Map) return;
+      for (final c in changes) {
+        final who = [for (final a in c.who) a.json];
+        if (c.node == 'reset' && json['lifecycle'] is Map && (json['lifecycle'] as Map)['reset'] is Map) ((json['lifecycle'] as Map)['reset'] as Map)['who'] = who;
+        if (c.node == 'trigger' && json['trigger'] is Map) (json['trigger'] as Map)['who'] = who;
+        void walk(Object? x) {
+          if (x is Map) {
+            if (x['id'] == c.node) x[x.containsKey('from') ? 'who' : 'assignees'] = who;
+            x.values.forEach(walk);
+          } else if (x is List) {
+            x.forEach(walk);
+          }
+        }
+        walk(json['lifecycle']);
+        walk(json['steps']);
+      }
+    }
+
+    final next = _clone(d['published']);
+    apply(next);
+    if (d['draft'] != null) {
+      final draft = _clone(d['draft']);
+      apply(draft);
+      d['draft'] = draft;
+    }
+    final v = (d['version'] as int) + 1;
+    d['version'] = v;
+    d['published'] = next;
+    d['status'] = 'published';
+    (d['versions'] as List).insert(0, _version(v, note ?? 'Changed who may do what'));
+    _log('definition', 'published', data: {'version': v}, actor: 'Hana Ibrahim');
+    return _summary(id);
+  });
+
+  @override
   Future<UiWorkflowDefinition> version(String id, int version) => _later(() => UiWorkflowDefinition.fromJson(_clone(_defs[id]!['published'])));
 
   @override

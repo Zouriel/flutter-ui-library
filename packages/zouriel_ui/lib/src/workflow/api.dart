@@ -479,6 +479,11 @@ abstract class UiWorkflowApi {
   Future<UiWfDefinitionSummary> archive(String id);
   Future<UiWfDefinitionSummary> restore(String id);
   Future<UiWfDefinitionSummary> rollback(String id, int version);
+
+  /// Changes who may do what in a published workflow at once: publishes a new version that is the
+  /// current one plus only these changes (and applies them to the draft, if any). `node` is a
+  /// transition or step id, `reset` or `trigger`.
+  Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note});
   Future<UiWorkflowDefinition> version(String id, int version);
   Future<List<String>> diff(String id);
   Future<List<UiWfProblem>> validate(UiWorkflowDefinition def);
@@ -629,6 +634,11 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
   Future<UiWfDefinitionSummary> restore(String id) async => UiWfDefinitionSummary.fromJson(await _call('POST', '/definitions/${_e(id)}/restore'));
   @override
   Future<UiWfDefinitionSummary> rollback(String id, int version) async => UiWfDefinitionSummary.fromJson(await _call('POST', '/definitions/${_e(id)}/rollback', {'version': version}));
+  @override
+  Future<UiWfDefinitionSummary> updatePermissions(String id, List<({String node, List<UiWfAssignee> who})> changes, {String? note}) async => UiWfDefinitionSummary.fromJson(await _call('POST', '/definitions/${_e(id)}/permissions', {
+        'changes': [for (final c in changes) {'node': c.node, 'who': [for (final a in c.who) a.json]}],
+        'note': note,
+      }));
   @override
   Future<UiWorkflowDefinition> version(String id, int version) async => UiWorkflowDefinition.fromJson(await _call('GET', '/definitions/${_e(id)}/versions/$version'));
   @override
