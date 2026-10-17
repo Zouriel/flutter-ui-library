@@ -773,7 +773,8 @@ class WfInspector extends StatelessWidget {
 
     final Widget editor = switch (kind) {
       'step' => store.selectedStep != null ? WfStepEditor(key: ValueKey(store.selectedStep!.id), step: store.selectedStep!) : const SizedBox.shrink(),
-      'trigger' => const WfTriggerEditor(),
+      // Keyed by the workflow: a custom schedule chosen in one isn't carried into the next.
+      'trigger' => WfTriggerEditor(key: ValueKey('trigger-${store.def.id}')),
       'state' => WfStateEditor(key: ValueKey(sel!.id)),
       'transition' => WfTransitionEditor(key: ValueKey(sel!.id)),
       'reset' => const WfResetEditor(),

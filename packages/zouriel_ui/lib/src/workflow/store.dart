@@ -55,6 +55,10 @@ class UiWorkflowBuilderController extends ChangeNotifier {
   UiWorkflowApi? _api;
   UiWorkflowSettings? _settings;
   final Map<String, UiWorkflowDefinition> _lifecycleCache = {};
+
+  /// Lifecycles that failed to load or have no published version: not asked again on every
+  /// rebuild (asked again once the api or the list of workflows changes).
+  final Set<String> _lifecycleMissing = {};
   final Set<String> _loading = {};
   UiWfSelection? _selection;
   List<UiWfProblem> _serverProblems = const [];
@@ -102,12 +106,15 @@ class UiWorkflowBuilderController extends ChangeNotifier {
   List<UiWfDefinitionSummary> get others => _others;
   set others(List<UiWfDefinitionSummary> v) {
     _others = v;
+    // A lifecycle that had no published version (or failed to load) may have one now.
+    _lifecycleMissing.clear();
     _notify();
   }
 
   UiWorkflowApi? get api => _api;
   set api(UiWorkflowApi? v) {
     _api = v;
+    _lifecycleMissing.clear();
     _notify();
   }
 
@@ -191,15 +198,19 @@ class UiWorkflowBuilderController extends ChangeNotifier {
   void loadLifecycle(String key) {
     final api = _api;
     final summary = _others.where((o) => o.key == key).firstOrNull;
-    if (api == null || summary == null || _lifecycleCache.containsKey(key) || _loading.contains(key)) return;
+    if (api == null || summary == null || _lifecycleCache.containsKey(key) || _loading.contains(key) || _lifecycleMissing.contains(key)) return;
     _loading.add(key);
     api.definition(summary.id).then((d) {
       final p = d.published;
       if (p != null) {
         _lifecycleCache[key] = p;
         _notify();
+      } else {
+        _lifecycleMissing.add(key);
       }
-    }).catchError((Object _) {}).whenComplete(() => _loading.remove(key));
+    }).catchError((Object _) {
+      _lifecycleMissing.add(key);
+    }).whenComplete(() => _loading.remove(key));
   }
 
   /// Tokens available at a step or list position, for pickers.

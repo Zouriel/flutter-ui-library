@@ -369,7 +369,8 @@ class _WfAssigneesEditorState extends State<WfAssigneesEditor> {
     api.searchUsers(q.trim(), take: 10).then((r) {
       if (n == _searchSeq && mounted) setState(() => _results = r);
     }).catchError((Object _) {
-      if (mounted) setState(() => _results = const []);
+      // Only the latest search may empty the list: an older one failing late leaves newer results.
+      if (n == _searchSeq && mounted) setState(() => _results = const []);
     });
   }
 
@@ -422,9 +423,12 @@ class _WfAssigneesEditorState extends State<WfAssigneesEditor> {
           UiInput(size: UiSize.sm, value: _query, placeholder: 'Search people by name', semanticLabel: 'Search people', autofocus: true, onChanged: _search),
           if (_results.isNotEmpty)
             Container(
+              key: const ValueKey('wf-people-results'),
               padding: const EdgeInsets.all(2),
+              // At most 180 tall, then it scrolls (the web `.results { max-height: 180px }`).
+              constraints: const BoxConstraints(maxHeight: 180),
               decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 for (final u in _results)
                   UiInteractive(
                     onTap: () => _pickUser(u),
@@ -434,13 +438,14 @@ class _WfAssigneesEditorState extends State<WfAssigneesEditor> {
                     builder: (context, s) => Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(color: s.hovered || s.focused ? t.surfaceHover : null, borderRadius: BorderRadius.circular(t.radiusXs)),
-                      child: Row(children: [
+                      child: Row(spacing: 8, children: [
                         Expanded(child: Text(u.name, style: context.uiText.body.copyWith(fontSize: 13, color: t.text))),
-                        Text(u.email ?? u.id, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
+                        // A long address shrinks to an ellipsis rather than pushing past the edge.
+                        Flexible(child: Text(u.email ?? u.id, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted))),
                       ]),
                     ),
                   ),
-              ]),
+              ])),
             )
           else if (_query.isNotEmpty)
             const FbHint('Nobody found.'),
