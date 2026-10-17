@@ -105,7 +105,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   /// for people the engine lets intervene, since only they can act on them.
   final _stopped = ValueNotifier<List<UiWfInstance>>(const []);
 
-  /// Whether the engine lets this person intervene, asked once per API.
+  /// Whether the engine lets this person intervene, asked once per API (again after a failed answer).
   ({UiWorkflowApi api, Future<bool> may})? _intervene;
 
   /// The stopped workflows counted now.
@@ -210,7 +210,16 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     final n = ++_seq;
     try {
       if (_intervene?.api != api) {
-        _intervene = (api: api, may: Future.sync(api.me).then((me) => me?.canIntervene ?? false).catchError((Object _) => false));
+        late final ({UiWorkflowApi api, Future<bool> may}) asked;
+        asked = (
+          api: api,
+          // A failed answer is not kept: the next count asks again.
+          may: Future.sync(api.me).then((me) => me?.canIntervene ?? false).catchError((Object _) {
+            if (identical(_intervene, asked)) _intervene = null;
+            return false;
+          }),
+        );
+        _intervene = asked;
       }
       final results = await Future.wait<Object>([api.tasks(UiWfTaskQuery(scope: widget.scope, status: const ['open'], take: _countTake)), _intervene!.may]);
       final page = results[0] as UiWfPage<UiWfTask>;

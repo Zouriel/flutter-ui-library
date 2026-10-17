@@ -414,4 +414,54 @@ void main() {
       expect(key.currentState!.total, 2);
     });
   });
+
+  // Mirrors @zouriel/ui bae06c5.
+  testWidgets('a failed me() is asked again on the next count', (tester) async {
+    final api = _FlakyMe();
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    await _pump(tester, UiWorkflowTasksDrawer(key: key, api: api, refreshSeconds: 0));
+    expect(api.meCalls, 1);
+    expect(key.currentState!.stopped, isEmpty);
+    await key.currentState!.refresh();
+    await tester.pump();
+    expect(api.meCalls, 2);
+    expect(key.currentState!.stopped, hasLength(1));
+    await key.currentState!.refresh();
+    expect(api.meCalls, 2, reason: 'a good answer is kept');
+  });
+
+  testWidgets('counts again when the scope changes', (tester) async {
+    final api = _TasksApi([_task('a')]);
+    final scope = ValueNotifier('mine');
+    await _pump(tester, ValueListenableBuilder(valueListenable: scope, builder: (_, v, _) => UiWorkflowTasksDrawer(api: api, scope: v, refreshSeconds: 0)));
+    scope.value = 'all';
+    await tester.pumpAndSettle();
+    expect(api.queries.last.scope, 'all');
+  });
+
+  testWidgets('closing goes back to the list: the next opening starts there, not on a run', (tester) async {
+    final key = GlobalKey<UiWorkflowTasksDrawerState>();
+    await _pump(tester, UiWorkflowTasksDrawer(key: key, api: _StoppedApi(intervene: true), refreshSeconds: 0));
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel(RegExp('^Pay approved scholarships')));
+    await tester.pumpAndSettle();
+    expect(find.byType(WfRunView), findsOneWidget);
+    key.currentState!.hide();
+    await tester.pumpAndSettle();
+    key.currentState!.show();
+    await tester.pumpAndSettle();
+    expect(find.byType(WfRunView), findsNothing);
+    expect(find.byType(WfTaskInbox), findsOneWidget);
+  });
+}
+
+class _FlakyMe extends _StoppedApi {
+  _FlakyMe() : super(intervene: true);
+  @override
+  Future<UiWfMe> me() async {
+    meCalls++;
+    if (meCalls == 1) throw const UiWfApiError(503, 'down', 'Down');
+    return UiWfMe.fromJson({'can': {'intervene': true}});
+  }
 }
