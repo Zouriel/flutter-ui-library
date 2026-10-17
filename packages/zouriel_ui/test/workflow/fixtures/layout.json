@@ -1,0 +1,560 @@
+[
+  {
+    "name": "a straight line",
+    "lifecycle": {
+      "states": [
+        {
+          "id": "a",
+          "category": "initial"
+        },
+        {
+          "id": "b"
+        },
+        {
+          "id": "c",
+          "category": "terminal"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "t1",
+          "from": [
+            "a"
+          ],
+          "to": "b"
+        },
+        {
+          "id": "t2",
+          "from": [
+            "b"
+          ],
+          "to": "c"
+        }
+      ]
+    },
+    "expect": {
+      "positions": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          268,
+          0
+        ],
+        "c": [
+          536,
+          0
+        ]
+      },
+      "width": 708,
+      "height": 56,
+      "edges": [
+        {
+          "id": "t1:a",
+          "back": false
+        },
+        {
+          "id": "t2:b",
+          "back": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "a fork into two final states",
+    "lifecycle": {
+      "states": [
+        {
+          "id": "draft",
+          "category": "initial"
+        },
+        {
+          "id": "review"
+        },
+        {
+          "id": "approved",
+          "category": "terminal"
+        },
+        {
+          "id": "rejected",
+          "category": "terminal"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "submit",
+          "from": [
+            "draft"
+          ],
+          "to": "review"
+        },
+        {
+          "id": "approve",
+          "from": [
+            "review"
+          ],
+          "to": "approved"
+        },
+        {
+          "id": "reject",
+          "from": [
+            "review"
+          ],
+          "to": "rejected"
+        }
+      ]
+    },
+    "expect": {
+      "positions": {
+        "draft": [
+          0,
+          48
+        ],
+        "review": [
+          268,
+          48
+        ],
+        "approved": [
+          536,
+          0
+        ],
+        "rejected": [
+          536,
+          96
+        ]
+      },
+      "width": 708,
+      "height": 152,
+      "edges": [
+        {
+          "id": "submit:draft",
+          "back": false
+        },
+        {
+          "id": "approve:review",
+          "back": false
+        },
+        {
+          "id": "reject:review",
+          "back": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "a loop back and a transition from any state",
+    "lifecycle": {
+      "states": [
+        {
+          "id": "draft",
+          "category": "initial"
+        },
+        {
+          "id": "submitted"
+        },
+        {
+          "id": "review"
+        },
+        {
+          "id": "done",
+          "category": "terminal"
+        },
+        {
+          "id": "withdrawn",
+          "category": "terminal"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "submit",
+          "from": [
+            "draft"
+          ],
+          "to": "submitted"
+        },
+        {
+          "id": "start",
+          "from": [
+            "submitted"
+          ],
+          "to": "review"
+        },
+        {
+          "id": "back",
+          "from": [
+            "submitted",
+            "review"
+          ],
+          "to": "draft"
+        },
+        {
+          "id": "finish",
+          "from": [
+            "review"
+          ],
+          "to": "done"
+        },
+        {
+          "id": "withdraw",
+          "from": "*",
+          "to": "withdrawn"
+        }
+      ]
+    },
+    "expect": {
+      "positions": {
+        "draft": [
+          0,
+          48
+        ],
+        "submitted": [
+          268,
+          48
+        ],
+        "review": [
+          536,
+          48
+        ],
+        "done": [
+          804,
+          0
+        ],
+        "withdrawn": [
+          804,
+          96
+        ]
+      },
+      "width": 976,
+      "height": 152,
+      "edges": [
+        {
+          "id": "submit:draft",
+          "back": false
+        },
+        {
+          "id": "start:submitted",
+          "back": false
+        },
+        {
+          "id": "back:submitted",
+          "back": true
+        },
+        {
+          "id": "back:review",
+          "back": true
+        },
+        {
+          "id": "finish:review",
+          "back": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "a shortcut makes the longest path win",
+    "lifecycle": {
+      "states": [
+        {
+          "id": "a",
+          "category": "initial"
+        },
+        {
+          "id": "b"
+        },
+        {
+          "id": "c"
+        },
+        {
+          "id": "d",
+          "category": "terminal"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "ab",
+          "from": [
+            "a"
+          ],
+          "to": "b"
+        },
+        {
+          "id": "bc",
+          "from": [
+            "b"
+          ],
+          "to": "c"
+        },
+        {
+          "id": "cd",
+          "from": [
+            "c"
+          ],
+          "to": "d"
+        },
+        {
+          "id": "ad",
+          "from": [
+            "a"
+          ],
+          "to": "d"
+        }
+      ]
+    },
+    "expect": {
+      "positions": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          268,
+          0
+        ],
+        "c": [
+          536,
+          0
+        ],
+        "d": [
+          804,
+          0
+        ]
+      },
+      "width": 976,
+      "height": 56,
+      "edges": [
+        {
+          "id": "ab:a",
+          "back": false
+        },
+        {
+          "id": "bc:b",
+          "back": false
+        },
+        {
+          "id": "cd:c",
+          "back": false
+        },
+        {
+          "id": "ad:a",
+          "back": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "crossing arrows are uncrossed by the sweeps",
+    "lifecycle": {
+      "states": [
+        {
+          "id": "s",
+          "category": "initial"
+        },
+        {
+          "id": "x"
+        },
+        {
+          "id": "y"
+        },
+        {
+          "id": "fy"
+        },
+        {
+          "id": "fx"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "sx",
+          "from": [
+            "s"
+          ],
+          "to": "x"
+        },
+        {
+          "id": "sy",
+          "from": [
+            "s"
+          ],
+          "to": "y"
+        },
+        {
+          "id": "x2",
+          "from": [
+            "x"
+          ],
+          "to": "fx"
+        },
+        {
+          "id": "y2",
+          "from": [
+            "y"
+          ],
+          "to": "fy"
+        }
+      ]
+    },
+    "expect": {
+      "positions": {
+        "s": [
+          0,
+          48
+        ],
+        "x": [
+          268,
+          0
+        ],
+        "y": [
+          268,
+          96
+        ],
+        "fx": [
+          536,
+          0
+        ],
+        "fy": [
+          536,
+          96
+        ]
+      },
+      "width": 708,
+      "height": 152,
+      "edges": [
+        {
+          "id": "sx:s",
+          "back": false
+        },
+        {
+          "id": "sy:s",
+          "back": false
+        },
+        {
+          "id": "x2:x",
+          "back": false
+        },
+        {
+          "id": "y2:y",
+          "back": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "an unreachable state and a self-loop",
+    "lifecycle": {
+      "states": [
+        {
+          "id": "a",
+          "category": "initial"
+        },
+        {
+          "id": "b"
+        },
+        {
+          "id": "orphan"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "ab",
+          "from": [
+            "a"
+          ],
+          "to": "b"
+        },
+        {
+          "id": "bb",
+          "from": [
+            "b"
+          ],
+          "to": "b"
+        },
+        {
+          "id": "ob",
+          "from": [
+            "orphan"
+          ],
+          "to": "a"
+        }
+      ]
+    },
+    "expect": {
+      "positions": {
+        "orphan": [
+          0,
+          0
+        ],
+        "a": [
+          268,
+          0
+        ],
+        "b": [
+          536,
+          0
+        ]
+      },
+      "width": 708,
+      "height": 56,
+      "edges": [
+        {
+          "id": "ab:a",
+          "back": false
+        },
+        {
+          "id": "ob:orphan",
+          "back": false
+        }
+      ]
+    }
+  },
+  {
+    "name": "manual positions win unless asked not to",
+    "keepManual": true,
+    "lifecycle": {
+      "states": [
+        {
+          "id": "a",
+          "category": "initial"
+        },
+        {
+          "id": "b"
+        }
+      ],
+      "transitions": [
+        {
+          "id": "ab",
+          "from": [
+            "a"
+          ],
+          "to": "b"
+        }
+      ],
+      "layout": {
+        "b": [
+          40,
+          300
+        ]
+      }
+    },
+    "expect": {
+      "positions": {
+        "a": [
+          0,
+          0
+        ],
+        "b": [
+          40,
+          300
+        ]
+      },
+      "width": 212,
+      "height": 356,
+      "edges": [
+        {
+          "id": "ab:a",
+          "back": false
+        }
+      ]
+    }
+  }
+]
