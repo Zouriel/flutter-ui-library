@@ -40,4 +40,12 @@ void main() {
     expect(find.text('Out of time'), findsOneWidget);
     expect(find.text('Done'), findsNothing);
   });
+
+  test('a reset reads as its label, the move and the reason', () {
+    final h = UiWfAuditEntry.fromJson({'seq': 1, 'actorType': 'user', 'category': 'lifecycle', 'action': 'reset', 'before': '{"state":"UnderReview"}', 'after': '{"state":"Draft"}',
+      'data': '{"label":"Start over","input":{"reason":"Wrong programme"}}'});
+    String label(Object? k) => const {'UnderReview': 'Under review', 'Draft': 'Draft'}[k] ?? '$k';
+    expect(wfDescribeHistory(h, label), 'Start over: Under review ${String.fromCharCode(0x2192)} Draft (“Wrong programme”)');
+  });
 }
+

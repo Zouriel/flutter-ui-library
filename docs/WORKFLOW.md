@@ -30,6 +30,11 @@ UiWorkflowHttpApi          // connects the widgets to the engine's REST API
 - **Lifecycles** own a status field: its states and the transitions between them, who may make each
   move, checks, a form, a confirmation, automatic moves on a timer, and steps to run on each move,
   on entering or leaving a state, or when a record stays too long.
+  A lifecycle can also let chosen people **reset** a record (`lifecycle.reset`): its open tasks and
+  runs stop, it goes back to the starting state (or another you pick), and the reset's own steps run,
+  which can change the record, related records and each item of a list. The builder sets it up under
+  "Starting over"; `UiWorkflowRecordPanel` and `UiWorkflowPanel` show the button to those allowed
+  (`record.reset`, `api.resetRecord`).
 
 Every start, step, decision and move is written to a hash-chained audit log.
 

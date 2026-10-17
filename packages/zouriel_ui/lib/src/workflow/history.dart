@@ -47,7 +47,7 @@ const Map<String, String> _auditActions = {
   'step.started': 'Step started', 'step.completed': 'Step done', 'step.failed': 'Step failed', 'step.retryScheduled': 'Retry scheduled',
   'step.skipped': 'Step skipped', 'step.branchTaken': 'Path chosen', 'step.waiting': 'Step waiting',
   'lifecycle.created': 'Lifecycle started', 'lifecycle.transitioned': 'Record moved', 'lifecycle.autoTransitioned': 'Moved automatically',
-  'lifecycle.autoSkipped': 'Automatic move skipped', 'lifecycle.slaBreached': 'Stayed too long in a state', 'lifecycle.forced': 'Moved by an admin',
+  'lifecycle.autoSkipped': 'Automatic move skipped', 'lifecycle.slaBreached': 'Stayed too long in a state', 'lifecycle.forced': 'Moved by an admin', 'lifecycle.reset': 'Workflow started over',
   'lifecycle.writeRefused': 'Direct state change refused', 'lifecycle.writeObserved': 'Direct state change seen', 'lifecycle.outOfSync': 'State out of sync',
   'task.created': 'Task created', 'task.assigned': 'Task assigned', 'task.reminded': 'Reminder sent', 'task.escalated': 'Task escalated',
   'task.delegated': 'Task handed to someone else', 'task.reassigned': 'Task reassigned', 'task.decided': 'Decided', 'task.cancelled': 'Task cancelled',
@@ -75,6 +75,11 @@ String wfDescribeHistory(UiWfAuditEntry h, String Function(Object? key) stateLab
       return 'Moved automatically: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}';
     case 'lifecycle.autoSkipped':
       return 'An automatic move was skipped';
+    case 'lifecycle.reset':
+      final input = data['input'] is Map ? wfMap(data['input']) : const <String, Object?>{};
+      final why = s(input['reason'] ?? input.values.whereType<String>().firstOrNull);
+      final name = s(data['label']);
+      return '${name.isEmpty ? 'Reset' : name}: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}${why.isEmpty ? '' : ' (“$why”)'}';
     case 'lifecycle.forced':
       final why = s(data['reason']);
       return 'Moved by an admin to ${stateLabel(after['state'])}${why.isEmpty ? '' : ': $why'}';
