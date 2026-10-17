@@ -545,10 +545,27 @@ UiWfStep cloneStep(UiWfStep step) {
     return x;
   }
 
-  final copy = fresh(step.json) as UiJson;
-  final title = copy['title'];
-  if (title is String && title.isNotEmpty) copy['title'] = '$title (copy)';
-  return UiWfStep.fromJson(copy);
+  final copy = UiWfStep.fromJson(fresh(step.json));
+  // Steps inside the copy that read each other (tokens, go-back targets) now point at the copies.
+  final ids = <String, String>{};
+  void pair(UiWfStep a, UiWfStep b) {
+    ids[a.id] = b.id;
+    final sa = stepSlots(a), sb = stepSlots(b);
+    for (var i = 0; i < sa.length; i++) {
+      for (var j = 0; j < sa[i].steps.length; j++) {
+        pair(sa[i].steps[j], sb[i].steps[j]);
+      }
+    }
+  }
+
+  pair(step, copy);
+  var json = jsonEncode(copy.json);
+  for (final e in ids.entries) {
+    json = json.replaceAll('steps.${e.key}.', 'steps.${e.value}.').replaceAll('"target":"${e.key}"', '"target":"${e.value}"');
+  }
+  final out = wfMap(jsonDecode(json));
+  out['title'] = '${stepName(step)} (copy)';
+  return UiWfStep.fromJson(out);
 }
 
 /// Duplicates a step right after itself; the copy's id, or null when the step wasn't found.
@@ -885,16 +902,17 @@ String describeTrigger(UiWfTrigger? t, UiWfDescribeContext ctx) {
   if (t == null) return 'Choose what starts this workflow';
   final e = entityOf(ctx.registry, ctx.def.entity);
   final rec = e?.label.toLowerCase() ?? 'record';
+  final aRec = '${RegExp('^[aeiou]').hasMatch(rec) ? 'an' : 'a'} $rec';
   final f = fieldOf(ctx.registry, ctx.def.entity, t.field);
   String vals(List<Object?>? v) => (v ?? const []).map((x) => wfOptionLabel(f, x)).join(' or ');
   String lifecycleName() => ctx.workflowTitle?.call(t.lifecycle ?? '') ?? t.lifecycle ?? 'a lifecycle';
   switch (t.type) {
     case 'created':
-      return 'When a $rec is created';
+      return 'When $aRec is created';
     case 'deleted':
-      return 'When a $rec is deleted';
+      return 'When $aRec is deleted';
     case 'fieldChanged':
-      if ((t.field ?? '').isEmpty) return 'When a $rec changes';
+      if ((t.field ?? '').isEmpty) return 'When $aRec changes';
       final from = t.from;
       final to = t.to;
       return 'When ${f?.label ?? t.field} ${from != null && from.isNotEmpty ? 'changes from ${vals(from)} ' : 'changes '}${to != null && to.isNotEmpty ? 'to ${vals(to)}' : ''}'.trim();

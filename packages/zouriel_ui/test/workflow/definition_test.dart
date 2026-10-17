@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
@@ -175,6 +177,20 @@ void main() {
       expect(inner, hasLength(2));
     });
 
+    test('a duplicate gets its own name, and its inner steps read each other, not the original', () {
+      var d = sample();
+      d = insertStep(d, 'b/path:p', 1, step('reader', 'notify', {'subject': ['Path: ', {'ref': 'steps.c.sent'}]}));
+      d = insertStep(d, 'b/path:p', 2, step('back', 'goTo', {'target': 'c'}));
+      final r = duplicateStep(d, 'b');
+      final copy = indexSteps(r.def)[r.id]!.step;
+      final [c2, reader2, back2] = stepSlots(copy)[0].steps;
+      expect(copy.title, 'Branch (copy)');
+      expect(jsonEncode(reader2.json), contains('steps.${c2.id}.sent'));
+      expect(UiWfGoToStep.of(back2).target, c2.id);
+      // Outside references to the original stay as they were.
+      expect(jsonEncode(indexSteps(r.def)['reader']!.step.json), contains('steps.c.sent'));
+    });
+
     test('cloneStep keeps embedded form ids and marks the title', () {
       final s = step('t', 'task', {'title': 'Check', 'form': {'schemaVersion': 1, 'id': 'form1', 'elements': <Object?>[]}});
       final c = cloneStep(s);
@@ -233,8 +249,8 @@ void main() {
       final def = createWorkflow('automation', title: 'x', entity: 'application');
       final ctx = UiWfDescribeContext(registry: registry, def: def);
       expect(describeTrigger(UiWfTrigger.fromJson({'type': 'fieldChanged', 'field': 'status', 'to': ['Submitted']}), ctx), 'When Status changes to Submitted');
-      expect(describeTrigger(UiWfTrigger('fieldChanged'), ctx), 'When a application changes');
-      expect(describeTrigger(UiWfTrigger('created'), ctx), 'When a application is created');
+      expect(describeTrigger(UiWfTrigger('fieldChanged'), ctx), 'When an application changes');
+      expect(describeTrigger(UiWfTrigger('created'), ctx), 'When an application is created');
       expect(describeTrigger(UiWfTrigger.fromJson({'type': 'manual', 'label': 'Escalate'}), ctx), 'When someone presses “Escalate”');
       expect(describeTrigger(UiWfTrigger.fromJson({'type': 'dateReached', 'field': 'deadline', 'offset': '-P2D'}), ctx), '2 days before deadline');
     });

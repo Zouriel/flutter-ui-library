@@ -693,7 +693,7 @@ class WfRuleEditor extends StatelessWidget {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
       Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(flex: 6, child: WfTokenSelect(tokens: tokens, value: rule.ref, label: 'Value to check', placeholder: 'Choose what to check…', onChanged: _setRef)),
+        Expanded(flex: 6, child: WfTokenSelect(tokens: tokens, value: rule.ref, label: 'Value to check', placeholder: 'Choose a value…', onChanged: _setRef)),
         Expanded(
           flex: 5,
           child: WfSelect(
