@@ -270,6 +270,8 @@ class _OverlaysPageState extends State<OverlaysPage> {
             ApiRow('title', 'String?', 'Header title, also the accessible name. Without it there is no header or close button.'),
             ApiRow('closeOnBackdrop / closeOnEscape', 'bool', 'As for the modal.', def: 'true'),
             ApiRow('glass / radius', 'bool?', 'Frosted surface / rounded inner corners; default to UiConfig.'),
+            ApiRow('UiDrawer.onPointerEnter / onPointerExit', 'VoidCallback?', 'The pointer entered or left the panel (for drawers that close when it leaves).'),
+            ApiRow('UiDrawerPeek', 'widget', 'The web modal=false drawer: open, child, drawer, side, title, onClose. Slides over the page without blocking it (no barrier, no route, no focus grab); a hover peek.'),
           ],
         ),
         DocSection(

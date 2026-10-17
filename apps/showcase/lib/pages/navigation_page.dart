@@ -187,7 +187,7 @@ class _NavigationPageState extends State<NavigationPage> {
         DocSection(
           name: 'Stepper',
           widget: 'UiStepper',
-          summary: 'Progress through ordered steps; display only. Steps before active are done (a filled marker whose check draws itself in), active is current. Horizontal when the labels fit, otherwise vertical, so no label is hidden on a phone. Each step is read as "Step 2 of 4, Shipping, current".',
+          summary: 'Progress through ordered steps; display only. Steps before active are done (a filled marker whose check draws itself in), active is current. Horizontal when the labels fit, otherwise vertical, so no label is hidden on a phone. Each step is read as "Step 2 of 4, Shipping, current". A vertical stepper shows a body under each step (details, history, actions); the dots variant is a compact strip of dots: finished and current steps in the tone (the current one ringed), steps not reached in the text colour. tone: success colours finished steps green.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
             UiStepper(active: _step, steps: const [UiStep(label: 'Cart'), UiStep(label: 'Pay'), UiStep(label: 'Done')]),
             UiStepper(active: _step, steps: const [
@@ -196,6 +196,16 @@ class _NavigationPageState extends State<NavigationPage> {
               UiStep(label: 'Payment'),
               UiStep(label: 'Review'),
             ]),
+            UiStepper(
+              active: _step,
+              axis: Axis.vertical,
+              tone: UiStepperTone.success,
+              label: 'Checkout',
+              steps: const [UiStep(label: 'Cart'), UiStep(label: 'Pay'), UiStep(label: 'Done')],
+              body: (context, i, state) => Text(switch (state) { UiStepState.done => 'Done', UiStepState.active => 'In progress', UiStepState.todo => 'Not started' },
+                  style: context.uiText.caption),
+            ),
+            UiStepper(active: _step, variant: UiStepperVariant.dots, tone: UiStepperTone.success, label: 'Checkout progress', steps: const [UiStep(label: 'Cart'), UiStep(label: 'Pay'), UiStep(label: 'Done')]),
             Row(spacing: t.space2, children: [
               UiButton(label: 'Back', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _step > 0 ? () => setState(() => _step--) : null),
               UiButton(label: 'Next', size: UiSize.sm, onPressed: _step < 3 ? () => setState(() => _step++) : null),
@@ -206,6 +216,10 @@ class _NavigationPageState extends State<NavigationPage> {
             ApiRow('steps', 'List<UiStep>', 'label and an optional description.'),
             ApiRow('active', 'int', 'Index of the current step.', def: '0'),
             ApiRow('axis', 'Axis?', 'Force a direction; by default horizontal when it fits.'),
+            ApiRow('variant', 'UiStepperVariant', 'standard, or dots: small dots only, labels kept for screen readers.', def: 'standard'),
+            ApiRow('tone', 'UiStepperTone', 'The colour of finished and current steps: primary or success.', def: 'primary'),
+            ApiRow('body', 'Widget? Function(context, index, UiStepState)?', 'Content under each step in a vertical stepper; return null for none.'),
+            ApiRow('label', 'String?', 'An accessible name for the list of steps.'),
           ],
         ),
         DocSection(
