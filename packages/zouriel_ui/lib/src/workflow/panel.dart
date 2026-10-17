@@ -237,7 +237,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> {
                   decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     WfArrowText(_describe(h), style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
-                    Text('${h.actorName ?? h.actorType} · ${wfAgo(h.at, now)}', style: muted),
+                    Text('${wfActorLabel(h, (k) => r.instances.where((i) => i.definitionKey == k).firstOrNull?.title)} · ${wfAgo(h.at, now)}', style: muted),
                   ]),
                 ),
             ]);

@@ -447,7 +447,7 @@ class UiWorkflowRecordPanelState extends State<UiWorkflowRecordPanel> {
                 decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   WfArrowText(_describeHistory(h), style: _body(context)),
-                  Text('${h.actorName ?? h.actorType} · ${wfAgo(h.at, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 11.5, color: t.textMuted)),
+                  Text('${wfActorLabel(h, (k) => _record?.instances.where((i) => i.definitionKey == k).firstOrNull?.title)} · ${wfAgo(h.at, UiWorkflowClock.nowOf(context))}', style: _body(context, size: 11.5, color: t.textMuted)),
                 ]),
               ),
           ]),
@@ -938,14 +938,15 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
       (byNode[s.nodeId] ??= []).add(s);
     }
     final rootList = r.kind == 'run' && (r.reason ?? '').isNotEmpty ? r.reason! : 'root';
-    const texts = {'completed': 'Done', 'waiting': 'Waiting', 'running': 'Running', 'failed': 'Failed', 'skipped': 'Skipped', 'cancelled': 'Cancelled', 'notRun': ''};
+    const texts = {'completed': 'Done', 'timedOut': 'Out of time', 'waiting': 'Waiting', 'running': 'Running', 'failed': 'Failed', 'skipped': 'Skipped', 'cancelled': 'Cancelled', 'notRun': ''};
     return [
       for (final loc in indexSteps(def).values)
         if (loc.path.first == rootList)
           () {
             final runs = byNode[loc.step.id] ?? const <UiWfStepRun>[];
             final last = runs.lastOrNull;
-            final status = last?.status ?? 'notRun';
+            // A step that finished because its time ran out isn't "done": it took its timeout path.
+            final status = last?.status == 'completed' && wfStepTimedOut(last?.output) ? 'timedOut' : last?.status ?? 'notRun';
             return _RunRow(
               loc.step.id,
               stepName(loc.step),
@@ -953,7 +954,7 @@ class UiWorkflowRunState extends State<UiWorkflowRun> {
               status,
               texts[status] ?? status,
               last?.error ?? (runs.length > 1 ? '${runs.length} attempts' : ''),
-              status == 'completed' ? WfIcons.tick02 : (status == 'failed' ? WfIcons.cancel01 : wfStepIcon(loc.step.type)),
+              status == 'completed' ? WfIcons.tick02 : status == 'timedOut' ? WfIcons.clock02 : (status == 'failed' ? WfIcons.cancel01 : wfStepIcon(loc.step.type)),
             );
           }(),
     ];
@@ -1065,10 +1066,10 @@ class _RunStepRow extends StatelessWidget {
       'completed' => t.success,
       'waiting' || 'running' => t.primary,
       'failed' => t.danger,
-      'skipped' || 'cancelled' => t.warning,
+      'skipped' || 'cancelled' || 'timedOut' => t.warning,
       _ => t.textMuted,
     };
-    final edge = switch (row.status) { 'completed' || 'waiting' || 'running' || 'failed' => c, _ => t.border };
+    final edge = switch (row.status) { 'completed' || 'waiting' || 'running' || 'failed' || 'timedOut' => c, _ => t.border };
     return Opacity(
       opacity: row.status == 'notRun' ? 0.45 : 1,
       child: Container(
@@ -1140,10 +1141,23 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
   bool _busy = false;
   String _error = '';
 
+  /// Workflow titles by key, so entries by a workflow name it rather than its key.
+  Map<String, String> _titles = const {};
+
   @override
   void initState() {
     super.initState();
     load(false);
+    _loadTitles();
+  }
+
+  Future<void> _loadTitles() async {
+    try {
+      final d = await widget.api?.definitions();
+      if (d != null && mounted) setState(() => _titles = {for (final x in d) x.key: x.title});
+    } catch (_) {
+      // Keys read as words when the titles can't be loaded.
+    }
   }
 
   @override
@@ -1274,6 +1288,7 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
           for (var i = 0; i < _entries.length; i++) ...[
             if (i > 0) Container(height: 1, color: t.borderSubtle),
             _AuditRow(
+              who: wfActorLabel(_entries[i], (k) => _titles[k]),
               entry: _entries[i],
               open: _open.contains(_entries[i].seq),
               raw: _raw.contains(_entries[i].seq),
@@ -1289,8 +1304,11 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
 }
 
 class _AuditRow extends StatelessWidget {
-  const _AuditRow({required this.entry, required this.open, required this.raw, required this.onToggle, required this.onToggleRaw});
+  const _AuditRow({required this.entry, required this.who, required this.open, required this.raw, required this.onToggle, required this.onToggleRaw});
   final UiWfAuditEntry entry;
+
+  /// Who did it, as people read it.
+  final String who;
   final bool open;
 
   /// Shows before/after/details as the stored JSON rather than key/value rows.
@@ -1329,7 +1347,6 @@ class _AuditRow extends StatelessWidget {
       'settings' || 'definition' => t.warning,
       _ => t.textSecondary,
     };
-    final who = e.actorName ?? e.actorId ?? e.actorType;
     final code = context.uiText.code.copyWith(fontSize: 11.5, color: t.text);
     Widget pair(String k, Widget v) => Padding(
       padding: const EdgeInsets.only(bottom: 4),

@@ -153,3 +153,22 @@ const List<({String value, String label})> wfAuditCategories = [
 
 /// An audit category's label ("lifecycle" reads "Record moves").
 String wfAuditCategoryLabel(String category) => wfAuditCategories.where((c) => c.value == category).firstOrNull?.label ?? wfHumanize(category);
+
+/// Who did something, as people read it (the web `wfActorLabel`): a person's name; for a workflow,
+/// "Workflow: <title>" (the actor id is the workflow's key, looked up with [workflowTitle]); "System"
+/// for the engine itself.
+String wfActorLabel(UiWfAuditEntry e, [String? Function(String key)? workflowTitle]) {
+  final name = e.actorName;
+  if (e.actorType == 'workflow') {
+    final key = e.actorId ?? '';
+    final title = (name != null && name.isNotEmpty) ? name : workflowTitle?.call(key);
+    return 'Workflow: ${title ?? (key.isEmpty ? 'unknown' : wfHumanize(key))}';
+  }
+  if (name != null && name.isNotEmpty) return name;
+  if (e.actorType == 'system') return 'System';
+  return e.actorId ?? wfHumanize(e.actorType);
+}
+
+/// Whether a finished step ended by running out of time (an approval or task, or a wait, that timed out).
+bool wfStepTimedOut(Object? output) => output is Map && (output['outcome'] == 'timedOut' || output['timedOut'] == true);
+

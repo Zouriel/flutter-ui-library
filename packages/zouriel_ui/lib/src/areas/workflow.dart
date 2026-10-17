@@ -9,7 +9,7 @@ export '../workflow/definition.dart';
 export '../workflow/global_settings.dart';
 export '../workflow/runtime.dart';
 export '../workflow/panel.dart';
-export '../workflow/history.dart' show wfDescribeHistory, wfOutcomeLabel, wfAuditActionLabel;
+export '../workflow/history.dart' show wfDescribeHistory, wfOutcomeLabel, wfAuditActionLabel, wfActorLabel, wfStepTimedOut;
 export '../workflow/layout.dart';
 export '../workflow/schema.dart';
 export '../workflow/store.dart';
