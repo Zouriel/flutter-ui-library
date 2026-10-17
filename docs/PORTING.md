@@ -109,6 +109,12 @@ Respect `MediaQuery.disableAnimations` (reduced motion), text scaling up to 200%
   diff/lint, option sources incl. HTTP) ported to pure Dart with the **same JSON**; the renderer as
   widgets. Shared fixtures: JSON definitions + answers + expected results exported from the Angular
   specs, run by both test suites so the two stay identical.
+- **Workflow builder:** see `docs/WORKFLOW.md`. The model is typed views (extension types) over
+  the spec JSON instead of classes with `extra`, because the definition helpers are spread-based
+  and must keep object identity exactly like `definition.ts` (`identical(next, def)` means "no
+  change"); unknown keys survive by construction. The lifecycle layout runs the shared
+  `layout.json` fixtures. `optionLabel` is `wfOptionLabel` here (the form engine already exports
+  an `optionLabel`). There is no DI: every runtime widget takes `api`.
 
 ## Phases
 

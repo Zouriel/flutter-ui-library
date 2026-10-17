@@ -11,6 +11,9 @@ Material), accessible, and tested component by component. Web docs for the Angul
 - **Form builder:** the engine reads and writes the **same JSON** as the web builder; shared JSON
   fixtures run in both test suites so the two behave identically. Includes the renderer (fill / edit /
   view), the searchable paginated source picker and the editor.
+- **Workflow builder:** the builder, lifecycle diagram and runtime widgets (record panel, task inbox,
+  run view, audit log, global settings) read and write the same Zouriel Workflows JSON as the web;
+  the lifecycle layout runs the same fixtures in both suites. See `docs/WORKFLOW.md`.
 
 ## Layout
 
@@ -19,7 +22,7 @@ Material), accessible, and tested component by component. Web docs for the Angul
 | `packages/zouriel_ui` | The library (`package:zouriel_ui/zouriel_ui.dart`) |
 | `apps/showcase` | Showcase app (Android APK + web): every component with demos, code and API |
 | `tool/` | Token generator and the Angular inventory script |
-| `docs/` | `PORTING.md` (decisions), `CONVENTIONS.md` (how components are built and tested), `inventory.md` (per-class checklist), `FORM_ENGINE.md` |
+| `docs/` | `PORTING.md` (decisions), `CONVENTIONS.md` (how components are built and tested), `inventory.md` (per-class checklist), `FORM_ENGINE.md`, `WORKFLOW.md` |
 
 ## Use
 

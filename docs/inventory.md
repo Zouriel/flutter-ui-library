@@ -1500,4 +1500,49 @@ File: `window/src/window.ts`
 - Methods: `dock(side: UiDockSide)`, `restore()`, `setBounds(b: UiWindowBounds)`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+## workflow
 
+### UiWorkflowBuilder (component, `ui-workflow-builder`)
+File: `workflow/src/workflow-builder.ts`  
+Design automations and lifecycles; two-way definition, API, schema, settings, persist.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowRecordPanel (component, `ui-workflow-record-panel`)
+File: `workflow/src/runtime.ts`  
+A record's state, moves, tasks, manual workflows and history.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowTasks (component, `ui-workflow-tasks`)
+File: `workflow/src/runtime.ts`  
+The signed-in person's approvals and tasks, with the decide dialog.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowRun (component, `ui-workflow-run`)
+File: `workflow/src/runtime.ts`  
+One run over its workflow, with retry/skip (per stopped path) and cancel.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowAudit (component, `ui-workflow-audit`)
+File: `workflow/src/runtime.ts`  
+The audit log: filter, export, verify the chain.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowStateBadge (component, `ui-workflow-state-badge`)
+File: `workflow/src/runtime.ts`  
+A lifecycle state as a coloured chip.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowGlobalSettings (component, `ui-workflow-global-settings`)
+File: `workflow/src/global-settings.ts`  
+Working hours, defaults, channels, webhooks, audit, pausing.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWorkflowHttpApi (class)
+File: `workflow/src/api.ts`  
+REST client for the engine (UiWorkflowApi).  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiCanvasViewport (component, `ui-canvas-viewport`)
+File: `canvas/src/viewport.ts`  
+Pan/zoom surface with fit, minimap and zoom controls.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [ ] showcase (used by the workflow page)
