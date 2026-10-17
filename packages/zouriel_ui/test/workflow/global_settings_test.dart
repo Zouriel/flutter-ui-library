@@ -268,7 +268,56 @@ void main() {
       }
     });
   }
+
+  // Mirrors @zouriel/ui 6beaec3: connection keys.
+  group('webhook connection keys', () {
+    UiWorkflowSettings saved() => UiWorkflowSettings.fromJson({
+          'version': 1,
+          'webhooks': {'connections': [{'key': 'erp', 'label': 'ERP', 'baseUrl': 'https://erp.example.com', 'auth': 'none'}]},
+        });
+    Future<GlobalKey<UiWorkflowGlobalSettingsState>> open(WidgetTester tester, FakeWorkflowApi api) async {
+      final key = await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, api: api), size: const Size(900, 1400));
+      await tester.tap(control('Webhooks'));
+      await tester.pumpAndSettle();
+      return key;
+    }
+
+    Finder nameField(int i) => find.descendant(of: find.byWidgetPredicate((w) => w is UiInput && w.semanticLabel == 'Name').at(i), matching: find.byType(EditableText));
+
+    testWidgets('renaming a saved connection keeps its key, so webhook steps using it keep working', (tester) async {
+      final key = await open(tester, FakeWorkflowApi()..settingsValue = saved());
+      await tester.enterText(nameField(0), 'Finance system');
+      await tester.pump();
+      expect(key.currentState!.value.connections.single.key, 'erp');
+      expect(find.textContaining('webhook steps use it, so it stays when the name changes'), findsOneWidget);
+    });
+
+    testWidgets('a new connection is keyed after its name, and two with the same name get different keys', (tester) async {
+      final key = await open(tester, FakeWorkflowApi()..settingsValue = saved());
+      await tester.tap(control('Add a connection'));
+      await tester.pumpAndSettle();
+      await tester.tap(control('Add a connection'));
+      await tester.pumpAndSettle();
+      await tester.enterText(nameField(1), 'Bank');
+      await tester.enterText(nameField(2), 'Bank');
+      await tester.pump();
+      expect([for (final c in key.currentState!.value.connections) c.key], ['erp', 'bank', 'bank2']);
+      expect(find.text('Key bank2', findRichText: true), findsOneWidget, reason: 'the key is shown');
+    });
+
+    testWidgets('adding after a delete never reuses a key on the page or a saved one', (tester) async {
+      final key = await open(tester, FakeWorkflowApi()..settingsValue = saved());
+      await tester.tap(control('Remove'));
+      await tester.pumpAndSettle();
+      await tester.tap(control('Add a connection'));
+      await tester.pumpAndSettle();
+      await tester.enterText(nameField(0), 'ERP');
+      await tester.pump();
+      expect(key.currentState!.value.connections.single.key, isNot('erp'), reason: 'the saved key may still be used by steps');
+    });
+  });
 }
+
 
 /// Answers settings() only when told to.
 class _GatedSettings extends FakeWorkflowApi {

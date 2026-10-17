@@ -14,6 +14,7 @@ import '../forms/choice/switch.dart';
 import '../theme/theme.dart';
 import 'api.dart';
 import 'bits.dart';
+import 'definition.dart' show wfKey;
 import 'editors.dart';
 import 'icons.dart';
 import 'json.dart';
@@ -200,12 +201,26 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
 
   void _removeOrigin(String o) => _patch({'webhooks': {..._webhooks, 'allowedOrigins': _s.allowedOrigins.where((x) => x != o).toList()}});
 
+  /// Keys of the connections in the last saved settings: webhook steps may refer to them.
+  Set<String> get _savedKeys => {for (final c in UiWorkflowSettings.fromJson(jsonDecode(_saved)).connections) c.key};
+
+  /// Whether a connection is saved already (its key is then fixed, as steps may use it).
+  bool _isSaved(String key) => _savedKeys.contains(key);
+
   void _addConnection() {
     final list = _s.connections;
+    final labels = {for (final c in list) c.label};
+    var n = list.length + 1;
+    while (labels.contains('Connection $n')) {
+      n++;
+    }
+    final label = 'Connection $n';
+    // Unique among the keys on the page and the saved ones (a removed connection's key may still be in use).
+    final key = wfKey(label, [for (final c in list) c.key, ..._savedKeys]);
     _patch({
       'webhooks': {
         ..._webhooks,
-        'connections': [...list, {'key': 'connection${list.length + 1}', 'label': 'Connection ${list.length + 1}', 'baseUrl': 'https://', 'auth': 'none'}],
+        'connections': [...list, {'key': key, 'label': label, 'baseUrl': 'https://', 'auth': 'none'}],
       },
     });
   }
@@ -220,10 +235,10 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
             final c = _s.connections[j];
             final n = wfPatch(c.json, p);
             final label = p['label'];
-            if (label is String) {
-              final words = label.replaceAll(RegExp(r'[^A-Za-z0-9]+'), ' ').trim().split(' ').where((w) => w.isNotEmpty).toList();
-              final key = [for (var k = 0; k < words.length; k++) k == 0 ? words[k].toLowerCase() : words[k][0].toUpperCase() + words[k].substring(1)].join();
-              n['key'] = key.isEmpty ? c.key : key;
+            // A new (unsaved) connection's key follows its name, unique on the page; a saved one keeps
+            // its key, so the webhook steps that use it keep working.
+            if (label is String && !_isSaved(c.key)) {
+              n['key'] = wfKey(label, [for (var k = 0; k < _s.connections.length; k++) if (k != i) _s.connections[k].key, ..._savedKeys]);
             }
             return UiWfConnection.fromJson(n);
           }(),
@@ -559,6 +574,14 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
                     onChanged: (v) => _patchConnection(i, {'secretName': v}),
                   ),
               ]),
+              Text.rich(
+                TextSpan(children: [
+                  const TextSpan(text: 'Key '),
+                  TextSpan(text: conns[i].key, style: context.uiText.code.copyWith(fontSize: 12, color: t.textSecondary)),
+                  if (_isSaved(conns[i].key)) TextSpan(text: ' · webhook steps use it, so it stays when the name changes', style: TextStyle(color: t.textMuted)),
+                ]),
+                style: context.uiText.body.copyWith(fontSize: 12, color: t.textSecondary),
+              ),
               Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Remove', color: t.danger, onTap: () => _removeConnection(i))),
             ]),
           Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Add a connection', onTap: _addConnection)),
