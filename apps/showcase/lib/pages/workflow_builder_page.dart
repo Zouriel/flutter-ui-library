@@ -105,7 +105,8 @@ final api = UiWorkflowHttpApi(
               'outcomes and parallel paths appear as columns. Drag a step by its grip to move it anywhere, including into another branch; the '
               '… menu also moves, duplicates, turns off or deletes it. Lifecycles are a diagram: drag a state to move it, drag from its handle '
               'onto another state to add a transition (tap the handle, then the target, on touch), and edit what each transition or state runs '
-              'underneath. Every change is checked by the engine as you go; Versions publishes and rolls back, Test runs the draft without '
+              'underneath. Applies to, in a lifecycle\'s settings, limits it to some records (e.g. applications whose type is Passport), '
+              'and the Create record step adds a record of any kind, which a reset can delete again. Every change is checked by the engine as you go; Versions publishes and rolls back, Test runs the draft without '
               'changing anything. Below 1100px the palette moves into a dialog, and on phones the settings open in a bottom sheet.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             Align(

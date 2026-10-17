@@ -587,9 +587,29 @@ class DemoWorkflowApi implements UiWorkflowApi {
     ],
   };
 
+  /// What the demo workflow did since the application last started over, for the reset list.
+  List<Map<String, Object?>> _resetItems() => [
+        if (_record['state'] != 'draft')
+          {'id': 'field:application:a1:reviewer', 'kind': 'field', 'title': 'Reviewer of Application “${_record['title'] ?? 'Bursary'}”: back to nobody',
+            'detail': 'Now Rana Ibrahim', 'workflow': 'Scholarship review', 'step': 'Assign the reviewer', 'undoable': true, 'selected': true},
+        if (_record['state'] != 'draft')
+          {'id': 'created:document:d9', 'kind': 'created', 'title': 'Delete Document “Review checklist”', 'detail': 'Created by the workflow',
+            'workflow': 'Scholarship review', 'step': 'Open a checklist', 'undoable': true, 'selected': true},
+        {'id': 'field:programme:p1:budget', 'kind': 'field', 'title': 'Budget of Programme “Engineering”: back to 50,000', 'detail': 'Now 42,000',
+          'workflow': 'Scholarship review', 'step': 'Reserve the amount', 'undoable': true, 'selected': false,
+          'warning': 'Changed again since the workflow set it to 45,200; ticking it overwrites that.'},
+        {'id': 'message:m1', 'kind': 'message', 'title': 'Message “We received your application” to Ali Hassan', 'detail': null,
+          'workflow': 'Scholarship review', 'step': 'Thank the applicant', 'undoable': false, 'selected': false, 'warning': "Already sent; it can't be taken back."},
+      ];
+
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input}) => _later(() {
+  Future<UiWfResetPreview> resetPreview(String entity, String id) => _later(() => UiWfResetPreview.fromJson({'reset': _recordNow().reset?.json, 'items': _resetItems()}));
+
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo}) => _later(() {
     final before = _record['state'];
+    // Read before the state moves: the list depends on it.
+    final undone = [for (final i in _resetItems()) if (undo?.contains(i['id']) ?? false) i['title']];
     for (final task in _tasks) {
       if (task['status'] == 'open') task['status'] = 'cancelled';
     }
@@ -598,7 +618,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
     _record['stateTone'] = 'neutral';
     _record['stateEnteredAt'] = _now();
     _record['transitions'] = _transitionsFrom('draft');
-    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}}, actor: 'Hana Ibrahim');
+    _log('lifecycle', 'reset', before: {'state': before}, after: {'state': 'draft'}, data: {'label': 'Start over', 'input': input ?? const {}, 'undone': undone}, actor: 'Hana Ibrahim');
     return _recordNow();
   });
 

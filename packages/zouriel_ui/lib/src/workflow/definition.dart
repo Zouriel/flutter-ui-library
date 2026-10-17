@@ -125,6 +125,7 @@ const List<UiWfStepInfo> uiWfStepTypes = [
   UiWfStepInfo(type: 'end', label: 'End', description: 'Stop the workflow here', category: 'Logic', outputs: []),
   UiWfStepInfo(type: 'wait', label: 'Wait', description: 'Pause for a time, until a date, a condition or an event', category: 'Timing', outputs: ['timedOut', 'data']),
   UiWfStepInfo(type: 'setFields', label: 'Update record', description: 'Change fields on the record', category: 'Data', outputs: []),
+  UiWfStepInfo(type: 'createRecord', label: 'Create record', description: 'Add a new record of any kind', category: 'Data', outputs: ['id']),
   UiWfStepInfo(type: 'applyTransition', label: 'Move lifecycle', description: 'Move a record to another state', category: 'Data', outputs: ['applied']),
   UiWfStepInfo(type: 'setVariables', label: 'Set variables', description: 'Remember a value for later steps', category: 'Data', outputs: []),
   UiWfStepInfo(type: 'notify', label: 'Send notification', description: 'Email or message people', category: 'Messages', outputs: ['sent']),
@@ -170,6 +171,7 @@ UiWfStep createStep(String type, [UiWorkflowRegistry? reg]) {
     'forEach' => {'id': id, 'type': type, 'collection': '', 'max': 100, 'mode': 'sequential', 'steps': <Object?>[]},
     'wait' => {'id': id, 'type': type, 'until': {'type': 'duration', 'duration': 'P1D'}},
     'setFields' => {'id': id, 'type': type, 'values': <Object?>[]},
+    'createRecord' => {'id': id, 'type': type, 'entity': '', 'values': <Object?>[]},
     'setVariables' => {'id': id, 'type': type, 'values': <Object?>[]},
     'applyTransition' => {'id': id, 'type': type, 'lifecycle': '', 'transition': '', 'ifNotAllowed': 'fail'},
     'notify' => {'id': id, 'type': type, 'channel': reg?.channels?.firstOrNull?.key ?? 'email', 'to': <Object?>[], 'subject': '', 'body': ''},
@@ -853,6 +855,7 @@ String _outputLabel(UiWfStep step, String output, UiWorkflowRegistry? reg) {
   if (step.type == 'action') {
     return reg?.actions?.where((a) => a.key == UiWfActionStep.of(step).action).firstOrNull?.outputs.where((o) => o.key == output).firstOrNull?.label ?? output;
   }
+  if (step.type == 'createRecord' && output == 'id') return 'New ${entityOf(reg, UiWfCreateRecordStep.of(step).entity)?.label.toLowerCase() ?? 'record'} id';
   return _outputWords[output] ?? output;
 }
 
@@ -1046,6 +1049,11 @@ String describeStep(UiWfStep step, UiWfDescribeContext ctx) {
     case 'setFields':
       final values = UiWfSetFieldsStep.of(step).values;
       return values.isNotEmpty ? values.map((v) => fieldOf(reg, ctx.def.entity, v.field)?.label ?? v.field).join(', ') : 'Choose fields to change';
+    case 'createRecord':
+      final cr = UiWfCreateRecordStep.of(step);
+      final e = entityOf(reg, cr.entity);
+      if (e == null) return 'Choose what to create';
+      return 'a new ${e.label.toLowerCase()}${cr.values.isNotEmpty ? ' with ${cr.values.map((v) => fieldOf(reg, e.key, v.field)?.label ?? v.field).join(', ')}' : ''}';
     case 'setVariables':
       final values = UiWfSetVariablesStep.of(step).values;
       return values.isNotEmpty ? values.map((v) => ctx.def.variables?.where((x) => x.id == v.variable).firstOrNull?.label ?? '?').join(', ') : 'Choose variables';

@@ -193,6 +193,7 @@ abstract final class UiWfStepType {
   static const forEach = 'forEach';
   static const wait = 'wait';
   static const setFields = 'setFields';
+  static const createRecord = 'createRecord';
   static const setVariables = 'setVariables';
   static const applyTransition = 'applyTransition';
   static const notify = 'notify';
@@ -363,6 +364,13 @@ extension type const UiWfSetFieldsStep._(UiJson json) implements UiWfStep {
   List<UiWfFieldValue> get values => wfList(json['values'], UiWfFieldValue.fromJson);
 }
 
+/// Creates a record of any registry entity; outputs its `id` (spec §7). A reset can delete it again.
+extension type const UiWfCreateRecordStep._(UiJson json) implements UiWfStep {
+  UiWfCreateRecordStep.of(UiWfStep s) : json = s.json;
+  String get entity => wfStr(json['entity']);
+  List<UiWfFieldValue> get values => wfList(json['values'], UiWfFieldValue.fromJson);
+}
+
 /// `{variable, value}` in a set-variables step (`variable` is the variable's id).
 extension type const UiWfVariableValue._(UiJson json) implements Object {
   UiWfVariableValue.fromJson(Object? j) : json = wfMap(j);
@@ -519,6 +527,10 @@ extension type const UiWfLifecycle._(UiJson json) implements Object {
             if (e.value is List) e.key: [for (final n in e.value as List) if (n is num) n],
         }
       : null;
+
+  /// Which records it is for, read from the record's own fields (spec §6 applies to). Null: every
+  /// record no other lifecycle on the field claims.
+  UiWfCondition? get appliesWhen => json['appliesWhen'] is Map ? UiWfCondition.fromJson(json['appliesWhen']) : null;
 
   /// Lets people start a record's workflow over (spec §6 reset); null = no reset.
   UiWfLifecycleReset? get reset => json['reset'] is Map ? UiWfLifecycleReset.fromJson(json['reset']) : null;

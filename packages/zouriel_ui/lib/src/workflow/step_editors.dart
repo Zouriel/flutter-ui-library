@@ -434,6 +434,48 @@ class _WfStepEditorState extends State<WfStepEditor> {
           else
             const FbHint('The app hasn’t allowed workflows to change any field of this record.'),
         ];
+      case 'createRecord':
+        final cr = UiWfCreateRecordStep.of(step);
+        final kind = cr.entity.isEmpty ? null : cr.entity;
+        final settable = [for (final f in entityOf(reg, kind)?.fields ?? const <UiWfFieldDescriptor>[]) if (f.settable) f];
+        final values = cr.values;
+        return [
+          field(
+            'Kind of record',
+            WfSelect(
+              label: 'Kind of record',
+              placeholder: 'Choose…',
+              value: cr.entity,
+              options: [for (final e in reg?.entities ?? const <UiWfEntityDescriptor>[]) (value: e.key, label: e.label)],
+              onChanged: (v) => patch({'entity': v, 'values': <Object?>[]}),
+            ),
+          ),
+          if (kind != null) ...[
+            for (var i = 0; i < values.length; i++)
+              _Assign(
+                first: WfSelect(
+                  label: 'Field ${i + 1}',
+                  placeholder: 'Field…',
+                  value: values[i].field,
+                  options: [for (final f in settable) (value: f.key, label: f.label)],
+                  onChanged: (f) => patch({'values': [...values]..[i] = UiWfFieldValue.fromJson({'field': f, 'value': {'const': null}})}),
+                ),
+                second: WfOperandEditor(
+                  value: values[i].value,
+                  field: fieldOf(reg, kind, values[i].field),
+                  tokens: tokens,
+                  label: fieldOf(reg, kind, values[i].field)?.label ?? 'Value',
+                  onChanged: (v) => patch({'values': [...values]..[i] = UiWfFieldValue.fromJson({...values[i].json, 'value': v.json})}, 'value$i'),
+                ),
+                remove: del('Remove', () => patch({'values': [...values]..removeAt(i)})),
+              ),
+            if (settable.isNotEmpty)
+              link('Set a field', () => patch({'values': [...values, {'field': '', 'value': {'const': null}}]}))
+            else
+              const FbHint('The app hasn’t allowed workflows to set any field of this kind of record.'),
+            const FbHint('Later steps can read the new record’s id. Resetting the workflow offers to delete it again.'),
+          ],
+        ];
       case 'setVariables':
         final sv = UiWfSetVariablesStep.of(step);
         final vars = store.def.variables ?? const <UiWfVariable>[];

@@ -241,6 +241,12 @@ const List<WfOption> _varTypes = [
 
 /// The workflow's own settings: name, record type, variables, who looks after it (the web
 /// `ui-wf-workflow-editor`).
+/// "Applies to" reads only the record's own fields, never the one the lifecycle controls (spec §6).
+List<UiWfToken> wfOwnFieldTokens(List<UiWfToken> tokens, String controlled) => [
+      for (final t in tokens)
+        if (RegExp(r'^entity\.[^.]+$').hasMatch(t.path) && t.path != 'entity.id' && t.path != 'entity.$controlled') t,
+    ];
+
 class WfWorkflowEditor extends StatelessWidget {
   const WfWorkflowEditor({super.key});
 
@@ -330,6 +336,15 @@ class WfWorkflowEditor extends StatelessWidget {
             onChanged: (m) => patch({'lifecycle': lc.patch({'mode': m}).json}),
           ),
         ),
+        WfSection(title: 'Applies to', children: [
+          WfConditionEditor(
+            value: lc.appliesWhen,
+            tokens: wfOwnFieldTokens(store.tokens(const UiWfAt.list('root', 0)), lc.field),
+            emptyText: 'Every ${(store.entity?.label ?? 'record').toLowerCase()}.',
+            onChanged: (c) => patch({'lifecycle': lc.patch({'appliesWhen': c.conditions.isNotEmpty ? c.json : null}).json}, 'appliesWhen'),
+          ),
+          const FbHint('Only records that meet these get this lifecycle, e.g. applications whose type is Passport. Pick fields that are set when the record is created: a record keeps its lifecycle if they change later. Another lifecycle on the same field can cover the rest.'),
+        ]),
       ] else
         FbSetting(
           label: 'If it starts again for the same record while running',

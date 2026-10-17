@@ -247,6 +247,41 @@ extension type const UiWfResetOption._(UiJson json) implements Object {
   UiJson? get form => wfMapOrNull(json['form']);
 }
 
+/// One thing a workflow did that a reset can list (spec §6 reset).
+extension type const UiWfResetItem._(UiJson json) implements Object {
+  UiWfResetItem.fromJson(Object? j) : json = wfMap(j);
+
+  /// Send back in [UiWorkflowApi.resetRecord]'s `undo` to take it back.
+  String get id => wfStr(json['id']);
+
+  /// `field` (a field it changed), `created` (a record it created), `action`, `message` or `webhook`.
+  String get kind => wfStr(json['kind']);
+
+  /// What taking it back does, in words.
+  String get title => wfStr(json['title']);
+  String? get detail => wfStrOrNull(json['detail']);
+
+  /// The workflow and step that did it.
+  String get workflow => wfStr(json['workflow']);
+  String get step => wfStr(json['step']);
+
+  /// False for messages, webhooks and actions the app cannot undo.
+  bool get undoable => json['undoable'] == true;
+
+  /// Ticked by default (not when changed again since, or when it cannot be undone).
+  bool get selected => json['selected'] == true;
+
+  /// Why it is unticked or cannot be undone.
+  String? get warning => wfStrOrNull(json['warning']);
+}
+
+/// What resetting a record would do: the reset as offered, and what the workflow did that it can take back.
+extension type const UiWfResetPreview._(UiJson json) implements Object {
+  UiWfResetPreview.fromJson(Object? j) : json = wfMap(j);
+  UiWfResetOption get reset => UiWfResetOption.fromJson(json['reset']);
+  List<UiWfResetItem> get items => wfList(json['items'], UiWfResetItem.fromJson);
+}
+
 extension type const UiWfAuditEntry._(UiJson json) implements Object {
   UiWfAuditEntry.fromJson(Object? j) : json = wfMap(j);
   int get seq => wfInt(json['seq']) ?? 0;
@@ -512,8 +547,14 @@ abstract class UiWorkflowApi {
   Future<UiWfRecord> applyTransition(String entity, String id, String key, {UiJson? input});
   Future<UiWfRecord> forceState(String entity, String id, String state, String reason, {bool skipSteps = false});
 
-  /// Starts the record's workflow over (the lifecycle's reset), with the reset form's answers.
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input});
+  /// What starting the record over would take back: every change its workflows made since it last
+  /// started over. Throw [UnimplementedError] when the API can't list it; the reset dialog then only
+  /// confirms.
+  Future<UiWfResetPreview> resetPreview(String entity, String id);
+
+  /// Starts the record's workflow over (the lifecycle's reset), with the reset form's answers and the
+  /// ids of the [resetPreview] items to take back.
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo});
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input});
 
   Future<List<UiWfAuditEntry>> audit(UiWfAuditQuery q);
@@ -691,8 +732,15 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
   Future<UiWfRecord> forceState(String entity, String id, String state, String reason, {bool skipSteps = false}) async =>
       UiWfRecord.fromJson(await _call('POST', '/records/${_e(entity)}/${_e(id)}/force-state', {'state': state, 'reason': reason, 'skipSteps': skipSteps}));
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input}) async =>
-      UiWfRecord.fromJson(await _call('POST', '/records/${_e(entity)}/${_e(id)}/reset', {'input': input ?? const <String, Object?>{}}));
+  Future<UiWfResetPreview> resetPreview(String entity, String id) async =>
+      UiWfResetPreview.fromJson(await _call('GET', '/records/${_e(entity)}/${_e(id)}/reset'));
+
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo}) async =>
+      UiWfRecord.fromJson(await _call('POST', '/records/${_e(entity)}/${_e(id)}/reset', {
+        'input': input ?? const <String, Object?>{},
+        if (undo != null && undo.isNotEmpty) 'undo': undo,
+      }));
   @override
   Future<UiWfInstance> startManual(String workflow, String? entity, String? id, {UiJson? input}) async {
     final path = entity != null && entity.isNotEmpty && id != null && id.isNotEmpty

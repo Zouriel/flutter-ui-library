@@ -79,7 +79,9 @@ String wfDescribeHistory(UiWfAuditEntry h, String Function(Object? key) stateLab
       final input = data['input'] is Map ? wfMap(data['input']) : const <String, Object?>{};
       final why = s(input['reason'] ?? input.values.whereType<String>().firstOrNull);
       final name = s(data['label']);
-      return '${name.isEmpty ? 'Reset' : name}: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}${why.isEmpty ? '' : ' (“$why”)'}';
+      final undone = data['undone'] is List ? (data['undone'] as List).length : 0;
+      final took = undone == 0 ? '' : ', took back $undone thing${undone == 1 ? '' : 's'} the workflow did';
+      return '${name.isEmpty ? 'Reset' : name}: ${stateLabel(before['state'])} $wfArrow ${stateLabel(after['state'])}${why.isEmpty ? '' : ' (“$why”)'}$took';
     case 'lifecycle.forced':
       final why = s(data['reason']);
       return 'Moved by an admin to ${stateLabel(after['state'])}${why.isEmpty ? '' : ': $why'}';

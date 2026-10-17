@@ -169,12 +169,23 @@ class FakeWorkflowApi extends Fake implements UiWorkflowApi {
     return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
   });
 
-  /// The input of the last reset.
+  /// The input and the ids taken back of the last reset.
   UiJson? lastResetInput;
+  List<String>? lastResetUndo;
+
+  /// What [resetPreview] lists; null: the API can't list it.
+  List<Map<String, Object?>>? resetItems;
 
   @override
-  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input}) => _do('reset', () {
+  Future<UiWfResetPreview> resetPreview(String entity, String id) => _do('resetPreview', () {
+    if (resetItems == null) throw UnimplementedError();
+    return UiWfResetPreview.fromJson({'reset': recordJson['reset'], 'items': resetItems});
+  });
+
+  @override
+  Future<UiWfRecord> resetRecord(String entity, String id, {UiJson? input, List<String>? undo}) => _do('reset', () {
     lastResetInput = input;
+    lastResetUndo = undo;
     recordJson = {...recordJson, 'state': 'draft', 'stateLabel': 'Draft', 'stateTone': 'neutral', 'tasks': <Object?>[], 'reset': null};
     return UiWfRecord.fromJson(jsonDecode(jsonEncode(recordJson)));
   });

@@ -24,6 +24,7 @@ abstract final class WfIcons {
   static const edit02 = HugeIcons.strokeRoundedEdit02;
   static const exchange01 = HugeIcons.strokeRoundedExchange01;
   static const flag01 = HugeIcons.strokeRoundedFlag01;
+  static const fileAdd = HugeIcons.strokeRoundedFileAdd;
   static const flag02 = HugeIcons.strokeRoundedFlag02;
   static const flash = HugeIcons.strokeRoundedFlash;
   static const gitFork = HugeIcons.strokeRoundedGitFork;
@@ -65,6 +66,7 @@ const Map<String, UiIconData> wfStepIcons = {
   'end': WfIcons.flag02,
   'wait': WfIcons.hourglass,
   'setFields': WfIcons.pencilEdit02,
+  'createRecord': WfIcons.fileAdd,
   'applyTransition': WfIcons.exchange01,
   'setVariables': WfIcons.variable,
   'notify': WfIcons.notification03,

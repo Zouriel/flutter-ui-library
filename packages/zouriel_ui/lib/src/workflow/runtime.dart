@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../button/button.dart';
@@ -11,6 +11,7 @@ import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/modal.dart';
 import '../form_builder/renderer/form_renderer.dart';
+import '../forms/choice/checkbox.dart';
 import '../forms/text/inputs.dart';
 import '../theme/theme.dart';
 import 'api.dart';
@@ -533,12 +534,17 @@ class _WfRecordActionsState extends State<WfRecordActions> {
   void _confirm(UiWfTransitionOption p, {required bool manual, bool reset = false}) {
     final err = ValueNotifier<String>('');
     final busy = ValueNotifier<bool>(false);
+    // The reset list: which of the workflow's changes to take back, and a nudge to read it again.
+    final chosen = ValueNotifier<Set<String>>({});
+    final reload = ValueNotifier<int>(0);
+    final api = widget.api;
     var input = <String, Object?>{};
     final formKey = GlobalKey<UiFormRendererState>();
     showUiModal<void>(
       context: context,
       title: p.label,
-      size: UiModalSize.md,
+      // The reset's list of what the workflow did needs the room.
+      size: reset ? UiModalSize.lg : UiModalSize.md,
       builder: (ctx) => ValueListenableBuilder(
         valueListenable: err,
         builder: (ctx, e, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
@@ -547,6 +553,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
             UiFormRenderer(key: formKey, definition: p.form!, showActions: false, showTitle: false, onValueChanged: (v) => input = v)
           else if (p.confirm == null)
             Text('Move this record to “${p.toLabel}”?', style: _body(ctx, size: 14)),
+          if (reset && api != null)
+            _WfResetUndoList(api: api, entity: widget.entity, entityId: widget.entityId, chosen: chosen, reload: reload, busy: busy),
           if (e.isNotEmpty) WfNote(e),
         ]),
       ),
@@ -566,7 +574,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
                     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
                     if (p.form != null && formKey.currentState?.submit() == null) return;
                     busy.value = true;
-                    final ok = reset ? await _reset(input, err) : manual ? await _runManual(p.key, input, err) : await _apply(p.key, input, err);
+                    final ok = reset ? await _reset(input, err, chosen.value.toList(), reload) : manual ? await _runManual(p.key, input, err) : await _apply(p.key, input, err);
                     busy.value = false;
                     if (ok && ctx.mounted) Navigator.of(ctx).pop();
                   },
@@ -576,6 +584,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     ).whenComplete(() {
       err.dispose();
       busy.dispose();
+      chosen.dispose();
+      reload.dispose();
     });
   }
 
@@ -601,17 +611,19 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     }
   }
 
-  Future<bool> _reset(UiJson input, ValueNotifier<String> err) async {
+  Future<bool> _reset(UiJson input, ValueNotifier<String> err, List<String> undo, ValueNotifier<int> reload) async {
     final api = widget.api;
     if (api == null) return false;
     setState(() => _busy = true);
     try {
-      final r = await api.resetRecord(widget.entity, widget.entityId, input: input);
+      final r = await api.resetRecord(widget.entity, widget.entityId, input: input, undo: undo.isEmpty ? null : undo);
       if (mounted) setState(() => _error = '');
       await widget.onChanged?.call(r);
       return true;
     } catch (e) {
       err.value = _errorText(e, 'The workflow could not be reset.');
+      // Someone else changed what the workflow did meanwhile: show the list as it is now.
+      if (e is UiWfApiError && e.code == 'resetChanged') reload.value++;
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -1459,5 +1471,130 @@ class _AuditRow extends StatelessWidget {
           ]),
         ),
     ]);
+  }
+}
+
+/// What the workflow did since the record last started over, for the reset to take back (spec §6
+/// reset list): ticked as the engine suggests, changed-since items unticked, and things that can't be
+/// undone (sent messages) locked with the reason. Shows nothing when the API can't list it.
+class _WfResetUndoList extends StatefulWidget {
+  const _WfResetUndoList({required this.api, required this.entity, required this.entityId, required this.chosen, required this.reload, required this.busy});
+  final UiWorkflowApi api;
+  final String entity;
+  final String entityId;
+
+  /// The ticked item ids, read when the reset is confirmed.
+  final ValueNotifier<Set<String>> chosen;
+
+  /// Bumped to read the list again.
+  final ValueListenable<int> reload;
+  final ValueListenable<bool> busy;
+
+  @override
+  State<_WfResetUndoList> createState() => _WfResetUndoListState();
+}
+
+class _WfResetUndoListState extends State<_WfResetUndoList> {
+  List<UiWfResetItem> _items = const [];
+  bool _loading = true;
+  String _error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    widget.reload.addListener(_load);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    widget.reload.removeListener(_load);
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    try {
+      final preview = await widget.api.resetPreview(widget.entity, widget.entityId);
+      if (!mounted) return;
+      widget.chosen.value = {for (final i in preview.items) if (i.undoable && i.selected) i.id};
+      setState(() => _items = preview.items);
+    } on UnimplementedError {
+      if (mounted) setState(() => _items = const []);
+    } catch (_) {
+      if (mounted) setState(() => _error = "What the workflow did couldn't be listed, so the reset will leave it as it is.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  static String _kindLabel(String kind) =>
+      const {'field': 'Field', 'created': 'New record', 'action': 'Action', 'message': 'Message', 'webhook': 'Webhook'}[kind] ?? wfHumanize(kind);
+
+  void _choose(String id, bool on) => widget.chosen.value = on ? {...widget.chosen.value, id} : ({...widget.chosen.value}..remove(id));
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    if (_loading) return Text('Looking up what the workflow did…', style: _body(context, size: 12, color: t.textMuted));
+    if (_items.isEmpty) return _error.isEmpty ? const SizedBox.shrink() : Text(_error, style: _body(context, size: 12, color: t.textMuted));
+    final undoable = [for (final i in _items) if (i.undoable) i.id];
+    return ListenableBuilder(
+      listenable: Listenable.merge([widget.chosen, widget.busy]),
+      builder: (context, _) {
+        final chosen = widget.chosen.value;
+        final busy = widget.busy.value;
+        final all = chosen.length >= undoable.length;
+        return Container(
+          padding: EdgeInsets.only(top: t.space3),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            Row(children: [
+              const Expanded(child: WfSectionTitle('Also take back')),
+              if (undoable.length > 1)
+                UiButton(
+                  label: all ? 'Select none' : 'Select all',
+                  size: UiSize.sm,
+                  variant: UiButtonVariant.ghost,
+                  onPressed: busy ? null : () => widget.chosen.value = all ? {} : undoable.toSet(),
+                ),
+            ]),
+            Text('What the workflow did since the record last started over. Untick anything that should stay; the workflow carries on either way.',
+                style: _body(context, size: 12, color: t.textMuted, height: 1.35)),
+            for (final it in _items)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+                decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
+                  // Start-aligned: the checkbox's touch target would otherwise centre a short title.
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: UiCheckbox(
+                      value: chosen.contains(it.id),
+                      onChanged: it.undoable && !busy ? (v) => _choose(it.id, v) : null,
+                      child: Text(it.title, style: _body(context, size: 13.5, weight: FontWeight.w600)),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 26),
+                    child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      WfChip(_kindLabel(it.kind)),
+                      Text([it.workflow, it.step, if (it.detail != null) it.detail!].join(' · '), style: _body(context, size: 12, color: t.textMuted)),
+                    ]),
+                  ),
+                  if (it.warning != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 26),
+                      child: Text(it.warning!, style: _body(context, size: 12, color: it.undoable ? t.warning : t.textMuted, height: 1.4)),
+                    ),
+                ]),
+              ),
+          ]),
+        );
+      },
+    );
   }
 }

@@ -26,15 +26,26 @@ UiWorkflowHttpApi          // connects the widgets to the engine's REST API
   changes (from/to chosen values), a date comes up, a schedule fires, someone presses a button, or
   your app reports an event. They run a tree of steps: approvals and tasks for people, waits,
   branches, switches, parallel paths, loops over related records, go-back loops, record updates,
-  variables, notifications, webhooks, your own actions and other workflows.
+  variables, new records ("Create record"), notifications, webhooks, your own actions and other
+  workflows.
 - **Lifecycles** own a status field: its states and the transitions between them, who may make each
   move, checks, a form, a confirmation, automatic moves on a timer, and steps to run on each move,
   on entering or leaving a state, or when a record stays too long.
+  **Applies to** (`lifecycle.appliesWhen`, in the lifecycle settings) limits a lifecycle to some
+  records, read from their own fields: a "Passport application" lifecycle for applications whose
+  type is Passport, another for visas, and one with no condition for everything else.
   A lifecycle can also let chosen people **reset** a record (`lifecycle.reset`): its open tasks and
   runs stop, it goes back to the starting state (or another you pick), and the reset's own steps run,
   which can change the record, related records and each item of a list. The builder sets it up under
   "Starting over"; `UiWorkflowRecordPanel` and `UiWorkflowPanel` show the button to those allowed
   (`record.reset`, `api.resetRecord`).
+  The reset dialog lists what the workflow did since the record last started over
+  (`api.resetPreview`): fields it changed on this or other records, records it created, actions,
+  messages and webhooks, all ticked. People untick anything that should stay; the ticked ids go to
+  `resetRecord(..., undo: [...])`, which deletes created records, puts fields back and undoes app
+  actions when the app supports it. Items changed again since start unticked, and sent messages
+  can't be taken back. An API that can't list them throws `UnimplementedError` from
+  `resetPreview`, and the dialog then only confirms.
 
 Every start, step, decision and move is written to a hash-chained audit log.
 

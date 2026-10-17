@@ -473,28 +473,42 @@ class _PersonChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    return Container(
-      height: 24,
-      padding: const EdgeInsets.only(left: 7),
-      decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(t.radiusXs)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.text))),
-        UiInteractive(
-          onTap: onRemove,
-          semanticLabel: 'Remove $label',
-          excludeChildSemantics: true,
-          pressScale: false,
-          builder: (context, s) => Container(
-            width: 22,
-            height: 22,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: s.hovered ? t.danger.withValues(alpha: 0.12) : null,
-              borderRadius: BorderRadius.circular(3),
-              boxShadow: s.focused ? t.focusRing : null,
+    // The tinted chip stays 24px tall; on touch the cross's padded 48px target sets the row's height
+    // (the chip is drawn behind it), so removing someone is a full-size tap without a bigger chip.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 24),
+      child: Stack(children: [
+        Positioned.fill(
+          child: Center(
+            child: SizedBox(
+              height: 24,
+              width: double.infinity,
+              child: DecoratedBox(decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(t.radiusXs))),
             ),
-            child: UiIcon(WfIcons.cancel01, size: 11, strokeWidth: 2, color: s.hovered ? t.danger : t.textMuted),
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 7),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.text))),
+            UiInteractive(
+              onTap: onRemove,
+              semanticLabel: 'Remove $label',
+              excludeChildSemantics: true,
+              pressScale: false,
+              builder: (context, s) => Container(
+                width: 22,
+                height: 22,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: s.hovered ? t.danger.withValues(alpha: 0.12) : null,
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: s.focused ? t.focusRing : null,
+                ),
+                child: UiIcon(WfIcons.cancel01, size: 11, strokeWidth: 2, color: s.hovered ? t.danger : t.textMuted),
+              ),
+            ),
+          ]),
         ),
       ]),
     );

@@ -48,7 +48,8 @@ class _WorkflowPanelPageState extends State<WorkflowPanelPage> {
           widget: 'UiWorkflowPanel',
           summary: 'An application on the demo engine. Pick a layout. With a drawer layout, look for the dots on the right edge or the '
               'bottom of the screen: hover them with a mouse to peek (move away and it closes), or tap them to open the drawer. When the '
-              'person has nothing to do in the current state, the panel says so.',
+              'person has nothing to do in the current state, the panel says so. Start over lists what the workflow did (fields it changed, '
+              'a record it created, a message it sent), all ticked; untick what should stay.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
               UiSegmented<UiWorkflowPanelLayout>(

@@ -309,4 +309,17 @@ void main() {
       expect(transitionAllows(d, t.patch({'to': done.id}), draft.id), isTrue);
     });
   });
+
+  test('create record: starts empty, says what it creates, and later steps can read the new record\'s id', () {
+    final c = step('mk', 'createRecord');
+    expect(c.json, {'id': 'mk', 'type': 'createRecord', 'entity': '', 'values': <Object?>[]});
+    final def = createWorkflow('automation', title: 'Sample', entity: 'application');
+    expect(describeStep(c, UiWfDescribeContext(registry: registry, def: def)), 'Choose what to create');
+    final doc = step('mk', 'createRecord', {'entity': 'document', 'values': [{'field': 'name', 'value': {'const': 'Checklist'}}]});
+    expect(describeStep(doc, UiWfDescribeContext(registry: registry, def: def)), 'a new document with Name');
+    final d = UiWorkflowDefinition.fromJson({...def.json, 'steps': [doc.json, step('after').json]});
+    final t = tokensAt(d, registry, at: const UiWfAt.step('after')).where((x) => x.path == 'steps.mk.id').firstOrNull;
+    expect(t?.label, 'New document id');
+    expect(tokensAt(d, registry, at: const UiWfAt.step('mk')).any((x) => x.path == 'steps.mk.id'), isFalse);
+  });
 }

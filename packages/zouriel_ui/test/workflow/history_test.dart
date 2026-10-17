@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -46,6 +48,15 @@ void main() {
       'data': '{"label":"Start over","input":{"reason":"Wrong programme"}}'});
     String label(Object? k) => const {'UnderReview': 'Under review', 'Draft': 'Draft'}[k] ?? '$k';
     expect(wfDescribeHistory(h, label), 'Start over: Under review ${String.fromCharCode(0x2192)} Draft (“Wrong programme”)');
+  });
+
+  test('a reset says how many of the workflow\'s changes it took back', () {
+    UiWfAuditEntry h(List<String> undone) => UiWfAuditEntry.fromJson({'seq': 1, 'actorType': 'user', 'category': 'lifecycle', 'action': 'reset',
+      'before': '{"state":"Review"}', 'after': '{"state":"Draft"}', 'data': jsonEncode({'label': 'Start over', 'input': <String, Object?>{}, 'undone': undone})});
+    final arrow = String.fromCharCode(0x2192);
+    expect(wfDescribeHistory(h(['Delete Document “Checklist”']), (k) => '$k'), 'Start over: Review $arrow Draft, took back 1 thing the workflow did');
+    expect(wfDescribeHistory(h(['a', 'b']), (k) => '$k'), 'Start over: Review $arrow Draft, took back 2 things the workflow did');
+    expect(wfDescribeHistory(h([]), (k) => '$k'), 'Start over: Review $arrow Draft');
   });
 }
 
