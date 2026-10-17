@@ -763,6 +763,27 @@ List<UiWfStep> upstreamSteps(UiWorkflowDefinition def, UiWfAt? at) {
   return out;
 }
 
+/// The For each loops a position is inside, outermost first, with the kind of record each one's
+/// item is (`item.*` reads the innermost); the web `forEachItemsAt`. Loops over a collection the
+/// registry doesn't know are left out, and each loop counts once.
+List<({String stepId, String entity, String label})> forEachItemsAt(UiWorkflowDefinition def, UiWorkflowRegistry? reg, UiWfAt? at) {
+  if (at == null) return const [];
+  final idx = indexSteps(def);
+  final listId = at.stepId != null ? idx[at.stepId]?.listId : at.listId;
+  final path = listId != null ? [...(at.stepId != null ? idx[at.stepId]?.path ?? const <String>[] : const <String>[]), listId] : const <String>[];
+  final out = <({String stepId, String entity, String label})>[];
+  for (final l in {...path}) {
+    final slash = l.indexOf('/');
+    if (slash < 0 || l.substring(slash + 1) != 'each') continue;
+    final fe = idx[l.substring(0, slash)]?.step;
+    if (fe == null || fe.type != 'forEach') continue;
+    final coll = collectionField(reg, def.entity, UiWfForEachStep.of(fe).collection);
+    final e = coll?.entity;
+    if (e != null) out.add((stepId: fe.id, entity: e, label: entityOf(reg, e)?.label ?? 'Item'));
+  }
+  return out;
+}
+
 /// Everything a value can be read from at a position, grouped for a picker. [outputs] are the
 /// outputs per step type as the engine reports them (`GET /schema`); [inputFields] are the form
 /// answers (`input.*`) available here.
@@ -810,24 +831,11 @@ List<UiWfToken> tokensAt(UiWorkflowDefinition def, UiWorkflowRegistry? reg, {Map
     tokens.add(UiWfToken(path: 'input.${f.key}', label: f.label, group: 'Form answers', type: 'any'));
   }
   // Inside a forEach, the current item.
-  if (at != null) {
-    final idx = indexSteps(def);
-    final listId = at.stepId != null ? idx[at.stepId]?.listId : at.listId;
-    final path = listId != null ? [...(at.stepId != null ? idx[at.stepId]?.path ?? const <String>[] : const <String>[]), listId] : const <String>[];
-    for (final l in path) {
-      final slash = l.indexOf('/');
-      if (slash < 0 || l.substring(slash + 1) != 'each') continue;
-      final fe = idx[l.substring(0, slash)]?.step;
-      if (fe == null || fe.type != 'forEach') continue;
-      final coll = collectionField(reg, def.entity, UiWfForEachStep.of(fe).collection);
-      if (coll?.entity != null) {
-        final label = entityOf(reg, coll!.entity)?.label ?? 'Item';
-        final group = 'Current ${label.toLowerCase()}';
-        tokens.add(UiWfToken(path: 'item.id', label: '$label id', group: group, type: 'text'));
-        tokens.add(UiWfToken(path: 'item.index', label: 'Position (from 0)', group: group, type: 'number'));
-        tokens.addAll(_entityTokens(reg, coll.entity!, 'item', group));
-      }
-    }
+  for (final it in forEachItemsAt(def, reg, at)) {
+    final group = 'Current ${it.label.toLowerCase()}';
+    tokens.add(UiWfToken(path: 'item.id', label: '${it.label} id', group: group, type: 'text'));
+    tokens.add(UiWfToken(path: 'item.index', label: 'Position (from 0)', group: group, type: 'number'));
+    tokens.addAll(_entityTokens(reg, it.entity, 'item', group));
   }
   for (final s in upstreamSteps(def, at)) {
     final outs = s.type == 'action'
@@ -1135,7 +1143,9 @@ UiWorkflowDefinition updateTransitionWith(UiWorkflowDefinition def, String id, U
 /// Merges [patch] into a transition (null values remove keys).
 UiWorkflowDefinition updateTransition(UiWorkflowDefinition def, String id, UiJson patch) => updateTransitionWith(def, id, (t) => t.patch(patch));
 
-/// Removes a state with the transitions into and out of it.
+/// Removes a state with the transitions into and out of it, and the reset's references to it: a
+/// reset back to it goes back to the starting state instead, and it is no longer among the states
+/// the reset is offered in.
 UiWorkflowDefinition removeState(UiWorkflowDefinition def, String id) => updateLifecycle(def, (lc) {
   final layout = <String, Object?>{...?wfMapOrNull(lc.json['layout'])}..remove(id);
   final transitions = <Object?>[];
@@ -1149,5 +1159,14 @@ UiWorkflowDefinition removeState(UiWorkflowDefinition def, String id) => updateL
     if (from.isEmpty) continue;
     transitions.add(t.patch({'from': from}));
   }
-  return lc.patch({'states': lc.states.where((s) => s.id != id).toList(), 'transitions': transitions, 'layout': layout});
+  final reset = lc.reset;
+  UiJson? resetJson;
+  if (reset != null && (reset.to == id || (reset.states?.contains(id) ?? false))) {
+    resetJson = {
+      ...reset.json,
+      'to': reset.to == id ? null : reset.to,
+      if (reset.states != null) 'states': [for (final x in reset.states!) if (x != id) x],
+    }..removeWhere((_, v) => v == null);
+  }
+  return lc.patch({'states': lc.states.where((s) => s.id != id).toList(), 'transitions': transitions, 'layout': layout, 'reset': ?resetJson});
 });

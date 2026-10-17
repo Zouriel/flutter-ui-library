@@ -428,13 +428,15 @@ class WfStateEditor extends StatelessWidget {
     void patch(UiJson p, [String? mergeKey]) => store.updateState(s.id, p, mergeKey: mergeKey == null ? null : 'state:${s.id}:$mergeKey');
 
     void setCategory(String category) {
-      // Only one starting state: making this one the start turns the old start into an ordinary state.
-      if (category == 'initial') {
-        for (final o in store.def.lifecycle?.states ?? const <UiWfState>[]) {
-          if (o.id != s.id && o.category == 'initial') store.updateState(o.id, {'category': 'active'});
-        }
-      }
-      patch({'category': category});
+      if (s.category == category) return;
+      // Only one starting state: making this one the start turns the old start into an ordinary state,
+      // in the same change, so one undo puts both back.
+      store.commit(updateLifecycle(store.def, (lc) => lc.patch({
+            'states': [
+              for (final o in lc.states)
+                o.id == s.id ? o.patch({'category': category}) : (category == 'initial' && o.category == 'initial' ? o.patch({'category': 'active'}) : o),
+            ],
+          })));
     }
 
     final sla = s.sla;
@@ -495,6 +497,9 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
     if (tr == null) return const SizedBox.shrink();
     final states = store.def.lifecycle?.states ?? const <UiWfState>[];
     final tokens = store.tokens(UiWfAt.list('transition:${tr.id}', 0));
+    // What "Check before" and an automatic move can read: not the move's form answers, its remarks or
+    // who made it, which don't exist yet when the check runs (and never for a move that happens by itself).
+    final checkTokens = [for (final x in tokens) if (!x.path.startsWith('input.') && x.path != 'trigger.comment' && x.path != 'trigger.actor') x];
     void patch(UiJson p, [String? mergeKey]) => store.updateTransition(tr.id, p, mergeKey: mergeKey == null ? null : 'tr:${tr.id}:$mergeKey');
     final auto = tr.auto;
     final autoKind = auto == null ? '' : (auto.containsKey('after') ? 'after' : (auto.containsKey('when') ? 'when' : ''));
@@ -547,7 +552,7 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
         FbSwitch(value: tr.hidden, label: 'Hide it from the record page', onChanged: (on) => patch({'hidden': on ? true : null})),
       ]),
       WfSection(title: 'Check before', children: [
-        WfConditionEditor(value: tr.when, tokens: tokens, emptyText: 'Always possible from the states above.', onChanged: (c) => patch({'when': c.conditions.isNotEmpty ? c.json : null})),
+        WfConditionEditor(value: tr.when, tokens: checkTokens, emptyText: 'Always possible from the states above.', onChanged: (c) => patch({'when': c.conditions.isNotEmpty ? c.json : null})),
       ]),
       WfSection(title: 'Ask for', children: [
         WfFormField(value: tr.inputForm, title: '${tr.label} form', addLabel: 'Add questions (a form)', onChanged: (f) => patch({'input': f == null ? null : {'form': f}})),
@@ -581,7 +586,7 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
         ),
         if (autoKind == 'after') WfDurationInput(value: wfStrOrNull(auto!['after']), label: 'After', onChanged: (v) => patch({'auto': {...auto, 'after': v}})),
         if (autoKind == 'when')
-          WfConditionEditor(value: UiWfCondition.fromJson(auto!['when']), tokens: tokens, emptyText: 'Add the condition.', onChanged: (c) => patch({'auto': {'when': c.json}})),
+          WfConditionEditor(value: UiWfCondition.fromJson(auto!['when']), tokens: checkTokens, emptyText: 'Add the condition.', onChanged: (c) => patch({'auto': {'when': c.json}})),
       ]),
       const FbHint('Edit what happens afterwards (“Then do”) in the steps panel under the diagram.'),
     ]);
@@ -617,7 +622,20 @@ class WfResetEditor extends StatelessWidget {
             for (final s in states)
               if (s.id != start?.id) (value: s.id, label: s.label),
           ],
-          onChanged: (v) => patch({'to': v.isEmpty ? null : v}),
+          // When the ticks were "from a state onwards", they are worked out again for the new target in
+          // the same change (the onward states stop at the reset's target).
+          onChanged: (v) {
+            final to = v.isEmpty ? null : v;
+            if (r.to == to) return;
+            final ticked = r.states;
+            final from = ticked == null ? '' : _fromState(store.def, ticked);
+            if (from.isEmpty) {
+              patch({'to': to});
+              return;
+            }
+            final next = updateLifecycle(store.def, (lc) => lc.patch({'reset': lc.reset!.patch({'to': to}).json}));
+            patch({'to': to, 'states': wfStatesFrom(next, from)});
+          },
         ),
       ),
       WfSection(title: 'Offer it', children: [
@@ -666,7 +684,10 @@ class WfResetEditor extends StatelessWidget {
                 ),
             ]),
           ),
-          if (ticked.isEmpty) const FbHint('Tick at least one state, or nobody can start a record over.'),
+          if (ticked.isEmpty)
+            const FbHint('Tick at least one state, or nobody can start a record over.')
+          else if (_fromState(store.def, ticked).isEmpty)
+            const FbHint('The ticked states aren’t one state and the ones after it, as the lifecycle is now. Keep them if that is what you meant, or choose a state under “From” to tick its states again.'),
         ],
       ]),
       WfSection(title: 'Who can reset', children: [

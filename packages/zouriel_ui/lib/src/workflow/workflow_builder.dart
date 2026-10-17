@@ -247,9 +247,10 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     });
     _reportDirty();
     _validateSoon();
-    if (canEdit) {
+    // Never for viewers, whether me() or the host's readOnly says so.
+    if (canEdit && !controller.readOnly) {
       // Settings are optional for builders (only admins can read them).
-      api.settings().then((s) {
+      Future.sync(api.settings).then((s) {
         if (mounted) controller.settings = s.settings;
       }).catchError((Object _) {});
     }
@@ -303,7 +304,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   /// Saves the draft through the API (creates it the first time).
   Future<void> save() async {
     final api = controller.api;
-    if (api == null || _saving) return;
+    // Someone only looking never saves.
+    if (api == null || _saving || controller.readOnly) return;
     setState(() {
       _saving = true;
       _saveError = '';
@@ -411,6 +413,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
   }
 
   void _askDelete(String kind, String id) {
+    if (controller.readOnly) return;
     final def = controller.def;
     String name;
     final detail = <String>[];
@@ -560,8 +563,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     final mod = keys.isControlPressed || keys.isMetaPressed;
     final k = e.logicalKey;
     if (mod && k == LogicalKeyboardKey.keyS) {
-      // Only where the host turned saving on.
-      if (!widget.persist || controller.api == null) return KeyEventResult.ignored;
+      // Only where the host turned saving on (and this person may edit).
+      if (!widget.persist || controller.api == null || controller.readOnly) return KeyEventResult.ignored;
       save();
       return KeyEventResult.handled;
     }
@@ -574,7 +577,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
       controller.redo();
       return KeyEventResult.handled;
     }
-    if ((k == LogicalKeyboardKey.delete || k == LogicalKeyboardKey.backspace) && controller.selection != null && _view == UiWorkflowBuilderView.build) {
+    if ((k == LogicalKeyboardKey.delete || k == LogicalKeyboardKey.backspace) && controller.selection != null && _view == UiWorkflowBuilderView.build && !controller.readOnly) {
       _requestDeleteSelected();
       return KeyEventResult.handled;
     }

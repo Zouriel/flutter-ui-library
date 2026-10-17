@@ -38,6 +38,18 @@ class _WfStepEditorState extends State<WfStepEditor> {
   /// draft is dropped and the step's own body shows.
   String? _bodyDraftOf;
 
+  /// Leaving the Body box shows valid JSON neatly formatted; invalid text stays as typed to be fixed.
+  late final FocusNode _bodyFocus = FocusNode(debugLabel: 'webhook body')
+    ..addListener(() {
+      if (!_bodyFocus.hasFocus && !_bodyInvalid && _bodyDraft != null && mounted) setState(() => _bodyDraft = null);
+    });
+
+  @override
+  void dispose() {
+    _bodyFocus.dispose();
+    super.dispose();
+  }
+
   static String _bodyKey(UiWfStep step) {
     final w = UiWfWebhookStep.of(step);
     return w.hasBody ? jsonEncode(w.body) : '';
@@ -420,7 +432,13 @@ class _WfStepEditorState extends State<WfStepEditor> {
         final entity = store.entity;
         final relations = [for (final f in entity?.fields ?? const <UiWfFieldDescriptor>[]) if (f.type == 'relation' && f.entity != null) f];
         final target = sf.target;
-        final targetEntity = target == null || target == 'self' ? store.def.entity : fieldOf(reg, store.def.entity, target.split('.').elementAtOrNull(1))?.entity;
+        // The For each this step is inside (innermost), whose current item it can change.
+        final loopItem = forEachItemsAt(store.def, reg, UiWfAt.step(step.id)).lastOrNull;
+        final targetEntity = target == null || target == 'self'
+            ? store.def.entity
+            : target == 'item'
+            ? loopItem?.entity
+            : fieldOf(reg, store.def.entity, target.split('.').elementAtOrNull(1))?.entity;
         final settable = [for (final f in entityOf(reg, targetEntity)?.fields ?? const <UiWfFieldDescriptor>[]) if (f.settable) f];
         final values = sf.values;
         return [
@@ -429,10 +447,24 @@ class _WfStepEditorState extends State<WfStepEditor> {
             WfSelect(
               label: 'Record',
               value: target == null || target == 'self' ? 'self' : target,
-              options: [(value: 'self', label: 'This ${entity?.label.toLowerCase() ?? 'record'}'), for (final r in relations) (value: 'entity.${r.key}', label: r.label)],
-              onChanged: (v) => patch({'target': v == 'self' ? null : v, 'values': <Object?>[]}),
+              options: [
+                (value: 'self', label: 'This ${entity?.label.toLowerCase() ?? 'record'}'),
+                if (loopItem != null)
+                  (value: 'item', label: 'Current ${loopItem.label.toLowerCase()} (each item of the For each)')
+                else if (target == 'item')
+                  (value: 'item', label: 'Current item (needs a For each around this step)'),
+                for (final r in relations) (value: 'entity.${r.key}', label: r.label),
+              ],
+              // Changing which record it changes empties its fields (they belong to the old one).
+              onChanged: (v) {
+                final next = v == 'self' ? null : v;
+                if (next == (target == 'self' ? null : target)) return;
+                patch({'target': next, 'values': <Object?>[]});
+              },
             ),
           ),
+          if (target == 'item' && loopItem == null)
+            const FbWarn(text: 'This step isn’t inside a For each, so there is no current item to change. Move it into one, or choose another record.'),
           for (var i = 0; i < values.length; i++)
             _Assign(
               first: WfSelect(
@@ -548,6 +580,19 @@ class _WfStepEditorState extends State<WfStepEditor> {
           field('Lifecycle', WfSelect(label: 'Lifecycle', placeholder: 'Choose…', value: at.lifecycle, options: lifecycles, onChanged: (v) => patch({'lifecycle': v, 'transition': ''}))),
           field('Transition (key)', UiInput(size: UiSize.sm, value: at.transition, placeholder: 'e.g. approve', semanticLabel: 'Transition (key)', onChanged: (v) => patch({'transition': v}, 'transition'))),
           field(
+            'Remarks (optional)',
+            WfTemplateEditor(
+              tokens: tokens,
+              value: at.comment,
+              multiline: false,
+              label: 'Remarks',
+              placeholder: 'e.g. Approved automatically: score above 80',
+              // An empty template is no template: the key is left out.
+              onChanged: (v) => patch({'comment': v.parts.every((x) => x is String && x.isEmpty) ? null : v.json}, 'comment'),
+            ),
+          ),
+          const FbHint('Recorded with the move in the history; workflows it starts read them as “Remarks”.'),
+          field(
             'If it isn’t possible',
             WfSelect(
               label: 'If it isn’t possible',
@@ -596,6 +641,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
               value: text,
               rows: 5,
               invalid: _bodyInvalid,
+              focusNode: _bodyFocus,
               semanticLabel: 'Body',
               onChanged: (v) {
                 if (v.trim().isEmpty) {

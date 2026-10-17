@@ -117,6 +117,8 @@ class WfDnd extends ChangeNotifier {
   }
 
   void begin(WfDragPayload payload, Offset global) {
+    // Nothing moves for someone only looking: no drag, no ghost, nothing announced.
+    if (store.readOnly) return;
     _payload = payload;
     _global = global;
     HapticFeedback.selectionClick();
@@ -263,7 +265,8 @@ class WfDragSource extends StatelessWidget {
     Drag? onStart(Offset at) {
       if (dnd.payload != null) return null;
       dnd.begin(payload(), at);
-      return _WfDrag(dnd);
+      // Refused (view only): no drag at all.
+      return dnd.payload == null ? null : _WfDrag(dnd);
     }
 
     const mouse = {PointerDeviceKind.mouse, PointerDeviceKind.trackpad};

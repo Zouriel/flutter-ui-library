@@ -215,6 +215,15 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
       final p = edgePath(_pos(layout, e.from), _pos(layout, e.to), e.back, lane);
       edges.add(_DrawnEdge(e.id, tr, p, p.label, tr.auto != null, sel == UiWfSelection.transition(tr.id)));
     }
+    // Moves back to the same state, drawn as loops over the card (several stack).
+    for (final loop in lc == null ? const <({String id, String state})>[] : lifecycleSelfLoops(lc)) {
+      final key = '${loop.state}|self';
+      final lane = lanes[key] ?? 0;
+      lanes[key] = lane + 1;
+      final tr = transitions.firstWhere((x) => loop.id.startsWith('${x.id}:'));
+      final p = selfLoopPath(_pos(layout, loop.state), lane);
+      edges.add(_DrawnEdge(loop.id, tr, p, p.label, tr.auto != null, sel == UiWfSelection.transition(tr.id)));
+    }
     final frame = _frame(layout);
     final cw = frame.width, ch = frame.height;
     final touch = uiTouchPlatform(context);
@@ -236,6 +245,8 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
               onHover: (on) => setState(() => _hovered = on ? s.id : (_hovered == s.id ? null : _hovered)),
               onTap: () => _clickState(store, ui, s),
               onKeyMove: (d) {
+                // Someone only looking can't move cards.
+                if (store.readOnly) return;
                 final p = _place(layout, s.id);
                 store.placeState(s.id, p.dx + d.dx, p.dy + d.dy);
               },
@@ -325,7 +336,7 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
           padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 6),
           decoration: BoxDecoration(color: t.surface, border: Border(top: BorderSide(color: t.borderSubtle))),
           child: Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Text('From any state', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.textSecondary)),
+            Text(anyState.isNotEmpty ? 'From any state' : 'Starting over', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w500, color: t.textSecondary)),
             for (final tr in anyState)
               _AnyChip(
                 label: tr.label,
@@ -337,6 +348,8 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
               _AnyChip(
                 label: reset.label ?? 'Reset workflow',
                 to: stateLabel(reset.to ?? states.where((x) => x.category == 'initial').firstOrNull?.id ?? ''),
+                // Where it is offered, when not everywhere: "from Review", "from 3 states".
+                from: reset.states == null ? null : _resetFrom(reset.states!, stateLabel),
                 selected: sel == UiWfSelection.reset,
                 onTap: () => _select(store, ui, UiWfSelection.reset),
               ),
@@ -346,10 +359,19 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
   }
 }
 
+/// Where a reset is offered, as people read it: "from Review", "from 3 states", "offered in no state".
+String _resetFrom(List<String> states, String Function(String id) label) {
+  if (states.isEmpty) return 'offered in no state';
+  return states.length == 1 ? 'from ${label(states.first)}' : 'from ${states.length} states';
+}
+
 class _AnyChip extends StatelessWidget {
-  const _AnyChip({required this.label, required this.to, required this.selected, required this.onTap});
+  const _AnyChip({required this.label, required this.to, this.from, required this.selected, required this.onTap});
   final String label;
   final String to;
+
+  /// Where a reset is offered ("from Review"), shown after the target.
+  final String? from;
   final bool selected;
   final VoidCallback onTap;
 
@@ -359,7 +381,7 @@ class _AnyChip extends StatelessWidget {
     return UiInteractive(
       onTap: onTap,
       selected: selected,
-      semanticLabel: '$label $wfArrow $to',
+      semanticLabel: from == null ? '$label $wfArrow $to' : '$label, $from, back to $to',
       excludeChildSemantics: true,
       pressScale: false,
       builder: (context, s) => Container(
@@ -374,7 +396,11 @@ class _AnyChip extends StatelessWidget {
           final fg = selected ? t.primaryContrast : t.textSecondary;
           final style = context.uiText.label.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600, color: fg);
           // The arrow is drawn: not every font has the arrow character.
-          return Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [Text(label, style: style), UiIcon(WfIcons.arrowRight02, size: 11, strokeWidth: 2, color: fg), Text(to, style: style)]);
+          return Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [
+            Text(label, style: style),
+            UiIcon(WfIcons.arrowRight02, size: 11, strokeWidth: 2, color: fg),
+            Text(from == null ? to : '$to · $from', style: style),
+          ]);
         }),
       ),
     );
@@ -827,7 +853,8 @@ class WfLifecycleRuns extends StatefulWidget {
     if (st == null) return const [];
     return [
       (value: 'onEnter:${o.id}', label: 'On entering'),
-      if (st.category != 'initial') (value: 'onExit:${o.id}', label: 'On leaving'),
+      // Any state can run steps on leaving (spec §6), the starting state included.
+      (value: 'onExit:${o.id}', label: 'On leaving'),
       if (st.sla != null) (value: 'sla:${o.id}', label: 'When late'),
     ];
   }

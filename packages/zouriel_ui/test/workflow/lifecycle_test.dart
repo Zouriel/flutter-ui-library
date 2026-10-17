@@ -160,10 +160,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Add a step here').first);
     expect(added.last, const WfDropTarget('sla:review', 0));
-    // The starting state has no "On leaving".
+    // Every state can run steps on leaving, the starting state included (spec §6).
     c.selection = const UiWfSelection.state('draft');
     await tester.pumpAndSettle();
-    expect(find.text('On leaving'), findsNothing);
+    expect(find.text('On leaving'), findsOneWidget);
   });
 
   testWidgets('golden: lifecycle diagram', (tester) async {

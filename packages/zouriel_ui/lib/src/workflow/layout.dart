@@ -51,6 +51,25 @@ List<UiWfEdge> lifecycleEdges(UiWfLifecycle lc) {
   return out;
 }
 
+/// Transitions that leave a state and come back to it (e.g. "Ask for more documents" from Review to
+/// Review): the web `lifecycleSelfLoops`. They take no part in the layout; the diagram draws each as
+/// a loop over its card.
+List<({String id, String state})> lifecycleSelfLoops(UiWfLifecycle lc) {
+  final ids = {for (final s in lc.states) s.id};
+  return [
+    for (final t in lc.transitions)
+      if (!t.fromAny && ids.contains(t.to) && t.from.contains(t.to)) (id: '${t.id}:${t.to}', state: t.to),
+  ];
+}
+
+/// A loop over the top of a card ([at] is its top-left corner), and where its label goes (the web
+/// `selfLoopPath`). [lane] stacks several loops on one card.
+UiWfEdgePath selfLoopPath(Offset at, [int lane = 0]) {
+  final x1 = at.dx + wfNodeW * 0.62 + lane * 8, x2 = at.dx + wfNodeW * 0.38 - lane * 8, y = at.dy;
+  final top = y - 30 - lane * 12;
+  return UiWfEdgePath('M ${_n(x1)} ${_n(y)} C ${_n(x1)} ${_n(top)} ${_n(x2)} ${_n(top)} ${_n(x2)} ${_n(y)}', Offset((x1 + x2) / 2, top + 4));
+}
+
 UiWfLayout autoLayout(UiWfLifecycle lc, {bool keepManual = true}) {
   final states = lc.states;
   final index = {for (var i = 0; i < states.length; i++) states[i].id: i};
@@ -201,7 +220,7 @@ UiWfEdgePath edgePath(Offset from, Offset to, bool back, [int lane = 0]) {
   );
 }
 
-/// A [Path] from the absolute `M`, `L`, `H`, `V` and `Q` commands [edgePath] writes.
+/// A [Path] from the absolute `M`, `L`, `H`, `V`, `Q` and `C` commands [edgePath] and [selfLoopPath] write.
 Path svgPathOf(String d) {
   final path = Path();
   final t = d.trim().split(RegExp(r'\s+'));
@@ -230,6 +249,11 @@ Path svgPathOf(String d) {
         x = next();
         y = next();
         path.quadraticBezierTo(cx, cy, x, y);
+      case 'C':
+        final c1x = next(), c1y = next(), c2x = next(), c2y = next();
+        x = next();
+        y = next();
+        path.cubicTo(c1x, c1y, c2x, c2y, x, y);
     }
   }
   return path;

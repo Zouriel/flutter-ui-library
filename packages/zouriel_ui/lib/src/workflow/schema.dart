@@ -393,6 +393,9 @@ extension type const UiWfApplyTransitionStep._(UiJson json) implements UiWfStep 
   String get transition => wfStr(json['transition']);
   Map<String, UiWfOperand>? get input => _operands(json['input']);
 
+  /// Remarks recorded with the move (read as `trigger.comment`); the transition's required check is skipped.
+  UiWfTemplate? get comment => json.containsKey('comment') && json['comment'] != null ? UiWfTemplate.fromJson(json['comment']) : null;
+
   /// `fail` or `skip`.
   String get ifNotAllowed => wfStr(json['ifNotAllowed'], 'fail');
 }
