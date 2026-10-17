@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -218,4 +220,65 @@ void main() {
     final (wideA, wideB) = await navTops(const Size(1100, 844));
     expect(wideB, greaterThan(wideA), reason: 'wide, they are a column beside the form');
   });
+
+  testWidgets('picking a holiday adds it at once, and the picker empties for the next one', (tester) async {
+    final key = await pumpSettings(tester, (k) => UiWorkflowGlobalSettings(key: k, settings: UiWorkflowSettings(), registry: FakeWorkflowApi().registry));
+    expect(find.text('Add holiday'), findsNothing);
+    await tester.tap(find.bySemanticsLabel(RegExp('^Holiday date')));
+    await tester.pumpAndSettle();
+    final now = DateTime.now();
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    await tester.tap(find.bySemanticsLabel('${months[now.month - 1]} 15, ${now.year}'));
+    await tester.pumpAndSettle();
+    final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-15';
+    expect(key.currentState!.value.holidays, [day]);
+    expect(find.text('Add a holiday'), findsOneWidget);
+  });
+
+  testWidgets('a slower answer from the earlier api never replaces the newer one', (tester) async {
+    final slow = _GatedSettings(UiWorkflowSettings.fromJson({'version': 1, 'timeZone': 'Asia/Tokyo'}));
+    final fast = FakeWorkflowApi()..settingsValue = UiWorkflowSettings.fromJson({'version': 1, 'timeZone': 'Europe/Oslo'});
+    final api = ValueNotifier<UiWorkflowApi>(slow);
+    final key = GlobalKey<UiWorkflowGlobalSettingsState>();
+    await pumpUi(tester, SizedBox(width: 900, height: 760, child: ValueListenableBuilder(valueListenable: api, builder: (_, v, _) => UiWorkflowGlobalSettings(key: key, api: v))), size: const Size(900, 760));
+    api.value = fast;
+    await tester.pumpAndSettle();
+    expect(key.currentState!.value.timeZone, 'Europe/Oslo');
+    slow.gate.complete();
+    await tester.pumpAndSettle();
+    expect(key.currentState!.value.timeZone, 'Europe/Oslo');
+  });
+
+  for (final w in [360.0, 320.0]) {
+    testWidgets('fits a ${w.toInt()}px phone inside a page\'s padding, holidays listed, every section', (tester) async {
+      final settings = UiWorkflowSettings.fromJson({'version': 1, 'calendar': {'holidays': ['2026-12-25', '2027-01-01']}});
+      // The showcase page gives it the phone's width less about 100px of padding.
+      await pumpUi(
+        tester,
+        SizedBox(width: w, height: 760, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 49), child: UiWorkflowGlobalSettings(settings: settings, registry: FakeWorkflowApi().registry))),
+        size: Size(w, 760),
+      );
+      expect(tester.takeException(), isNull);
+      for (final section in ['Defaults', 'Webhooks', 'Audit log', 'Watching']) {
+        await tester.ensureVisible(control(section));
+        await tester.pumpAndSettle();
+        await tester.tap(control(section));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: section);
+      }
+    });
+  }
+}
+
+/// Answers settings() only when told to.
+class _GatedSettings extends FakeWorkflowApi {
+  _GatedSettings(UiWorkflowSettings s) {
+    settingsValue = s;
+  }
+  final gate = Completer<void>();
+  @override
+  Future<({UiWorkflowSettings settings, int revision})> settings() async {
+    await gate.future;
+    return super.settings();
+  }
 }

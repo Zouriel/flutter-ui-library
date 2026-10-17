@@ -88,7 +88,6 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
   String _status = '';
   String _newOrigin = '';
   String _originError = '';
-  String? _holiday;
   int _resetKey = 0;
 
   /// The settings as edited (not necessarily saved).
@@ -119,9 +118,13 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
     }
   }
 
+  /// Bumped per load, so a slower answer from an earlier api never replaces a newer one.
+  int _loadSeq = 0;
+
   Future<void> _load() async {
     final api = widget.api;
     if (api == null) return;
+    final n = ++_loadSeq;
     try {
       final st = await api.settings();
       final schema = widget.registry != null ? null : await api.schema();
@@ -131,7 +134,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       } catch (_) {
         triggers = const [];
       }
-      if (!mounted) return;
+      if (!mounted || n != _loadSeq) return;
       setState(() {
         _s = st.settings;
         _saved = jsonEncode(st.settings.json);
@@ -140,7 +143,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         _triggers = triggers;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = e is UiWfApiError ? e.message : 'Could not load the settings.');
+      if (mounted && n == _loadSeq) setState(() => _error = e is UiWfApiError ? e.message : 'Could not load the settings.');
     }
   }
 
@@ -171,10 +174,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
     if (d == null || !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(d)) return;
     final list = {..._s.holidays, d}.toList()..sort();
     _patch({'calendar': {..._calendar, 'holidays': list}});
-    setState(() {
-      _holiday = null;
-      _resetKey++;
-    });
+    setState(() => _resetKey++);
   }
 
   void _removeHoliday(String d) => _patch({'calendar': {..._calendar, 'holidays': _s.holidays.where((x) => x != d).toList()}});
@@ -409,10 +409,14 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         label: 'Holidays',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
           if (_s.holidays.isNotEmpty) _items(_s.holidays, _removeHoliday),
-          Row(spacing: t.space2, children: [
-            SizedBox(width: 200, child: UiDatePicker(key: ValueKey('h$_resetKey'), size: UiSize.sm, label: 'Holiday date', value: _holiday, onChanged: (d) => setState(() => _holiday = d))),
-            FbLink(label: 'Add holiday', onTap: () => _addHoliday(_holiday)),
-          ]),
+          // Picking a date adds it (the web `pickHoliday`); the picker then empties for the next one.
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: UiDatePicker(key: ValueKey('h$_resetKey'), size: UiSize.sm, label: 'Holiday date', placeholder: 'Add a holiday', value: null, onChanged: _addHoliday),
+            ),
+          ),
         ]),
       ),
     ];
