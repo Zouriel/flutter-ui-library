@@ -23,7 +23,18 @@ const List<WfOption> _days = [
   (value: 'fri', label: 'Fri'), (value: 'sat', label: 'Sat'), (value: 'sun', label: 'Sun'),
 ];
 
-const List<String> _auditCategories = ['step', 'instance', 'task', 'lifecycle', 'trigger', 'definition', 'settings'];
+/// Audit categories whose entries can be removed after a while, with names for people.
+const List<WfOption> _auditCategories = [
+  (value: 'step', label: 'Steps'), (value: 'instance', label: 'Runs'), (value: 'task', label: 'Tasks and approvals'),
+  (value: 'lifecycle', label: 'Record moves'), (value: 'trigger', label: 'Triggers'), (value: 'definition', label: 'Workflow changes'),
+  (value: 'settings', label: 'Settings changes'),
+];
+
+/// The settings with a record type paused or resumed.
+UiWorkflowSettings _withPaused(UiWorkflowSettings st, String entity, bool on) {
+  final list = [for (final e in st.paused) if (e != entity) {'entity': e}];
+  return st.patch({'paused': on ? [...list, {'entity': entity}] : (list.isNotEmpty ? list : null)});
+}
 
 const List<WfOption> _sections = [
   (value: 'time', label: 'Time & calendar'), (value: 'defaults', label: 'Defaults'), (value: 'channels', label: 'Channels'),
@@ -148,6 +159,8 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
   }
 
   void _setHours(int i, String v) {
+    // Only whole times are kept.
+    if (!RegExp(r'^\d{2}:\d{2}$').hasMatch(v) || v == _s.hours[i]) return;
     final h = [..._s.hours];
     h[i] = v;
     _patch({'calendar': {..._calendar, 'hours': h}});
@@ -239,10 +252,45 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
 
   bool _isPaused(String entity) => _s.paused.contains(entity);
 
-  void _setPaused(String entity, bool on) {
-    final list = [for (final e in _s.paused) if (e != entity) {'entity': e}];
-    _patch({'paused': on ? [...list, {'entity': entity}] : (list.isNotEmpty ? list : null)});
-    save();
+  /// Pauses or resumes a record type at once. Only that change is saved: it is applied to the last
+  /// saved settings, and any other edits on the page stay unsaved, as they were.
+  Future<void> _setPaused(String entity, bool on) async {
+    if (_busy || _isPaused(entity) == on) return;
+    final toSave = _withPaused(UiWorkflowSettings.fromJson(jsonDecode(_saved)), entity, on);
+    setState(() {
+      _s = _withPaused(_s, entity, on);
+      _error = '';
+    });
+    final api = widget.api;
+    if (api == null) {
+      setState(() {
+        _saved = jsonEncode(toSave.json);
+        _status = on ? 'Paused.' : 'Running again.';
+      });
+      widget.onSettingsChanged?.call(toSave);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final rev = await api.saveSettings(toSave, _revision);
+      if (!mounted) return;
+      setState(() {
+        _revision = rev;
+        _saved = jsonEncode(toSave.json);
+        _status = '${on ? 'Paused.' : 'Running again.'}${dirty ? ' Your other changes are not saved yet.' : ''}';
+      });
+      widget.onSettingsChanged?.call(toSave);
+    } catch (e) {
+      // Put the switch back; the rest of the page keeps its edits.
+      if (mounted) {
+        setState(() {
+          _s = _withPaused(_s, entity, !on);
+          _error = e is UiWfApiError ? e.message : 'Saving failed.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   void _discard() => setState(() {
@@ -253,6 +301,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
 
   /// Saves the settings (through the API, or locally without one).
   Future<void> save() async {
+    if (_busy) return;
     final api = widget.api;
     setState(() => _error = '');
     if (api == null) {
@@ -264,15 +313,17 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       return;
     }
     setState(() => _busy = true);
+    final sent = _s;
     try {
-      final rev = await api.saveSettings(_s, _revision);
+      final rev = await api.saveSettings(sent, _revision);
       if (!mounted) return;
       setState(() {
         _revision = rev;
-        _saved = jsonEncode(_s.json);
+        // What was sent is what's saved; anything changed while it was on its way stays unsaved.
+        _saved = jsonEncode(sent.json);
         _status = 'Saved.';
       });
-      widget.onSettingsChanged?.call(_s);
+      widget.onSettingsChanged?.call(sent);
     } catch (e) {
       if (mounted) setState(() => _error = e is UiWfApiError ? e.message : 'Saving failed.');
     } finally {
@@ -328,7 +379,16 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       const FbHint('Deadlines, reminders and time limits marked “working time” only count these hours.'),
       FbSetting(
         label: 'Time zone',
-        child: WfSelect(label: 'Time zone', value: zone, options: [for (final z in {...uiWfTimeZones, zone}) (value: z, label: z)], onChanged: (z) => _patch({'timeZone': z})),
+        child: WfSelect(
+          label: 'Time zone',
+          value: zone,
+          // UTC first, and a saved zone the list lacks kept as a choice.
+          options: [
+            for (final z in {if (!uiWfTimeZones.contains(zone)) zone, ...uiWfTimeZones})
+              (value: z, label: z == 'UTC' ? 'UTC (Coordinated Universal Time)' : z.replaceAll('_', ' ')),
+          ],
+          onChanged: (z) => _patch({'timeZone': z}),
+        ),
       ),
       FbSetting(label: 'Working days', child: WfChecks(label: 'Working days', options: _days, isChecked: _s.workDays.contains, onChanged: _toggleDay)),
       FbPair(children: [
@@ -514,16 +574,16 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
             SizedBox(
               width: w,
               child: FbSetting(
-                label: c,
+                label: c.label,
                 child: UiNumberInput(
-                  key: ValueKey('r$c$_resetKey'),
+                  key: ValueKey('r${c.value}$_resetKey'),
                   size: UiSize.sm,
-                  value: wfNum(retention[c]),
+                  value: wfNum(retention[c.value]),
                   min: 1,
                   suffix: 'days',
                   placeholder: 'Keep',
-                  semanticLabel: '$c retention',
-                  onChanged: (v) => _setRetention(c, v),
+                  semanticLabel: '${c.label}: days to keep',
+                  onChanged: (v) => _setRetention(c.value, v),
                 ),
               ),
             ),
@@ -554,7 +614,8 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
     };
     return [
       _h2('What is being watched'),
-      const FbHint('Every published workflow and what starts it, by record type. Pause a record type to stop new runs while you sort something out.'),
+      const FbHint('Every published workflow and what starts it, by record type. Pause a record type to stop new runs while you sort something out; pausing saves at once and leaves other unsaved changes as they are.'),
+      if (_error.isNotEmpty) WfNote(_error) else if (_status.isNotEmpty) Semantics(liveRegion: true, child: FbHint(_status)),
       if (groups.isEmpty) const FbHint('Nothing is published yet.'),
       for (final MapEntry(key: entity, value: triggers) in groups.entries)
         () {
@@ -569,7 +630,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           return _card([
             Row(children: [
               Expanded(child: Text(label, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text))),
-              FbSwitch(value: _isPaused(entity), label: 'Paused', onChanged: (on) => _setPaused(entity, on)),
+              FbSwitch(value: _isPaused(entity), label: 'Paused', onChanged: _busy ? null : (on) => _setPaused(entity, on)),
             ]),
             for (final tr in triggers)
               Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
