@@ -2,7 +2,7 @@
 
 The Flutter port of `@zouriel/ui/workflow` (see `projects/ui/workflow/README.md` in the Angular
 repo): a builder where admins design workflows without code, and the widgets that run them in
-your app: a workflow panel, a task inbox and My tasks drawer, a run view, an audit log, a
+your app: a workflow panel, a My tasks drawer, a run view, an audit log, a
 permissions page and a settings screen. Workflows
 are JSON in the Zouriel Workflows format, run by an engine on your server (the .NET engine first;
 Laravel and Go engines follow the same spec and REST API).
@@ -13,8 +13,7 @@ Code: `packages/zouriel_ui/lib/src/workflow/` (and `lib/src/canvas/viewport.dart
 ```dart
 UiWorkflowBuilder          // where admins design workflows
 UiWorkflowPanel            // a record's workflow: a stepper, a compact card or an edge drawer
-UiWorkflowTasks            // the signed-in person's approvals and tasks
-UiWorkflowTasksDrawer      // a "My tasks" button with a count, opening the inbox in a drawer
+UiWorkflowTasksDrawer      // a "My tasks" button with a count, where people decide their tasks
 UiWorkflowRun              // one run over its workflow, with retry/skip/cancel
 UiWorkflowAudit            // the tamper-evident log: filter, export, verify
 UiWorkflowGlobalSettings   // working hours, channels, webhooks, retention
@@ -172,7 +171,8 @@ Draft), the applicant only their own moves, finance only the sign-off.
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, onChanged: (_) => reloadApp())
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.compact, title: '')
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)
-UiWorkflowTasks(api: api, onDecided: (_) => refresh())
+UiWorkflowTasksDrawer(api: api, onDecided: (_) => refresh())
+UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks') // everyone's, for admins
 UiWorkflowRun(api: api, instanceId: runId, canIntervene: isAdmin)
 UiWorkflowAudit(api: api, entity: 'application', entityId: app.id, onExport: (bytes, format) => save(bytes))
 UiWorkflowGlobalSettings(api: api)
@@ -200,6 +200,10 @@ drawer's rail keeps one dot (named by the title) so it can still open.
 `UiWorkflowPanel(layout: UiWorkflowPanelLayout.compact)`, which shows what it did: the badge, the
 strip of states, the moves, tasks and manual workflows, and the history (`title: ''` hides the
 panel's heading). Its `onChanged` is the same; its `reload()` is on `UiWorkflowPanelState`.
+
+**Breaking (0.27.0):** `UiWorkflowTasks` is removed from the public API: the tasks drawer is where
+people work through their tasks. Use `UiWorkflowTasksDrawer` (with `scope: 'all'` for everyone's
+tasks); the list inside it is the internal `WfTaskInbox`.
 
 ## Working with definitions in code
 
@@ -243,9 +247,11 @@ survive a round trip, and every helper returns a new definition, keeping untouch
 
 ## My tasks drawer (UiWorkflowTasksDrawer)
 
-A "My tasks" button for an app's header. It shows how many tasks are open for the signed-in person
-(`api.tasks(UiWfTaskQuery(scope: 'mine', status: ['open'], take: 100))`) and opens the task inbox
-(`UiWorkflowTasks`) in a `UiDrawer` titled with the button's label.
+Where people work through their approvals and tasks: a "My tasks" button for an app's header. It
+shows how many tasks are open (`api.tasks(UiWfTaskQuery(scope: scope, status: ['open'], take: 100))`)
+and opens them in a `UiDrawer` titled with the button's label: due first and overdue marked, open or
+finished, each opening its decision. `scope` is `'mine'` (the signed-in person's) or `'all'`
+(everyone's, for admins; give it a label such as "All tasks"); the count follows it.
 
 - The badge is primary, danger when any open task is overdue, absent at 0, and reads `99+` above 99.
 - Screen readers hear the label and the count: "My tasks, 3 open, 1 overdue" or "My tasks, none open".
@@ -291,7 +297,7 @@ drawer.currentState!.show();     // also hide() and refresh(); isOpen, count, ov
 | `onDecided` | `ValueChanged<UiWfTask>?` | | After a task was decided in the drawer. |
 
 There is no read-only mode: the inbox shows only the person's own tasks, and a task they may not
-decide (`canDecide` false) is listed without "Your turn" and can't be opened, as in `UiWorkflowTasks`.
+decide (`canDecide` false) is listed without "Your turn" and can't be opened, as in the tasks drawer.
 
 ## Permissions (UiWorkflowPermissions)
 

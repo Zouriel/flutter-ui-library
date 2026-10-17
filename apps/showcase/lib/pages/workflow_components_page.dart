@@ -31,7 +31,7 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   int _rev = 0;
 
   final Map<String, GlobalKey> _anchors = {
-    for (final a in ['panel', 'tasks-drawer', 'tasks', 'run', 'audit', 'state-badge', 'permissions', 'global-settings', 'settings-page']) a: GlobalKey(),
+    for (final a in ['panel', 'tasks-drawer', 'run', 'audit', 'state-badge', 'permissions', 'global-settings', 'settings-page']) a: GlobalKey(),
   };
 
   @override
@@ -71,8 +71,8 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
     return DocPage(
       eyebrow: 'Flagship',
       title: 'Workflow components',
-      lead: 'Everything an app puts on its own pages once workflows run: a record\'s workflow on the record\'s page, a task button in the '
-          'header, an inbox, run and audit views for admins, and the pieces of a workflow settings page. Each one talks to the engine '
+      lead: 'Everything an app puts on its own pages once workflows run: a record\'s workflow on the record\'s page, a tasks drawer in the '
+          'header, run and audit views for admins, and the pieces of a workflow settings page. Each one talks to the engine '
           'through the workflow API, and each person only sees what they may do.',
       children: [
         _Where(onJump: _jump, onBuilder: () => ShowcaseNav.maybeOf(context)?.go('workflow-builder')),
@@ -186,8 +186,9 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
           key: _anchors['tasks-drawer'],
           name: 'My tasks drawer',
           widget: 'UiWorkflowTasksDrawer',
-          summary: 'A button for the app\'s header with the number of open approvals and tasks (red when one is overdue) that opens the task '
-              'inbox in a drawer. Use it so people can act from any page; open it from code too, for a link in a message or a shortcut.',
+          summary: 'Where people work through their approvals and tasks: a button for the app\'s header with the number open (red when one '
+              'is overdue) that opens them in a drawer, open or finished, each opening its decision with its form. People act from any page; '
+              'open it from code too, for a link in a message or a shortcut. With scope \'all\' it lists everyone\'s tasks, for admins.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             Container(
               padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space2),
@@ -205,7 +206,10 @@ UiWorkflowTasksDrawer(api: api, onDecided: (_) => reload())
 
 // your own button, or a link in a message
 UiWorkflowTasksDrawer(api: api, showButton: false, label: 'Approvals',
-    open: tasksOpen, onOpenChanged: (v) => setState(() => tasksOpen = v))''',
+    open: tasksOpen, onOpenChanged: (v) => setState(() => tasksOpen = v))
+
+// everyone's tasks, for admins
+UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks', pageSize: 50)''',
           api: const [
             ApiRow('api', 'UiWorkflowApi?', 'The engine API.'),
             ApiRow('open', 'bool?', 'Whether the drawer is open, when you control it; with onOpenChanged it is the web [(open)].'),
@@ -215,31 +219,13 @@ UiWorkflowTasksDrawer(api: api, showButton: false, label: 'Approvals',
             ApiRow('showButton', 'bool', 'Show the built-in button; off when the app opens the drawer from its own control.', def: 'true'),
             ApiRow('refreshSeconds', 'int', 'How often the count refreshes while the app is in the foreground; 0 only on open, close and decisions.', def: '60'),
             ApiRow('pageSize', 'int', 'Tasks per page in the drawer.', def: '25'),
+            ApiRow('scope', 'String', "The signed-in person's tasks ('mine'), or everyone's ('all', for admins; give it a label such as 'All tasks'). The count follows it.", def: "'mine'"),
           ],
           callbacks: const [
             ApiRow('onOpenChanged', 'ValueChanged<bool>', 'When the drawer opens or closes.'),
             ApiRow('onDecided', 'ValueChanged<UiWfTask>', 'After a task was decided in the drawer.'),
             ApiRow('show() · hide() · refresh()', 'state', 'Through a GlobalKey<UiWorkflowTasksDrawerState>.'),
           ],
-        ),
-        DocSection(
-          key: _anchors['tasks'],
-          name: 'Task inbox',
-          widget: 'UiWorkflowTasks',
-          summary: 'The signed-in person\'s approvals and tasks, due first and overdue marked, each opening its decision with its form. Use it '
-              'as an app\'s inbox page (the tasks drawer shows the same list in a drawer).',
-          demo: frame(UiWorkflowTasks(key: _k('tasks'), api: _api, onDecided: (_) => _changed()), maxWidth: 560),
-          code: '''// an inbox page
-UiWorkflowTasks(api: api, onDecided: (_) => reload())
-
-// everyone's tasks, for admins
-UiWorkflowTasks(api: api, scope: 'all', pageSize: 50)''',
-          api: const [
-            ApiRow('api', 'UiWorkflowApi?', 'The engine API.'),
-            ApiRow('scope', 'String', "'mine' (the signed-in person's) or 'all' (needs admin rights).", def: "'mine'"),
-            ApiRow('pageSize', 'int', 'Tasks per page; Show more loads the next page.', def: '25'),
-          ],
-          callbacks: const [ApiRow('onDecided', 'ValueChanged<UiWfTask>', 'After a decision, so the host can refresh related views.')],
         ),
         DocSection(
           key: _anchors['run'],
@@ -288,7 +274,7 @@ UiWorkflowAudit(api: api, instanceId: runId)''',
           name: 'State badge',
           widget: 'UiWorkflowStateBadge',
           summary: 'A record\'s state as a small coloured chip, in the tone its lifecycle gives it. Use it in tables and cards wherever a '
-              'record\'s state is listed; the panels use it themselves.',
+              'record\'s state is listed; the workflow panel uses it too.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Wrap(spacing: t.space2, runSpacing: t.space2, children: const [
               UiWorkflowStateBadge(label: 'Draft', tone: 'neutral'),
@@ -441,8 +427,7 @@ class _Where extends StatelessWidget {
         Semantics(header: true, child: UiText('Which component goes where', variant: UiTextVariant.h4)),
         Wrap(spacing: t.space4, runSpacing: t.space3, children: [
           row('A record\'s page', [link('Workflow panel', 'panel')]),
-          row('The app\'s header', [link('My tasks drawer', 'tasks-drawer')]),
-          row('An inbox page', [link('Task inbox', 'tasks')]),
+          row('Approvals and tasks', [link('My tasks drawer', 'tasks-drawer')]),
           row('Admin pages', [link('Run', 'run'), link('Audit log', 'audit')]),
           row('A settings page', [link('Permissions', 'permissions'), link('Global settings', 'global-settings'), link('Put together', 'settings-page')]),
           row('The builder page', [UiButton(label: 'Workflow builder', size: UiSize.sm, variant: UiButtonVariant.link, onPressed: onBuilder)]),

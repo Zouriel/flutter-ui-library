@@ -32,7 +32,7 @@ void main() {
     expect(find.textContaining('Start over shows to the head of office once an application has moved on from Draft.'), findsOneWidget);
     final sections = [for (final s in tester.widgetList<DocSection>(find.byType(DocSection))) s.name];
     expect(sections, [
-      'Workflow panel', 'My tasks drawer', 'Task inbox', 'Run', 'Audit log', 'State badge', 'Permissions', 'Global settings',
+      'Workflow panel', 'My tasks drawer', 'Run', 'Audit log', 'State badge', 'Permissions', 'Global settings',
       'Putting a settings page together',
     ]);
     // The head of office may start this application over.

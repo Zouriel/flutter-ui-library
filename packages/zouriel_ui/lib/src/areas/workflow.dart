@@ -7,7 +7,8 @@ export '../workflow/api.dart';
 export '../workflow/clock.dart';
 export '../workflow/definition.dart';
 export '../workflow/global_settings.dart';
-export '../workflow/runtime.dart';
+// The task inbox is internal: apps use UiWorkflowTasksDrawer.
+export '../workflow/runtime.dart' hide WfTaskInbox, WfTaskInboxState;
 export '../workflow/panel.dart';
 export '../workflow/permissions.dart';
 export '../workflow/history.dart' show wfDescribeHistory, wfOutcomeLabel, wfAuditActionLabel, wfActorLabel, wfStepTimedOut, wfCommentRequired, wfRemarksLabel, wfRemarksFor;

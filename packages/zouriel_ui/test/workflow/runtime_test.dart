@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfTaskInbox;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -149,10 +150,10 @@ void main() {
     });
   });
 
-  group('UiWorkflowTasks', () {
+  group('WfTaskInbox (the drawer\'s list)', () {
     testWidgets('lists open tasks, overdue marked; Done shows finished ones', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowTasks(api: api, pageSize: 2));
+      await pumpPage(tester, WfTaskInbox(api: api, pageSize: 2));
       expect(find.text('Task 1'), findsOneWidget);
       expect(find.text('Task 2'), findsOneWidget);
       expect(find.text('Task 3'), findsNothing);
@@ -171,7 +172,7 @@ void main() {
     testWidgets('deciding from the inbox reports the decision', (tester) async {
       final api = FakeWorkflowApi();
       UiWfTask? decided;
-      await pumpPage(tester, UiWorkflowTasks(api: api, onDecided: (t) => decided = t));
+      await pumpPage(tester, WfTaskInbox(api: api, onDecided: (t) => decided = t));
       await tester.tap(find.text('Task 1'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(EditableText).first, 'Missing transcript');
@@ -185,7 +186,7 @@ void main() {
 
     testWidgets('rejecting without the remarks it requires sends nothing and says why', (tester) async {
       final api = FakeWorkflowApi();
-      await pumpPage(tester, UiWorkflowTasks(api: api));
+      await pumpPage(tester, WfTaskInbox(api: api));
       await tester.tap(find.text('Task 1'));
       await tester.pumpAndSettle();
       expect(find.text('Remarks (required to reject)'), findsOneWidget);

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfTaskInbox;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -82,6 +83,16 @@ void main() {
     expect(find.bySemanticsLabel('Approvals, 140 open'), findsOneWidget);
   });
 
+  testWidgets('with scope "all" counts and lists everyone\'s tasks (an admin\'s drawer)', (tester) async {
+    final api = _TasksApi([_task('a')]);
+    await _pump(tester, UiWorkflowTasksDrawer(api: api, refreshSeconds: 0, scope: 'all', label: 'All tasks'));
+    await tester.tap(find.byType(UiButton));
+    await tester.pumpAndSettle();
+    expect(api.queries.length, greaterThan(1));
+    expect({for (final q in api.queries) q.scope}, {'all'});
+    expect(find.descendant(of: find.byType(UiDrawer), matching: find.text('All tasks')), findsOneWidget);
+  });
+
   testWidgets('opens from its button, counts again on open and close, and reports both', (tester) async {
     final api = _TasksApi([_task('a')]);
     final changes = <bool>[];
@@ -90,14 +101,14 @@ void main() {
     final before = counts();
     await tester.tap(find.byType(UiButton));
     await tester.pumpAndSettle();
-    expect(find.byType(UiWorkflowTasks), findsOneWidget);
+    expect(find.byType(WfTaskInbox), findsOneWidget);
     expect(find.text('Task a'), findsOneWidget);
     expect(find.descendant(of: find.byType(UiDrawer), matching: find.text('My tasks')), findsOneWidget); // the drawer's title
     expect(counts(), before + 1);
     expect(changes, [true]);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
-    expect(find.byType(UiWorkflowTasks), findsNothing);
+    expect(find.byType(WfTaskInbox), findsNothing);
     expect(changes, [true, false]);
     expect(counts(), before + 2);
   });
@@ -116,10 +127,10 @@ void main() {
     expect(find.byType(UiButton), findsNothing);
     set(() => open = true);
     await tester.pumpAndSettle();
-    expect(find.byType(UiWorkflowTasks), findsOneWidget);
+    expect(find.byType(WfTaskInbox), findsOneWidget);
     set(() => open = false);
     await tester.pumpAndSettle();
-    expect(find.byType(UiWorkflowTasks), findsNothing);
+    expect(find.byType(WfTaskInbox), findsNothing);
     expect(open, isFalse);
   });
 
@@ -129,7 +140,7 @@ void main() {
     key.currentState!.show();
     await tester.pumpAndSettle();
     expect(key.currentState!.isOpen, isTrue);
-    expect(find.byType(UiWorkflowTasks), findsOneWidget);
+    expect(find.byType(WfTaskInbox), findsOneWidget);
     key.currentState!.hide();
     await tester.pumpAndSettle();
     expect(key.currentState!.isOpen, isFalse);
@@ -242,12 +253,12 @@ void main() {
     key.currentState!.show();
     await tester.pumpAndSettle();
     // Something else opens over the drawer (a decision, a confirmation).
-    final nav = Navigator.of(tester.element(find.byType(UiWorkflowTasks)));
+    final nav = Navigator.of(tester.element(find.byType(WfTaskInbox)));
     nav.push(PageRouteBuilder<void>(opaque: false, pageBuilder: (context, a, b) => const Center(child: Text('On top'))));
     await tester.pumpAndSettle();
     key.currentState!.hide();
     await tester.pumpAndSettle();
-    expect(find.byType(UiWorkflowTasks), findsNothing);
+    expect(find.byType(WfTaskInbox), findsNothing);
     expect(find.text('On top'), findsOneWidget, reason: 'only the drawer goes');
     expect(key.currentState!.isOpen, isFalse);
   });

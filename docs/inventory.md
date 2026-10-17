@@ -1517,9 +1517,9 @@ File: `workflow/src/runtime.ts`
 A record's moves, manual workflows and tasks with their dialogs, used by the workflow panel.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
-### UiWorkflowTasks (component, `ui-workflow-tasks`)
+### WfTaskInbox (component, `ui-wf-task-inbox`)
 File: `workflow/src/runtime.ts`  
-The signed-in person's approvals and tasks, with the decide dialog.  
+The approvals and tasks inside the tasks drawer, with the decide dialog (internal; was the public `UiWorkflowTasks` before 0.27.0).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiWorkflowRun (component, `ui-workflow-run`)

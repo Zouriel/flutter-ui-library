@@ -754,9 +754,10 @@ class _WfRecordActionsState extends State<WfRecordActions> {
 
 // ── Task inbox ──────────────────────────────────────────────────────────────────────────────
 
-/// `ui-workflow-tasks`: the signed-in person's approvals and tasks: due first, overdue marked.
-class UiWorkflowTasks extends StatefulWidget {
-  const UiWorkflowTasks({super.key, required this.api, this.scope = 'mine', this.pageSize = 25, this.onDecided});
+/// The task inbox inside [UiWorkflowTasksDrawer]: approvals and tasks, due first, overdue marked,
+/// open or finished, each opening its decision. Internal: apps use the drawer.
+class WfTaskInbox extends StatefulWidget {
+  const WfTaskInbox({super.key, required this.api, this.scope = 'mine', this.pageSize = 25, this.onDecided});
   final UiWorkflowApi? api;
 
   /// `mine` (the signed-in person's) or `all` (needs admin rights).
@@ -767,10 +768,10 @@ class UiWorkflowTasks extends StatefulWidget {
   final ValueChanged<UiWfTask>? onDecided;
 
   @override
-  State<UiWorkflowTasks> createState() => UiWorkflowTasksState();
+  State<WfTaskInbox> createState() => WfTaskInboxState();
 }
 
-class UiWorkflowTasksState extends State<UiWorkflowTasks> {
+class WfTaskInboxState extends State<WfTaskInbox> {
   String _status = 'open';
   List<UiWfTask> _tasks = const [];
   int _total = 0;
@@ -785,7 +786,7 @@ class UiWorkflowTasksState extends State<UiWorkflowTasks> {
   }
 
   @override
-  void didUpdateWidget(UiWorkflowTasks oldWidget) {
+  void didUpdateWidget(WfTaskInbox oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
     if (old.api != widget.api || old.scope != widget.scope || old.pageSize != widget.pageSize) {

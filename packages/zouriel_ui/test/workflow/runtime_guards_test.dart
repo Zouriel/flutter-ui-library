@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/src/workflow/history.dart';
+import 'package:zouriel_ui/src/workflow/runtime.dart' show WfTaskInbox, WfTaskInboxState;
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -59,8 +60,8 @@ void main() {
 
   testWidgets('a slower older task list never replaces a newer one', (tester) async {
     final api = _SlowTasks();
-    final key = GlobalKey<UiWorkflowTasksState>();
-    await pumpPage(tester, UiWorkflowTasks(key: key, api: api));
+    final key = GlobalKey<WfTaskInboxState>();
+    await pumpPage(tester, WfTaskInbox(key: key, api: api));
     key.currentState!.reload();
     await tester.pump();
     expect(api.pending, hasLength(2));
@@ -75,7 +76,7 @@ void main() {
 
   testWidgets('a double tap on a decision sends it once', (tester) async {
     final api = _SlowDecide();
-    await pumpPage(tester, UiWorkflowTasks(api: api));
+    await pumpPage(tester, WfTaskInbox(api: api));
     await tester.tap(find.text('Task 1'));
     await tester.pumpAndSettle();
     final approve = button('Approve').last;
@@ -89,7 +90,7 @@ void main() {
 
   testWidgets('handing a task over picks a person from the directory', (tester) async {
     final api = FakeWorkflowApi();
-    await pumpPage(tester, UiWorkflowTasks(api: api));
+    await pumpPage(tester, WfTaskInbox(api: api));
     await tester.tap(find.text('Task 1'));
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsLabel('Hand it to someone else'));

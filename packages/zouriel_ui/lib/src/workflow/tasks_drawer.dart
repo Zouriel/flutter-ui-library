@@ -11,8 +11,10 @@ import 'api.dart';
 import 'icons.dart';
 import 'runtime.dart';
 
-/// `ui-workflow-tasks-drawer`: a "My tasks" button with the number of open tasks (red when any is
-/// overdue) that opens the task inbox ([UiWorkflowTasks]) in a drawer. Put it in an app's header.
+/// `ui-workflow-tasks-drawer`: where people work through their approvals and tasks: a "My tasks"
+/// button with the number of open tasks (red when any is overdue) that opens them in a drawer, open
+/// or finished, each opening its decision. Put it in an app's header; with [scope] `all` admins see
+/// everyone's.
 ///
 /// Open it from code with [open] (and follow it with [onOpenChanged], the web `[(open)]`), or call
 /// [UiWorkflowTasksDrawerState.show] through a `GlobalKey`. With [showButton] false only the drawer
@@ -21,6 +23,7 @@ import 'runtime.dart';
 /// ```dart
 /// UiWorkflowTasksDrawer(api: api)
 /// UiWorkflowTasksDrawer(api: api, open: tasksOpen, onOpenChanged: (v) => setState(() => tasksOpen = v), label: 'Approvals')
+/// UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks')
 /// ```
 class UiWorkflowTasksDrawer extends StatefulWidget {
   const UiWorkflowTasksDrawer({
@@ -35,6 +38,7 @@ class UiWorkflowTasksDrawer extends StatefulWidget {
     this.showButton = true,
     this.refreshSeconds = 60,
     this.pageSize = 25,
+    this.scope = 'mine',
     this.onDecided,
   });
 
@@ -58,6 +62,10 @@ class UiWorkflowTasksDrawer extends StatefulWidget {
   /// How often to refresh the count, in seconds (0: only on start, open, close and decisions).
   final int refreshSeconds;
   final int pageSize;
+
+  /// Whose tasks: the signed-in person's (`mine`), or everyone's (`all`, for admins who oversee the
+  /// work; give it a [label] such as "All tasks"). The count follows it.
+  final String scope;
 
   /// After a task was decided in the drawer.
   final ValueChanged<UiWfTask>? onDecided;
@@ -115,7 +123,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   void didUpdateWidget(UiWorkflowTasksDrawer oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
-    if (old.api != widget.api) refresh();
+    if (old.api != widget.api || old.scope != widget.scope) refresh();
     if (old.refreshSeconds != widget.refreshSeconds) _startTimer();
     if (old.open != widget.open) {
       if (widget.open == true && !_shown) WidgetsBinding.instance.addPostFrameCallback((_) => show());
@@ -158,7 +166,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     if (api == null) return;
     final n = ++_seq;
     try {
-      final page = await api.tasks(const UiWfTaskQuery(scope: 'mine', status: ['open'], take: _countTake));
+      final page = await api.tasks(UiWfTaskQuery(scope: widget.scope, status: const ['open'], take: _countTake));
       if (!mounted || n != _seq) return;
       setState(() {
         _count = page.total;
@@ -182,8 +190,9 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
       title: widget.label,
       builder: (ctx) {
         _drawerRoute = ModalRoute.of(ctx);
-        return UiWorkflowTasks(
+        return WfTaskInbox(
           api: widget.api,
+          scope: widget.scope,
           pageSize: widget.pageSize,
           onDecided: (t) {
             widget.onDecided?.call(t);
