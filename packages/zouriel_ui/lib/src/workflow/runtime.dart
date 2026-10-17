@@ -625,12 +625,14 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     final r = widget.record;
     final tasks = widget.showTasks ? r.tasks : const <UiWfTask>[];
     final nothing = r.transitions.isEmpty && r.manual.isEmpty && tasks.isEmpty;
+    // Small buttons with a mouse; the regular size on touch screens, where small ones look cramped.
+    final size = uiTouchPlatform(context) ? UiSize.md : UiSize.sm;
     if (nothing && widget.emptyText.isEmpty && _error.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
       if (r.transitions.isNotEmpty || r.manual.isNotEmpty)
         Wrap(spacing: t.space2, runSpacing: t.space2, children: [
-          for (final tr in r.transitions) UiButton(label: tr.label, size: UiSize.sm, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr)),
-          for (final m in r.manual) UiButton(label: m.label, size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m)),
+          for (final tr in r.transitions) UiButton(label: tr.label, size: size, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr)),
+          for (final m in r.manual) UiButton(label: m.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m)),
         ]),
       if (tasks.isNotEmpty)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
