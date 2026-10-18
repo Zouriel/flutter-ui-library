@@ -83,7 +83,8 @@ class UiCalendarViewState extends State<UiCalendarView> {
     FocusManager.instance.addHighlightModeListener(_onHighlight);
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) focusDay(widget.value ?? uiIsoDate(uiToday()));
+        // An empty or malformed value is no date, so focus goes to today rather than nowhere.
+        if (mounted) focusDay(uiParseIsoDate(widget.value) != null ? widget.value! : uiIsoDate(uiToday()));
       });
     }
   }

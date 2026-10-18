@@ -106,7 +106,8 @@ class _UiDatePickerState extends State<UiDatePicker> {
     final t = theme.tokens;
     final h = widget.size.height(t);
     final style = uiFieldTextStyle(context, widget.size);
-    final shown = widget.value == null ? null : uiFormatIsoDate(context, widget.value!);
+    // An empty or malformed value is no date: the placeholder shows, as for null.
+    final shown = uiParseIsoDate(widget.value) == null ? null : uiFormatIsoDate(context, widget.value!);
     final name = widget.label ?? UiFieldScope.maybeOf(context)?.label;
 
     final field = UiInteractive(

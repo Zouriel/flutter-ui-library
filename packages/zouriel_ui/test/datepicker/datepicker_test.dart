@@ -221,6 +221,18 @@ void main() {
       FocusManager.instance.highlightStrategy = FocusHighlightStrategy.automatic;
     });
 
+    testWidgets('an empty value is no date: the placeholder shows and the calendar opens on today', (tester) async {
+      FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+      await pumpUi(tester, SizedBox(width: 300, child: UiDatePicker(label: 'Due', value: '', onChanged: (_) {})));
+      expect(find.text('Select a date'), findsOneWidget);
+      await _key(tester, LogicalKeyboardKey.tab);
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(find.text('October'), findsOneWidget);
+      expect(_ringDay(tester), '13');
+      FocusManager.instance.highlightStrategy = FocusHighlightStrategy.automatic;
+    });
+
     testWidgets('Tab stays inside the popover', (tester) async {
       await pumpUi(tester, Column(children: [
         SizedBox(width: 300, child: UiDatePicker(label: 'Due', onChanged: (_) {})),
