@@ -17,6 +17,30 @@ void main() {
     expect(uiThemeTokens.length, 13);
   });
 
+  // Glass panels (drawers, menus, popovers) show the page through them, and a drawer's page is also
+  // dimmed by the overlay; thin glass on a light theme went muddy grey and its text was hard to read.
+  test('text stays readable on glass in every light theme, over the page and over a dimmed page', () {
+    Color over(Color a, Color b) => Color.alphaBlend(a, b);
+    double ratio(Color fg, Color bg) {
+      final x = over(fg, bg).computeLuminance(), y = bg.computeLuminance();
+      return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+    }
+
+    final fails = <String>[];
+    for (final name in UiThemeName.values) {
+      final t = uiThemeTokens[name]!;
+      if (t.bg.computeLuminance() < 0.5) continue;
+      for (final (where, ground) in [('page', t.bg), ('dimmed page', over(t.overlay, t.bg))]) {
+        final panel = over(t.glassBg, ground);
+        for (final (fg, label, need) in [(t.text, 'text', 7.0), (t.textMuted, 'textMuted', 4.5)]) {
+          final r = ratio(fg, panel);
+          if (r < need) fails.add('${name.name}: $label on glass over the $where is ${r.toStringAsFixed(2)}:1');
+        }
+      }
+    }
+    expect(fails, isEmpty);
+  });
+
   test('brightness follows the background', () {
     expect(UiThemeData(name: UiThemeName.dark).brightness, Brightness.dark);
     expect(UiThemeData(name: UiThemeName.lightPink).brightness, Brightness.light);
