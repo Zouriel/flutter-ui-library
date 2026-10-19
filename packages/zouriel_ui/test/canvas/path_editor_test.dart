@@ -72,6 +72,29 @@ Future<void> _tap(WidgetTester tester, Offset at, {PointerDeviceKind kind = Poin
 final _square = UiPathItem(id: 'sq', contours: [rectContour(20, 20, 40, 40)]);
 
 void main() {
+  testWidgets('a plain wheel scrolls the page; Ctrl + wheel zooms the editor instead', (tester) async {
+    final scroll = ScrollController();
+    await pumpUi(
+      tester,
+      SingleChildScrollView(
+        controller: scroll,
+        child: Column(children: [const _Host(mode: UiPathEditorMode.objects), const SizedBox(height: 2000)]),
+      ),
+      size: const Size(800, 600),
+    );
+    final at = tester.getCenter(find.byType(UiPathEditor));
+    tester.binding.handlePointerEvent(PointerScrollEvent(position: at, scrollDelta: const Offset(0, 100)));
+    await tester.pump();
+    expect(scroll.offset, greaterThan(0));
+    scroll.jumpTo(0);
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    tester.binding.handlePointerEvent(PointerScrollEvent(position: tester.getCenter(find.byType(UiPathEditor)), scrollDelta: const Offset(0, 100)));
+    await tester.pump();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    expect(scroll.offset, 0);
+  });
+
   group('pen', () {
     testWidgets('taps place corners; tapping the first point closes the shape into a new item', (tester) async {
       await pumpUi(tester, const _Host(mode: UiPathEditorMode.pen), size: const Size(800, 600));

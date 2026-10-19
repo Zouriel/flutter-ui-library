@@ -382,32 +382,40 @@ class _UiAudioPlayerState extends State<UiAudioPlayer> with _PlayerHost<UiAudioP
     final v = player.value;
     final ready = v.isInitialized && !hasError;
     final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),
-      decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(context.uiTheme.radius())),
-      child: LayoutBuilder(builder: (context, box) {
-        return Row(spacing: t.space2, children: [
-          UiIconButton(
-            icon: UiIcon(v.isPlaying ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay),
-            label: v.isPlaying ? 'Pause' : 'Play',
-            round: true,
-            variant: UiButtonVariant.primary,
-            onPressed: ready ? togglePlay : null,
-          ),
-          if (widget.title != null)
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: box.maxWidth * 0.3),
-              child: Text(widget.title!, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.caption.copyWith(color: t.text)),
+    return LayoutBuilder(builder: (context, outer) {
+      // Narrow: the title gets its own line above the controls, so neither it nor the seek bar is squeezed.
+      final narrow = outer.maxWidth < 420;
+      final title = widget.title == null
+          ? null
+          : Text(widget.title!, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.caption.copyWith(color: t.text));
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: narrow ? t.space2 : t.space1),
+        decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(context.uiTheme.radius())),
+        child: LayoutBuilder(builder: (context, box) {
+          final controls = Row(spacing: t.space2, children: [
+            UiIconButton(
+              icon: UiIcon(v.isPlaying ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay),
+              label: v.isPlaying ? 'Pause' : 'Play',
+              round: true,
+              variant: UiButtonVariant.primary,
+              onPressed: ready ? togglePlay : null,
             ),
-          if (hasError)
-            Expanded(child: Text(errorText, style: context.uiText.caption.copyWith(color: t.danger)))
-          else ...[
-            Text(uiFormatMediaTime(v.position), style: time),
-            Expanded(child: UiSeekBar(position: v.position, duration: v.duration, buffered: buffered, onSeek: player.seekTo)),
-            Text(uiFormatMediaTime(v.duration), style: time),
-          ],
-        ]);
-      }),
-    );
+            if (title != null && !narrow) ConstrainedBox(constraints: BoxConstraints(maxWidth: box.maxWidth * 0.3), child: title),
+            if (hasError)
+              Expanded(child: Text(errorText, style: context.uiText.caption.copyWith(color: t.danger)))
+            else ...[
+              Text(uiFormatMediaTime(v.position), style: time),
+              Expanded(child: UiSeekBar(position: v.position, duration: v.duration, buffered: buffered, onSeek: player.seekTo)),
+              Text(uiFormatMediaTime(v.duration), style: time),
+            ],
+          ]);
+          if (title == null || !narrow) return controls;
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
+            Padding(padding: EdgeInsets.symmetric(horizontal: t.space1), child: title),
+            controls,
+          ]);
+        }),
+      );
+    });
   }
 }

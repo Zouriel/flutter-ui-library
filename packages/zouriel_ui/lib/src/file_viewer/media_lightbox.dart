@@ -658,13 +658,17 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
           if (count > 1)
             SizedBox(
               height: 54 + t.space2 * 2,
-              child: ListView.separated(
-                controller: _strip,
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space1),
-                itemCount: count,
-                separatorBuilder: (_, _) => SizedBox(width: t.space2),
-                itemBuilder: (context, i) => _StripTile(item: widget.items[i], index: i, current: i == widget.index, onTap: () => _goTo(i)),
+              // Centred under the photo while the set fits; it scrolls from the start once it doesn't.
+              child: Center(
+                child: ListView.separated(
+                  controller: _strip,
+                  shrinkWrap: true,
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space1),
+                  itemCount: count,
+                  separatorBuilder: (_, _) => SizedBox(width: t.space2),
+                  itemBuilder: (context, i) => _StripTile(item: widget.items[i], index: i, current: i == widget.index, onTap: () => _goTo(i)),
+                ),
               ),
             ),
         ]),

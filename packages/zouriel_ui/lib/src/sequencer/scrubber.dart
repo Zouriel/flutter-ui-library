@@ -548,14 +548,15 @@ class _ScrubberPainter extends CustomPainter {
           maxLines: 1,
           ellipsis: '…',
         )..layout(maxWidth: maxW);
-        tp.paint(canvas, Offset(rect.left + 6, top + (trackH - tp.height) / 2));
+        // Labels ride the top half and ticks the bottom half, so a keyframe never sits on a section's name.
+        tp.paint(canvas, Offset(rect.left + 6, top + 2));
         tp.dispose();
       }
     }
 
     // Ticks: small diamonds.
     for (final tick in ticks) {
-      final c = Offset(x(tick.at), (top + bottom) / 2);
+      final c = Offset(x(tick.at), bottom - 7.5);
       final path = Path()
         ..moveTo(c.dx, c.dy - 6.4)
         ..lineTo(c.dx + 6.4, c.dy)

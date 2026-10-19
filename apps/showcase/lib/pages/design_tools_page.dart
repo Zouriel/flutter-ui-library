@@ -180,7 +180,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
           'and curve handles (tap an edge to add one, double-tap to switch corner and curve, long-press or Shift-tap to select '
           'several, Alt-drag or freeHandles to bend one side); Pen places points (drag for a curve, tap the first point to close); '
           'Draw paints with pressure-sensitive brushes, and holding still at the end of a stroke snaps it to a line, circle, '
-          'rectangle or triangle. Once a pen is used, fingers pan instead of drawing. Pinch or wheel zooms. Keyboard: ] and [ step '
+          'rectangle or triangle. Once a pen is used, fingers pan instead of drawing. Pinch or Ctrl/Cmd + wheel zooms; a plain wheel scrolls the page. Keyboard: ] and [ step '
           'through the items, Escape clears points then the item, arrows nudge (Shift for 10), Delete removes selected points, '
           'Ctrl+A selects every point, and in Pen mode Enter or Escape finishes and Backspace takes back the last point. It never '
           'changes items itself: each finished edit comes back once through onItemsChanged, so the host owns undo.',
@@ -200,17 +200,22 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
             onChanged: (b) => setState(() => _brush = b),
             options: [for (final b in UiBrushKind.values) UiSegmentedOption(value: b, label: '${b.name[0].toUpperCase()}${b.name.substring(1)}')],
           ),
+        // One button style; the groups wrap as a whole on narrow screens, so the shapes stay together.
         Wrap(spacing: t.space2, runSpacing: t.space2, children: [
-          UiButton(label: 'Rectangle', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _add('rect')),
-          UiButton(label: 'Ellipse', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _add('ellipse')),
-          UiButton(label: 'Star', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _add('star')),
-          UiButton(
-            label: 'Undo',
-            size: UiSize.sm,
-            variant: UiButtonVariant.ghost,
-            onPressed: _history.isEmpty ? null : () => setState(() => _items = _history.removeLast()),
-          ),
-          UiButton(label: 'Fit', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => _editor.currentState?.fit()),
+          Wrap(spacing: t.space2, children: [
+            UiButton(label: 'Rectangle', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _add('rect')),
+            UiButton(label: 'Ellipse', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _add('ellipse')),
+            UiButton(label: 'Star', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _add('star')),
+          ]),
+          Wrap(spacing: t.space2, children: [
+            UiButton(
+              label: 'Undo',
+              size: UiSize.sm,
+              variant: UiButtonVariant.outline,
+              onPressed: _history.isEmpty ? null : () => setState(() => _items = _history.removeLast()),
+            ),
+            UiButton(label: 'Fit', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _editor.currentState?.fit()),
+          ]),
         ]),
         Container(
           height: 340,
@@ -530,7 +535,8 @@ class _ScrubberSectionState extends State<_ScrubberSection> {
           onZoomChanged: (z) => setState(() => _zoom = z),
           label: 'Scroll position',
         ),
-        UiText('${_at.round()} - zoom ${_zoom.toStringAsFixed(2)}', variant: UiTextVariant.code),
+        // Plain muted readouts, as on the web page (a code block would box them).
+        Text('${_at.round()} · zoom ${_zoom.toStringAsFixed(2)}', style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)),
         UiScrubber(
           length: 3376,
           lanes: _lanes,
@@ -542,7 +548,7 @@ class _ScrubberSectionState extends State<_ScrubberSection> {
           label: 'Layers, flattened (hold to open)',
           onLongPress: () => setState(() => _presses++),
         ),
-        UiText('Long presses: $_presses', variant: UiTextVariant.code),
+        Text('Long presses: $_presses', style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)),
       ]),
       code: 'UiScrubber(\n  length: 3376,\n  markers: markers,\n  ticks: ticks,\n  value: at,\n  onChanged: (v) => setState(() => at = v),\n'
           '  zoom: zoom,\n  onZoomChanged: (z) => setState(() => zoom = z),\n  onLongPress: openTimeline,\n)',

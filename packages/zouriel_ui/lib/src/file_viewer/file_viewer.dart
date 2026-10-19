@@ -87,7 +87,11 @@ class UiFileViewer extends StatelessWidget {
       case UiFileType.video:
         return UiVideoPlayer(src: src);
       case UiFileType.audio:
-        return UiAudioPlayer(src: src, title: name);
+        // A player is one bar: centred in the viewer, not stuck to its top above empty space.
+        return Padding(
+          padding: EdgeInsets.all(context.ui.space6),
+          child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: UiAudioPlayer(src: src, title: name))),
+        );
       case UiFileType.pdf:
         return UiPdfViewer(src: src);
       case UiFileType.text:
