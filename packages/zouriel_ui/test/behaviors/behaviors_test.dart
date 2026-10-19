@@ -97,6 +97,55 @@ void main() {
     expect(hits, 2);
   });
 
+  testWidgets('UiInfiniteScroll re-arms when new rows arrive, so a jump to the new end loads again', (tester) async {
+    var hits = 0;
+    var count = 30;
+    final c = ScrollController();
+    addTearDown(c.dispose);
+    late StateSetter set;
+    await pumpUi(tester, SizedBox(height: 300, width: 200, child: StatefulBuilder(builder: (context, s) {
+      set = s;
+      return UiInfiniteScroll(
+        threshold: 100,
+        onScrolledToEnd: () => hits++,
+        child: ListView(controller: c, children: [for (var i = 0; i < count; i++) SizedBox(height: 50, child: Text('$i'))]),
+      );
+    })));
+    c.jumpTo(1200); // the end
+    await tester.pump();
+    expect(hits, 1);
+    // The load adds ten rows while the reader is still at the old end (now 500px from the bottom).
+    set(() => count = 40);
+    await tester.pumpAndSettle();
+    expect(hits, 1);
+    // One big step lands right at the new end, never passing above the line in between.
+    c.jumpTo(1700);
+    await tester.pump();
+    expect(hits, 2);
+    // Rows that still leave the reader at the end load again at once.
+    set(() => count = 41);
+    await tester.pumpAndSettle();
+    expect(hits, 3);
+  });
+
+  testWidgets('UiScrollFade fades only the edges with more content past them', (tester) async {
+    final c = ScrollController();
+    addTearDown(c.dispose);
+    Widget strip(double w) => SizedBox(width: 200, height: 40, child: UiScrollFade(
+          child: SingleChildScrollView(controller: c, scrollDirection: Axis.horizontal, child: SizedBox(width: w, height: 40)),
+        ));
+    await pumpUi(tester, strip(150));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShaderMask), findsNothing, reason: 'fits: no fade');
+    await pumpUi(tester, strip(600));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShaderMask), findsOneWidget, reason: 'more to the right');
+    c.jumpTo(400);
+    await tester.pumpAndSettle();
+    expect(find.byType(ShaderMask), findsOneWidget, reason: 'more to the left');
+    expect(c.offset, 400, reason: 'the mask coming and going keeps the scroll position');
+  });
+
   testWidgets('UiVirtualList builds only the rows in view', (tester) async {
     await pumpUi(tester, SizedBox(width: 200, child: UiVirtualList<int>(
       items: List.generate(10000, (i) => i),

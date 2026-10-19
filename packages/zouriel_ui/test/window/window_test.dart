@@ -204,6 +204,21 @@ void main() {
     expect(find.text('Test body'), findsOneWidget);
   });
 
+  testWidgets('minimized, the Minimize control becomes Restore and brings the window back, still maximized', (tester) async {
+    final (_, key) = await _pumpOne(tester);
+    key.currentState!.dock(UiDockSide.maximize);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Minimize'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Minimize'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('Restore').first);
+    await tester.pumpAndSettle();
+    expect(key.currentState!.isMinimized, isFalse);
+    expect(key.currentState!.isMaximized, isTrue);
+    expect(find.text('Test body'), findsOneWidget);
+    expect(find.bySemanticsLabel('Minimize'), findsOneWidget);
+  });
+
   testWidgets('resizes from the corner and the edges, never below 220 x 120', (tester) async {
     final (_, key) = await _pumpOne(tester);
     // Bottom-right corner sits on the window's corner (520, 380).
@@ -252,9 +267,10 @@ void main() {
     ]);
     mgr.tile();
     await tester.pumpAndSettle();
-    expect(a.currentState!.bounds, const Rect.fromLTWH(0, 0, 500, 350));
-    expect(b.currentState!.bounds, const Rect.fromLTWH(500, 0, 500, 350));
-    expect(c.currentState!.bounds, const Rect.fromLTWH(0, 350, 500, 350));
+    // 8px apart and 8px in from the edges.
+    expect(a.currentState!.bounds, const Rect.fromLTWH(8, 8, 488, 338));
+    expect(b.currentState!.bounds, const Rect.fromLTWH(504, 8, 488, 338));
+    expect(c.currentState!.bounds, const Rect.fromLTWH(8, 354, 488, 338));
     mgr.minimizeAll();
     await tester.pumpAndSettle();
     expect([a, b, c].every((k) => k.currentState!.isMinimized), isTrue);

@@ -24,13 +24,14 @@ void main() {
     });
 
     for (final axis in Axis.values) {
-      testWidgets('dots ($axis): 30px from dot to dot, a line of 8 with 6 clear on each side, like the web', (tester) async {
+      testWidgets('dots ($axis): a line with 6 clear on each side, 10 beside the current dot (its ring), like the web', (tester) async {
         await pumpUi(tester, UiStepper(steps: steps, active: 1, variant: UiStepperVariant.dots, axis: axis, label: 'Progress'));
         final dots = find.descendant(of: find.byType(UiStepper), matching: find.byWidgetPredicate((w) => w is Container && w.constraints?.maxWidth == 10 && w.constraints?.maxHeight == 10));
         expect(dots, findsNWidgets(3));
         final a = tester.getRect(dots.at(0)), b = tester.getRect(dots.at(1));
-        // The web: a 10px dot, then 6 + 8 + 6 (the bar and its margins; vertically padding-bottom 20 with the bar from 16 to 24).
-        expect(axis == Axis.horizontal ? b.left - a.left : b.top - a.top, 30);
+        // The web: a 10px dot, then 6 + 8 + 10 across (the bar's margin grows beside the ringed current
+        // dot); down, padding-bottom 20 keeps dots 30 apart and the bar shrinks to 16..20 instead.
+        expect(axis == Axis.horizontal ? b.left - a.left : b.top - a.top, axis == Axis.horizontal ? 34 : 30);
       });
     }
 
@@ -61,7 +62,9 @@ void main() {
           .where((d) => d.shape == BoxShape.circle)
           .toList();
       final t = tester.element(find.byType(UiStepper)).ui;
-      expect(dots.map((d) => d.color), [t.success, t.success, t.text]);
+      expect(dots.map((d) => d.color), [t.success, t.success, null]);
+      // Not reached: hollow, outlined in the muted text colour.
+      expect((dots[2].border! as Border).top.color, t.textMuted);
       expect(dots[1].boxShadow, isNotNull); // the current dot is ringed
       h.dispose();
     });

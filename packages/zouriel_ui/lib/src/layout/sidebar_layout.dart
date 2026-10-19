@@ -126,7 +126,7 @@ class UiSidebarLayoutState extends State<UiSidebarLayout> {
 
       final side = DecoratedBox(
         decoration: BoxDecoration(color: t.surface, border: Border(right: BorderSide(color: t.border))),
-        child: widget.sidebar,
+        child: Padding(padding: EdgeInsets.all(t.space3), child: widget.sidebar),
       );
 
       if (!compact) {

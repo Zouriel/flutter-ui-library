@@ -154,7 +154,7 @@ class _MenuPanel<T> extends StatelessWidget {
       role: SemanticsRole.menu,
       explicitChildNodes: true,
       child: Container(
-        constraints: const BoxConstraints(minWidth: 170, maxWidth: 320),
+        constraints: const BoxConstraints(minWidth: 180, maxWidth: 320),
         padding: EdgeInsets.all(t.space1),
         decoration: BoxDecoration(color: t.surfaceRaised, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(r), boxShadow: t.shadow2),
         child: SingleChildScrollView(
@@ -194,7 +194,7 @@ class _MenuPanel<T> extends StatelessWidget {
                                   ?items[i].icon,
                                   Flexible(
                                     child: Text(items[i].label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                        style: context.uiText.body.copyWith(fontSize: t.fontSizeMd, height: 1.35, color: fg)),
+                                        style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: fg)),
                                   ),
                                 ],
                               ),

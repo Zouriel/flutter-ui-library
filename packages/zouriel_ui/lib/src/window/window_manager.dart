@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -110,22 +112,27 @@ class UiWindowManager extends ChangeNotifier {
   }
 
   /// Arranges every open window in a grid covering [viewport] (by default the viewport of the
-  /// first window).
+  /// first window), 8px apart and 8px in from its edges. On a narrow screen it uses fewer columns,
+  /// so no window is squeezed below its 220px minimum width.
   void tile([Size? viewport]) {
     final handles = [..._registry.values];
     if (handles.isEmpty) return;
     final area = viewport ?? handles.map((h) => h.viewport).whereType<Size>().firstOrNull;
     if (area == null) return;
     final n = handles.length;
+    // 8px (space2) between windows and in from the viewport edges.
+    const gap = 8.0;
     var cols = 1;
     while (cols * cols < n) {
       cols++;
     }
+    final fit = math.max(1, ((area.width - gap) / (220 + gap)).floor());
+    cols = math.min(cols, fit);
     final rows = (n / cols).ceil();
-    final w = (area.width / cols).floorToDouble();
-    final h = (area.height / rows).floorToDouble();
+    final w = ((area.width - gap * (cols + 1)) / cols).floorToDouble();
+    final h = ((area.height - gap * (rows + 1)) / rows).floorToDouble();
     for (var i = 0; i < n; i++) {
-      handles[i].setBounds(Rect.fromLTWH((i % cols) * w, (i ~/ cols) * h, w, h));
+      handles[i].setBounds(Rect.fromLTWH(gap + (i % cols) * (w + gap), gap + (i ~/ cols) * (h + gap), w, h));
     }
   }
 

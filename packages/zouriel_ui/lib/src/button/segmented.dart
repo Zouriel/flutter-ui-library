@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../forms/choice/roving.dart';
+import '../behaviors/scrolling.dart';
 import '../theme/theme.dart';
 
 /// One option of a [UiSegmented].
@@ -77,7 +78,8 @@ class _UiSegmentedState<T> extends State<UiSegmented<T>> with UiRovingFocus<UiSe
     final touch = uiTouchPlatform(context);
     final sm = widget.size == UiSize.sm, lg = widget.size == UiSize.lg;
     final pad = sm ? 1.0 : 2.0;
-    final optH = sm ? 24.0 : (lg ? t.sizeLg : t.sizeMd) - 6;
+    // sm: the track is as tall as the other sm controls; the whole track height stays the hit area.
+    final optH = sm ? t.sizeSm - 4 : (lg ? t.sizeLg : t.sizeMd) - 6;
     final trackH = optH + pad * 2 + 2;
     final rowH = touch && trackH < uiMinTouchTarget ? uiMinTouchTarget : trackH;
     final rounded = context.uiTheme.config.radius;
@@ -109,7 +111,7 @@ class _UiSegmentedState<T> extends State<UiSegmented<T>> with UiRovingFocus<UiSe
       ),
     );
     final fitted = LayoutBuilder(
-      builder: (context, c) => c.hasBoundedWidth ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: track) : track,
+      builder: (context, c) => c.hasBoundedWidth ? UiScrollFade(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: track)) : track,
     );
     return Semantics(
       container: true,

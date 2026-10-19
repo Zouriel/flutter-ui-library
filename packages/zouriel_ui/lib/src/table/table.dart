@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import '../behaviors/scrolling.dart';
 import '../core/interactive.dart';
 import '../theme/theme.dart';
 
@@ -83,7 +84,8 @@ bool _isDigits(String s) => s.codeUnitAt(0) >= 48 && s.codeUnitAt(0) <= 57;
 /// Sorting cycles ascending, descending, unsorted; numbers compare as numbers, text naturally and
 /// case-insensitively, and empty cells always go last. Selected rows are tracked by identity and
 /// forgotten when they leave [data]. With no rows it shows [emptyText]. On a narrow screen the table
-/// keeps its natural width and scrolls sideways inside its border instead of squeezing the columns.
+/// keeps its natural width and scrolls sideways inside its border, with the cut-off edge faded,
+/// instead of squeezing the columns.
 class UiTable<T> extends StatefulWidget {
   const UiTable({
     super.key,
@@ -286,11 +288,13 @@ class _UiTableState<T> extends State<UiTable<T>> {
             ]);
           }
           // Fill the width when the columns fit; otherwise keep their natural width and scroll.
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: box.maxWidth.isFinite ? box.maxWidth : 0),
-              child: IntrinsicWidth(child: content),
+          return UiScrollFade(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: box.maxWidth.isFinite ? box.maxWidth : 0),
+                child: IntrinsicWidth(child: content),
+              ),
             ),
           );
         }),

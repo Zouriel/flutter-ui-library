@@ -76,7 +76,7 @@ class UiSideNav extends StatelessWidget {
               children: [
                 if (g.label != null)
                   Padding(
-                    padding: EdgeInsets.fromLTRB(t.space2, 0, t.space2, t.space1 + 2),
+                    padding: EdgeInsets.fromLTRB(t.space3, 0, t.space3, t.space1 + 2),
                     child: Text(g.label!.toUpperCase(), style: groupLabel),
                   ),
                 for (var i = 0; i < g.items.length; i++) ...[

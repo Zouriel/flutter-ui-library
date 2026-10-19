@@ -179,7 +179,7 @@ class _UiAccordionItemState extends State<UiAccordionItem> with SingleTickerProv
               );
             },
             child: Padding(
-              padding: EdgeInsets.fromLTRB(t.space2, 0, t.space2, t.space3),
+              padding: EdgeInsets.fromLTRB(t.space2, t.space1, t.space2, t.space3),
               child: DefaultTextStyle.merge(style: context.uiText.body.copyWith(color: t.textMuted, height: 1.45), child: widget.child),
             ),
           ),

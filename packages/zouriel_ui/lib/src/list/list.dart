@@ -45,7 +45,8 @@ class UiList extends StatelessWidget {
 
 /// `ui-list-item`: a row with optional [leading] and [trailing] widgets (trailing in the muted
 /// colour). With [onTap] the row is a button (48dp tall on touch) with hover, press and an inset
-/// focus ring; [selected] tints it and is announced; [enabled] false fades it and ignores taps.
+/// focus ring; [selected] tints it, marks its leading edge with a 2px primary bar (so it can't be
+/// mistaken for a hovered row) and is announced; [enabled] false fades it and ignores taps.
 class UiListItem extends StatelessWidget {
   const UiListItem({super.key, required this.child, this.leading, this.trailing, this.onTap, this.selected = false, this.enabled = true});
 
@@ -68,11 +69,12 @@ class UiListItem extends StatelessWidget {
           duration: context.uiAnimate ? t.motionFast : Duration.zero,
           curve: t.easeStandard,
           constraints: BoxConstraints(minHeight: interactive && uiTouchPlatform(context) ? uiMinTouchTarget : 0),
-          padding: EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space4),
-          decoration: BoxDecoration(color: bg),
+          // The 2px left border is the selected bar (transparent otherwise); it is part of the padding.
+          padding: EdgeInsets.fromLTRB(t.space4 - 2, t.space2, t.space4, t.space2),
+          decoration: BoxDecoration(color: bg, border: Border(left: BorderSide(color: selected ? t.primary : t.primary.withValues(alpha: 0), width: 2))),
           foregroundDecoration: s.focused ? BoxDecoration(border: Border.all(color: t.borderFocus, width: 2)) : null,
           child: DefaultTextStyle.merge(
-            style: context.uiText.body.copyWith(height: 1.35),
+            style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35),
             child: Row(spacing: t.space3, children: [
               if (leading != null) IconTheme.merge(data: IconThemeData(color: t.text, size: 20), child: leading!),
               Expanded(child: child),

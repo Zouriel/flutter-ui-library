@@ -30,7 +30,7 @@ class UiStep {
 ///
 /// A vertical stepper shows [body] under each step's label (the web `uiStepBody` template). The
 /// [UiStepperVariant.dots] variant is a strip of 10px dots: finished and active steps in the [tone]
-/// (the active one ringed), steps not reached solid in the text colour.
+/// (the active one ringed), steps not reached hollow, outlined in the muted text colour.
 class UiStepper extends StatelessWidget {
   const UiStepper({
     super.key,
@@ -191,21 +191,30 @@ extension on UiStepper {
           height: UiStepper._dot,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: reached ? toneColor : t.text,
-            // The current step: a ring in the tone, with a gap in the surface colour.
-            boxShadow: st == UiStepState.active ? [BoxShadow(color: t.surface, spreadRadius: 2), BoxShadow(color: toneColor, spreadRadius: 4)] : null,
+            color: reached ? toneColor : null,
+            border: reached ? null : Border.all(color: t.textMuted, width: 1.5),
+            // The current step: a ring in the tone, with a gap in the surface colour. Flutter paints
+            // the last shadow on top (CSS the first), so the gap comes after the ring here.
+            boxShadow: st == UiStepState.active ? [BoxShadow(color: toneColor, spreadRadius: 4), BoxShadow(color: t.surface, spreadRadius: 2)] : null,
           ),
         ),
       );
     }
 
-    Widget line(int i) => Container(
-          width: vertical ? 1 : 8,
-          height: vertical ? 8 : 1,
-          // Clear of the current dot's 4px ring.
-          margin: vertical ? const EdgeInsets.symmetric(vertical: 6) : const EdgeInsets.symmetric(horizontal: 6),
-          color: i < active ? toneColor : t.border,
-        );
+    // 6px between a line and a dot; beside the current dot 10px, so its 4px ring keeps the same 6px.
+    // Across, the gap grows (like the web's bar margins); down, dots stay 30px apart and the line
+    // gives up the 4px instead (like the web's absolutely placed bar).
+    Widget line(int i) {
+      final before = i == active ? 4.0 : 0.0, after = i + 1 == active ? 4.0 : 0.0;
+      return Container(
+        width: vertical ? 1 : 8,
+        height: vertical ? 8 - before - after : 1,
+        margin: vertical
+            ? EdgeInsets.only(top: 6 + before, bottom: 6 + after)
+            : EdgeInsets.only(left: 6 + before, right: 6 + after),
+        color: i < active ? toneColor : t.border,
+      );
+    }
 
     final children = <Widget>[
       for (var i = 0; i < steps.length; i++) ...[dot(i), if (i < steps.length - 1) line(i)],

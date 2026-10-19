@@ -193,7 +193,7 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
                 top: 0,
                 width: w,
                 height: h,
-                child: ExcludeSemantics(excluding: i != _index, child: _Slide(slide: widget.slides[i], style: captionStyle)),
+                child: ExcludeSemantics(excluding: i != _index, child: _Slide(slide: widget.slides[i], style: captionStyle, dots: _count > 1 && widget.dots)),
               ),
         ]),
       );
@@ -264,9 +264,10 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
 }
 
 class _Slide extends StatelessWidget {
-  const _Slide({required this.slide, required this.style});
+  const _Slide({required this.slide, required this.style, required this.dots});
   final UiCarouselSlide slide;
   final TextStyle style;
+  final bool dots;
 
   @override
   Widget build(BuildContext context) {
@@ -293,9 +294,9 @@ class _Slide extends StatelessWidget {
                 colors: [t.mediaScrim.withValues(alpha: 0), t.mediaScrim.withValues(alpha: 0.6)],
               ),
             ),
-            // Room under the text for the dots.
+            // Room under the text for the dots, so a caption never runs beneath them.
             child: Padding(
-              padding: EdgeInsets.fromLTRB(t.space3, t.space6, t.space3, t.space3 + 24),
+              padding: EdgeInsets.fromLTRB(t.space3, t.space6, t.space3, t.space3 + (dots ? 24 : 0)),
               child: Text(slide.caption!, style: style, maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
           ),
