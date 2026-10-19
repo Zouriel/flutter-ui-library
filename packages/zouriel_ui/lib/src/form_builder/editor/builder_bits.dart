@@ -232,6 +232,20 @@ class FbSetting extends StatelessWidget {
   }
 }
 
+/// A control (or a row of them) with hints 4px underneath, kept together so the hints read as
+/// belonging to it rather than taking the panel's wider gap.
+class FbHinted extends StatelessWidget {
+  const FbHinted({super.key, required this.child, required this.hints});
+  final Widget child;
+  final List<String> hints;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [child, for (final h in hints) Padding(padding: EdgeInsets.only(top: context.ui.space1), child: FbHint(h))],
+      );
+}
+
 /// A titled group of settings with a rule above it (the web `.group-sec`).
 class FbSection extends StatelessWidget {
   const FbSection({super.key, required this.title, required this.children, this.first = false});
@@ -251,12 +265,22 @@ class FbSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: t.space2,
         children: [
-          Semantics(header: true, child: Text(title, style: context.uiText.label.copyWith(fontSize: 13, color: t.text))),
+          FbHeading(title),
           ...children,
         ],
       ),
     );
   }
+}
+
+/// A section heading in a settings panel (the web `.group-sec h3`); the Checks tab uses it too.
+class FbHeading extends StatelessWidget {
+  const FbHeading(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 13, color: context.ui.text)));
 }
 
 /// Two settings side by side when there's room, stacked when there isn't (the web `.fb-grid2`).
@@ -330,12 +354,15 @@ class FbRowHead extends StatelessWidget {
 
 /// A switch that sits at the start of its row (a [UiSwitch] alone centres itself in the width it gets).
 class FbSwitch extends StatelessWidget {
-  const FbSwitch({super.key, required this.value, required this.label, required this.onChanged});
+  const FbSwitch({super.key, required this.value, required this.label, required this.onChanged, this.size = UiSize.md});
   final bool value;
   final String label;
   final ValueChanged<bool>? onChanged;
 
+  /// [UiSize.sm] in dense panels (the inspector and settings), so its label matches the fields.
+  final UiSize size;
+
   @override
   Widget build(BuildContext context) =>
-      Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, child: UiSwitch(value: value, label: label, onChanged: onChanged));
+      Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, child: UiSwitch(size: size, value: value, label: label, onChanged: onChanged));
 }

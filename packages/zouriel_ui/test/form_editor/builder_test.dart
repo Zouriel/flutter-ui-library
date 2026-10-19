@@ -122,6 +122,16 @@ void main() {
       expect(find.text('Deleted “Second”'), findsNothing);
     });
 
+    testWidgets('the settings sheet lines its tabs and fields up with its title', (tester) async {
+      await pumpBuilder(tester, twoFields());
+      await tester.longPress(find.text('First'));
+      await tester.pumpAndSettle();
+      final insp = find.byType(UiFbInspector);
+      double x(Finder f) => tester.getTopLeft(find.descendant(of: insp, matching: f).first).dx;
+      expect(x(find.text('Settings')), 16);
+      expect(x(find.text('Question')), 16);
+    });
+
     testWidgets('asks before deleting a question other rules use, and removes those rules', (tester) async {
       final h = await pumpBuilder(tester, formOf([
         fj('a', 'toggle', {'label': 'Student'}),
@@ -253,6 +263,45 @@ void main() {
       await tester.tap(find.descendant(of: find.byType(UiFbPalette), matching: find.text('Number')), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(labels(h), ['First', 'Number', 'Second']);
+    });
+
+    testWidgets('the undo toast closes when the view changes, so it never covers that view', (tester) async {
+      await pumpBuilder(tester, twoFields(), size: const Size(1280, 800));
+      await tester.tap(find.text('Second'));
+      await tester.pumpAndSettle();
+      await tester.tap(iconButton('Delete Second'));
+      await tester.pumpAndSettle();
+      expect(find.text('Deleted “Second”'), findsOneWidget);
+      await tester.tap(find.text('Preview'));
+      await tester.pumpAndSettle();
+      expect(find.text('Deleted “Second”'), findsNothing);
+    });
+
+    testWidgets('cards side by side in a row share one height', (tester) async {
+      await pumpBuilder(
+        tester,
+        formOf([
+          fj('a', 'text', {'label': 'First', 'layout': {'width': 'half'}}),
+          fj('b', 'text', {'label': 'Second', 'help': 'A line of help that makes this card taller.', 'layout': {'width': 'half'}}),
+        ]),
+        size: const Size(1280, 800),
+      );
+      Rect cell(String label) => tester.getRect(find.ancestor(of: find.text(label), matching: find.byWidgetPredicate((w) => w is SizedBox && w.key is GlobalKey)).first);
+      expect(cell('First').top, cell('Second').top);
+      expect(cell('First').height, cell('Second').height);
+      expect(cell('First').right, lessThan(cell('Second').left));
+    });
+
+    testWidgets('the inspector header, first tab and fields share one left edge', (tester) async {
+      await pumpBuilder(tester, twoFields(), size: const Size(1280, 800));
+      await tester.tap(find.text('First'));
+      await tester.pumpAndSettle();
+      final insp = find.byType(UiFbInspector);
+      final left = tester.getRect(insp).left;
+      double x(Finder f) => tester.getTopLeft(find.descendant(of: insp, matching: f).first).dx - left;
+      expect(x(find.text('Settings')), 12);
+      expect(x(find.text('Question')), 12);
+      expect(x(find.text(fieldTypeInfo(UiFbFieldType.text).label)), 12 + 28 + 8, reason: 'the header text, after its 28px icon');
     });
 
     testWidgets('a palette item held and dragged onto the canvas lands where it was dropped', (tester) async {

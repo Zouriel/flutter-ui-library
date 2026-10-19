@@ -1,5 +1,4 @@
-import 'dart:ui' show SemanticsRole;
-
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -276,16 +275,96 @@ class _Items extends StatelessWidget {
     final gap = t.space2;
     return LayoutBuilder(builder: (context, box) {
       final narrow = box.maxWidth < 520;
-      return Wrap(spacing: gap, runSpacing: gap, children: [
-        for (final el in elements)
-          SizedBox(
-            key: host._dndFor(UiFbBuilderScope.of(context)).itemKey(el.id),
-            width: narrow ? box.maxWidth : ((box.maxWidth + gap) * _spanOf(el) / 12 - gap - 0.01).clamp(0, box.maxWidth),
-            child: _Card(el: el, host: host),
-          ),
+      final dnd = host._dndFor(UiFbBuilderScope.of(context));
+      // Rows of up to 12 columns, like the renderer's grid; the cards in a row share one height.
+      final rows = <List<UiFbElement>>[];
+      var used = 12;
+      for (final el in elements) {
+        final span = narrow ? 12 : _spanOf(el);
+        if (used + span > 12) {
+          rows.add([]);
+          used = 0;
+        }
+        rows.last.add(el);
+        used += span;
+      }
+      double widthOf(UiFbElement el) => narrow ? box.maxWidth : ((box.maxWidth + gap) * _spanOf(el) / 12 - gap - 0.01).clamp(0, box.maxWidth);
+      Widget cell(UiFbElement el) => SizedBox(key: dnd.itemKey(el.id), width: widthOf(el), child: _Card(el: el, host: host));
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: gap, children: [
+        for (final row in rows)
+          row.length == 1 ? cell(row.single) : _EqualHeightRow(gap: gap, children: [for (final el in row) cell(el)]),
       ]);
     });
   }
+}
+
+/// Lays its children side by side at their own widths, then gives them all the tallest one's
+/// height, so cards in a row end at the same line (the web grid's stretch).
+class _EqualHeightRow extends MultiChildRenderObjectWidget {
+  const _EqualHeightRow({required this.gap, required super.children});
+  final double gap;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderEqualHeightRow(gap);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderEqualHeightRow renderObject) => renderObject.gap = gap;
+}
+
+class _EqualHeightRowData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderEqualHeightRow extends RenderBox
+    with ContainerRenderObjectMixin<RenderBox, _EqualHeightRowData>, RenderBoxContainerDefaultsMixin<RenderBox, _EqualHeightRowData> {
+  _RenderEqualHeightRow(this._gap);
+
+  double _gap;
+  set gap(double v) {
+    if (v == _gap) return;
+    _gap = v;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _EqualHeightRowData) child.parentData = _EqualHeightRowData();
+  }
+
+  Iterable<RenderBox> get _children sync* {
+    var c = firstChild;
+    while (c != null) {
+      yield c;
+      c = childAfter(c);
+    }
+  }
+
+  @override
+  void performLayout() {
+    final loose = BoxConstraints(maxWidth: constraints.maxWidth);
+    var height = 0.0;
+    for (final c in _children) {
+      c.layout(loose, parentUsesSize: true);
+      if (c.size.height > height) height = c.size.height;
+    }
+    var x = 0.0;
+    for (final c in _children) {
+      c.layout(BoxConstraints.tightFor(width: c.size.width, height: height), parentUsesSize: true);
+      (c.parentData! as _EqualHeightRowData).offset = Offset(x, 0);
+      x += c.size.width + _gap;
+    }
+    size = constraints.constrain(Size(constraints.hasBoundedWidth ? constraints.maxWidth : (x - _gap).clamp(0, double.infinity), height));
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _children.fold(0, (m, c) => c.getMinIntrinsicHeight(width) > m ? c.getMinIntrinsicHeight(width) : m);
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _children.fold(0, (m, c) => c.getMaxIntrinsicHeight(width) > m ? c.getMaxIntrinsicHeight(width) : m);
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) => defaultHitTestChildren(result, position: position);
 }
 
 class _Card extends StatelessWidget {
@@ -932,7 +1011,7 @@ class _PageHead extends StatelessWidget {
   }
 }
 
-class _PageTabs extends StatelessWidget {
+class _PageTabs extends StatefulWidget {
   const _PageTabs({required this.store, required this.dnd, required this.over, this.onOpen});
   final UiFormBuilderController store;
   final FbDnd dnd;
@@ -940,44 +1019,82 @@ class _PageTabs extends StatelessWidget {
   final ValueChanged<String>? onOpen;
 
   @override
+  State<_PageTabs> createState() => _PageTabsState();
+}
+
+class _PageTabsState extends State<_PageTabs> {
+  /// Some tabs are out of view on the right.
+  bool _more = false;
+
+  bool _measure(ScrollMetrics m) {
+    final more = m.extentAfter > 0.5;
+    if (more != _more) setState(() => _more = more);
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = context.ui;
+    final store = widget.store;
+    final dnd = widget.dnd;
+    final over = widget.over;
+    final onOpen = widget.onOpen;
     final pages = store.def.pages;
+    final solid = t.text;
+    Widget strip = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (n) => _measure(n.metrics),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (n) => _measure(n.metrics),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, spacing: 2, children: [
+            Semantics(
+              role: SemanticsRole.tabBar,
+              label: 'Pages',
+              container: true,
+              explicitChildNodes: true,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, spacing: 2, children: [
+                for (var i = 0; i < pages.length; i++)
+                  KeyedSubtree(
+                    key: dnd.tabKey(pages[i].id),
+                    child: _Tab(
+                      label: (pages[i].title ?? '').isNotEmpty ? pages[i].title! : 'Page ${i + 1}',
+                      on: i == store.pageIndex,
+                      over: over == 'tab:${pages[i].id}',
+                      hasRules: pages[i].visibility != null || (pages[i].jumps ?? const []).isNotEmpty,
+                      onTap: () {
+                        if (store.pageIndex == i) {
+                          store.select(pages[i].id);
+                          onOpen?.call(pages[i].id);
+                        } else {
+                          store.showPage(i);
+                        }
+                      },
+                    ),
+                  ),
+              ]),
+            ),
+            _Tab(label: 'Page', icon: HugeIcons.strokeRoundedAdd01, semantic: 'Add a page (a new step)', onTap: store.addPage),
+          ]),
+        ),
+      ),
+    );
+    // More tabs off to the right: fade the edge so a cut-off tab reads as "scroll", not as a typo.
+    // The bottom rule is outside the mask, so it stays solid.
+    if (_more) {
+      strip = ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (r) => LinearGradient(
+          colors: [solid, solid, solid.withValues(alpha: 0)],
+          stops: [0, ((r.width - t.space8) / r.width).clamp(0, 1), 1],
+        ).createShader(r),
+        child: strip,
+      );
+    }
     return Container(
       padding: EdgeInsets.fromLTRB(t.space3, t.space2, t.space3, 0),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.borderSubtle))),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(crossAxisAlignment: CrossAxisAlignment.end, spacing: 2, children: [
-          Semantics(
-            role: SemanticsRole.tabBar,
-            label: 'Pages',
-            container: true,
-            explicitChildNodes: true,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, spacing: 2, children: [
-              for (var i = 0; i < pages.length; i++)
-                KeyedSubtree(
-                  key: dnd.tabKey(pages[i].id),
-                  child: _Tab(
-                    label: (pages[i].title ?? '').isNotEmpty ? pages[i].title! : 'Page ${i + 1}',
-                    on: i == store.pageIndex,
-                    over: over == 'tab:${pages[i].id}',
-                    hasRules: pages[i].visibility != null || (pages[i].jumps ?? const []).isNotEmpty,
-                    onTap: () {
-                      if (store.pageIndex == i) {
-                        store.select(pages[i].id);
-                        onOpen?.call(pages[i].id);
-                      } else {
-                        store.showPage(i);
-                      }
-                    },
-                  ),
-                ),
-            ]),
-          ),
-          _Tab(label: 'Page', icon: HugeIcons.strokeRoundedAdd01, semantic: 'Add a page (a new step)', onTap: store.addPage),
-        ]),
-      ),
+      child: strip,
     );
   }
 }

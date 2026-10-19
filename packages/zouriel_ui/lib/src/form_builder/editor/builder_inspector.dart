@@ -65,10 +65,14 @@ enum _Tab { settings, logic, checks }
 /// It scrolls itself; give [scrollController] when it sits in a [UiBottomSheet] so dragging the
 /// content also moves the sheet.
 class UiFbInspector extends StatefulWidget {
-  const UiFbInspector({super.key, this.showHead = true, this.onDeleteRequest, this.scrollController});
+  const UiFbInspector({super.key, this.showHead = true, this.onDeleteRequest, this.scrollController, this.sidePadding});
 
   /// Hide the header when something around it already names the selection (the phone sheet).
   final bool showHead;
+
+  /// Space at the left and right of the header, tabs and fields, which all share one edge
+  /// (default 12). The phone sheet passes 16 to line up with the sheet's title.
+  final double? sidePadding;
 
   /// Delete was pressed for an element or page (the builder asks first when answers or rules
   /// would be lost).
@@ -120,15 +124,16 @@ class _UiFbInspectorState extends State<UiFbInspector> {
       };
     }
 
+    final pad = widget.sidePadding ?? t.space3;
     return ColoredBox(
       color: t.surface,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (widget.showHead) _Head(store: store),
-        if (tabs.length > 1) _Tabs(tabs: tabs, value: tab, onChanged: (v) => setState(() => _tab = v)),
+        if (widget.showHead) _Head(store: store, pad: pad),
+        if (tabs.length > 1) _Tabs(tabs: tabs, value: tab, pad: pad, onChanged: (v) => setState(() => _tab = v)),
         Expanded(
           child: SingleChildScrollView(
             controller: widget.scrollController,
-            padding: EdgeInsets.fromLTRB(t.space3, t.space3, t.space3, t.space8),
+            padding: EdgeInsets.fromLTRB(pad, t.space3, pad, t.space8),
             // A fresh subtree per selection, so local drafts (keys, pasted lists) don't carry over.
             child: KeyedSubtree(key: ValueKey('${sel?.id}:${tab.name}'), child: body),
           ),
@@ -139,8 +144,9 @@ class _UiFbInspectorState extends State<UiFbInspector> {
 }
 
 class _Head extends StatelessWidget {
-  const _Head({required this.store});
+  const _Head({required this.store, required this.pad});
   final UiFormBuilderController store;
+  final double pad;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +163,7 @@ class _Head extends StatelessWidget {
     };
     final name = sel != null ? store.name(sel.id) : (store.def.title.isNotEmpty ? store.def.title : 'Untitled form');
     return Padding(
-      padding: EdgeInsets.fromLTRB(t.space3, t.space3, t.space3, t.space2),
+      padding: EdgeInsets.fromLTRB(pad, t.space3, pad, t.space2),
       child: Row(spacing: t.space2, children: [
         Container(
           width: 28,
@@ -182,16 +188,18 @@ class _Head extends StatelessWidget {
 
 /// Settings / Logic / Checks, with a count of what each holds.
 class _Tabs extends StatelessWidget {
-  const _Tabs({required this.tabs, required this.value, required this.onChanged});
+  const _Tabs({required this.tabs, required this.value, required this.pad, required this.onChanged});
   final List<(_Tab, String, int)> tabs;
   final _Tab value;
+  final double pad;
   final ValueChanged<_Tab> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: t.space3),
+      // Less the tab's own padding, so the first tab's label lines up with the header and the fields.
+      padding: EdgeInsets.symmetric(horizontal: (pad - t.space2).clamp(0, double.infinity)),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.borderSubtle))),
       child: Semantics(
         role: SemanticsRole.tabBar,
@@ -479,7 +487,7 @@ class _FieldPanel extends StatelessWidget {
       if (f.type != UiFbFieldType.hidden)
         FbSetting(
           label: 'Help text',
-          child: UiTextarea(
+          child: UiTextarea(size: UiSize.sm, 
             value: f.help ?? '',
             rows: 2,
             autosize: true,
@@ -548,8 +556,13 @@ class _FieldPanel extends StatelessWidget {
       if (f.type != UiFbFieldType.hidden)
         FbSection(title: 'Layout', children: [
           FbSetting(label: 'Width', child: _segmented<String>('Width', f.layout?.width ?? 'full', _widths, (v) => layout('width', v == 'full' ? null : v))),
-          if (f.type != UiFbFieldType.calculated) ...[
-            FbPair(children: [
+          if (f.type != UiFbFieldType.calculated)
+            FbHinted(
+              hints: [
+                if (!info.textLike) '“Inside the box” works for text, number and email boxes; this field shows them above and below.',
+                if (f.layout?.labelPlacement == 'hidden') 'Screen readers still read the question. Use it when the heading above already says it.',
+              ],
+              child: FbPair(children: [
               FbSetting(
                 label: 'Question text',
                 child: UiSelect(
@@ -581,9 +594,7 @@ class _FieldPanel extends StatelessWidget {
                 ),
               ),
             ]),
-            if (!info.textLike) const FbHint('“Inside the box” works for text, number and email boxes; this field shows them above and below.'),
-            if (f.layout?.labelPlacement == 'hidden') const FbHint('Screen readers still read the question. Use it when the heading above already says it.'),
-          ],
+            ),
         ]),
       FbSection(title: 'Saved data', children: [
         _KeyBox(id: f.id, current: f.key),
@@ -632,15 +643,17 @@ class _FieldPanel extends StatelessWidget {
     switch (f.type.name) {
       case 'number' || 'currency' || 'slider':
         return [
+          // The hint explains Lowest and Highest, so it sits under their row, not under the last box.
+          FbHinted(
+            hints: [if (f.type != UiFbFieldType.slider) 'Lowest and highest guide the arrows. Add a check to enforce them.'],
+            child: FbPair(children: [num_('Lowest', 'min', p?.min, placeholder: 'Any'), num_('Highest', 'max', p?.max, placeholder: 'Any')]),
+          ),
           FbPair(children: [
-            num_('Lowest', 'min', p?.min, placeholder: 'Any'),
-            num_('Highest', 'max', p?.max, placeholder: 'Any'),
             if (f.type != UiFbFieldType.currency) num_('Steps of', 'step', p?.step ?? 1, min: 0),
             if (f.type == UiFbFieldType.currency) text('Currency', 'currency', p?.currency ?? 'USD', 'USD', map: (v) => v.toUpperCase()),
             if (f.type != UiFbFieldType.slider) num_('Decimals', 'decimals', p?.decimals, min: 0, max: 6, placeholder: 'Any'),
             if (f.type == UiFbFieldType.number) text('Unit', 'suffix', p?.suffix, 'e.g. kg'),
           ]),
-          if (f.type != UiFbFieldType.slider) const FbHint('Lowest and highest guide the arrows. Add a check to enforce them.'),
         ];
       case 'textarea':
         return [
@@ -650,7 +663,7 @@ class _FieldPanel extends StatelessWidget {
         return [num_('Number of stars', 'maxRating', p?.maxRating ?? 5, min: 2, max: 10)];
       case 'file':
         return [
-          FbSwitch(value: p?.multiple == true, label: 'Allow several files', onChanged: (v) => prop('multiple', v ? true : null)),
+          FbSwitch(size: UiSize.sm, value: p?.multiple == true, label: 'Allow several files', onChanged: (v) => prop('multiple', v ? true : null)),
           FbSetting(
             label: 'Accepted files',
             hint: 'Leave empty to accept any file. Add a “File types” check to enforce it.',
@@ -662,7 +675,7 @@ class _FieldPanel extends StatelessWidget {
       case 'radio':
         return [orient()];
       case 'checkboxes':
-        return [orient(), FbSwitch(value: p?.selectAll == true, label: 'Offer “Select all”', onChanged: (v) => prop('selectAll', v ? true : null))];
+        return [orient(), FbSwitch(size: UiSize.sm, value: p?.selectAll == true, label: 'Offer “Select all”', onChanged: (v) => prop('selectAll', v ? true : null))];
       case 'calculated':
         final format = p?.format ?? 'number';
         return [
@@ -681,7 +694,7 @@ class _FieldPanel extends StatelessWidget {
             text('Currency code', 'currency', p?.currency ?? 'USD', 'USD', map: (v) => v.toUpperCase())
           else if (format != 'text')
             FbPair(children: [text('Before it', 'prefix', p?.prefix, 'e.g. #'), text('After it', 'suffix', p?.suffix, 'e.g. years')]),
-          FbSwitch(value: p?.excludeFromData == true, label: 'Show it, but don’t save it', onChanged: (v) => prop('excludeFromData', v ? true : null)),
+          FbSwitch(size: UiSize.sm, value: p?.excludeFromData == true, label: 'Show it, but don’t save it', onChanged: (v) => prop('excludeFromData', v ? true : null)),
         ];
     }
     return const [];
@@ -855,7 +868,7 @@ class _GroupPanel extends StatelessWidget {
       ),
       FbSetting(
         label: 'Description',
-        child: UiTextarea(
+        child: UiTextarea(size: UiSize.sm, 
           value: g.description ?? '',
           rows: 2,
           autosize: true,
@@ -879,7 +892,7 @@ class _GroupPanel extends StatelessWidget {
         child: _segmented<String>('Width', g.layout?.width ?? 'full', _widths, (v) => store.updateGroup(g.id, (x) => x.layout = v == 'full' ? null : UiFbLayout(width: v))),
       ),
       FbSection(title: 'Repeating', children: [
-        FbSwitch(
+        FbSwitch(size: UiSize.sm, 
           value: rep != null,
           label: 'People can add this section more than once',
           onChanged: nested != null
@@ -926,7 +939,7 @@ class _GroupPanel extends StatelessWidget {
         ],
       ]),
       FbSection(title: 'Saved data', children: [
-        FbSwitch(
+        FbSwitch(size: UiSize.sm, 
           value: (g.key ?? '').isNotEmpty,
           label: 'Keep its answers together',
           onChanged: rep != null
@@ -972,7 +985,7 @@ class _StaticPanel extends StatelessWidget {
       else if (s.type == 'paragraph') ...[
         FbSetting(
           label: 'Text',
-          child: UiTextarea(value: s.text ?? '', rows: 4, autosize: true, maxRows: 14, semanticLabel: 'Text', onChanged: (v) => store.updateStatic(s.id, (x) => x.text = v, mergeKey: 'text:${s.id}')),
+          child: UiTextarea(size: UiSize.sm, value: s.text ?? '', rows: 4, autosize: true, maxRows: 14, semanticLabel: 'Text', onChanged: (v) => store.updateStatic(s.id, (x) => x.text = v, mergeKey: 'text:${s.id}')),
         ),
         FbSetting(
           label: 'Width',
@@ -1014,7 +1027,7 @@ class _PagePanel extends StatelessWidget {
         ),
         FbSetting(
           label: 'Description',
-          child: UiTextarea(
+          child: UiTextarea(size: UiSize.sm, 
             value: p.description ?? '',
             rows: 2,
             autosize: true,
@@ -1130,7 +1143,7 @@ class _FormSettings extends StatelessWidget {
       ),
       FbSetting(
         label: 'Description',
-        child: UiTextarea(
+        child: UiTextarea(size: UiSize.sm, 
           value: def.description ?? '',
           rows: 2,
           autosize: true,

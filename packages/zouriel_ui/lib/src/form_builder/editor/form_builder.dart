@@ -80,6 +80,7 @@ class UiFormBuilder extends StatefulWidget {
     this.globalSettings,
     this.httpSources = const UiFbHttpSourcesOptions(),
     this.actions,
+    this.showTitle = true,
   });
 
   /// The form being built: a [UiFormDefinition] or its stored JSON (migrated on load). Handing back
@@ -113,6 +114,9 @@ class UiFormBuilder extends StatefulWidget {
 
   /// Your own buttons (Save, Publish) at the end of the top bar.
   final Widget? actions;
+
+  /// Show the form's title in the top bar. Turn off when the host's own header already names the form.
+  final bool showTitle;
 
   @override
   State<UiFormBuilder> createState() => UiFormBuilderState();
@@ -208,9 +212,17 @@ class UiFormBuilderState extends State<UiFormBuilder> {
   }
 
   void _setView(UiFormBuilderView v) => setState(() {
+    // The undo toast belongs to the view it was raised in; elsewhere it would cover that view's own buttons.
+    if (v != _view) _dismissToast();
     _view = v;
     _sheetSnap = 0;
   });
+
+  void _dismissToast() {
+    _toastTimer?.cancel();
+    _toastTimer = null;
+    _toast = null;
+  }
 
   void _openSettings(String? id) {
     controller.select(id);
@@ -387,7 +399,8 @@ class UiFormBuilderState extends State<UiFormBuilder> {
                   snap: _sheetSnap,
                   onSnapChanged: (s) => setState(() => _sheetSnap = s),
                   title: controller.selected != null ? controller.name(controller.selectedId!) : 'Form settings',
-                  builder: (context, scroll) => UiFbInspector(showHead: false, scrollController: scroll, onDeleteRequest: _requestDelete),
+                  // The sheet's builder content pads itself: 16 at the sides, like the sheet's title.
+                  builder: (context, scroll) => UiFbInspector(showHead: false, sidePadding: t.space4, scrollController: scroll, onDeleteRequest: _requestDelete),
                 ),
               if (narrow)
                 UiBottomSheet(
@@ -399,7 +412,7 @@ class UiFormBuilderState extends State<UiFormBuilder> {
                     if (s == 0) setState(() => _addOpen = false);
                   },
                   builder: (context, scroll) => Padding(
-                    padding: EdgeInsets.fromLTRB(t.space3, t.space3, t.space3, 0),
+                    padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, 0),
                     child: UiFbPalette(compact: true, target: _addTarget, scrollController: scroll, onAdded: () => setState(() => _addOpen = false)),
                   ),
                 ),
@@ -414,7 +427,7 @@ class UiFormBuilderState extends State<UiFormBuilder> {
                       actionLabel: 'Undo',
                       onAction: () {
                         controller.undo();
-                        setState(() => _toast = null);
+                        setState(_dismissToast);
                       },
                     ),
                   ),
@@ -455,7 +468,7 @@ class UiFormBuilderState extends State<UiFormBuilder> {
           if (_layout == UiFormBuilderLayout.wide)
             Container(
               width: 240,
-              padding: EdgeInsets.fromLTRB(t.space2, t.space3, t.space2, 0),
+              padding: EdgeInsets.fromLTRB(t.space2, t.space3, t.space2, t.space3),
               decoration: side(true),
               child: Semantics(container: true, label: 'Fields to add', child: UiFbPalette(dnd: _dnd)),
             ),
@@ -584,7 +597,8 @@ class _TopBar extends StatelessWidget {
       onChanged: state._setView,
     );
 
-    final tools = Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, runSpacing: 2, children: [
+    // Undo and redo sit close together; buttons after them (Add, the host's actions) keep 8px.
+    final tools = Wrap(alignment: WrapAlignment.end, crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, runSpacing: 2, children: [
       FbIconButton(icon: HugeIcons.strokeRoundedUndo02, label: 'Undo', onPressed: store.canUndo ? store.undo : null),
       FbIconButton(icon: HugeIcons.strokeRoundedRedo02, label: 'Redo', onPressed: store.canRedo ? store.redo : null),
       if (errors > 0)
@@ -610,9 +624,13 @@ class _TopBar extends StatelessWidget {
           ),
         ),
       if (!narrow && state._layout == UiFormBuilderLayout.medium && state._view == UiFormBuilderView.build)
-        UiButton(label: 'Add', size: UiSize.sm, variant: UiButtonVariant.outline, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: () => state._openAdd(null)),
-      ?state.widget.actions,
+        Padding(
+          padding: EdgeInsetsDirectional.only(start: t.space2),
+          child: UiButton(label: 'Add', size: UiSize.sm, variant: UiButtonVariant.outline, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: () => state._openAdd(null)),
+        ),
+      if (state.widget.actions != null) Padding(padding: EdgeInsetsDirectional.only(start: t.space2), child: state.widget.actions),
     ]);
+    final showTitle = state.widget.showTitle;
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: 6),
@@ -621,17 +639,17 @@ class _TopBar extends StatelessWidget {
           ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
               // The tools keep their natural width (up to most of the row); the title takes the rest.
               LayoutBuilder(builder: (context, box) => Row(children: [
-                Expanded(child: Align(alignment: Alignment.centerLeft, child: titleButton)),
-                ConstrainedBox(constraints: BoxConstraints(maxWidth: box.maxWidth * 0.72), child: tools),
+                Expanded(child: Align(alignment: Alignment.centerLeft, child: showTitle ? titleButton : null)),
+                ConstrainedBox(constraints: BoxConstraints(maxWidth: box.maxWidth * (showTitle ? 0.72 : 1)), child: tools),
               ])),
               views,
             ])
+          // Title and tools share the room either side of the views (as in the workflow builder's bar),
+          // so the title only shortens when it must; the tools get more, as they hold the host's buttons.
           : Row(spacing: t.space3, children: [
-              Flexible(child: titleButton),
-              const Spacer(),
+              Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: showTitle ? titleButton : null)),
               views,
-              const Spacer(),
-              tools,
+              Expanded(flex: 3, child: Align(alignment: Alignment.centerRight, child: tools)),
             ]),
     );
   }

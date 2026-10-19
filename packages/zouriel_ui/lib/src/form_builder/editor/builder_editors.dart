@@ -191,16 +191,17 @@ class _UiFbOptionsEditorState extends State<UiFbOptionsEditor> {
         Wrap(spacing: t.space3, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           FbLink(label: 'Add option', icon: HugeIcons.strokeRoundedAdd01, onTap: () => addAt(opts.length)),
           FbLink(label: _pasting ? 'Close the list box' : 'Paste a list', onTap: () => setState(() => _pasting = !_pasting)),
-          FbSwitch(value: _showValues, label: 'Show saved values', onChanged: (v) => setState(() => _showValues = v)),
         ]),
         if (_pasting)
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
-            UiTextarea(value: _pasted, rows: 4, placeholder: 'One option per line', semanticLabel: 'Options, one per line', onChanged: (v) => _pasted = v),
+            UiTextarea(size: UiSize.sm, value: _pasted, rows: 4, placeholder: 'One option per line', semanticLabel: 'Options, one per line', onChanged: (v) => _pasted = v),
             Row(spacing: t.space2, children: [
               UiButton(label: 'Add these', size: UiSize.sm, onPressed: applyPaste),
               UiButton(label: 'Cancel', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _pasting = false)),
             ]),
           ]),
+        // On its own row at the start, like every other switch in the panel.
+        FbSwitch(size: UiSize.sm, value: _showValues, label: 'Show saved values', onChanged: (v) => setState(() => _showValues = v)),
       ],
     ]);
   }
@@ -239,9 +240,11 @@ class _OptionRow extends StatelessWidget {
     final t = context.ui;
     final o = option;
     final archived = o.archived == true;
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-      FbIconButton(icon: HugeIcons.strokeRoundedArrowUp01, label: 'Move ${o.label} up', onPressed: index == 0 ? null : () => onMove(-1)),
-      FbIconButton(icon: HugeIcons.strokeRoundedArrowDown01, label: 'Move ${o.label} down', onPressed: last ? null : () => onMove(1)),
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space1, children: [
+      Row(mainAxisSize: MainAxisSize.min, spacing: 2, children: [
+        FbIconButton(icon: HugeIcons.strokeRoundedArrowUp01, label: 'Move ${o.label} up', onPressed: index == 0 ? null : () => onMove(-1)),
+        FbIconButton(icon: HugeIcons.strokeRoundedArrowDown01, label: 'Move ${o.label} down', onPressed: last ? null : () => onMove(1)),
+      ]),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 3, children: [
           Opacity(
@@ -340,7 +343,7 @@ class UiFbChecksEditor extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
       if (f.type != UiFbFieldType.calculated && f.type != UiFbFieldType.hidden)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
-          const FbLabel('Answer needed?'),
+          const FbHeading('Answer needed?'),
           Align(
             alignment: Alignment.centerLeft,
             child: UiSegmented<String>(
@@ -556,12 +559,12 @@ class _CheckBox extends StatelessWidget {
             onChanged: (v) => onPatch((r) => r.message = v.isEmpty ? null : v, merge: 'msg'),
           ),
         ),
-        FbSwitch(
+        FbSwitch(size: UiSize.sm, 
           value: rule.when != null,
           label: 'Only check sometimes',
           onChanged: (on) => onPatch((r) => r.when = on ? fbEmptyCondition() : null),
         ),
-        FbSwitch(
+        FbSwitch(size: UiSize.sm, 
           value: rule.severity == 'warning',
           label: 'Warn but allow submitting',
           onChanged: (on) => onPatch((r) => r.severity = on ? 'warning' : null),
@@ -647,6 +650,7 @@ class UiFbCalcEditor extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
       FbSetting(
         label: 'Work out',
+        hint: info.hint,
         child: UiSelect(
           label: 'Work out',
           size: UiSize.sm,
@@ -655,7 +659,6 @@ class UiFbCalcEditor extends StatelessWidget {
           onChanged: (v) => setOp(UiFbCalcOp(v)),
         ),
       ),
-      FbHint(info.hint),
       const FbLabel('Using'),
       for (var i = 0; i < c.args.length; i++)
         Row(spacing: 4, children: [

@@ -483,7 +483,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
                 right: BorderSide(color: uiMix(t.danger, 0.55, t.surface)),
                 bottom: BorderSide(color: uiMix(t.danger, 0.55, t.surface)),
               ),
-              boxShadow: _summaryFocus.hasFocus && FocusManager.instance.highlightMode == FocusHighlightMode.traditional ? t.focusRing : const [],
+              // Focused by the form so it's read out; its red frame already marks it, a ring would double it.
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space1, children: [
               ExcludeSemantics(
