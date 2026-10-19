@@ -287,7 +287,9 @@ class _UiTableState<T> extends State<UiTable<T>> {
               ),
             ]);
           }
-          // Fill the width when the columns fit; otherwise keep their natural width and scroll.
+          // Wide: fill the width and let long text wrap (flexible columns shrink to fit). Narrow (a
+          // phone): the columns keep their natural width and the table scrolls, with a faded edge.
+          if (box.maxWidth.isFinite && box.maxWidth > 600) return SizedBox(width: box.maxWidth, child: content);
           return UiScrollFade(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,

@@ -121,6 +121,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('wide: long text wraps inside the width instead of scrolling', (tester) async {
+    final long = {'name': 'A long description of what this option does, written out the way docs tables have it, and then some more words so it cannot fit on one line', 'qty': 1};
+    await pumpUi(tester, SizedBox(width: 900, child: UiTable<Item>(columns: _cols, data: [long])), size: const Size(1000, 800));
+    expect(tester.getSize(find.byType(Table)).width, lessThanOrEqualTo(900));
+    expect(find.descendant(of: find.byType(UiTable<Item>), matching: find.byType(SingleChildScrollView)), findsNothing);
+    expect(tester.getSize(find.text(long['name']! as String)).height, greaterThan(30), reason: 'the text wraps onto more lines');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('semantics: a table of rows and cells with column headers', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpUi(tester, SizedBox(width: 390, child: UiTable<Item>(columns: _cols, data: [a, b], selectable: true)));

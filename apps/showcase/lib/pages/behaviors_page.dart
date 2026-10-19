@@ -102,14 +102,15 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
           name: 'Scroll fade',
           widget: 'UiScrollFade',
           summary: 'Wrap a sideways scroll view: each edge with more content past it fades out, so a cut-off row reads as one that scrolls on. Nothing changes while the content fits. UiTable and UiSegmented use it.',
+          // Framed like the other scrolling demos, so the faded edge reads as more to scroll, not a cut.
           demo: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: UiScrollFade(
+            child: _box(context, Padding(padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2), child: UiScrollFade(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(spacing: t.space2, children: [for (var i = 1; i <= 16; i++) UiBadge(label: 'Tag $i')]),
               ),
-            ),
+            ))),
           ),
           code: 'UiScrollFade(\n  child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: row),\n)',
           api: const [

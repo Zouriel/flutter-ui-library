@@ -162,8 +162,10 @@ class _UiColorPickerState extends State<UiColorPicker> {
     );
 
     final cell = touch ? uiMinTouchTarget : 24.0;
+    // 4px between the swatch targets, so the selected ring (3px out) keeps clear of its neighbour.
     final swatches = Row(
       mainAxisSize: MainAxisSize.min,
+      spacing: t.space1,
       children: [
         for (final hex in widget.swatches)
           UiInteractive(

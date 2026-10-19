@@ -1543,7 +1543,7 @@ class _KindBadge extends StatelessWidget {
     final t = context.ui;
     // One width for every badge (SVG, TEXT, RSVP…), so the names after them start in one column.
     return Container(
-      constraints: const BoxConstraints(minWidth: 11 * 4.5),
+      constraints: const BoxConstraints(minWidth: 11 * 3.75),
       padding: EdgeInsets.symmetric(horizontal: t.space1),
       decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radiusXs)),
       child: Text(kind.toUpperCase(), maxLines: 1, overflow: TextOverflow.clip, softWrap: false, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, height: 14 / 11, letterSpacing: 11 * 0.04, color: t.textMuted)),

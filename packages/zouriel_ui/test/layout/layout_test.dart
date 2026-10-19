@@ -87,6 +87,15 @@ void main() {
   });
 
   group('UiPanelSection', () {
+    testWidgets('divider: false drops the line under the last section', (tester) async {
+      await pumpUi(tester, const SizedBox(width: 300, child: Column(children: [
+        UiPanelSection(title: 'First', child: Text('a')),
+        UiPanelSection(title: 'Last', divider: false, child: Text('b')),
+      ])));
+      Border? line(int i) => (tester.widget<DecoratedBox>(find.descendant(of: find.byType(UiPanelSection).at(i), matching: find.byType(DecoratedBox)).first).decoration as BoxDecoration).border as Border?;
+      expect(line(0)?.bottom.width, greaterThan(0));
+      expect(line(1), isNull);
+    });
     testWidgets('the heading toggles the body and announces expanded', (tester) async {
       final handle = tester.ensureSemantics();
       final changes = <bool>[];

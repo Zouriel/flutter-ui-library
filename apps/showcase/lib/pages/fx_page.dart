@@ -136,7 +136,7 @@ class _FxPageState extends State<FxPage> {
               height: 200,
               child: Stack(children: [
                 Positioned.fill(child: ColoredBox(color: t.surface)),
-                const Positioned.fill(child: UiGlyphField()),
+                const Positioned.fill(child: UiGlyphField(opacity: 0.9)),
                 const Center(child: UiText('Backdrop', variant: UiTextVariant.h2)),
               ]),
             ),

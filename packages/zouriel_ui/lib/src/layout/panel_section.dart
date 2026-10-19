@@ -23,6 +23,7 @@ class UiPanelSection extends StatefulWidget {
     this.collapsible = true,
     this.badge,
     this.actions = const [],
+    this.divider = true,
   });
 
   final String title;
@@ -39,6 +40,10 @@ class UiPanelSection extends StatefulWidget {
 
   /// Header controls, after the title.
   final List<Widget> actions;
+
+  /// The line under the section. Turn it off on the last section inside a bordered panel, so the
+  /// panel's edge isn't doubled (the web drops it on `:last-child` by itself).
+  final bool divider;
 
   @override
   State<UiPanelSection> createState() => _UiPanelSectionState();
@@ -100,7 +105,7 @@ class _UiPanelSectionState extends State<UiPanelSection> {
         : Semantics(header: true, label: widget.title, child: ExcludeSemantics(child: heading(const UiStates())));
 
     return DecoratedBox(
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
+      decoration: BoxDecoration(border: widget.divider ? Border(bottom: BorderSide(color: t.border)) : null),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
         Row(children: [
           Expanded(child: head),
