@@ -12,8 +12,9 @@ import 'form_field.dart';
 
 /// The focus ring an invalid field shows: the web `0 0 0 2px bg, 0 0 0 4px danger`.
 List<BoxShadow> uiDangerRing(UiTokens t) => [
-      BoxShadow(color: t.bg, spreadRadius: 2),
+      // Flutter paints the last shadow on top: the outer ring first, the 2px gap over it.
       BoxShadow(color: t.danger, spreadRadius: 4),
+      BoxShadow(color: t.bg, spreadRadius: 2),
     ];
 
 /// Text size for a control size: sm / md / lg font tokens.

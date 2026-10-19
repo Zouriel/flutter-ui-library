@@ -417,7 +417,7 @@ if (ok == true) delete();''',
           api: const [
             ApiRow('snaps', 'List<double>', 'Resting heights as fractions of the room it has, ascending. A first snap of 0 is closed.', def: '[0, 0.5, 1]'),
             ApiRow('snap / onSnapChanged', 'int / ValueChanged<int>?', 'The index it rests at, and where it came to rest after a drag, the handle, Escape, back or a backdrop tap.', def: '0'),
-            ApiRow('child / builder', 'Widget? / (context, ScrollController) => Widget', 'Content in a scroll view the sheet provides, or your own scroll view on the given controller (so a list takes part in dragging).'),
+            ApiRow('child / builder', 'Widget? / (context, ScrollController) => Widget', 'Content in a scroll view the sheet provides, padded like a dialog body (12px top and bottom, 16px sides), or your own scroll view on the given controller (so a list takes part in dragging); give that one UiBottomSheet.bodyPadding(context) to line up with the title.'),
             ApiRow('title', 'String', 'Header title and accessible name. A title, or hasHeader, shows the header row.', def: "''"),
             ApiRow('offset', 'double', 'Px kept free below it, for a toolbar it sits on.', def: '0'),
             ApiRow('topInset', 'double', 'Px kept free above its tallest snap.', def: '0'),

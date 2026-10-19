@@ -111,7 +111,9 @@ function dartGradient(s) {
 }
 function dartShadows(s) {
   if (s === 'none') return 'const <BoxShadow>[]';
-  return '[' + splitTop(s).map((p) => {
+  // CSS paints the first shadow on top; Flutter paints a BoxShadow list in order, the last on top.
+  // Reverse it, so a ring like the focus ring ("2px page colour, then 4px focus colour") keeps its gap.
+  return '[' + splitTop(s).reverse().map((p) => {
     const inset = /\binset\b/.test(p);
     const [c, rest] = takeColor(p.replace(/\binset\b/, ''));
     const [x, y, blur, spread] = rest.trim().split(/\s+/).map((v) => parseFloat(v) || 0);
@@ -198,6 +200,13 @@ ${fields.map((f) => `  /// \`${f.n}\`\n  final ${f.type} ${f.name};`).join('\n')
   /// Interpolates every token, so a theme change can animate.
   UiTokens lerp(UiTokens other, double t) => UiTokens(
 ${fields.map((f) => `        ${f.name}: ${lerpExpr(f)},`).join('\n')}
+      );
+
+  /// A copy with some tokens replaced (e.g. a theme island's glass).
+  UiTokens copyWith({
+${fields.map((f) => `    ${f.type.endsWith('?') ? f.type : f.type + '?'} ${f.name},`).join('\n')}
+  }) => UiTokens(
+${fields.map((f) => `        ${f.name}: ${f.name} ?? this.${f.name},`).join('\n')}
       );
 }
 

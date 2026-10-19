@@ -255,8 +255,9 @@ void main() {
           title: modal ? 'Share' : 'Layers',
           backdrop: modal,
           actions: modal ? null : UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'Add layer', size: UiSize.sm, onPressed: () {}),
+          // The sheet pads its body (16px sides), so the content brings no padding of its own.
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.zero,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [
               for (final n in ['Background', 'Title', 'Photo', 'Caption']) UiText(n),
             ]),

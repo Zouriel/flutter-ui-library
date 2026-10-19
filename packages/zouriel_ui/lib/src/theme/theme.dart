@@ -208,7 +208,12 @@ class UiThemeScope extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parent = UiTheme.of(context);
-    final data = UiThemeData(name: theme, config: parent.config);
+    // Without its own background the island sits over another theme's ground, which its thin glass
+    // tint wasn't tuned for (a near-white "dark" card with light text), so glass inside uses the
+    // panel recipe, as on the web (`ui-theme-provider` without `ui-surface`).
+    final base = uiThemeTokens[theme]!;
+    final data = UiThemeData(
+        name: theme, tokens: paintBackground ? base : base.copyWith(glassBg: base.glassPanelBg), config: parent.config);
     Widget content = IconTheme(
       data: IconThemeData(color: data.tokens.text, size: 20),
       child: DefaultTextStyle(style: data.typography.body, child: child),

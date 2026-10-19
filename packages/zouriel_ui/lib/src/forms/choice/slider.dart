@@ -175,14 +175,18 @@ class _UiSliderState extends State<UiSlider> {
           ),
         ),
         if (widget.showValue)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 24),
-            child: Text(
-              shown,
-              textAlign: TextAlign.end,
-              style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]),
-            ),
-          ),
+          // The slot fits the longest value this slider can show, and at least 4 characters, so it
+          // doesn't change size while dragging and stacked sliders end their tracks together.
+          Builder(builder: (context) {
+            final style = context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
+            final scale = MediaQuery.textScalerOf(context);
+            double widthOf(String w) => (TextPainter(text: TextSpan(text: w, style: style), textDirection: TextDirection.ltr, textScaler: scale)..layout()).width;
+            final slot = [for (final w in ['0000', _fmt(widget.min), _fmt(widget.max), _fmt(widget.min + widget.step)]) widthOf(w)].reduce(math.max);
+            return ConstrainedBox(
+              constraints: BoxConstraints(minWidth: slot.ceilToDouble()),
+              child: Text(shown, textAlign: TextAlign.end, style: style),
+            );
+          }),
       ],
     );
 

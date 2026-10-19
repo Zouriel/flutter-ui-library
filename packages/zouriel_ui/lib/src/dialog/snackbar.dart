@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
@@ -45,6 +47,10 @@ class UiSnackbarController extends ChangeNotifier {
 
   /// The notice showing now.
   UiSnack? get current => _current;
+
+  /// Where the shown bar sits on screen (global coordinates), set by the [UiSnackbarHost]; null
+  /// while none shows. A [UiToastHost] reads it to move a bottom stack out of the bar's way.
+  final ValueNotifier<Rect?> area = ValueNotifier<Rect?>(null);
 
   /// The controller of the nearest [UiSnackbarHost].
   static UiSnackbarController of(BuildContext context) {
@@ -112,6 +118,7 @@ class UiSnackbarController extends ChangeNotifier {
   @override
   void dispose() {
     _tick?.cancel();
+    area.dispose();
     super.dispose();
   }
 }
@@ -147,6 +154,7 @@ class UiSnackbarHost extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final s = controller.current;
+        if (s == null) SchedulerBinding.instance.addPostFrameCallback((_) => controller.area.value = null);
         return IgnorePointer(
           ignoring: s == null,
           child: Padding(
@@ -184,7 +192,11 @@ class UiSnackbarHost extends StatelessWidget {
                               child: Semantics(
                                 container: true,
                                 liveRegion: true,
-                                child: UiSnackbar(message: s.message, title: s.title, actionLabel: s.action?.label, onAction: controller.act),
+                                child: _ReportArea(
+                                  controller: controller,
+                                  id: s.id,
+                                  child: UiSnackbar(message: s.message, title: s.title, actionLabel: s.action?.label, onAction: controller.act),
+                                ),
                               ),
                             ),
                           ),
@@ -233,7 +245,8 @@ class UiSnackbar extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(color: t.text, borderRadius: BorderRadius.circular(r), boxShadow: t.shadow2),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: t.space3),
+          // The action's own 4px side padding makes up the end inset, so its label sits where it did.
+          padding: EdgeInsetsDirectional.only(start: t.space3, end: label != null && onAction != null ? t.space3 - t.space1 : t.space3),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -263,15 +276,24 @@ class UiSnackbar extends StatelessWidget {
                       borderRadius: BorderRadius.circular(t.radiusXs),
                       border: s.focused ? Border.all(color: t.bg, width: 2) : null,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Text(
-                        label,
-                        style: body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          decoration: TextDecoration.underline,
-                          decorationColor: t.bg,
-                          decorationThickness: s.hovered ? 2 : 1,
+                    // A 26px tall target (the toast action's height) with a pointer too, not just on touch.
+                    // (A Center with height factor 1, not Container.alignment, which fills the bar's whole height.)
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: t.sizeSm),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: t.space1),
+                        child: Center(
+                          widthFactor: 1,
+                          heightFactor: 1,
+                          child: Text(
+                            label,
+                            style: body.copyWith(
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                              decorationColor: t.bg,
+                              decorationThickness: s.hovered ? 2 : 1,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -282,5 +304,37 @@ class UiSnackbar extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Publishes its child's on-screen rect to the controller's [UiSnackbarController.area] after each
+/// paint that moves it, while its notice [id] is still the current one (not while it fades out).
+class _ReportArea extends SingleChildRenderObjectWidget {
+  const _ReportArea({required this.controller, required this.id, super.child});
+  final UiSnackbarController controller;
+  final int id;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderReportArea(controller, id);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderReportArea renderObject) => renderObject
+    ..controller = controller
+    ..id = id;
+}
+
+class _RenderReportArea extends RenderProxyBox {
+  _RenderReportArea(this.controller, this.id);
+  UiSnackbarController controller;
+  int id;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+    final rect = localToGlobal(Offset.zero) & size;
+    if (controller.area.value == rect) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (attached && controller.current?.id == id) controller.area.value = rect;
+    });
   }
 }

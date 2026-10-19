@@ -39,7 +39,7 @@ class UiFloatingPanel extends StatelessWidget {
     final r = (radius ?? theme.config.radius) ? (cornerRadius ?? t.radius) : 0.0;
     Widget box = DecoratedBox(
       decoration: BoxDecoration(
-        color: isGlass ? t.glassBg : t.surfaceRaised,
+        color: isGlass ? t.glassPanelBg : t.surfaceRaised,
         borderRadius: BorderRadius.circular(r),
         border: Border.all(color: isGlass ? t.glassBorder : t.border),
         boxShadow: shadow ?? t.shadow2,
