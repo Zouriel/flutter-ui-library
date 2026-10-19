@@ -337,7 +337,9 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
               }),
             ),
           )),
-          if (task.allowDelegation) ...[
+          // The link and its search sit together as one group: the link's touch target already
+          // gives them room, so the dialog's field spacing would leave the search floating away.
+          if (task.allowDelegation) Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space1, children: [
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: FbLink(
@@ -369,7 +371,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
                 ),
                 UiButton(label: 'Hand over', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: st.busy || st.delegateTo.isEmpty ? null : () => delegate(ctx)),
               ]),
-          ],
+          ]),
           if (st.error.isNotEmpty) WfNote(st.error),
         ]));
       },
