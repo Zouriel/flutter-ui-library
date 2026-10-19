@@ -127,15 +127,18 @@ class _FxPageState extends State<FxPage> {
         DocSection(
           name: 'Section label',
           widget: 'UiSectionLabel',
-          summary: 'An editorial mono section marker, e.g. [ 00 · INDEX ]. The index and its dot are left out when index is empty.',
+          summary: 'A section marker above a heading. eyebrow is a short accent bar and the label in small caps, in the theme\'s own font, with the index in the primary colour; bracket is the editorial mono marker made for Dark Orange, [ 00 · INDEX ]. auto (the default) picks bracket on Dark Orange and eyebrow everywhere else. The accent is the theme\'s sectionLabelBracket: its primary by default, the warm accent in Winter, blood red in Dark Orange, coral in Maldives. The index is left out when empty.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: const [
             UiSectionLabel(index: '00', label: 'Index'),
-            UiSectionLabel(label: 'Work'),
+            UiSectionLabel(index: '01', label: 'Eyebrow', variant: UiSectionLabelVariant.eyebrow),
+            UiSectionLabel(index: '02', label: 'Bracket', variant: UiSectionLabelVariant.bracket),
           ]),
-          code: "UiSectionLabel(index: '01', label: 'Work')",
+          code: "UiSectionLabel(index: '01', label: 'Work')\nUiSectionLabel(label: 'Work', variant: UiSectionLabelVariant.bracket)",
+          shapes: 'enum UiSectionLabelVariant { auto, bracket, eyebrow }',
           api: const [
             ApiRow('label', 'String', 'The section name.'),
             ApiRow('index', 'String', 'Optional number.', def: "''"),
+            ApiRow('variant', 'UiSectionLabelVariant', 'bracket on Dark Orange and eyebrow elsewhere, or force one.', def: 'auto'),
           ],
         ),
         DocSection(

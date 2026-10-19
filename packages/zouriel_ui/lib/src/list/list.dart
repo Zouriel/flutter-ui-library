@@ -76,9 +76,9 @@ class UiListItem extends StatelessWidget {
           child: DefaultTextStyle.merge(
             style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35),
             child: Row(spacing: t.space3, children: [
-              if (leading != null) IconTheme.merge(data: IconThemeData(color: t.text, size: 20), child: leading!),
+              if (leading != null) IconTheme.merge(data: IconThemeData(color: t.icon ?? t.text, size: 20), child: leading!),
               Expanded(child: child),
-              if (trailing != null) DefaultTextStyle.merge(style: TextStyle(color: t.textMuted), child: IconTheme.merge(data: IconThemeData(color: t.textMuted), child: trailing!)),
+              if (trailing != null) DefaultTextStyle.merge(style: TextStyle(color: t.textMuted), child: IconTheme.merge(data: IconThemeData(color: t.icon ?? t.textMuted), child: trailing!)),
             ]),
           ),
         ),

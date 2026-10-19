@@ -161,6 +161,9 @@ void main() {
 
   for (final theme in [UiThemeName.dark, UiThemeName.light]) {
     testWidgets('golden: focus rings on a ghost button and a calendar day, ${theme.name} (2px gap, then the ring)', (tester) async {
+      // The calendar outlines today; pin it, or the golden only matches on the day it was made.
+      uiToday = () => DateTime(2026, 10, 19);
+      addTearDown(() => uiToday = DateTime.now);
       debugDisableShadows = false;
       tester.view.devicePixelRatio = 2;
       tester.view.physicalSize = const Size(300, 400) * 2;

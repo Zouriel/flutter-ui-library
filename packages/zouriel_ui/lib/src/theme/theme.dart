@@ -216,7 +216,7 @@ class UiThemeScope extends StatelessWidget {
     final data = UiThemeData(
         name: theme, tokens: paintBackground ? base : base.copyWith(glassBg: base.glassPanelBg), config: parent.config);
     Widget content = IconTheme(
-      data: IconThemeData(color: data.tokens.text, size: 20),
+      data: IconThemeData(color: data.tokens.icon ?? data.tokens.text, size: 20),
       child: DefaultTextStyle(style: data.typography.body, child: child),
     );
     if (paintBackground) content = ColoredBox(color: data.tokens.bg, child: content);
@@ -224,8 +224,25 @@ class UiThemeScope extends StatelessWidget {
   }
 }
 
+/// Makes a [UiThemeController] reachable below it with [UiThemeController.maybeOf]. [UiApp]
+/// provides its controller this way, so any widget can switch the app's theme, as an Angular
+/// component injects `UiThemeService`.
+class UiThemeControllerScope extends InheritedWidget {
+  const UiThemeControllerScope({super.key, required this.controller, required super.child});
+
+  final UiThemeController controller;
+
+  @override
+  bool updateShouldNotify(UiThemeControllerScope oldWidget) => oldWidget.controller != controller;
+}
+
 /// Holds the app's current theme, the twin of the web `UiThemeService`. Persist [theme] yourself.
 class UiThemeController extends ChangeNotifier {
+  /// The controller of the nearest [UiApp] (or [UiThemeControllerScope]), or null when the app has a
+  /// fixed theme.
+  static UiThemeController? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<UiThemeControllerScope>()?.controller;
+
   // Named parameters can't be private, so these can't be initializing formals.
   UiThemeController({UiThemeName theme = UiThemeName.dark, UiConfig config = const UiConfig()})
       : _theme = theme, // ignore: prefer_initializing_formals

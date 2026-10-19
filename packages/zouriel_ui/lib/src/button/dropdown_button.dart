@@ -186,7 +186,7 @@ class _MenuPanel<T> extends StatelessWidget {
                                 ? BoxDecoration(border: Border.all(color: t.borderFocus, width: 2), borderRadius: BorderRadius.circular(t.radiusXs))
                                 : null,
                             child: IconTheme.merge(
-                              data: IconThemeData(color: fg, size: 16),
+                              data: IconThemeData(color: items[i].danger ? fg : (t.icon ?? fg), size: 16),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 spacing: t.space2,

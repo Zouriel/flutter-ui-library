@@ -134,7 +134,7 @@ class _SideNavTile extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.symmetric(vertical: t.space1, horizontal: t.space3),
                 child: Row(spacing: t.space2, children: [
-                  if (item.icon != null) SizedBox(width: 18, child: Center(child: UiIcon(item.icon!, size: 16, color: fg))),
+                  if (item.icon != null) SizedBox(width: 18, child: Center(child: UiIcon(item.icon!, size: 16, color: active ? fg : (t.icon ?? fg)))),
                   Expanded(
                     child: Text(
                       item.label,

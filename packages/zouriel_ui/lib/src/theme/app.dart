@@ -44,7 +44,7 @@ class UiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = controller;
     if (c == null) return _app(UiThemeData(name: theme, config: config));
-    return ListenableBuilder(listenable: c, builder: (context, _) => _app(c.data));
+    return UiThemeControllerScope(controller: c, child: ListenableBuilder(listenable: c, builder: (context, _) => _app(c.data)));
   }
 
   Widget _app(UiThemeData data) {
@@ -69,9 +69,10 @@ class UiApp extends StatelessWidget {
           builder: (context, child) {
             Widget content = ColoredBox(
               color: t.tokens.bg,
-              // Icons default to the theme's text colour (black would vanish on dark themes).
+              // Icons default to the theme's icon colour (maldives: Lagoon), else its text colour (black
+              // would vanish on dark themes). Filled and active controls set their own.
               child: IconTheme(
-                data: IconThemeData(color: t.tokens.text, size: 20),
+                data: IconThemeData(color: t.tokens.icon ?? t.tokens.text, size: 20),
                 child: DefaultTextStyle(style: t.typography.body, child: child ?? const SizedBox.shrink()),
               ),
             );

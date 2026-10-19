@@ -45,6 +45,9 @@ class _Look {
   final List<BoxShadow> shadow;
 }
 
+/// Ghost and outline buttons sit on the page, so their icons take the theme's icon colour.
+bool _neutral(UiButtonVariant v) => v == UiButtonVariant.ghost || v == UiButtonVariant.outline;
+
 _Look _look(UiButtonVariant v, UiTokens t, UiStates s) {
   final hover = s.hovered || s.pressed;
   switch (v) {
@@ -158,7 +161,9 @@ class UiButton extends StatelessWidget {
           ?trailingIcon,
         ];
         final row = IconTheme.merge(
-          data: IconThemeData(color: look.fg, size: iconSize),
+          // Icons follow the label on filled and link buttons; ghost and outline ones take the theme's
+          // icon colour (the web's --ui-color-icon).
+          data: IconThemeData(color: _neutral(variant) ? (t.icon ?? look.fg) : look.fg, size: iconSize),
           child: DefaultTextStyle(
             style: style,
             child: Row(
@@ -276,7 +281,7 @@ class UiIconButton extends StatelessWidget {
             foregroundDecoration: v == UiButtonVariant.brand && (s.hovered || s.pressed)
                 ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
                 : null,
-            child: Center(child: IconTheme.merge(data: IconThemeData(color: s.hovered || s.pressed ? look.fg : (iconColor ?? look.fg), size: iconSize), child: icon)),
+            child: Center(child: IconTheme.merge(data: IconThemeData(color: iconColor != null ? (s.hovered || s.pressed ? look.fg : iconColor!) : _neutral(v) ? (t.icon ?? look.fg) : look.fg, size: iconSize), child: icon)),
           ),
         );
       },

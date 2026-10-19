@@ -384,7 +384,7 @@ class _Row extends StatelessWidget {
                   SizedBox(
                     width: 16,
                     child: IconTheme.merge(
-                      data: IconThemeData(color: t.textMuted, size: 16),
+                      data: IconThemeData(color: t.icon ?? t.textMuted, size: 16),
                       child: DefaultTextStyle.merge(style: small.copyWith(color: t.textMuted), child: Center(child: c.icon!)),
                     ),
                   ),

@@ -46,7 +46,7 @@ class UiStatCard extends StatelessWidget {
         children: [
           Row(spacing: t.space2, children: [
             Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: small.copyWith(color: t.textMuted))),
-            if (icon != null) IconTheme.merge(data: IconThemeData(size: 18, color: t.textMuted), child: icon!),
+            if (icon != null) IconTheme.merge(data: IconThemeData(size: 18, color: t.icon ?? t.textMuted), child: icon!),
           ]),
           Text(
             value,

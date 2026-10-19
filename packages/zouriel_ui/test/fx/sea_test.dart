@@ -277,6 +277,45 @@ void main() {
     });
   });
 
+  group('theme icon colour', () {
+    testWidgets('loose icons and ghost buttons take Lagoon in maldives; filled and active ones keep their colour', (tester) async {
+      final m = uiThemeTokens[UiThemeName.maldives]!;
+      await pumpBox(tester, Column(children: [
+        const UiIcon(HugeIcons.strokeRoundedHome01, key: Key('loose')),
+        UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSearch01, key: Key('ghost')), label: 'Search', onPressed: () {}),
+        UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSent, key: Key('filled')), label: 'Send', variant: UiButtonVariant.primary, onPressed: () {}),
+        const UiBottomNav(items: [
+          UiBottomNavItem(label: 'Home', value: 'home', icon: HugeIcons.strokeRoundedHome01),
+          UiBottomNavItem(label: 'Search', value: 'search', icon: HugeIcons.strokeRoundedSearch01),
+        ], active: 'home', safeArea: false),
+      ]), animations: false);
+      Color? color(Finder f) => IconTheme.of(tester.element(f)).color;
+      expect(color(find.byKey(const Key('loose'))), m.icon);
+      expect(color(find.byKey(const Key('ghost'))), m.icon);
+      expect(color(find.byKey(const Key('filled'))), m.primaryContrast);
+      final nav = tester.widgetList<UiIcon>(find.descendant(of: find.byType(UiBottomNav), matching: find.byType(UiIcon))).map((i) => i.color).toList();
+      expect(nav, [m.primary, m.icon], reason: 'the current page in Ocean Deep, the others Lagoon');
+    });
+
+    testWidgets('other themes keep icons in the text colour', (tester) async {
+      await pumpBox(tester, const UiIcon(HugeIcons.strokeRoundedHome01, key: Key('loose')), theme: UiThemeName.lightTeal, animations: false);
+      expect(IconTheme.of(tester.element(find.byKey(const Key('loose')))).color, uiThemeTokens[UiThemeName.lightTeal]!.text);
+    });
+  });
+
+  group('section label', () {
+    testWidgets('auto is the bracket marker on Dark Orange and the eyebrow elsewhere', (tester) async {
+      await pumpBox(tester, const UiSectionLabel(index: '01', label: 'Work'), theme: UiThemeName.darkOrange, animations: false);
+      expect(find.text('['), findsOneWidget);
+      await pumpBox(tester, const UiSectionLabel(index: '01', label: 'Work'), animations: false);
+      await tester.pumpAndSettle(); // the theme cross-fade switches its name half-way
+      expect(find.text('['), findsNothing);
+      expect(find.text('WORK'), findsOneWidget);
+      await pumpBox(tester, const UiSectionLabel(index: '01', label: 'Work', variant: UiSectionLabelVariant.bracket), animations: false);
+      expect(find.text('['), findsOneWidget);
+    });
+  });
+
   group('goldens', () {
     const themes = [UiThemeName.dark, UiThemeName.light, UiThemeName.maldives];
     Widget box(BuildContext context, Widget child, {double height = 140}) => ClipRRect(

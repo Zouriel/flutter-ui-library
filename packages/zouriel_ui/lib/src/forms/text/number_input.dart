@@ -241,6 +241,7 @@ class _UiNumberInputState extends State<UiNumberInput> {
     Widget? scrub;
     if (hasLabel) {
       final color = _scrubbing ? t.primary : t.textMuted;
+      final iconColor = _scrubbing ? t.primary : (t.icon ?? t.textMuted);
       scrub = ExcludeSemantics(
         child: MouseRegion(
           cursor: widget.enabled ? SystemMouseCursors.resizeLeftRight : SystemMouseCursors.forbidden,
@@ -258,7 +259,7 @@ class _UiNumberInputState extends State<UiNumberInput> {
                 child: Center(
                   widthFactor: 1,
                   child: widget.labelIcon != null
-                      ? IconTheme.merge(data: IconThemeData(size: 14, color: color), child: widget.labelIcon!)
+                      ? IconTheme.merge(data: IconThemeData(size: 14, color: iconColor), child: widget.labelIcon!)
                       : Text(widget.label, style: context.uiText.body.merge(small).copyWith(color: color)),
                 ),
               ),

@@ -162,7 +162,7 @@ class UiFieldButton extends StatelessWidget {
               boxShadow: s.focused ? t.focusRing : const [],
             ),
             child: IconTheme.merge(
-              data: IconThemeData(size: math.min(16, visual - 6), color: s.hovered || s.pressed ? t.text : t.textMuted),
+              data: IconThemeData(size: math.min(16, visual - 6), color: t.icon ?? (s.hovered || s.pressed ? t.text : t.textMuted)),
               child: Center(child: icon),
             ),
           ),

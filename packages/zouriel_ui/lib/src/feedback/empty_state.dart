@@ -29,7 +29,7 @@ class UiEmptyState extends StatelessWidget {
           if (icon != null)
             Padding(
               padding: EdgeInsets.only(bottom: t.space2),
-              child: IconTheme.merge(data: IconThemeData(size: 32, color: t.textMuted), child: ExcludeSemantics(child: icon!)),
+              child: IconTheme.merge(data: IconThemeData(size: 32, color: t.icon ?? t.textMuted), child: ExcludeSemantics(child: icon!)),
             ),
           Text(heading, textAlign: TextAlign.center, style: ty.body.copyWith(fontWeight: FontWeight.w600, height: 1.35)),
           if (description != null)

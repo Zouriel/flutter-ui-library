@@ -178,36 +178,52 @@ class _UiScrollProgressState extends State<UiScrollProgress> {
   }
 }
 
-/// `ui-section-label`: an editorial mono section marker, `[ 00 · INDEX ]`, with a fading rule.
-/// The index and its dot are left out when [index] is empty.
+/// How [UiSectionLabel] draws, the web `UiSectionLabelVariant`: [bracket] is the editorial mono marker
+/// made for Dark Orange (`[ 00 · INDEX ]`), [eyebrow] a quieter accent bar + small caps in the theme's
+/// own font, and [auto] picks bracket on Dark Orange and eyebrow everywhere else.
+enum UiSectionLabelVariant { auto, bracket, eyebrow }
+
+/// `ui-section-label`: a section marker above a heading, an optional [index] and a [label]. Reads as
+/// one label. The accent (eyebrow bar, or the brackets) is the theme's `sectionLabelBracket`.
 class UiSectionLabel extends StatelessWidget {
-  const UiSectionLabel({super.key, required this.label, this.index = ''});
+  const UiSectionLabel({super.key, required this.label, this.index = '', this.variant = UiSectionLabelVariant.auto});
 
   final String label;
   final String index;
+  final UiSectionLabelVariant variant;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final base = context.uiText.code.copyWith(fontSize: 11, height: 1.35, letterSpacing: 11 * 0.4, color: t.textMuted);
-    return Semantics(
-      label: index.isEmpty ? label : '$index $label',
-      child: ExcludeSemantics(
-        child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
-          Text('[', style: base.copyWith(color: t.sectionLabelBracket)),
-          if (index.isNotEmpty) ...[
-            Text(index.toUpperCase(), style: base.copyWith(color: t.text)),
-            Text('·', style: base),
-          ],
-          Text(label.toUpperCase(), style: base.copyWith(color: t.text)),
-          Text(']', style: base.copyWith(color: t.sectionLabelBracket)),
-          Container(
-            width: 48,
-            height: 1,
-            decoration: BoxDecoration(gradient: LinearGradient(colors: [t.border, t.border.withValues(alpha: 0)])),
-          ),
-        ]),
-      ),
+    final bracket = variant == UiSectionLabelVariant.bracket ||
+        (variant == UiSectionLabelVariant.auto && context.uiTheme.name == UiThemeName.darkOrange);
+    final rule = Container(
+      width: 48,
+      height: 1,
+      decoration: BoxDecoration(gradient: LinearGradient(colors: [t.border, t.border.withValues(alpha: 0)])),
     );
+    final Widget row;
+    if (bracket) {
+      final base = context.uiText.code.copyWith(fontSize: 11, height: 1.35, letterSpacing: 11 * 0.4, color: t.textMuted);
+      row = Row(mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
+        Text('[', style: base.copyWith(color: t.sectionLabelBracket)),
+        if (index.isNotEmpty) ...[
+          Text(index.toUpperCase(), style: base.copyWith(color: t.text)),
+          Text('·', style: base),
+        ],
+        Text(label.toUpperCase(), style: base.copyWith(color: t.text)),
+        Text(']', style: base.copyWith(color: t.sectionLabelBracket)),
+        rule,
+      ]);
+    } else {
+      final base = context.uiText.body.copyWith(fontSize: 12, height: 1.35, fontWeight: FontWeight.w600, letterSpacing: 12 * t.trackingWide, color: t.textSecondary);
+      row = Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+        Container(width: 16, height: 2, decoration: BoxDecoration(color: t.sectionLabelBracket, borderRadius: BorderRadius.circular(t.radiusPill))),
+        if (index.isNotEmpty) Text(index.toUpperCase(), style: base.copyWith(color: t.primary, fontFeatures: const [FontFeature.tabularFigures()])),
+        Text(label.toUpperCase(), style: base),
+        Padding(padding: EdgeInsets.only(left: t.space1), child: rule),
+      ]);
+    }
+    return Semantics(label: index.isEmpty ? label : '$index $label', child: ExcludeSemantics(child: row));
   }
 }

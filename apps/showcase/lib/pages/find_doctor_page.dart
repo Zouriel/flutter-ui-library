@@ -5,9 +5,49 @@ import 'package:zouriel_ui/zouriel_ui.dart';
 import '../docs/doc.dart';
 
 /// The Find Doctor reference screens, rebuilt from library widgets inside UiSeaSurface (the twin of
-/// the web showcase's Find Doctor page). Each screen is its own Maldives island.
-class FindDoctorPage extends StatelessWidget {
+/// the web showcase's Find Doctor page). Opening it switches the app to Maldives, and back on leaving;
+/// the screens follow whatever theme is picked meanwhile.
+class FindDoctorPage extends StatefulWidget {
   const FindDoctorPage({super.key});
+
+  @override
+  State<FindDoctorPage> createState() => _FindDoctorPageState();
+}
+
+class _FindDoctorPageState extends State<FindDoctorPage> {
+  UiThemeController? _controller;
+  UiThemeName? _previous;
+
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: switching rebuilds the app above this page.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = _controller = mounted ? UiThemeController.maybeOf(context) : null;
+      if (c == null) return;
+      _previous = c.theme;
+      c.set(UiThemeName.maldives);
+    });
+  }
+
+  @override
+  void dispose() {
+    final c = _controller, previous = _previous;
+    // Only undo our own switch (a theme picked while here stays), and not mid-teardown.
+    if (c != null && previous != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (c.theme == UiThemeName.maldives) c.set(previous);
+      });
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const _FindDoctorScreens();
+}
+
+class _FindDoctorScreens extends StatelessWidget {
+  const _FindDoctorScreens();
 
   static const _doctors = [
     ('Dr. Aisha Rasheed', 'Aisha Rasheed', 'Cardiologist', 'Malé', '4.9'),
@@ -27,43 +67,43 @@ class FindDoctorPage extends StatelessWidget {
     return DocPage(
       eyebrow: 'Themes',
       title: 'Find Doctor',
-      lead: 'The Maldives theme in use: the five Find Doctor app screens rebuilt from existing widgets inside UiSeaSurface. White cards on Mist, Ocean Deep ink and buttons, a Coral call to action, Poppins, and the sea backdrops. Each screen is its own Maldives island, so it looks the same whatever theme the app is in.',
+      lead: 'The Maldives theme in use: the five Find Doctor app screens rebuilt from existing widgets inside UiSeaSurface. White cards on Mist, Ocean Deep ink and buttons, a Coral call to action, Poppins, and the sea backdrops. Opening this page switches the app to Maldives (and back when you leave); the screens follow whatever theme is picked while you are here.',
       children: [
         DocSection(
           name: 'Splash',
           widget: 'UiOceanHero · UiSunrise',
           summary: 'An ocean hero with the sunrise and the wordmark, over a sheet holding the two first actions. The sunrise rises once; the light sweeps across the sky every 8 seconds.',
-          demo: _Phone(child: UiSeaSurface(waveHeight: 70, waveOpacity: 0.4, child: Builder(builder: _splash))),
+          demo: _Phone(child: UiSeaSurface(theme: null, waveHeight: 70, waveOpacity: 0.4, child: Builder(builder: _splash))),
           code: 'UiSeaSurface(child: Column(children: [\n  UiOceanHero(child: UiSunrise(child: logo)),\n  UiButton(label: \'Get started\', block: true, size: UiSize.lg, onPressed: start),\n]))',
         ),
         DocSection(
           name: 'Home',
           widget: 'UiSearchInput · UiCard · UiBottomNav',
           summary: 'Greeting, search, the coral guidance card (the accent button), specialty chips and the top doctors as white list cards with a bookmark and a chevron, entering one after another with UiTide. The bottom navigation marks the current page in Ocean Deep.',
-          demo: _Phone(child: UiSeaSurface(waves: false, child: Builder(builder: _home))),
+          demo: _Phone(child: UiSeaSurface(theme: null, waves: false, child: Builder(builder: _home))),
           code: 'for (final (i, d) in doctors.indexed) UiTide(index: i, child: UiCard(padding: UiSize.sm, child: DoctorRow(d))),\nUiBottomNav(items: nav, active: \'home\')',
         ),
         DocSection(
           name: 'Doctor profile',
           widget: 'UiAvatar · UiTabs · UiButton',
           summary: 'The doctor over the waves, three facts, tabs underlined in Ocean Deep, and the full-width booking button.',
-          demo: _Phone(child: UiSeaSurface(waveHeight: 80, child: Builder(builder: _profile))),
+          demo: _Phone(child: UiSeaSurface(theme: null, waveHeight: 80, child: Builder(builder: _profile))),
           code: 'UiTabs(tabs: [UiTab(label: \'About\', child: about), UiTab(label: \'Reviews\', child: reviews)])\nUiButton(label: \'Book appointment\', size: UiSize.lg, block: true, onPressed: book)',
         ),
         DocSection(
           name: 'AI symptom checker',
           widget: 'UiTextarea · UiPulse',
-          summary: 'A short conversation: the assistant\'s mark pulses while it is thinking (UiPulse), quick answers are chips, and the reply box is a textarea with a send button. Coral decor in the corner; the waves stay low.',
+          summary: 'A short conversation: the assistant\'s mark pulses while it is thinking (UiPulse), quick answers are chips, and the reply box is a one-line textarea that grows with the text, with a round send button level with its last line. Coral decor in the corner; the waves stay low.',
           demo: _Phone(
-            child: UiSeaSurface(coral: UiDecorCorner.br, decorScale: 0.5, waveLayers: 2, waveHeight: 60, waveOpacity: 0.35, child: Builder(builder: _checker)),
+            child: UiSeaSurface(theme: null, coral: UiDecorCorner.br, decorScale: 0.5, waveLayers: 2, waveHeight: 60, waveOpacity: 0.35, child: Builder(builder: _checker)),
           ),
-          code: 'UiPulse(child: UiIcon(HugeIcons.strokeRoundedAiBrain01))\nUiTextarea(rows: 2, placeholder: \'Describe your symptoms\')',
+          code: 'UiPulse(child: UiIcon(HugeIcons.strokeRoundedAiBrain01))\nUiTextarea(rows: 1, autosize: true, maxRows: 4, placeholder: \'Describe your symptoms\')\nUiIconButton(icon: UiIcon(HugeIcons.strokeRoundedSent), label: \'Send\', size: UiSize.lg, round: true, onPressed: send)',
         ),
         DocSection(
           name: 'Search results',
           widget: 'UiSearchInput · UiChip · UiTide',
           summary: 'The query, filter chips and a count, then the matching doctors entering with UiTide, and the bottom navigation on Search.',
-          demo: _Phone(child: UiSeaSurface(waves: false, child: Builder(builder: _results))),
+          demo: _Phone(child: UiSeaSurface(theme: null, waves: false, child: Builder(builder: _results))),
           code: 'UiSearchInput(value: query, onChanged: search)\nfor (final (i, d) in results.indexed) UiTide(index: i, child: DoctorCard(d))',
         ),
       ],
@@ -268,9 +308,15 @@ class FindDoctorPage extends StatelessWidget {
         UiTide(index: 3, child: Wrap(spacing: t.space2, children: const [UiChip(label: 'No'), UiChip(label: 'Stiff neck'), UiChip(label: 'Rash')])),
         UiTide(index: 4, child: _bubble(context, 'Thinking…', leading: UiPulse(child: UiIcon(HugeIcons.strokeRoundedAiBrain01, size: 16, color: t.textMuted)))),
         const Spacer(),
+        // A chat composer: the box grows with the text and the send button stays level with its last
+        // line. On touch the button sits centred in a 48dp target, so drop it by that padding to
+        // line its visible edge up with the box.
         Row(crossAxisAlignment: CrossAxisAlignment.end, spacing: t.space2, children: [
-          const Expanded(child: UiTextarea(rows: 2, placeholder: 'Describe your symptoms', semanticLabel: 'Describe your symptoms')),
-          UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSent), label: 'Send', variant: UiButtonVariant.primary, onPressed: () {}),
+          const Expanded(child: UiTextarea(rows: 1, autosize: true, maxRows: 4, placeholder: 'Describe your symptoms', semanticLabel: 'Describe your symptoms')),
+          Transform.translate(
+            offset: Offset(0, uiTouchPlatform(context) ? (uiMinTouchTarget - t.sizeLg) / 2 : 0),
+            child: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSent), label: 'Send', size: UiSize.lg, round: true, variant: UiButtonVariant.primary, onPressed: () {}),
+          ),
         ]),
         const UiText('Guidance only, not a diagnosis. In an emergency call 102.', variant: UiTextVariant.caption, textAlign: TextAlign.center),
       ]),

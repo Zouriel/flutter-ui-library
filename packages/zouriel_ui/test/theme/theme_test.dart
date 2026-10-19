@@ -30,6 +30,8 @@ void main() {
     expect(m.fontDefault, 'Poppins');
     expect(m.fontDisplay, 'Poppins');
     expect(m.shadow2.single.blurRadius, 16);
+    expect(m.icon, const Color(0xff4a90a4));
+    expect(uiThemeTokens[UiThemeName.darkOrange]!.icon, isNull, reason: 'only maldives tints icons');
     // Brand-only tokens are absent elsewhere; the rating fill defaults to the warning colour.
     expect(dark.lagoon, isNull);
     expect(dark.ratingFill, dark.warning);
@@ -54,6 +56,28 @@ void main() {
         for (final (fg, label, need) in [(t.text, 'text', 7.0), (t.textMuted, 'textMuted', 4.5)]) {
           final r = ratio(fg, panel);
           if (r < need) fails.add('${name.name}: $label on glass over the $where is ${r.toStringAsFixed(2)}:1');
+        }
+      }
+    }
+    expect(fails, isEmpty);
+  });
+
+  // The skeleton once vanished on cards: surface → surface-raised is a hair apart in the dark palettes
+  // and identical in maldives. Now it sits a step above the raised surface in every theme.
+  test('the skeleton shows on a card and shimmers in every theme', () {
+    double ratio(Color a, Color b) {
+      final x = a.computeLuminance(), y = b.computeLuminance();
+      return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+    }
+
+    final fails = <String>[];
+    for (final name in UiThemeName.values) {
+      final t = uiThemeTokens[name]!;
+      if (ratio(t.skeletonBase, t.surfaceRaised) < 1.1) fails.add('${name.name}: skeleton on a card ${ratio(t.skeletonBase, t.surfaceRaised).toStringAsFixed(2)}:1');
+      if (ratio(t.skeletonBase, t.skeletonHighlight) < 1.05) fails.add('${name.name}: shimmer ${ratio(t.skeletonBase, t.skeletonHighlight).toStringAsFixed(2)}:1');
+      if (t.icon != null) {
+        for (final (g, c) in [('bg', t.bg), ('surface', t.surface), ('surfaceRaised', t.surfaceRaised)]) {
+          if (ratio(t.icon!, c) < 3) fails.add('${name.name}: icon on $g ${ratio(t.icon!, c).toStringAsFixed(2)}:1');
         }
       }
     }

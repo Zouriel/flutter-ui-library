@@ -1051,8 +1051,8 @@ File: `fx/src/scroll-progress.ts`
 
 ### UiSectionLabel (component, `ui-section-label`)
 File: `fx/src/section-label.ts`  
-`ui-section-label` — editorial mono section marker, e.g. `[ 00 · INDEX ]`.  
-- Inputs: `index`: string = ''; `label`: string
+`ui-section-label` — section marker: eyebrow (accent bar + small caps) or the editorial bracket `[ 00 · INDEX ]`; `auto` = bracket on Dark Orange.  
+- Inputs: `index`: string = ''; `label`: string; `variant`: UiSectionLabelVariant = 'auto'
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSplitText (directive, `[uiSplitText]`)

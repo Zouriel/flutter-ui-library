@@ -136,7 +136,7 @@ class _PageButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(context.uiTheme.radius()),
             boxShadow: s.focused ? t.focusRing : const [],
           ),
-          child: IconTheme.merge(data: IconThemeData(color: t.text), child: Center(widthFactor: 1, child: child)),
+          child: IconTheme.merge(data: IconThemeData(color: t.icon ?? t.text), child: Center(widthFactor: 1, child: child)),
         ),
       ),
     );

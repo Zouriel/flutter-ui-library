@@ -101,6 +101,15 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**Theme icon colour (0.31.0).** The web's `--ui-color-icon` is `UiTokens.icon`, set only by maldives.
+On the web one global rule colours every `hugeicons-icon` with it and filled or state-coloured
+components reset it to `currentColor`; here `UiApp`/`UiThemeScope` default `IconTheme` to
+`icon ?? text` and the neutral slots (ghost and outline buttons, inactive nav/tab/segment items,
+input adornments, list, menu and palette icons, empty state, stat card) use `icon` too, while
+filled, selected, danger and toned ones keep their foreground. `UiThemeController.maybeOf(context)`
+(provided by `UiApp`) is the twin of injecting `UiThemeService`. `UiSectionLabel` has the web's
+`variant` (`auto` = bracket on Dark Orange, eyebrow elsewhere).
+
 ## What maps how (from inventory.md)
 
 - **Port 1:1:** buttons (button, icon, group, segmented, toggle, split, dropdown, FAB), every form

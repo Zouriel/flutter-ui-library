@@ -165,7 +165,7 @@ class _UiSegmentedState<T> extends State<UiSegmented<T>> with UiRovingFocus<UiSe
                       ? BoxDecoration(border: Border.all(color: t.borderFocus, width: 2), borderRadius: BorderRadius.circular(r == 0 ? 0 : r - 2))
                       : null,
                   child: IconTheme.merge(
-                    data: IconThemeData(color: fg, size: lg ? 18 : 16),
+                    data: IconThemeData(color: on ? fg : (t.icon ?? fg), size: lg ? 18 : 16),
                     child: ExcludeSemantics(
                       excluding: o.glyph != null || o.icon != null,
                       child: shownText != null ? Text(shownText, maxLines: 1, style: style.copyWith(color: fg)) : o.icon!,

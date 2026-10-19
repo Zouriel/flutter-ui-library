@@ -191,7 +191,7 @@ class _TabButton extends StatelessWidget {
       builder: (context, s) {
         final fg = selected || s.hovered || s.pressed ? t.text : t.textMuted;
         final content = Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-          if (tab.icon != null) UiIcon(tab.icon!, size: iconOnly ? 22 : 18, color: fg),
+          if (tab.icon != null) UiIcon(tab.icon!, size: iconOnly ? 22 : 18, color: selected ? fg : (t.icon ?? fg)),
           if (!iconOnly) Text(tab.label, maxLines: 1, softWrap: false, style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: fg)),
         ]);
         // The role sits inside the builder so UiInteractive's merged node carries it.

@@ -99,7 +99,7 @@ class UiChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: t.space1,
         children: [
-          if (leading != null) IconTheme.merge(data: IconThemeData(size: 14, color: t.text), child: leading!),
+          if (leading != null) IconTheme.merge(data: IconThemeData(size: 14, color: toned ? t.text : (t.icon ?? t.text)), child: leading!),
           Flexible(child: Text(label, style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
           if (removable) const SizedBox(width: 16),
         ],

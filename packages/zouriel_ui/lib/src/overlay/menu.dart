@@ -348,7 +348,7 @@ class _MenuItemTile extends StatelessWidget {
               border: Border.all(color: s.focused ? t.borderFocus : const Color(0x00000000), width: 2),
             ),
             child: IconTheme.merge(
-              data: IconThemeData(color: fg, size: 16),
+              data: IconThemeData(color: item.danger ? fg : (t.icon ?? fg), size: 16),
               child: DefaultTextStyle.merge(
                 style: theme.typography.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: fg),
                 child: Row(

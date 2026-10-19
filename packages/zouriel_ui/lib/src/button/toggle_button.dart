@@ -77,7 +77,7 @@ class UiToggleButton extends StatelessWidget {
             child: Center(
               widthFactor: iconOnly ? null : 1,
               child: IconTheme.merge(
-                data: IconThemeData(color: fg, size: switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 }),
+                data: IconThemeData(color: pressed ? fg : (t.icon ?? fg), size: switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 }),
                 child: DefaultTextStyle(
                   style: style,
                   child: Row(

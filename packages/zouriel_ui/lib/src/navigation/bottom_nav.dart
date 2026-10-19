@@ -123,7 +123,7 @@ class _BottomNavTile extends StatelessWidget {
             children: [
               if (item.icon != null)
                 Stack(clipBehavior: Clip.none, children: [
-                  UiIcon(item.icon!, size: iconSize, color: fg),
+                  UiIcon(item.icon!, size: iconSize, color: active ? fg : (t.icon ?? fg)),
                   if (item.badge != null)
                     Positioned(
                       top: -6,
