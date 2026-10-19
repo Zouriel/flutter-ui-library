@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/interactive.dart';
+import '../../core/types.dart';
 import '../../theme/theme.dart';
 import 'marks.dart';
 
@@ -16,6 +17,7 @@ class UiSwitch extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
+    this.size = UiSize.md,
   });
 
   final bool value;
@@ -30,11 +32,15 @@ class UiSwitch extends StatelessWidget {
   /// Accessible name when there is no visible label.
   final String? semanticLabel;
 
+  /// [UiSize.sm] for dense panels (inspectors, settings): a smaller track and 13px label.
+  final UiSize size;
+
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
     final enabled = onChanged != null;
     final animate = context.uiAnimate;
+    final sm = size == UiSize.sm;
     return UiInteractive(
       onTap: enabled ? () => onChanged!(!value) : null,
       enabled: enabled,
@@ -48,11 +54,12 @@ class UiSwitch extends StatelessWidget {
         disabled: !enabled,
         center: true,
         label: label,
+        fontSize: sm ? t.fontSizeSm : null,
         mark: AnimatedContainer(
           duration: animate ? t.motionBase : Duration.zero,
           curve: t.easeStandard,
-          width: 38,
-          height: 22,
+          width: sm ? 30 : 38,
+          height: sm ? 18 : 22,
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: value ? t.switchTrackChecked : t.switchTrack,
@@ -65,8 +72,8 @@ class UiSwitch extends StatelessWidget {
             curve: t.easeSpring,
             child: AnimatedContainer(
               duration: animate ? t.motionBase : Duration.zero,
-              width: 18,
-              height: 18,
+              width: sm ? 14 : 18,
+              height: sm ? 14 : 18,
               decoration: BoxDecoration(
                 color: value ? t.switchThumbChecked : t.switchThumb,
                 shape: BoxShape.circle,

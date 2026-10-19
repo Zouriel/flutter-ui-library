@@ -115,7 +115,7 @@ class UiRadioMark extends StatelessWidget {
 /// A mark (checkbox, radio, switch) beside its label: the label's first line lines up with the
 /// mark, longer labels wrap under themselves. Dimmed when disabled.
 class UiMarkRow extends StatelessWidget {
-  const UiMarkRow({super.key, required this.mark, this.label, this.child, this.disabled = false, this.center = false, this.bold = false});
+  const UiMarkRow({super.key, required this.mark, this.label, this.child, this.disabled = false, this.center = false, this.bold = false, this.fontSize});
 
   final Widget mark;
   final String? label;
@@ -126,10 +126,13 @@ class UiMarkRow extends StatelessWidget {
   final bool center;
   final bool bold;
 
+  /// Label size; defaults to the md font size.
+  final double? fontSize;
+
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final style = context.uiText.body.copyWith(fontSize: t.fontSizeMd, height: 1.35, color: t.text, fontWeight: bold ? FontWeight.w600 : null);
+    final style = context.uiText.body.copyWith(fontSize: fontSize ?? t.fontSizeMd, height: 1.35, color: t.text, fontWeight: bold ? FontWeight.w600 : null);
     final text = child ?? (label == null ? null : Text(label!));
     return AnimatedOpacity(
       opacity: disabled ? 0.5 : 1,

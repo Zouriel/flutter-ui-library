@@ -153,6 +153,7 @@ class UiTextarea extends StatefulWidget {
     this.autofocus = false,
     this.semanticLabel,
     this.maxLength,
+    this.size = UiSize.md,
   });
 
   final String? value;
@@ -160,6 +161,9 @@ class UiTextarea extends StatefulWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final String placeholder;
+
+  /// Text size, matching UiInput's sizes; [UiSize.sm] for dense panels.
+  final UiSize size;
   final int rows;
   final bool autosize;
   final int maxRows;
@@ -201,7 +205,7 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final style = context.uiText.body.copyWith(fontSize: t.fontSizeMd, height: 1.5, color: t.text);
+    final style = context.uiText.body.copyWith(fontSize: uiFieldFontSize(t, widget.size), height: 1.5, color: t.text);
     return ListenableBuilder(
       listenable: focusNode,
       builder: (context, _) => UiFieldFrame(
@@ -209,7 +213,7 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
         invalid: uiFieldInvalid(context, widget.invalid),
         enabled: widget.enabled,
         radius: widget.radius,
-        padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+        padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: widget.size == UiSize.sm ? t.space1 : t.space2),
         child: UiTextEditor(
           controller: controller,
           focusNode: focusNode,

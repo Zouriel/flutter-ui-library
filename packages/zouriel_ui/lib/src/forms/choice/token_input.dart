@@ -229,6 +229,7 @@ class UiTokenInput extends StatefulWidget {
     this.onFocusChange,
     this.onTokenTap,
     this.focusNode,
+    this.size = UiSize.md,
   });
 
   final List<UiTokenRun> value;
@@ -241,6 +242,9 @@ class UiTokenInput extends StatefulWidget {
 
   /// Minimum height of a multiline field.
   final double? minHeight;
+
+  /// Text size, matching UiInput's sizes; [UiSize.sm] for dense panels.
+  final UiSize size;
   final bool? radius;
 
   /// Chip text for a token value; defaults to the value itself.
@@ -360,7 +364,8 @@ class UiTokenInputState extends State<UiTokenInput> {
     final r = (widget.radius ?? theme.config.radius) ? t.radius : 0.0;
     final focused = _focus.hasFocus;
     final touch = uiTouchPlatform(context);
-    final style = context.uiText.body.copyWith(fontSize: t.fontSizeMd, height: 1.6, color: t.text);
+    final controlH = widget.size.height(t);
+    final style = context.uiText.body.copyWith(fontSize: widget.size == UiSize.sm ? t.fontSizeSm : widget.size == UiSize.lg ? t.fontSizeLg : t.fontSizeMd, height: 1.6, color: t.text);
     final field = UiBareInput(
       controller: _ctrl,
       focusNode: _focus,
@@ -406,9 +411,9 @@ class UiTokenInputState extends State<UiTokenInput> {
             onTap: _enabled ? _focus.requestFocus : null,
             child: AnimatedContainer(
               duration: context.uiAnimate ? t.motionBase : Duration.zero,
-              constraints: BoxConstraints(minHeight: single ? (touch ? uiMinTouchTarget : t.sizeMd) : math.max(widget.minHeight ?? 0, touch ? uiMinTouchTarget : 0)),
-              height: single ? (touch ? uiMinTouchTarget : t.sizeMd) : null,
-              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: single ? 0 : t.space2),
+              constraints: BoxConstraints(minHeight: single ? (touch ? uiMinTouchTarget : controlH) : math.max(widget.minHeight ?? 0, touch ? uiMinTouchTarget : 0)),
+              height: single ? (touch ? uiMinTouchTarget : controlH) : null,
+              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: single ? 0 : (widget.size == UiSize.sm ? t.space1 : t.space2)),
               alignment: single ? AlignmentDirectional.centerStart : AlignmentDirectional.topStart,
               decoration: BoxDecoration(
                 color: t.surface,
