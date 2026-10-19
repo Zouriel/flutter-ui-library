@@ -50,7 +50,7 @@ class UiSplitButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final v = variant == UiButtonVariant.link || variant == UiButtonVariant.brand ? UiButtonVariant.outline : variant;
+    final v = const {UiButtonVariant.link, UiButtonVariant.brand, UiButtonVariant.accent}.contains(variant) ? UiButtonVariant.outline : variant;
     final filled = v == UiButtonVariant.primary || v == UiButtonVariant.secondary || v == UiButtonVariant.destructive;
     final fg = switch (v) {
       UiButtonVariant.primary => t.primaryContrast,

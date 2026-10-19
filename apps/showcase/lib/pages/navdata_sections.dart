@@ -225,7 +225,7 @@ class _AccordionSection extends StatelessWidget {
         summary: 'Titled panels that open and close. Opening one closes the others unless multiple. The title row is a heading and an expandable button (48dp on touch); a closed panel is hidden from screen readers and focus. An item on its own toggles itself.',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space4, children: const [
           UiAccordion(initiallyOpen: {0}, children: [
-            UiAccordionItem(title: 'What ships with the library?', child: Text('Components, 13 themes, the form engine and the file viewers.')),
+            UiAccordionItem(title: 'What ships with the library?', child: Text('Components, 14 themes, the form engine and the file viewers.')),
             UiAccordionItem(title: 'Does it use Material?', child: Text('No. It builds on the widgets layer, so it looks like this design everywhere.')),
             UiAccordionItem(title: 'Can I change the radius?', child: Text('Yes, with UiConfig(radius: false).')),
           ]),

@@ -26,3 +26,5 @@ export '../fx/backdrops.dart';
 export '../fx/chrome.dart';
 export '../fx/motion.dart';
 export '../fx/rails.dart';
+export '../fx/sea.dart';
+export '../fx/utilities.dart';

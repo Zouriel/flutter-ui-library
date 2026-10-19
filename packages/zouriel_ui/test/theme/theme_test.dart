@@ -14,7 +14,26 @@ void main() {
     expect(dark.sizeMd, 30);
     expect(dark.motionBase, const Duration(milliseconds: 200));
     expect(uiThemeTokens[UiThemeName.darkOrange]!.fontDefault, 'Space Grotesk');
-    expect(uiThemeTokens.length, 13);
+    expect(uiThemeTokens.length, 14);
+    // The maldives theme and its brand tokens (theme-maldives.css).
+    final m = uiThemeTokens[UiThemeName.maldives]!;
+    expect(m.bg, const Color(0xfff3f8fb));
+    expect(m.primary, const Color(0xff0b2d3a));
+    expect(m.oceanDeep, const Color(0xff0b2d3a));
+    expect(m.lagoon, const Color(0xff4a90a4));
+    expect(m.coral, const Color(0xffff7f7f));
+    expect(m.sand, const Color(0xfff6e7d7));
+    expect(m.mist, const Color(0xfff3f8fb));
+    expect(m.accent, const Color(0xffff7f7f));
+    expect(m.accentContrast, const Color(0xff0b2d3a));
+    expect(m.ratingFill, const Color(0xffe26363));
+    expect(m.fontDefault, 'Poppins');
+    expect(m.fontDisplay, 'Poppins');
+    expect(m.shadow2.single.blurRadius, 16);
+    // Brand-only tokens are absent elsewhere; the rating fill defaults to the warning colour.
+    expect(dark.lagoon, isNull);
+    expect(dark.ratingFill, dark.warning);
+    expect(dark.trackingWide, 0.08);
   });
 
   // Glass panels (drawers, menus, popovers) show the page through them, and a drawer's page is also

@@ -1062,6 +1062,55 @@ File: `fx/src/split-text.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
+### UiWaveFooter (component, `ui-wave-footer`)
+File: `fx/src/sea.ts`  
+`ui-wave-footer` — stacked wave bands pinned to the bottom of the nearest positioned container; each drifts sideways (the tide), alternating direction.  
+- Inputs: `layers`: 2 | 3 = 3; `height` = 120; `opacity` = 0.5
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiOceanHero (component, `ui-ocean-hero`)
+File: `fx/src/sea.ts`  
+`ui-ocean-hero` — full-bleed sea backdrop: the theme hero gradient, optional photo wash, slow diagonal light sweep.  
+- Inputs: `src`: string | null = null; `shimmer` = true; `fill` = false
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiCoralDecor (component, `ui-coral-decor`)
+File: `fx/src/sea.ts`  
+`ui-coral-decor` — coral on a sand mound tucked into a corner; floats gently.  
+- Inputs: `corner`: UiDecorCorner = 'bl'; `scale` = 1; `opacity` = 0.9
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiPalmDecor (component, `ui-palm-decor`)
+File: `fx/src/sea.ts`  
+`ui-palm-decor` — two palm silhouettes leaning out of a corner; floats gently.  
+- Inputs: `corner`: UiDecorCorner = 'bl'; `scale` = 1; `opacity` = 0.9
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSunrise (component, `ui-sunrise`)
+File: `fx/src/sea.ts`  
+`ui-sunrise` — coral sun with a sand glow behind a logo slot; rises on mount, then pulses.  
+- Inputs: `size` = 120
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSeaSurface (component, `ui-sea-surface`)
+File: `fx/src/sea.ts`  
+`ui-sea-surface` — a sea region in one element: scoped theme (maldives), background, waves and corner decor.  
+- Inputs: `theme`: string | null = 'maldives'; `waves` = true; `waveLayers` = 3; `waveHeight` = 120; `waveOpacity` = 0.5; `coral`, `palm`: UiDecorCorner | null = null; `decorScale` = 1
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiTide (directive, `[uiTide]`)
+File: `fx/src/sea.ts`  
+`[uiTide]` — staggered fade + 8px slide-up for list items (ui-slide-up-enter).  
+- Inputs: `uiTide` (index) = 0; `tideDelay` = 0; `tideStep` = 60
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### fx.css `.ui-pulse`, `.ui-gradient-text`, `.ui-glow` (utility classes)
+File: `styles/fx.css`, `styles/theme-animations.css`  
+Flutter twins: `UiPulse`, `UiGradientText`, `UiGlow`, with the maldives signature motion (tide, shimmer) only.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- types `UiWaveLayers`, `UiDecorCorner`, `UiSeaShape`, `UiSeaTone` (sea.ts, sea-shapes.ts)
+
 ## layout
 
 ### UiAspectRatio (component, `ui-aspect-ratio`)

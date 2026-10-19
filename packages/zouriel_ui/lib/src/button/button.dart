@@ -33,7 +33,7 @@ class UiButtonJoin extends InheritedWidget {
 }
 
 /// Button styles, the web `UiButtonVariant`.
-enum UiButtonVariant { primary, secondary, outline, ghost, link, destructive, brand }
+enum UiButtonVariant { primary, secondary, outline, ghost, link, destructive, brand, accent }
 
 /// The resolved look of a button variant in a given state.
 class _Look {
@@ -60,6 +60,9 @@ _Look _look(UiButtonVariant v, UiTokens t, UiStates s) {
       return _Look(fill: hover ? t.surfaceHover : null, fg: t.text);
     case UiButtonVariant.link:
       return _Look(fg: hover ? t.primaryHover : t.primary);
+    case UiButtonVariant.accent:
+      // The theme's accent (maldives: the coral call to action); hover mixes in 12% of its contrast.
+      return _Look(fill: hover ? Color.lerp(t.accent, t.accentContrast, 0.12) : t.accent, fg: t.accentContrast);
     case UiButtonVariant.brand:
       final g = t.gradientBrand.toGradient();
       return _Look(gradient: g, fg: t.primaryContrast, shadow: t.glowAmber);

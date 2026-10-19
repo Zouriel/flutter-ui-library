@@ -1,7 +1,7 @@
 # zouriel_ui (Flutter)
 
 The [@zouriel/ui](https://github.com/Zouriel/angular-ui-library) design system for Flutter: the same
-tokens, 13 themes and components as the Angular library, built on Flutter's widgets layer (no
+tokens, 14 themes and components as the Angular library, built on Flutter's widgets layer (no
 Material), accessible, and tested component by component. Web docs for the Angular version:
 <https://zouriel.com/uilib/>.
 
@@ -53,7 +53,7 @@ switch themes with a `UiThemeController`; scope a theme with `UiThemeScope`.
 ```sh
 flutter pub get
 cd packages/zouriel_ui && flutter test          # widget, semantics, guideline and golden tests
-cd apps/showcase && flutter run                 # or: flutter build apk --release --split-per-abi
+cd apps/showcase && flutter run                 # or: flutter build apk --release --target-platform android-arm64
 ```
 
 Regenerate tokens after changing the Angular stylesheets:
@@ -62,7 +62,23 @@ Regenerate tokens after changing the Angular stylesheets:
 node tool/gen_tokens.mjs <angular>/projects/ui/styles packages/zouriel_ui/lib/src/theme/tokens.g.dart <chromium>
 ```
 
+and the sea shapes after changing the Angular `projects/ui/fx/assets/maldives/*.svg`:
+
+```sh
+node tool/gen_sea_shapes.mjs <angular>/projects/ui/fx/assets/maldives packages/zouriel_ui/lib/src/fx/sea_shapes.g.dart
+```
+
+### Showcase APK
+
+Build one APK per install target, never `--split-per-abi`: split APKs get different version codes
+(1001, 2001, 4001) from the universal one (the plain build number), so swapping between them is
+refused as a downgrade. Phones are arm64, so `--target-platform android-arm64` is enough. Release
+builds are signed with the key named in `apps/showcase/android/key.properties` (gitignored; on the
+owner's machine a link to `~/.config/zouriel-ui-showcase/key.properties`). Keep that one key:
+Android will not update an installed app from an APK signed with a different one. Without the file
+the build falls back to the machine's debug key.
+
 ## License
 
-MIT. Bundled fonts (Roboto, Space Grotesk, Bricolage Grotesque, JetBrains Mono) are under the SIL
+MIT. Bundled fonts (Roboto, Space Grotesk, Bricolage Grotesque, JetBrains Mono, Poppins) are under the SIL
 Open Font License; see `packages/zouriel_ui/fonts/OFL-*.txt`.

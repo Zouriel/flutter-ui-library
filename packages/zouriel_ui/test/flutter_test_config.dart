@@ -13,6 +13,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     'JetBrains Mono': 'JetBrainsMono',
     'Space Grotesk': 'SpaceGrotesk',
     'Bricolage Grotesque': 'BricolageGrotesque',
+    'Poppins': 'Poppins',
   };
   for (final e in families.entries) {
     final loader = FontLoader('packages/zouriel_ui/${e.key}');

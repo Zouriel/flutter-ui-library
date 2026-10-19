@@ -240,7 +240,7 @@ class UiDropdownButton<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final v = variant == UiButtonVariant.link || variant == UiButtonVariant.brand ? UiButtonVariant.outline : variant;
+    final v = const {UiButtonVariant.link, UiButtonVariant.brand, UiButtonVariant.accent}.contains(variant) ? UiButtonVariant.outline : variant;
     return UiDropdownMenuAnchor<T>(
       items: items,
       onSelected: onSelected,

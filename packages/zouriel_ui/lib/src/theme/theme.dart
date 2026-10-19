@@ -4,7 +4,8 @@ import 'tokens.dart';
 
 export 'tokens.dart' show UiGradientSpec, UiRingShadow, UiThemeName, UiTokens, uiThemeTokens;
 
-/// The package that ships the bundled fonts (Space Grotesk, Bricolage Grotesque, JetBrains Mono).
+/// The package that ships the bundled fonts (Roboto, Space Grotesk, Bricolage Grotesque, JetBrains Mono,
+/// Poppins).
 const String uiFontPackage = 'zouriel_ui';
 
 /// The font used for code when a theme names none: bundled, so code looks the same on every device.

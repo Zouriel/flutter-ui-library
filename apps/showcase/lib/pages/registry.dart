@@ -7,6 +7,7 @@ import 'data_page.dart';
 import 'design_tools_page.dart';
 import 'feedback_page.dart';
 import 'file_viewer_page.dart';
+import 'find_doctor_page.dart';
 import 'form_builder_page.dart';
 import 'forms_page.dart';
 import 'foundation_page.dart';
@@ -51,6 +52,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('design-tools', 'Flagship', 'Design tools', HugeIcons.strokeRoundedPenTool01, (_) => const DesignToolsPage()),
   ShowcasePage('fx', 'Motion', 'Motion & FX', HugeIcons.strokeRoundedMagicWand01, (_) => const FxPage()),
   ShowcasePage('behaviors', 'Motion', 'Behaviors', HugeIcons.strokeRoundedTouch01, (_) => const BehaviorsPage()),
+  ShowcasePage('find-doctor', 'Examples', 'Find Doctor (Maldives)', HugeIcons.strokeRoundedStethoscope02, (_) => const FindDoctorPage()),
 ];
 
 /// Old page ids that moved, and where they went.

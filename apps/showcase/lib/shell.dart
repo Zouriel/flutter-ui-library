@@ -20,6 +20,7 @@ const themeLabels = {
   UiThemeName.goldBlack: 'Gold Black',
   UiThemeName.goldRed: 'Gold Red',
   UiThemeName.darkOrange: 'Dark Orange',
+  UiThemeName.maldives: 'Maldives',
 };
 
 /// The showcase frame: a top bar (menu, title, theme picker) over the current page. On a wide
@@ -81,7 +82,12 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
 
     // Stretch, so every page gets the full width: a page that is a Stack of positioned layers (the
     // window system) has nothing to size itself by and would otherwise collapse to zero width.
-    final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [bar, Expanded(child: page)]);
+    // The maldives theme's fx layer, like the web shell: the tide along the bottom, behind the page.
+    final sea = widget.controller.theme == UiThemeName.maldives;
+    final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      bar,
+      Expanded(child: sea ? Stack(children: [const Positioned.fill(child: UiWaveFooter(height: 96, opacity: 0.35)), Positioned.fill(child: page)]) : page),
+    ]);
     if (wide) {
       return Row(children: [
         SizedBox(width: 280, child: FocusTraversalGroup(child: _Menu(current: _page, onPick: _go))),
@@ -223,7 +229,7 @@ class _MenuItem extends StatelessWidget {
   }
 }
 
-/// Opens a sheet listing all 13 themes, each with a swatch.
+/// Opens a sheet listing all 14 themes, each with a swatch.
 class _ThemeButton extends StatelessWidget {
   const _ThemeButton({required this.controller});
   final UiThemeController controller;

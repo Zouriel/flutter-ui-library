@@ -45,7 +45,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
         DocSection(
           name: 'Button',
           widget: 'UiButton',
-          summary: 'The action primitive. Seven variants: primary for the main action, secondary, outline, ghost, link, destructive, and brand (the theme\'s gradient, pill-shaped) for the one hero action per screen. Leave onPressed null to disable it. While loading it shows a spinner, is announced as busy and ignores taps. Enter and Space activate it when focused.',
+          summary: 'The action primitive. Eight variants: primary for the main action, secondary, outline, ghost, link, destructive, brand (the theme\'s gradient, pill-shaped) for the one hero action per screen, and accent, filled with the theme\'s accent (the coral call to action in Maldives; secondary in themes without an accent of their own). Leave onPressed null to disable it. While loading it shows a spinner, is announced as busy and ignores taps. Enter and Space activate it when focused.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Wrap(spacing: t.space2, runSpacing: t.space2, children: [
               UiButton(label: 'Primary', onPressed: () => setState(() => _count++)),
@@ -53,6 +53,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
               UiButton(label: 'Outline', variant: UiButtonVariant.outline, onPressed: () {}),
               UiButton(label: 'Delete', variant: UiButtonVariant.destructive, onPressed: () {}),
               UiButton(label: 'Get started', variant: UiButtonVariant.brand, onPressed: () {}),
+              UiButton(label: 'Get guidance', variant: UiButtonVariant.accent, onPressed: () {}),
             ]),
             // The borderless variants get their own row: wrapped to the start of a line they read as stray text.
             Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -81,7 +82,7 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
             ApiRow('child', 'Widget?', 'Custom content instead of label.'),
             ApiRow('icon / trailingIcon', 'Widget?', 'Icons before or after the text; coloured and sized to match.'),
             ApiRow('onPressed', 'VoidCallback?', 'Tap and Enter/Space handler. Null disables the button.'),
-            ApiRow('variant', 'UiButtonVariant', 'primary, secondary, outline, ghost, link, destructive, brand.', def: 'primary'),
+            ApiRow('variant', 'UiButtonVariant', 'primary, secondary, outline, ghost, link, destructive, brand, accent.', def: 'primary'),
             ApiRow('size', 'UiSize', 'sm (26), md (30), lg (38) visual height.', def: 'md'),
             ApiRow('loading', 'bool', 'Spinner, busy announcement, taps ignored.', def: 'false'),
             ApiRow('block', 'bool', 'Full width.', def: 'false'),
@@ -186,7 +187,7 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
         DocSection(
           name: 'Split button',
           widget: 'UiSplitButton<T>',
-          summary: 'A main action plus a caret ("More actions") joined into one shape. onPressed runs the main action. The caret either calls onMenu so you can open your own menu, or, given items, opens the built-in action menu and reports the choice to onSelected. Filled variants draw a thin divider between the halves; link and brand draw as outline.',
+          summary: 'A main action plus a caret ("More actions") joined into one shape. onPressed runs the main action. The caret either calls onMenu so you can open your own menu, or, given items, opens the built-in action menu and reports the choice to onSelected. Filled variants draw a thin divider between the halves; link, brand and accent draw as outline.',
           demo: Wrap(spacing: t.space2, runSpacing: t.space2, children: [
             UiSplitButton<String>(label: 'Save', onPressed: () => _did('Save'), items: const [
               UiDropdownItem(label: 'Save as draft', value: 'draft'),

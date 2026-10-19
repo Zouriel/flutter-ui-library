@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
@@ -15,6 +16,17 @@ class _FxPageState extends State<FxPage> {
   int _introRun = 0;
   bool _introDone = false;
   bool _grain = true;
+  int _sunRun = 0;
+  int _tideRun = 0;
+
+  /// A rounded Maldives island for the sea demos, whatever the page theme.
+  Widget _island(BuildContext context, double height, List<Widget> layers) {
+    final t = context.ui;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(t.radiusLg),
+      child: UiThemeScope(theme: UiThemeName.maldives, child: SizedBox(height: height, child: Stack(children: layers))),
+    );
+  }
 
   Widget _card(BuildContext context, String title, String body) {
     final t = context.ui;
@@ -35,7 +47,7 @@ class _FxPageState extends State<FxPage> {
     return DocPage(
       eyebrow: 'Motion',
       title: 'Motion & FX',
-      lead: 'Reveal, split text, marquee, drift, glyph field, grain, intro loader, scroll progress, press tilt and the section label. Every effect follows the OS "remove animations" setting: entrances calm down, loops stand still, textures go.',
+      lead: 'Reveal, split text, marquee, drift, glyph field, grain, intro loader, scroll progress, press tilt and the section label, plus the sea backdrops of the Maldives theme (shown in Maldives islands whatever the app theme). Every effect follows the OS "remove animations" setting: entrances calm down, loops stand still, textures go.',
       children: [
         DocSection(
           name: 'Reveal',
@@ -243,6 +255,152 @@ class _FxPageState extends State<FxPage> {
           api: const [
             ApiRow('strength', 'double', 'How far it follows (0–1).', def: '0.35'),
             ApiRow('maxTilt', 'double', 'Steepest tilt at full strength, degrees.', def: '10'),
+          ],
+        ),
+        DocSection(
+          name: 'Wave footer',
+          widget: 'UiWaveFooter',
+          summary: 'Two or three stacked wave bands along the bottom of the space it is given (in a Stack, as Positioned.fill), in the theme\'s Lagoon (secondary in themes without one). Each band drifts sideways on its own slow loop, alternating direction (the tide: 30, 38 and 46 seconds). Decorative: it ignores touches and screen readers. The drift stops under reduced motion and with the library\'s animations off.',
+          demo: _island(context, 160, const [Positioned.fill(child: UiWaveFooter(height: 110, opacity: 0.6))]),
+          code: 'Stack(children: [\n  content,\n  const Positioned.fill(child: UiWaveFooter(layers: 3, height: 120, opacity: 0.5)),\n])',
+          api: const [
+            ApiRow('layers', 'int (2 | 3)', 'Bands, back to front; 2 drops the middle one.', def: '3'),
+            ApiRow('height', 'double', 'Height of the tallest band.', def: '120'),
+            ApiRow('opacity', 'double', 'Opacity of the whole footer.', def: '0.5'),
+          ],
+        ),
+        DocSection(
+          name: 'Ocean hero',
+          widget: 'UiOceanHero',
+          summary: 'A sea backdrop behind its child: the theme\'s hero gradient (in Maldives a sand and coral sky over the lagoon into deep teal), an optional photo under it as a wash, and a slow diagonal light sweep every 8 seconds. The photo and sweep are decorative; the sweep stops under reduced motion or with animations off. With fill it expands to the space it is given.',
+          demo: _island(context, 220, [
+            Positioned.fill(
+              child: UiOceanHero(
+                fill: true,
+                child: Padding(
+                  padding: EdgeInsets.all(t.space6),
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Builder(builder: (context) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space1, children: [
+                      Text('Find Doctor', style: context.uiText.h2.copyWith(color: context.ui.primaryContrast)),
+                      Text('CARE, CLOSE TO HOME', style: context.uiText.caption.copyWith(color: context.ui.primaryContrast, letterSpacing: context.ui.trackingWide * context.ui.fontSizeSm)),
+                    ])),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+          code: 'UiOceanHero(src: const AssetImage(\'beach.jpg\'), child: Text(\'Find a doctor\'))',
+          api: const [
+            ApiRow('child', 'Widget?', 'The hero content, drawn above the sky.'),
+            ApiRow('src', 'ImageProvider?', 'Optional photo under the gradient. Decorative.'),
+            ApiRow('shimmer', 'bool', 'The slow light sweep.', def: 'true'),
+            ApiRow('fill', 'bool', 'Expand to the space given instead of sizing to the child.', def: 'false'),
+          ],
+        ),
+        DocSection(
+          name: 'Coral and palm decor',
+          widget: 'UiCoralDecor · UiPalmDecor',
+          summary: 'Corner silhouettes: branching coral on a sand mound (Coral and Sand), and two leaning palms (Ocean Deep and Lagoon). corner picks the corner of the space they are given and mirrors the shape to face inward. They float 4px up and down on a 5 second loop, which stops under reduced motion or with animations off. Decorative. The shapes are generated from the Angular library\'s shared SVG sources (tool/gen_sea_shapes.mjs).',
+          demo: Wrap(spacing: t.space3, runSpacing: t.space3, children: [
+            for (final c in UiDecorCorner.values)
+              SizedBox(
+                width: 168,
+                child: _island(context, 140, [
+                  Positioned.fill(child: UiCoralDecor(corner: c, scale: 0.6)),
+                  Positioned.fill(child: UiPalmDecor(corner: const {UiDecorCorner.bl: UiDecorCorner.br, UiDecorCorner.br: UiDecorCorner.bl, UiDecorCorner.tl: UiDecorCorner.tr, UiDecorCorner.tr: UiDecorCorner.tl}[c]!, scale: 0.55)),
+                  Center(child: UiText(c.name, variant: UiTextVariant.code)),
+                ]),
+              ),
+          ]),
+          code: 'Positioned.fill(child: UiCoralDecor(corner: UiDecorCorner.bl, scale: 1, opacity: 0.9))\nPositioned.fill(child: UiPalmDecor(corner: UiDecorCorner.br, scale: 0.8))',
+          api: const [
+            ApiRow('corner', 'UiDecorCorner', 'bl, br, tl or tr; mirrored to face inward.', def: 'bl'),
+            ApiRow('scale', 'double', 'Size multiplier: coral is 160 × 128 at 1, palms 160 × 176.', def: '1'),
+            ApiRow('opacity', 'double', 'Opacity of the silhouette.', def: '0.9'),
+          ],
+        ),
+        DocSection(
+          name: 'Sunrise',
+          widget: 'UiSunrise',
+          summary: 'A Coral sun with a soft Sand glow behind a logo, for a splash or empty state. On mount it fades in and rises 12px over twice motionSlow, then idles with a slow glow pulse. Under reduced motion it only fades in and does not pulse; with animations off it simply shows.',
+          demo: _island(context, 220, [
+            Positioned.fill(
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, spacing: t.space2, children: [
+                UiSunrise(key: ValueKey(_sunRun), size: 96, child: const UiIcon(HugeIcons.strokeRoundedStethoscope02)),
+                UiButton(label: 'Replay', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _sunRun++)),
+              ]),
+            ),
+          ]),
+          code: 'UiSunrise(size: 120, child: logo)',
+          api: const [
+            ApiRow('child', 'Widget?', 'The logo, centred on the sun, in the accent contrast colour.'),
+            ApiRow('size', 'double', 'Diameter of the sun; the widget is 1.6 times that, for the glow.', def: '120'),
+          ],
+        ),
+        DocSection(
+          name: 'Sea surface',
+          widget: 'UiSeaSurface',
+          summary: 'The whole look in one widget. It scopes a theme to the region (maldives by default, null keeps the surrounding theme) like UiThemeScope, paints its background, and lays the wave footer and any corner decor behind the child.',
+          demo: ClipRRect(
+            borderRadius: BorderRadius.circular(t.radiusLg),
+            child: UiSeaSurface(
+              coral: UiDecorCorner.bl,
+              palm: UiDecorCorner.br,
+              decorScale: 0.6,
+              waveHeight: 90,
+              child: Builder(builder: (context) => Padding(
+                padding: EdgeInsets.fromLTRB(context.ui.space6, context.ui.space8, context.ui.space6, context.ui.space20),
+                child: Column(spacing: context.ui.space3, children: [
+                  const UiText('Book a visit', variant: UiTextVariant.h3),
+                  const UiText('Waves along the bottom, coral and palms in the corners, Maldives tokens inside.', variant: UiTextVariant.caption, textAlign: TextAlign.center),
+                  UiButton(label: 'Get guidance', variant: UiButtonVariant.accent, onPressed: () {}),
+                ]),
+              )),
+            ),
+          ),
+          code: 'UiSeaSurface(\n  coral: UiDecorCorner.bl,\n  palm: UiDecorCorner.br,\n  child: content,\n)',
+          api: const [
+            ApiRow('child', 'Widget', 'The region content, above the backdrop.'),
+            ApiRow('theme', 'UiThemeName?', 'Theme scoped to the region; null keeps the surrounding theme.', def: 'maldives'),
+            ApiRow('waves', 'bool', 'Show the wave footer.', def: 'true'),
+            ApiRow('waveLayers', 'int', 'Wave bands.', def: '3'),
+            ApiRow('waveHeight', 'double', 'Wave footer height.', def: '120'),
+            ApiRow('waveOpacity', 'double', 'Wave footer opacity.', def: '0.5'),
+            ApiRow('coral', 'UiDecorCorner?', 'Corner for the coral, or none.'),
+            ApiRow('palm', 'UiDecorCorner?', 'Corner for the palms, or none.'),
+            ApiRow('decorScale', 'double', 'Scale of both decor silhouettes.', def: '1'),
+          ],
+        ),
+        DocSection(
+          name: 'Tide',
+          widget: 'UiTide · UiPulse · UiGradientText · UiGlow',
+          summary: 'UiTide is a staggered entrance for lists and cards: each item fades in and slides up 8px, starting delay + index × step after it is built (the web [uiTide]). Reduced motion turns it into a plain fade; animations off skips it. UiPulse is the slow glow pulse for a working or AI-thinking mark (.ui-pulse). UiGradientText and UiGlow are the .ui-gradient-text and .ui-glow classes; in Maldives the gradient ebbs like the tide and the glow shimmers.',
+          demo: ClipRRect(
+            borderRadius: BorderRadius.circular(t.radiusLg),
+            child: UiThemeScope(
+              theme: UiThemeName.maldives,
+              child: Builder(builder: (context) => Padding(
+                padding: EdgeInsets.all(context.ui.space4),
+                child: Column(key: ValueKey(_tideRun), crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space2, children: [
+                  for (final (i, d) in const ['Dr. Aisha Rasheed · Cardiology', 'Dr. Ibrahim Naseem · Paediatrics', 'Dr. Mariyam Shifa · Dermatology'].indexed)
+                    UiTide(index: i, step: const Duration(milliseconds: 80), child: UiCard(padding: UiSize.sm, child: Text(d))),
+                  Wrap(spacing: context.ui.space3, runSpacing: context.ui.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    UiPulse(child: UiIcon(HugeIcons.strokeRoundedAiBrain01, color: context.ui.secondary)),
+                    UiGlow(child: UiGradientText('Find Doctor', style: context.uiText.h4)),
+                    UiButton(label: 'Replay', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _tideRun++)),
+                  ]),
+                ]),
+              )),
+            ),
+          ),
+          code: 'for (final (i, d) in doctors.indexed) UiTide(index: i, child: DoctorCard(d)),\nUiPulse(child: UiIcon(HugeIcons.strokeRoundedAiBrain01)),',
+          api: const [
+            ApiRow('UiTide index', 'int', 'The item\'s position in its list.', def: '0'),
+            ApiRow('UiTide delay', 'Duration', 'Before the first item.', def: '0'),
+            ApiRow('UiTide step', 'Duration', 'Extra delay per index.', def: '60ms'),
+            ApiRow('UiGradientText text', 'String', 'Filled with the brand gradient.'),
+            ApiRow('UiGlow child', 'Widget', 'Its text gets the theme glow.'),
           ],
         ),
       ],

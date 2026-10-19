@@ -36,7 +36,7 @@ class FoundationPage extends StatelessWidget {
         DocSection(
           name: 'Themes',
           widget: 'UiThemeController',
-          summary: 'Thirteen themes: Winter Dark and Winter Light (the defaults), ten colour palettes, and Dark Orange with its own fonts. Each tile below renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
+          summary: 'Fourteen themes: Winter Dark and Winter Light (the defaults), ten colour palettes, Dark Orange with its own fonts, and Maldives, the light sea theme with Poppins and its own sea backdrops (see Motion & FX). Each tile below renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
           demo: DocGrid(minWidth: 168, minColumns: 2, children: [
             for (final th in UiThemeName.values)
               UiThemeScope(

@@ -99,7 +99,7 @@ class _UiRatingState extends State<UiRating> with UiRovingFocus<UiRating> {
                             boxShadow: s.focused ? t.focusRing : const [],
                           ),
                           child: TweenAnimationBuilder<Color?>(
-                            tween: ColorTween(end: i <= shownUpTo ? t.warning : t.textMuted),
+                            tween: ColorTween(end: i <= shownUpTo ? t.ratingFill : t.textMuted),
                             duration: context.uiAnimate ? t.motionFast : Duration.zero,
                             builder: (context, c, _) => CustomPaint(
                               size: Size.square(starSize),

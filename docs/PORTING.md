@@ -43,7 +43,7 @@ flutterUiLib/
 **Tokens and themes.** `tool/gen_tokens.py` reads the Angular `styles/tokens.css`,
 `theme-palettes.css` and `theme-dark-orange.css` and writes `lib/src/theme/tokens.g.dart`: every
 `--ui-color-*`, spacing (1/2/3/4/6/8/12/20 → 4..80 px), radius, size (sm/md/lg/touch), font sizes,
-motion durations and easings, for all 13 themes. `UiTokens` is a `ThemeExtension`-style immutable
+motion durations and easings, for all 14 themes. `UiTokens` is a `ThemeExtension`-style immutable
 class with `lerp` so theme changes animate. Nothing in a widget hard-codes a colour or spacing; a
 test fails on literal `Color(0x...)` in `lib/src` outside the generated file (mirror of the Angular
 style-contract spec).
@@ -84,6 +84,22 @@ Respect `MediaQuery.disableAnimations` (reduced motion), text scaling up to 200%
 2. Accessibility guideline matchers (tap target, labels, contrast).
 3. Golden images in dark and light themes (plus states), reviewed by eye when created.
 4. A showcase page section, checked on the web build and on Android.
+
+**Maldives theme and sea backdrops (0.31.0).** `theme-maldives.css` is generated into
+`UiThemeName.maldives` like every theme; its brand colours (`oceanDeep`, `lagoon`, `coral`, `sand`,
+`mist`) are nullable tokens, present only in maldives, so the sea widgets fall back to theme roles
+elsewhere (`uiSeaTone`). Poppins is bundled (400–700) and picked up from the theme's font tokens.
+The silhouettes come from the Angular library's shared SVGs (`projects/ui/fx/assets/maldives`):
+`tool/gen_sea_shapes.mjs` turns them into `lib/src/fx/sea_shapes.g.dart` (path opcodes, no SVG
+dependency, drawn with CustomPainter); never edit the generated file. Positioned web components
+(`ui-wave-footer`, the decor) fill the space they are given and draw at the bottom / in their
+corner, so in a `Stack` they go in `Positioned.fill`. The web's signature motion in
+`theme-animations.css` had no Flutter twin; for parity in this theme the fx.css classes are now
+widgets (`UiGradientText`, `UiGlow`, `UiPulse`) and only maldives' keyframes are ported (`ui-fx-tide`
+as a gradient ebb, `ui-fx-shimmer` as a glow lift: Flutter strengthens the glow shadow rather than
+filtering brightness). The other palettes' sheen/breathe/aurora motion is still web-only.
+`[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
+tests never leave a timer pending.
 
 ## What maps how (from inventory.md)
 

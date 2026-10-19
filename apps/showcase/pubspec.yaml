@@ -1,7 +1,9 @@
 name: zouriel_ui_showcase
 description: Showcase for the zouriel_ui Flutter library.
 publish_to: none
-version: 0.1.0+1
+# The build number is the Android versionCode. It starts above every APK built before the fixed
+# release key (split APKs had codes up to 4001), so an update is never refused as a downgrade.
+version: 0.31.0+5000
 resolution: workspace
 
 environment:
