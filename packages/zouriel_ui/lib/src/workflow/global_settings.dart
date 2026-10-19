@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 
+import '../accordion/accordion.dart';
 import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
@@ -559,7 +560,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       ..._problemsFor('timeZone'),
       FbSetting(label: 'Working days', child: WfChecks(label: 'Working days', options: _days, isChecked: _s.workDays.contains, onChanged: _toggleDay)),
       ..._problemsFor('days'),
-      FbPair(children: [
+      WfPair(children: [
         FbSetting(label: 'From', child: UiTimePicker(size: UiSize.sm, label: 'From', value: _s.hours[0], onChanged: (v) => _setHours(0, v))),
         FbSetting(label: 'To', child: UiTimePicker(size: UiSize.sm, label: 'To', value: _s.hours[1], onChanged: (v) => _setHours(1, v))),
       ]),
@@ -568,14 +569,9 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         label: 'Holidays',
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
           if (_s.holidays.isNotEmpty) _items(_s.holidays, _removeHoliday),
-          // Picking a date adds it (the web `pickHoliday`); the picker then empties for the next one.
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 220),
-              child: UiDatePicker(key: ValueKey('h$_resetKey'), size: UiSize.sm, label: 'Holiday date', placeholder: 'Add a holiday', value: null, onChanged: _addHoliday),
-            ),
-          ),
+          // Picking a date adds it (the web `pickHoliday`); the picker then empties for the next one. Full width,
+          // like every field of the form.
+          UiDatePicker(key: ValueKey('h$_resetKey'), size: UiSize.sm, label: 'Holiday date', placeholder: 'Add a holiday', value: null, onChanged: _addHoliday),
           ..._problemsFor('holidays'),
         ]),
       ),
@@ -593,7 +589,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         child: WfDurationInput(value: wfStringsOrNull(d['reminders'])?.firstOrNull ?? 'P1D', label: 'Reminder', onChanged: (v) => _patchDefaults({'reminders': [v]})),
       ),
       ..._problemsFor('reminders'),
-      FbPair(children: [
+      WfPair(children: [
         FbSetting(
           label: 'Retry failed calls',
           child: UiNumberInput(
@@ -636,7 +632,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         ),
       ),
       ..._problemsFor('maxChainDepth'),
-      FbSwitch(
+      WfSwitch(
         value: _s.people?['delegation'] == true,
         label: 'People may hand tasks to someone else',
         onChanged: (on) => _patch({'people': wfPatch(_s.people ?? const {}, {'delegation': on ? true : null})}),
@@ -652,7 +648,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
       if (channels.isEmpty) const FbHint('The app has not registered any channels.'),
       for (final c in channels)
         _card([
-          FbSwitch(value: _s.channels?[c.key]?['enabled'] != false, label: c.label, onChanged: (on) => _patchChannel(c.key, {'enabled': on ? null : false})),
+          WfSwitch(value: _s.channels?[c.key]?['enabled'] != false, label: c.label, onChanged: (on) => _patchChannel(c.key, {'enabled': on ? null : false})),
           FbSetting(
             label: 'Footer added to every message',
             child: UiInput(
@@ -689,7 +685,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
                 onSubmitted: (_) => _addOrigin(),
               ),
             ),
-            FbLink(label: 'Add', onTap: _addOrigin),
+            UiButton(label: 'Add', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _addOrigin),
           ]),
           if (_originError.isNotEmpty) WfNote(_originError),
           ..._problemsFor('origins'),
@@ -700,7 +696,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
           for (var i = 0; i < conns.length; i++)
             _card([
-              FbPair(children: [
+              WfPair(children: [
                 UiInput(key: ValueKey('cl$i$_resetKey'), size: UiSize.sm, value: conns[i].label, placeholder: 'Name', semanticLabel: 'Name', onChanged: (v) => _patchConnection(i, {'label': v})),
                 UiInput(
                   key: ValueKey('cu$i$_resetKey'),
@@ -738,7 +734,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
               ..._problemsFor('conn:$i'),
             ]),
           ..._problemsFor('connections'),
-          Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Add a connection', onTap: _addConnection)),
+          Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'Add a connection', icon: WfIcons.add01, onTap: _addConnection)),
         ]),
       ),
     ];
@@ -826,17 +822,20 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 widthFactor: 1,
+                // On means running: an off switch reads "Paused".
                 child: UiSwitch(
-                  value: _isPaused(entity),
+                  value: !_isPaused(entity),
+                  size: UiSize.sm,
                   label: _isPaused(entity) ? 'Paused' : 'Running',
-                  semanticLabel: 'Pause workflows for $label',
-                  onChanged: _busy ? null : (on) => _setPaused(entity, on),
+                  semanticLabel: 'Run workflows for $label',
+                  onChanged: _busy ? null : (on) => _setPaused(entity, !on),
                 ),
               ),
             ]),
             for (final tr in triggers)
               Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                WfChip(tr.kind == 'lifecycle' ? 'Lifecycle' : 'Automation'),
+                // One chip width, so the workflow names line up whatever their kind.
+                ConstrainedBox(constraints: const BoxConstraints(minWidth: 76), child: WfChip(tr.kind == 'lifecycle' ? 'Lifecycle' : 'Automation')),
                 Expanded(
                   child: Text.rich(
                     TextSpan(children: [
@@ -861,10 +860,10 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
     return [
       _h2('What workflows can use'),
       const FbHint('Set by the app’s developers. Ask them to add a record type, field or action.'),
+      UiAccordion(multiple: true, children: [
       for (final e in reg?.entities ?? const <UiWfEntityDescriptor>[])
-        _EntityCard(
-          title: e.label,
-          summary: '${e.fields.length} fields',
+        UiAccordionItem(
+          title: '${e.label} · ${e.fields.length} fields',
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             for (final row in [null, ...e.fields])
               Container(
@@ -888,14 +887,15 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
               ),
           ]),
         ),
+      ]),
       if (reg?.actions?.isNotEmpty ?? false) ...[
         Text('Actions', style: context.uiText.label.copyWith(fontSize: 13, color: t.text)),
         for (final a in reg!.actions!)
-          Text.rich(TextSpan(children: [TextSpan(text: '•  ${a.label} ', style: const TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: a.description ?? '', style: muted)]), style: small),
+          Text.rich(TextSpan(children: [TextSpan(text: '${a.label} ', style: const TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: a.description ?? '', style: muted)]), style: small),
       ],
       if (reg?.signals?.isNotEmpty ?? false) ...[
         Text('Events', style: context.uiText.label.copyWith(fontSize: 13, color: t.text)),
-        for (final sg in reg!.signals!) Text('•  ${sg.label}', style: small),
+        for (final sg in reg!.signals!) Text(sg.label, style: small),
       ],
     ];
   }
@@ -1012,50 +1012,9 @@ class _Nav extends StatelessWidget {
         ),
         child: wide
             ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [for (final s in _sections) item(s)])
-            : SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(spacing: 2, children: [for (final s in _sections) item(s)])),
+            // On a phone the sections wrap onto a second row rather than scrolling out of sight.
+            : Wrap(spacing: 2, runSpacing: 2, children: [for (final s in _sections) IntrinsicWidth(child: item(s))]),
       ),
-    );
-  }
-}
-
-/// A collapsible card (the web `<details class="card">`).
-class _EntityCard extends StatefulWidget {
-  const _EntityCard({required this.title, required this.summary, required this.child});
-  final String title;
-  final String summary;
-  final Widget child;
-
-  @override
-  State<_EntityCard> createState() => _EntityCardState();
-}
-
-class _EntityCardState extends State<_EntityCard> {
-  bool _open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.ui;
-    return Container(
-      decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        UiInteractive(
-          onTap: () => setState(() => _open = !_open),
-          semanticLabel: '${widget.title}, ${widget.summary}',
-          toggled: _open,
-          excludeChildSemantics: true,
-          pressScale: false,
-          builder: (context, s) => Container(
-            padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radius), boxShadow: s.focused ? t.focusRing : null),
-            child: Row(spacing: 6, children: [
-              UiIcon(_open ? WfIcons.arrowDown01 : WfIcons.arrowRight01, size: 12, color: t.textMuted),
-              Text(widget.title, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text)),
-              Text(widget.summary, style: context.uiText.body.copyWith(fontSize: 12.5, color: t.textMuted)),
-            ]),
-          ),
-        ),
-        if (_open) Padding(padding: EdgeInsets.fromLTRB(t.space3, 0, t.space3, t.space2), child: widget.child),
-      ]),
     );
   }
 }

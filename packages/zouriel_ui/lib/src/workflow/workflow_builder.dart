@@ -464,9 +464,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
           const FbHint('You can undo this.'),
         ]),
       ),
-      footerBuilder: (ctx) => Row(children: [
+      footerBuilder: (ctx) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
         UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop(false)),
-        const Spacer(),
         UiButton(label: 'Delete', variant: UiButtonVariant.destructive, onPressed: () => Navigator.of(ctx).pop(true)),
       ]),
     ).then((ok) {
@@ -662,8 +661,9 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
                       onSnapChanged: (s) {
                         if (s == 0) setState(() => _addTarget = null);
                       },
+                      // The sheet's body padding (16px sides), so the steps line up with its title.
                       builder: (context, scroll) => Padding(
-                        padding: EdgeInsets.fromLTRB(t.space3, t.space3, t.space3, 0),
+                        padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, 0),
                         child: WfStepPicker(
                           compact: true,
                           scrollController: scroll,
@@ -881,7 +881,16 @@ class _TopBar extends StatelessWidget {
       onChanged: state._setView,
     );
 
-    final tools = Wrap(crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.end, spacing: 4, runSpacing: 4, children: [
+    final saveText = !narrow && persist && !store.readOnly && saveState.isNotEmpty
+        ? Semantics(
+            liveRegion: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(saveState, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
+            ),
+          )
+        : null;
+    final toolItems = <Widget>[
       FbIconButton(icon: WfIcons.undo02, label: 'Undo', onPressed: store.canUndo ? store.undo : null),
       FbIconButton(icon: WfIcons.redo02, label: 'Redo', onPressed: store.canRedo ? store.redo : null),
       if (store.readOnly)
@@ -947,14 +956,19 @@ class _TopBar extends StatelessWidget {
             ),
           ),
         )
-      else if (persist) ...[
-        if (!narrow && saveState.isNotEmpty)
-          Semantics(liveRegion: true, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: Text(saveState, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)))),
-        UiButton(label: 'Save', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: state._saving || !state._dirty ? null : state.save),
-        UiButton(label: 'Publish…', size: UiSize.sm, onPressed: () => state._setView(UiWorkflowBuilderView.versions)),
-      ],
+    ];
+    final trailing = <Widget>[
+      if (persist && !store.readOnly)
+        // Save and Publish stay side by side; the save state shrinks first (wide) or sits out (narrow).
+        Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [
+          UiButton(label: 'Save', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: state._saving || !state._dirty ? null : state.save),
+          UiButton(label: 'Publish…', size: UiSize.sm, onPressed: () => state._setView(UiWorkflowBuilderView.versions)),
+        ]),
       ?state.widget.actions,
-    ]);
+    ];
+    final tools = narrow
+        ? Wrap(crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.end, spacing: 4, runSpacing: 4, children: [...toolItems, ...trailing])
+        : Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [...toolItems, if (saveText != null) Flexible(child: saveText), ...trailing]);
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: 6),
@@ -967,10 +981,11 @@ class _TopBar extends StatelessWidget {
               ])),
               views,
             ])
+          // Equal sides, so the views stay centred whatever the tools show (a problem count, the save state).
           : Row(spacing: t.space3, children: [
-              Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: titleButton)),
+              Expanded(child: Align(alignment: Alignment.centerLeft, child: titleButton)),
               views,
-              Expanded(flex: 3, child: Align(alignment: Alignment.centerRight, child: tools)),
+              Expanded(child: Align(alignment: Alignment.centerRight, child: tools)),
             ]),
     );
   }

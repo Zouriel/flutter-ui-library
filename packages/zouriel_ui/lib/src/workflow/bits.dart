@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../core/icon.dart';
 import '../core/types.dart';
 import '../forms/choice/checkbox.dart';
+import '../forms/choice/switch.dart';
 import '../forms/text/select.dart';
 import '../theme/theme.dart';
 import 'icons.dart';
@@ -211,6 +212,46 @@ class WfSelect extends StatelessWidget {
   }
 }
 
+/// Button and transition colours as people see them (the values are the theme's tone names).
+const List<WfOption> wfToneOptions = [
+  (value: 'neutral', label: 'Plain'), (value: 'primary', label: 'Main colour'), (value: 'success', label: 'Green'), (value: 'warning', label: 'Amber'), (value: 'danger', label: 'Red'),
+];
+
+/// A lifecycle state's colours (info rather than primary).
+const List<WfOption> wfStateToneOptions = [
+  (value: 'neutral', label: 'Plain'), (value: 'info', label: 'Blue'), (value: 'success', label: 'Green'), (value: 'warning', label: 'Amber'), (value: 'danger', label: 'Red'),
+];
+
+/// A small switch with its label (the web `label.wf-row.small` with an sm `ui-switch`): 13px, as the fields around it.
+class WfSwitch extends StatelessWidget {
+  const WfSwitch({super.key, required this.value, required this.label, required this.onChanged});
+  final bool value;
+  final String label;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) =>
+      Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, child: UiSwitch(value: value, label: label, size: UiSize.sm, onChanged: onChanged));
+}
+
+/// Two fields side by side, one under the other below 300px (the web `.wf-grid2`). A pair whose second field is
+/// hidden gives the first the whole row (`.wf-grid2 > :only-child`).
+class WfPair extends StatelessWidget {
+  const WfPair({super.key, required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return LayoutBuilder(builder: (context, c) {
+      final cols = c.maxWidth >= 300 && children.length > 1 ? 2 : 1;
+      final w = cols == 2 ? (c.maxWidth - t.space2) / 2 : c.maxWidth;
+      // Bottom-aligned, so boxes line up when one label wraps onto two lines.
+      return Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.end, children: [for (final ch in children) SizedBox(width: w, child: ch)]);
+    });
+  }
+}
+
 /// Checkboxes in a wrapping row (the web `.multi` of `.opt` labels).
 class WfChecks extends StatelessWidget {
   const WfChecks({super.key, required this.options, required this.isChecked, required this.onChanged, this.label});
@@ -226,7 +267,7 @@ class WfChecks extends StatelessWidget {
       container: true,
       label: label,
       child: Wrap(spacing: t.space3, runSpacing: 0, children: [
-        for (final o in options) UiCheckbox(value: isChecked(o.value), label: o.label, onChanged: (on) => onChanged(o.value, on)),
+        for (final o in options) UiCheckbox(value: isChecked(o.value), label: o.label, size: UiSize.sm, onChanged: (on) => onChanged(o.value, on)),
       ]),
     );
   }

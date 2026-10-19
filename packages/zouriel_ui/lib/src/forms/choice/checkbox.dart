@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/interactive.dart';
+import '../../core/types.dart';
 import '../../theme/theme.dart';
 import 'marks.dart';
 
 /// `ui-checkbox`: a boolean control with its label beside it. The whole row is the touch target.
+/// [UiSize.sm] (13px label, 16px box) for dense panels.
 ///
 /// Controlled: pass [value] and [onChanged]; leave [onChanged] null to disable it. A null [value]
 /// draws the mixed state (a dash) and is announced as mixed; tapping it checks it.
@@ -19,6 +21,7 @@ class UiCheckbox extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
+    this.size = UiSize.md,
   });
 
   final bool? value;
@@ -36,9 +39,13 @@ class UiCheckbox extends StatelessWidget {
   /// Accessible name when there is no visible label.
   final String? semanticLabel;
 
+  /// [UiSize.sm] for dense panels (inspectors, settings): a 13px label and a 16px box; lg is drawn as md.
+  final UiSize size;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onChanged != null;
+    final sm = size == UiSize.sm;
     return UiInteractive(
       onTap: enabled ? () => onChanged!(!(value ?? false)) : null,
       enabled: enabled,
@@ -53,7 +60,8 @@ class UiCheckbox extends StatelessWidget {
         child: UiMarkRow(
           disabled: !enabled,
           label: label,
-          mark: UiCheckMark(value: value, states: s, invalid: invalid),
+          fontSize: sm ? context.ui.fontSizeSm : null,
+          mark: UiCheckMark(value: value, states: s, invalid: invalid, small: sm),
           child: child,
         ),
       ),

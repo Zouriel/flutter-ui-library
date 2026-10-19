@@ -93,7 +93,7 @@ class _WfTriggerEditorState extends State<WfTriggerEditor> {
       patch({key: on ? [...cur, v] : cur});
     }
 
-    Widget sw(bool value, String label, ValueChanged<bool>? onChanged) => FbSwitch(value: value, label: label, onChanged: onChanged);
+    Widget sw(bool value, String label, ValueChanged<bool>? onChanged) => WfSwitch(value: value, label: label, onChanged: onChanged);
     WfSelect lifecycleSelect(String resetKey) => WfSelect(
       label: 'Lifecycle',
       placeholder: 'Choose…',
@@ -312,7 +312,7 @@ class WfWorkflowEditor extends StatelessWidget {
 
     return WfStack(children: [
       FbSetting(label: 'Name', child: UiInput(size: UiSize.sm, value: def.title, semanticLabel: 'Name', onChanged: (v) => patch({'title': v}, 'title'))),
-      FbSetting(label: 'Description', child: UiTextarea(value: def.description ?? '', rows: 2, autosize: true, semanticLabel: 'Description', onChanged: (v) => patch({'description': v.isEmpty ? null : v}, 'description'))),
+      FbSetting(label: 'Description', child: UiTextarea(size: UiSize.sm, value: def.description ?? '', rows: 2, autosize: true, semanticLabel: 'Description', onChanged: (v) => patch({'description': v.isEmpty ? null : v}, 'description'))),
       FbSetting(
         label: 'Record type',
         child: WfSelect(
@@ -357,10 +357,10 @@ class WfWorkflowEditor extends StatelessWidget {
             onChanged: (v) => patchSettings({'concurrency': v}),
           ),
         ),
-      FbSwitch(value: def.settings?.calendar == 'working', label: 'Count deadlines in working time', onChanged: (on) => patchSettings({'calendar': on ? 'working' : null})),
+      WfSwitch(value: def.settings?.calendar == 'working', label: 'Count deadlines in working time', onChanged: (on) => patchSettings({'calendar': on ? 'working' : null})),
       if (def.kind == 'lifecycle')
         WfSection(title: 'Starting over', children: [
-          FbSwitch(
+          WfSwitch(
             value: def.lifecycle?.reset != null,
             label: 'Let people reset a record\'s workflow',
             onChanged: (on) => on ? store.enableReset() : store.removeReset(),
@@ -373,7 +373,7 @@ class WfWorkflowEditor extends StatelessWidget {
         ]),
       WfSection(title: 'Looked after by', children: [
         WfAssigneesEditor(value: def.settings?.owners ?? const [], registry: store.registry, api: store.api, emptyText: 'Nobody yet.', label: 'owners', onChanged: (v) => patchSettings({'owners': v})),
-        FbSwitch(value: def.settings?.notifyOwnersOnIncident ?? false, label: 'Tell them when a run gets stuck', onChanged: (on) => patchSettings({'notifyOwnersOnIncident': on ? true : null})),
+        WfSwitch(value: def.settings?.notifyOwnersOnIncident ?? false, label: 'Tell them when a run gets stuck', onChanged: (on) => patchSettings({'notifyOwnersOnIncident': on ? true : null})),
       ]),
       WfSection(title: 'Variables', children: [
         for (var i = 0; i < vars.length; i++)
@@ -413,7 +413,7 @@ class WfWorkflowEditor extends StatelessWidget {
   }
 }
 
-const List<WfOption> _stateTones = [(value: 'neutral', label: 'neutral'), (value: 'info', label: 'info'), (value: 'success', label: 'success'), (value: 'warning', label: 'warning'), (value: 'danger', label: 'danger')];
+const List<WfOption> _stateTones = wfStateToneOptions;
 
 /// A lifecycle state: name and stored value, kind, colour, time limit (the web `ui-wf-state-editor`).
 class WfStateEditor extends StatelessWidget {
@@ -454,29 +454,29 @@ class WfStateEditor extends StatelessWidget {
               )
             : UiInput(size: UiSize.sm, value: s.key, semanticLabel: 'Stored value', onChanged: (v) => patch({'key': v}, 'key')),
       ),
-      FbPair(children: [
+      WfPair(children: [
         FbSetting(
           label: 'Kind',
           child: WfSelect(label: 'Kind', value: s.category, options: const [(value: 'initial', label: 'Starting state'), (value: 'active', label: 'In progress'), (value: 'terminal', label: 'Final state')], onChanged: setCategory),
         ),
         FbSetting(label: 'Colour', child: WfSelect(label: 'Colour', value: s.tone ?? 'neutral', options: _stateTones, onChanged: (v) => patch({'tone': v}))),
       ]),
-      FbSetting(label: 'Description', child: UiTextarea(value: s.description ?? '', rows: 2, autosize: true, semanticLabel: 'Description', onChanged: (v) => patch({'description': v.isEmpty ? null : v}, 'description'))),
+      FbSetting(label: 'Description', child: UiTextarea(size: UiSize.sm, value: s.description ?? '', rows: 2, autosize: true, semanticLabel: 'Description', onChanged: (v) => patch({'description': v.isEmpty ? null : v}, 'description'))),
       if (s.category != 'terminal')
         WfSection(title: 'Time limit', children: [
-          FbSwitch(value: sla != null, label: 'Do something if a record stays here too long', onChanged: (on) => patch({'sla': on ? {'within': 'P2D', 'steps': <Object?>[]} : null})),
+          WfSwitch(value: sla != null, label: 'Do something if a record stays here too long', onChanged: (on) => patch({'sla': on ? {'within': 'P2D', 'steps': <Object?>[]} : null})),
           if (sla != null) ...[
             FbSetting(label: 'Longer than', child: WfDurationInput(value: sla.within, label: 'Time limit', onChanged: (v) => patch({'sla': {...sla.json, 'within': v}}))),
-            FbSwitch(value: sla.calendar == 'working', label: 'Count working time only', onChanged: (on) => patch({'sla': wfPatch(sla.json, {'calendar': on ? 'working' : null})})),
+            WfSwitch(value: sla.calendar == 'working', label: 'Count working time only', onChanged: (on) => patch({'sla': wfPatch(sla.json, {'calendar': on ? 'working' : null})})),
           ],
         ]),
-      FbSwitch(value: s.keepRunsOnExit, label: 'Keep its steps running after the record leaves', onChanged: (on) => patch({'keepRunsOnExit': on ? true : null})),
+      WfSwitch(value: s.keepRunsOnExit, label: 'Keep its steps running after the record leaves', onChanged: (on) => patch({'keepRunsOnExit': on ? true : null})),
       const FbHint('Edit what happens on entering, leaving or running late in the steps panel under the diagram.'),
     ]);
   }
 }
 
-const List<WfOption> _transitionTones = [(value: 'neutral', label: 'neutral'), (value: 'primary', label: 'primary'), (value: 'success', label: 'success'), (value: 'warning', label: 'warning'), (value: 'danger', label: 'danger')];
+const List<WfOption> _transitionTones = wfToneOptions;
 
 /// A transition: who may apply it, when it is possible, what it asks for, and when it happens by
 /// itself (the web `ui-wf-transition-editor`).
@@ -507,7 +507,7 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
 
     return WfStack(children: [
       FbSetting(label: 'Button label', child: UiInput(size: UiSize.sm, value: tr.label, semanticLabel: 'Button label', onChanged: (v) => patch({'label': v}, 'label'))),
-      FbPair(children: [
+      WfPair(children: [
         FbSetting(
           label: 'From',
           child: WfSelect(
@@ -549,7 +549,7 @@ class _WfTransitionEditorState extends State<WfTransitionEditor> {
           emptyText: 'Nobody by hand: only automatically, or from other workflows.',
           onChanged: (v) => patch({'who': v}),
         ),
-        FbSwitch(value: tr.hidden, label: 'Hide it from the record page', onChanged: (on) => patch({'hidden': on ? true : null})),
+        WfSwitch(value: tr.hidden, label: 'Hide it from the record page', onChanged: (on) => patch({'hidden': on ? true : null})),
       ]),
       WfSection(title: 'Check before', children: [
         WfConditionEditor(value: tr.when, tokens: checkTokens, emptyText: 'Always possible from the states above.', onChanged: (c) => patch({'when': c.conditions.isNotEmpty ? c.json : null})),
@@ -674,6 +674,7 @@ class WfResetEditor extends StatelessWidget {
             child: Wrap(spacing: context.ui.space4, runSpacing: context.ui.space2, children: [
               for (final x in states)
                 UiCheckbox(
+                  size: UiSize.sm,
                   value: ticked.contains(x.id),
                   label: x.label,
                   onChanged: (on) {
@@ -717,8 +718,8 @@ class WfResetEditor extends StatelessWidget {
         ),
       ]),
       WfSection(title: 'What else happens', children: [
-        FbSwitch(value: r.cancelAutomations, label: 'Also stop other workflows running about the record', onChanged: (on) => patch({'cancelAutomations': on ? null : false})),
-        FbSwitch(value: r.runExitEnter, label: 'Run the state\'s “on leaving” and the start\'s “on entering” steps', onChanged: (on) => patch({'runExitEnter': on ? true : null})),
+        WfSwitch(value: r.cancelAutomations, label: 'Also stop other workflows running about the record', onChanged: (on) => patch({'cancelAutomations': on ? null : false})),
+        WfSwitch(value: r.runExitEnter, label: 'Run the state\'s “on leaving” and the start\'s “on entering” steps', onChanged: (on) => patch({'runExitEnter': on ? true : null})),
       ]),
     ]);
   }
@@ -823,7 +824,8 @@ class WfInspector extends StatelessWidget {
       Expanded(
         child: SingleChildScrollView(
           controller: scrollController,
-          padding: EdgeInsets.all(t.space3),
+          // In the phone sheet, the sheet's body padding (16px sides, as a modal's), so the settings line up with its title.
+          padding: showHead ? EdgeInsets.all(t.space3) : EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             // In a bottom sheet (no header) the way back to the parent and Delete still have to be
             // somewhere: a small row above the settings.

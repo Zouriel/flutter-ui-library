@@ -39,6 +39,10 @@ class _DrawnEdge {
 /// Space around the cards inside the diagram.
 const double _frameMargin = 48;
 
+/// An arrow label's height, and roughly its width (its text at 11px, its padding, the clock of an automatic move).
+const double _edgeLabelH = 20;
+double _edgeLabelWidth(String text, bool auto) => math.min(150, (text.length * 6 + 16 + (auto ? 14 : 0)).toDouble());
+
 class WfLifecycleCanvas extends StatefulWidget {
   const WfLifecycleCanvas({super.key});
 
@@ -76,7 +80,9 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
     final ps = l.positions.values;
     final minX = ps.fold(0.0, (m, p) => math.min(m, p.dx));
     final minY = ps.fold(0.0, (m, p) => math.min(m, p.dy));
-    return (ox: _frameMargin - minX, oy: _frameMargin - minY, width: l.width - minX + _frameMargin * 2, height: l.height - minY + _frameMargin * 2 + 56);
+    // Room underneath for the arrows looping back, a lane per arrow that may need one.
+    final below = 56 + 22 * math.min(3, math.max(0, l.edges.where((e) => e.back).length - 1));
+    return (ox: _frameMargin - minX, oy: _frameMargin - minY, width: l.width - minX + _frameMargin * 2, height: l.height - minY + _frameMargin * 2 + below);
   }
 
   /// Where a card is drawn (in the drawing area).
@@ -207,13 +213,32 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
 
     final lanes = <String, int>{};
     final edges = <_DrawnEdge>[];
-    for (final e in layout.edges) {
-      final pair = ([e.from, e.to]..sort()).join('|');
-      final lane = lanes[pair] ?? 0;
-      lanes[pair] = lane + 1;
-      final tr = transitions.firstWhere((x) => e.id.startsWith('${x.id}:'));
-      final p = edgePath(_pos(layout, e.from), _pos(layout, e.to), e.back, lane);
-      edges.add(_DrawnEdge(e.id, tr, p, p.label, tr.auto != null, sel == UiWfSelection.transition(tr.id)));
+    // Arrows going forward keep their place; one looping back underneath moves down a lane while its label
+    // would sit on another label (forward ones included), so no two labels overlap (the web `edges`).
+    final drawn = [
+      for (final e in layout.edges)
+        () {
+          final pair = ([e.from, e.to]..sort()).join('|');
+          final lane = lanes[pair] ?? 0;
+          lanes[pair] = lane + 1;
+          final tr = transitions.firstWhere((x) => e.id.startsWith('${x.id}:'));
+          return (e: e, tr: tr, lane: lane, path: edgePath(_pos(layout, e.from), _pos(layout, e.to), e.back, lane), w: _edgeLabelWidth(tr.label, tr.auto != null));
+        }(),
+    ];
+    final placed = [for (final x in drawn) if (!x.e.back) (at: x.path.label, w: x.w)];
+    bool hits(Offset at, double w) => placed.any((o) => (o.at.dy - at.dy).abs() < _edgeLabelH && (o.at.dx - at.dx).abs() < (o.w + w) / 2 + 4);
+    for (var i = 0; i < drawn.length; i++) {
+      var x = drawn[i];
+      if (!x.e.back) continue;
+      while (x.lane < 6 && hits(x.path.label, x.w)) {
+        final lane = x.lane + 1;
+        x = (e: x.e, tr: x.tr, lane: lane, path: edgePath(_pos(layout, x.e.from), _pos(layout, x.e.to), true, lane), w: x.w);
+      }
+      drawn[i] = x;
+      placed.add((at: x.path.label, w: x.w));
+    }
+    for (final x in drawn) {
+      edges.add(_DrawnEdge(x.e.id, x.tr, x.path, x.path.label, x.tr.auto != null, sel == UiWfSelection.transition(x.tr.id)));
     }
     // Moves back to the same state, drawn as loops over the card (several stack).
     for (final loop in lc == null ? const <({String id, String state})>[] : lifecycleSelfLoops(lc)) {
@@ -285,8 +310,10 @@ class _WfLifecycleCanvasState extends State<WfLifecycleCanvas> {
             ),
           );
 
+    // Fitting stops at 80%, where the cards stay readable; a wider diagram scrolls (the minimap shows the rest).
     final diagram = UiCanvasViewport(
       controller: _viewport,
+      fitMinZoom: 0.8,
       contentWidth: cw,
       contentHeight: ch,
       minimap: true,
@@ -566,10 +593,10 @@ class _StateCard extends StatelessWidget {
                     ),
                   Positioned(left: 0, top: 8, bottom: 8, child: Container(width: 3, decoration: BoxDecoration(color: tone, borderRadius: const BorderRadius.horizontal(right: Radius.circular(3))))),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 6, 12, 6),
+                    padding: const EdgeInsets.fromLTRB(14, 4, 12, 4),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, spacing: 1, children: [
                       if (kind.isNotEmpty) Text(kind.toUpperCase(), style: context.uiText.label.copyWith(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6, height: 1.1, color: t.textMuted)),
-                      Text(s.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w600, height: 1.25, color: t.text)),
+                      Text(s.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
                       Text(
                         '$outCount way${outCount == 1 ? '' : 's'} out${s.sla != null ? ' · time limit' : ''}',
                         maxLines: 1,

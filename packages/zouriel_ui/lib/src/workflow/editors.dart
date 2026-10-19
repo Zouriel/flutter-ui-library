@@ -120,6 +120,7 @@ class _WfTemplateEditorState extends State<WfTemplateEditor> {
     final t = context.ui;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
       UiTokenInput(
+        size: UiSize.sm,
         key: _input,
         value: wfTemplateRuns(widget.value),
         onChanged: _change,
@@ -658,6 +659,7 @@ class WfOperandEditor extends StatelessWidget {
 
 const Set<String> _multiOps = {'anyOf', 'noneOf', 'includesAny', 'includesAll'};
 
+
 UiWfCondition _asGroup(UiWfCondition? c) {
   if (c == null) return UiWfCondition.empty();
   return c.isGroup ? c : UiWfCondition.group('all', [c]);
@@ -742,27 +744,31 @@ class WfRuleEditor extends StatelessWidget {
       );
     }
 
+    final trash = FbIconButton(icon: WfIcons.delete02, label: 'Remove condition', danger: true, onPressed: onRemove);
+    // A row that stops where Remove's column starts (an invisible copy keeps the width, touch padding included).
+    Widget underTrash(Widget child) => Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(child: child),
+      Visibility(visible: false, maintainSize: true, maintainAnimation: true, maintainState: true, child: trash),
+    ]);
+    // One column at the inspector's width (the web `ui-wf-rule`): the value and Remove, how to compare, then
+    // what to compare with before the value it switches. The trash keeps its column, so the controls line up.
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
       Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(flex: 6, child: WfTokenSelect(tokens: tokens, value: rule.ref, label: 'Value to check', placeholder: 'Choose a value…', onChanged: _setRef)),
-        Expanded(
-          flex: 5,
-          child: WfSelect(
-            label: 'How to compare',
-            enabled: rule.ref.isNotEmpty,
-            value: rule.op,
-            options: [for (final o in ops) (value: o.op.name, label: o.label)],
-            onChanged: _setOp,
-          ),
-        ),
-        FbIconButton(icon: WfIcons.delete02, label: 'Remove condition', danger: true, onPressed: onRemove),
+        Expanded(child: WfTokenSelect(tokens: tokens, value: rule.ref, label: 'Value to check', placeholder: 'Choose a value…', onChanged: _setRef)),
+        trash,
       ]),
+      underTrash(WfSelect(
+          label: 'How to compare',
+          enabled: rule.ref.isNotEmpty,
+          value: rule.op,
+          options: [for (final o in ops) (value: o.op.name, label: o.label)],
+          onChanged: _setOp,
+        )),
       if (arity > 0)
-        Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: valueInput()),
+        underTrash(Row(spacing: 6, crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (!multi && !countOp)
             SizedBox(
-              width: 132,
+              width: 112,
               child: WfSelect(
                 label: 'Compare with',
                 value: compareMode,
@@ -774,7 +780,8 @@ class WfRuleEditor extends StatelessWidget {
                 onChanged: (m) => _patch({'value': (m == 'ref' ? UiWfOperand.ref('') : m == 'today' ? UiWfOperand.today(0) : UiWfOperand.constant(null)).json}),
               ),
             ),
-        ]),
+          Expanded(child: valueInput()),
+        ])),
       if (arity == 2)
         Row(spacing: 6, children: [
           Text('and', style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
@@ -839,6 +846,7 @@ class WfConditionEditor extends StatelessWidget {
         if (!nested)
           FbLink(
             label: 'Add a group',
+            icon: WfIcons.add01,
             onTap: () => emit([...conditions, UiWfCondition.group('any', [UiWfCondition.fromJson({'ref': '', 'op': 'eq'})])]),
           ),
       ]),
@@ -886,9 +894,8 @@ class WfFormField extends StatelessWidget {
         height: MediaQuery.sizeOf(ctx).height * 0.78,
         child: StatefulBuilder(builder: (ctx, setInner) => UiFormBuilder(definition: draft, onChanged: (d) => setInner(() => draft = d))),
       ),
-      footerBuilder: (ctx) => Row(children: [
+      footerBuilder: (ctx) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
         UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop(false)),
-        const Spacer(),
         UiButton(label: 'Use this form', onPressed: () => Navigator.of(ctx).pop(true)),
       ]),
     );

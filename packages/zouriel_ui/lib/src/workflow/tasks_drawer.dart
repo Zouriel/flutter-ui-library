@@ -347,7 +347,8 @@ class _DrawerBodyState extends State<_DrawerBody> {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
         Align(
           alignment: AlignmentDirectional.centerStart,
-          child: UiButton(label: '‹ Back to the list', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _open = null)),
+          // A text link, so "Back" lines up with the run's own content edge.
+          child: FbLink(label: '‹ Back to the list', fontSize: 12, onTap: () => setState(() => _open = null)),
         ),
         WfRunView(key: ValueKey('drawer-run-${run.id}'), api: widget.api, instanceId: run.id, onChanged: (_) => widget.onRunChanged()),
       ]);

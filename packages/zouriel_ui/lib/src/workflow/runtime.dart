@@ -90,6 +90,10 @@ class _RemarksCount extends StatelessWidget {
   }
 }
 
+/// A remarks field with its counter right under it (4px), as one group of the dialog's 16px-spaced fields.
+Widget _withCount(BuildContext context, String text, Widget field) =>
+    Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: context.ui.space1, children: [field, _RemarksCount(text)]);
+
 UiButtonVariant _variantOf(String? tone, {UiButtonVariant otherwise = UiButtonVariant.outline}) => switch (tone) {
   'danger' => UiButtonVariant.destructive,
   'success' || 'primary' => UiButtonVariant.primary,
@@ -121,18 +125,20 @@ class UiWorkflowStateBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    // Info has the theme's own colour (themes without one give it the primary's); the rest by tone.
-    final c = tone == null || tone == 'neutral' ? t.textSecondary : tone == 'info' ? t.info : wfToneColor(t, tone);
+    // Info has the theme's own colour (themes without one give it the primary's); the rest by tone. Neutral is
+    // muted text, not secondary: light themes draw secondary text in the primary colour.
+    final c = tone == null || tone == 'neutral' ? t.textMuted : tone == 'info' ? t.info : wfToneColor(t, tone);
     return Semantics(
       label: label,
       child: ExcludeSemantics(
+        // UiBadge's metrics: 20px tall, 8px sides, a pill, 11px semibold.
         child: Container(
-          height: 22,
-          padding: const EdgeInsets.symmetric(horizontal: 9),
-          decoration: BoxDecoration(color: c.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(11)),
+          height: 20,
+          padding: EdgeInsets.symmetric(horizontal: t.space2),
+          decoration: BoxDecoration(color: c.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(t.radiusPill)),
           child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
             Container(width: 6, height: 6, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-            Text(label, maxLines: 1, style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: c, height: 1)),
+            Text(label, maxLines: 1, style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: c, height: 1)),
           ]),
         ),
       ),
@@ -284,16 +290,19 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
         final t = ctx.ui;
         final remarks = wfRemarksLabel(task);
         // Nothing closes the dialog while a decision is on its way (Close, the backdrop, Escape, Back).
-        return PopScope(canPop: !st.busy, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-          if (task.entityTitle != null) Text(task.entityTitle!, style: _body(ctx, size: 14, weight: FontWeight.w600)),
-          if (task.instructions != null) Text(task.instructions!, style: _body(ctx, size: 14, height: 1.5)),
-          Text.rich(
-            TextSpan(children: [
-              TextSpan(text: 'Due ${wfDateTime(task.dueAt)} (${wfAgo(task.dueAt, UiWorkflowClock.nowOf(ctx))})'),
-              if (task.overdue) ...[const TextSpan(text: ' · '), TextSpan(text: 'overdue', style: TextStyle(color: t.danger, fontWeight: FontWeight.w700))],
-            ]),
-            style: _body(ctx, size: 12.5, color: t.textMuted),
-          ),
+        // The record, instructions and due date read as one block; the fields under it are 16px apart.
+        return PopScope(canPop: !st.busy, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space4, children: [
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
+            if (task.entityTitle != null) Text(task.entityTitle!, style: _body(ctx, size: 14, weight: FontWeight.w600)),
+            if (task.instructions != null) Text(task.instructions!, style: _body(ctx, size: 14, height: 1.5)),
+            Text.rich(
+              TextSpan(children: [
+                TextSpan(text: 'Due ${wfDateTime(task.dueAt)} (${wfAgo(task.dueAt, UiWorkflowClock.nowOf(ctx))})'),
+                if (task.overdue) ...[const TextSpan(text: ' · '), TextSpan(text: 'overdue', style: TextStyle(color: t.danger, fontWeight: FontWeight.w700))],
+              ]),
+              style: _body(ctx, size: 12.5, color: t.textMuted),
+            ),
+          ]),
           if (task.decisions.isNotEmpty)
             // A bulleted list, like the web `ul.decisions`.
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
@@ -313,7 +322,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
             ]),
           if (task.form != null)
             UiFormRenderer(key: formKey, definition: task.form!, showActions: false, showTitle: false),
-          FbSetting(
+          _withCount(ctx, st.comment, FbSetting(
             label: remarks,
             child: UiTextarea(
               value: st.comment,
@@ -327,8 +336,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
                 st.commentMissing = false;
               }),
             ),
-          ),
-          if (wfRemarksCounter(st.comment).isNotEmpty) _RemarksCount(st.comment),
+          )),
           if (task.allowDelegation) ...[
             Align(
               alignment: AlignmentDirectional.centerStart,
@@ -678,14 +686,15 @@ class _WfRecordActionsState extends State<WfRecordActions> {
         _dialogRoute = ModalRoute.of(ctx);
         return ListenableBuilder(
           listenable: d,
-          builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+          // Field groups (a form's questions, the remarks) 16px apart, like the form renderer's own fields.
+          builder: (ctx, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space4, children: [
             if (o.confirm != null) Text(o.confirm!, style: _body(ctx, size: 14)),
             if (o.form != null)
               UiFormRenderer(key: formKey, definition: o.form!, showActions: false, showTitle: false)
             else if (o.confirm == null)
               Text('Move this record to “${o.toLabel}”?', style: _body(ctx, size: 14)),
             if (p.remarks != UiWfRemarks.none)
-              FbSetting(
+              _withCount(ctx, d.remark, FbSetting(
                 label: 'Remarks${p.remarks == UiWfRemarks.required ? ' (required)' : ' (optional)'}',
                 child: UiTextarea(
                   value: d.remark,
@@ -699,8 +708,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
                     d.remarkMissing = false;
                   }),
                 ),
-              ),
-            if (p.remarks != UiWfRemarks.none && wfRemarksCounter(d.remark).isNotEmpty) _RemarksCount(d.remark),
+              )),
             if (reset) _WfResetUndoList(dialog: d),
             if (d.error.isNotEmpty) WfNote(d.error),
           ]),
@@ -708,9 +716,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       },
       footerBuilder: (ctx) => ListenableBuilder(
         listenable: d,
-        builder: (ctx, _) => Row(children: [
+        builder: (ctx, _) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
           UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: d.busy ? null : () => Navigator.of(ctx).pop()),
-          const Spacer(),
           UiButton(
             label: o.label,
             variant: o.tone == 'danger' ? UiButtonVariant.destructive : UiButtonVariant.primary,
@@ -1279,7 +1286,7 @@ class WfRunViewState extends State<WfRunView> {
         listenable: d,
         builder: (ctx, _) => PopScope(
           canPop: !d.busy,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space4, children: [
             ...body(ctx, d),
             if (d.error.isNotEmpty) WfNote(d.error),
           ]),
@@ -1287,9 +1294,8 @@ class WfRunViewState extends State<WfRunView> {
       ),
       footerBuilder: (ctx) => ListenableBuilder(
         listenable: d,
-        builder: (ctx, _) => Row(children: [
+        builder: (ctx, _) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
           UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: d.busy ? null : () => Navigator.of(ctx).pop()),
-          const Spacer(),
           UiButton(
             label: confirm,
             variant: variant,
@@ -1403,11 +1409,10 @@ class WfRunViewState extends State<WfRunView> {
       variant: UiButtonVariant.destructive,
       body: (ctx, d) => [
         Text('The run stops here and its open tasks are cancelled. What it already did stays done.', style: _body(ctx, size: 14)),
-        FbSetting(
+        _withCount(ctx, remarks, FbSetting(
           label: 'Remarks (optional)',
           child: UiTextarea(value: remarks, rows: 2, autosize: true, semanticLabel: 'Remarks (optional)', maxLength: wfRemarksMax, onChanged: (v) => d.set(() => remarks = v)),
-        ),
-        if (wfRemarksCounter(remarks).isNotEmpty) _RemarksCount(remarks),
+        )),
       ],
       onConfirm: (d) async {
         if (remarks.trim().length > wfRemarksMax) {
@@ -1428,6 +1433,13 @@ class WfRunViewState extends State<WfRunView> {
     UiButton btn(String label, VoidCallback onTap, {UiButtonVariant variant = UiButtonVariant.primary}) =>
         UiButton(label: label, size: UiSize.sm, variant: variant, onPressed: _busy ? null : onTap);
     final cancel = btn('Cancel the run', _askCancel, variant: UiButtonVariant.destructive);
+    // Try again, Skip and Cancel share the width; too narrow for one row, they stack, so none is left alone
+    // half a row away (the web `.incident .wf-row ui-button { flex: 1 1 auto }`).
+    Widget actions(List<Widget> buttons) => LayoutBuilder(
+          builder: (context, box) => box.maxWidth >= 300
+              ? Row(spacing: t.space2, children: [for (final b in buttons) Expanded(child: b)])
+              : Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: buttons),
+        );
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
       if (widget.showHead)
         Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
@@ -1459,7 +1471,7 @@ class WfRunViewState extends State<WfRunView> {
                 FbHint(r.kind == 'record'
                     ? 'Try again runs it now. Skip drops it: the record stays where it is. Moving the record by hand also clears this.'
                     : 'Try again runs it now. Skip drops it; the task stays open and can still be decided.'),
-                Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+                actions([
                   btn('Try again', () => _act('retry')),
                   btn('Skip', _askSkipTimer, variant: UiButtonVariant.outline),
                   if (r.kind != 'record') cancel,
@@ -1474,7 +1486,7 @@ class WfRunViewState extends State<WfRunView> {
                   ]),
                 Align(alignment: AlignmentDirectional.centerStart, child: cancel),
               ] else if (_mayIntervene)
-                Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+                actions([
                   btn('Try again', () => _act('retry')),
                   btn('Skip the step', () => _askSkip(null, r.errorStepId), variant: UiButtonVariant.outline),
                   cancel,
@@ -1495,10 +1507,15 @@ class WfRunViewState extends State<WfRunView> {
       if (r.tasks?.isNotEmpty ?? false)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
           const WfSectionTitle('Tasks'),
+          // Rows with a rule between them (the web's unbulleted list), not bullets.
           for (final task in r.tasks!)
-            Text(
-              '•  ${task.title} — ${task.status == 'open' ? 'waiting for ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}' : wfTaskResult(task)}',
-              style: _body(context),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: t.borderSubtle))),
+              child: Text(
+                '${task.title} — ${task.status == 'open' ? 'waiting for ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}' : wfTaskResult(task)}',
+                style: _body(context),
+              ),
             ),
         ]),
     ]);
