@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 
 import '../accordion/accordion.dart';
+import '../behaviors/scrolling.dart';
 import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
@@ -923,7 +924,8 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         ),
       );
       body = Align(alignment: Alignment.topLeft, child: body);
-      if (bounded) body = Expanded(child: SingleChildScrollView(child: body));
+      // Content running on under the footer fades out, so it reads as "scrolls on", not "cut off".
+      if (bounded) body = Expanded(child: UiScrollFade(axis: Axis.vertical, child: SingleChildScrollView(child: body)));
       final showFoot = _section != 'watching' && _section != 'registry';
       final foot = Container(
         padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: 8),

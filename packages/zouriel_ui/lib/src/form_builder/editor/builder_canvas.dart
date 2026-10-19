@@ -1023,12 +1023,17 @@ class _PageTabs extends StatefulWidget {
 }
 
 class _PageTabsState extends State<_PageTabs> {
-  /// Some tabs are out of view on the right.
-  bool _more = false;
+  /// Some tabs are out of view on the right ([_more]) or, scrolled along, on the left ([_less]).
+  bool _more = false, _less = false;
 
   bool _measure(ScrollMetrics m) {
-    final more = m.extentAfter > 0.5;
-    if (more != _more) setState(() => _more = more);
+    final more = m.extentAfter > 0.5, less = m.extentBefore > 0.5;
+    if (more != _more || less != _less) {
+      setState(() {
+        _more = more;
+        _less = less;
+      });
+    }
     return false;
   }
 
@@ -1079,15 +1084,16 @@ class _PageTabsState extends State<_PageTabs> {
         ),
       ),
     );
-    // More tabs off to the right: fade the edge so a cut-off tab reads as "scroll", not as a typo.
+    // More tabs off either side: fade that edge so a cut-off tab reads as "scroll", not as a typo.
     // The bottom rule is outside the mask, so it stays solid.
-    if (_more) {
+    if (_more || _less) {
+      final clear = solid.withValues(alpha: 0);
       strip = ShaderMask(
         blendMode: BlendMode.dstIn,
-        shaderCallback: (r) => LinearGradient(
-          colors: [solid, solid, solid.withValues(alpha: 0)],
-          stops: [0, ((r.width - t.space8) / r.width).clamp(0, 1), 1],
-        ).createShader(r),
+        shaderCallback: (r) {
+          final f = r.width <= 0 ? 0.0 : (t.space8 / r.width).clamp(0.0, 0.5);
+          return LinearGradient(colors: [_less ? clear : solid, solid, solid, _more ? clear : solid], stops: [0, f, 1 - f, 1]).createShader(r);
+        },
         child: strip,
       );
     }

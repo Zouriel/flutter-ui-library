@@ -400,7 +400,8 @@ for (final row in permissionRows(def)) print('\${row.label}: \${row.detail}');''
               'webhooks may call, audit retention and masking, pausing triggers per record type, what is being watched, and what the app lets '
               'workflows use. Use it on a settings page; without an API, give it settings and save them yourself. On a phone its sections '
               'become a scrolling row by themselves.',
-          demo: SizedBox(height: 560, child: UiWorkflowGlobalSettings(key: ValueKey('settings-$_user'), api: _api)),
+          // Unbounded: as tall as its section, the footer under it (no inner scroll box on the page).
+          demo: UiWorkflowGlobalSettings(key: ValueKey('settings-$_user'), api: _api),
           code: '''// through the API (saves with a revision check)
 UiWorkflowGlobalSettings(api: api)
 
@@ -446,7 +447,7 @@ UiWorkflowGlobalSettings(registry: registry, settings: settings, onSettingsChang
                 label: 'Global settings',
                 child: Padding(
                   padding: EdgeInsets.only(top: t.space3),
-                  child: _settingsTab == 2 ? SizedBox(height: 520, child: UiWorkflowGlobalSettings(key: ValueKey('tab-settings-$_user'), api: _api)) : const SizedBox.shrink(),
+                  child: _settingsTab == 2 ? UiWorkflowGlobalSettings(key: ValueKey('tab-settings-$_user'), api: _api) : const SizedBox.shrink(),
                 ),
               ),
             ],
@@ -470,7 +471,7 @@ class _WorkflowSettingsPageState extends State<WorkflowSettingsPage> {
         tabs: [
           UiTab(label: 'Workflows', child: WorkflowList(api: widget.api)),   // yours; opens the builder on its own route
           UiTab(label: 'Permissions', child: UiWorkflowPermissions(api: widget.api, onSaved: (_) => toast('Saved'))),
-          UiTab(label: 'Global settings', child: SizedBox(height: 600, child: UiWorkflowGlobalSettings(api: widget.api))),
+          UiTab(label: 'Global settings', child: UiWorkflowGlobalSettings(api: widget.api)),
         ],
       );
 }''',

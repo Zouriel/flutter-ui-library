@@ -99,7 +99,12 @@ class _UiDeviceFrameState extends State<UiDeviceFrame> {
               top: 11,
               left: (width - 110) / 2,
               child: IgnorePointer(
-                child: Container(width: 110, height: 32, decoration: BoxDecoration(color: t.mediaBg, borderRadius: BorderRadius.circular(20))),
+                // A faint rim, as the bezel has: on a dark screen a black island would vanish.
+                child: Container(
+                  width: 110,
+                  height: 32,
+                  decoration: BoxDecoration(color: t.mediaBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: t.mediaOnScrim.withValues(alpha: 0.12))),
+                ),
               ),
             ),
         ]),

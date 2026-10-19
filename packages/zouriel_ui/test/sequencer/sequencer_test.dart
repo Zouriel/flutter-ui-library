@@ -229,12 +229,15 @@ void main() {
     expect(find.text('Title'), findsNothing);
   });
 
-  _testWidgets('a ruler label gives way to the End grip sitting on it', (tester) async {
+  _testWidgets('a ruler label moves past the End grip sitting on it, never under it', (tester) async {
     await _pump(tester, const _Host(end: 47, endDraggable: true));
     expect(find.text('Intro'), findsOneWidget);
-    expect(find.text('Gallery'), findsNothing);
-    await _pump(tester, const _Host(end: 90, endDraggable: true));
     expect(find.text('Gallery'), findsOneWidget);
+    final grip = tester.getRect(find.bySemanticsLabel('Drag to change where it ends'));
+    final label = tester.getRect(find.text('Gallery'));
+    expect(label.left, greaterThanOrEqualTo(grip.right + 4 - 0.01)); // beside the grip, not under it
+    await _pump(tester, const _Host(end: 90, endDraggable: true));
+    expect(tester.getRect(find.text('Gallery')).left, lessThan(grip.right)); // back at its line, which the grip covered
   });
 
   _testWidgets('a draggable end reports past the timeline too, and once more when let go; arrows move it', (tester) async {

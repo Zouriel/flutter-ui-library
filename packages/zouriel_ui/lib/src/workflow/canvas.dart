@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../behaviors/scrolling.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
@@ -256,13 +257,27 @@ class _WfStepCardState extends State<WfStepCard> {
   }
 }
 
-/// At most 560 wide, centred (the web card's `max-width: 560px; margin-inline: auto`).
+/// At most 560 wide and never wider than the visible canvas, centred (the web card's
+/// `max-width: min(560px, 100cqi); margin-inline: auto`): on a canvas widened by branches, the card
+/// the view opens centred on shows whole.
 class _CardWidth extends StatelessWidget {
   const _CardWidth({required this.child});
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: child));
+  Widget build(BuildContext context) {
+    final room = context.dependOnInheritedWidgetOfExactType<_CanvasRoom>()?.width ?? double.infinity;
+    return Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: math.min(560, room)), child: child));
+  }
+}
+
+/// The visible width of the automation canvas, for [_CardWidth].
+class _CanvasRoom extends InheritedWidget {
+  const _CanvasRoom({required this.width, required super.child});
+  final double width;
+
+  @override
+  bool updateShouldNotify(_CanvasRoom old) => old.width != width;
 }
 
 /// A "+" between steps: tap to pick a step for this place (the web `ui-wf-add-slot`).
@@ -674,7 +689,11 @@ class _WfAutomationCanvasState extends State<WfAutomationCanvas> {
                 if (mounted && _hscroll.hasClients) _hscroll.jumpTo(_hscroll.position.maxScrollExtent / 2);
               });
             }
-            return needed > room ? SingleChildScrollView(controller: _hscroll, scrollDirection: Axis.horizontal, child: flow) : Center(child: flow);
+            return _CanvasRoom(
+              width: room,
+              // Columns running on past an edge fade out there, so they read as "scrolls on", not "cut off".
+              child: needed > room ? UiScrollFade(child: SingleChildScrollView(controller: _hscroll, scrollDirection: Axis.horizontal, child: flow)) : Center(child: flow),
+            );
           }),
         ),
       ),

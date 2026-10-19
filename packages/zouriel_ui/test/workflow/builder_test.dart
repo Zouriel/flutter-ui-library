@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
@@ -311,6 +312,25 @@ void main() {
     expect(out.last.steps!.first.type, 'wait');
     // The new step's settings opened in the sheet.
     expect(find.text('For a length of time'), findsOneWidget);
+  });
+
+  testWidgets('phone: a step\'s Delete sits in the settings sheet\'s header, beside its title', (tester) async {
+    final out = await pumpBuilder(tester, size: const Size(390, 844));
+    int steps(UiWorkflowDefinition d) => RegExp('"type"').allMatches(jsonEncode(d.json)).length;
+    final before = steps(automation());
+    await tester.tap(find.text('Wait').first);
+    await tester.pumpAndSettle();
+    final del = find.bySemanticsLabel(RegExp(r'^Delete '));
+    expect(del, findsOneWidget);
+    final close = tester.getRect(find.bySemanticsLabel('Close'));
+    expect(tester.getRect(del).center.dy, closeTo(close.center.dy, 1), reason: 'one header row, not a row of its own');
+    await tester.tap(del);
+    await tester.pumpAndSettle();
+    if (find.text('Delete').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+    }
+    expect(steps(out.last), lessThan(before)); // the step (and anything typed inside it) is gone
   });
 
   testWidgets('phone: branch columns stack and collapse', (tester) async {

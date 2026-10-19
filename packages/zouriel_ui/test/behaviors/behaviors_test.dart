@@ -146,6 +146,27 @@ void main() {
     expect(c.offset, 400, reason: 'the mask coming and going keeps the scroll position');
   });
 
+  testWidgets('UiScrollFade with axis vertical fades a column, and ignores a sideways view', (tester) async {
+    final c = ScrollController();
+    addTearDown(c.dispose);
+    await pumpUi(tester, SizedBox(width: 200, height: 100, child: UiScrollFade(
+          axis: Axis.vertical,
+          child: SingleChildScrollView(controller: c, child: const SizedBox(width: 200, height: 400)),
+        )));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShaderMask), findsOneWidget, reason: 'more below');
+    c.jumpTo(300);
+    await tester.pumpAndSettle();
+    expect(find.byType(ShaderMask), findsOneWidget, reason: 'more above');
+    await pumpUi(tester, SizedBox(width: 200, height: 40, child: UiScrollFade(
+          key: const ValueKey('sideways'),
+          axis: Axis.vertical,
+          child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: const SizedBox(width: 600, height: 40)),
+        )));
+    await tester.pumpAndSettle();
+    expect(find.byType(ShaderMask), findsNothing, reason: 'a sideways view is not this fade\'s axis');
+  });
+
   testWidgets('UiVirtualList builds only the rows in view', (tester) async {
     await pumpUi(tester, SizedBox(width: 200, child: UiVirtualList<int>(
       items: List.generate(10000, (i) => i),

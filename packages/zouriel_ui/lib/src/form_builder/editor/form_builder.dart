@@ -569,7 +569,9 @@ class _TopBar extends StatelessWidget {
     final changes = store.diff?.summary ?? const <String>[];
     final title = store.def.title.isNotEmpty ? store.def.title : 'Untitled form';
 
-    final titleButton = UiInteractive(
+    // Pulled 6px left, its hover padding, so the words line up with the views below (the web
+    // `margin-left: -6px`).
+    final titleButton = Transform.translate(offset: const Offset(-6, 0), child: UiInteractive(
       onTap: () => state._openSettings(null),
       semanticLabel: '$title, form settings',
       excludeChildSemantics: true,
@@ -583,7 +585,7 @@ class _TopBar extends StatelessWidget {
         ),
         child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, color: t.text)),
       ),
-    );
+    ));
 
     final views = UiSegmented<UiFormBuilderView>(
       label: 'View',

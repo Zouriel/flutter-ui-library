@@ -26,6 +26,9 @@ void main() {
     });
     test('falls back to a readable key when the title is unknown', () {
       expect(wfActorLabel(actor('workflow', 'scholarshipReview', null)), 'Workflow: Scholarship review');
+      // Nothing names it: a plain phrase, never "unknown".
+      expect(wfActorLabel(actor('workflow', '', null)), 'A workflow');
+      expect(wfActorLabel(actor('workflow', null, '')), 'A workflow');
     });
     test('people by name; the engine as System', () {
       expect(wfActorLabel(actor('user', 'hana', 'Hana Yusuf')), 'Hana Yusuf');

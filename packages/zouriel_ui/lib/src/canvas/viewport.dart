@@ -52,6 +52,10 @@ class UiCanvasViewportController extends ChangeNotifier {
   double _fitMinZoom = 0.6;
   bool _auto = true;
 
+  /// Fitting was asked for by name (the fit button, `0`): it shows everything, below `fitMinZoom`
+  /// if it must, and keeps doing so on refits until the person pans or zooms.
+  bool _all = false;
+
   /// Pointers down on the canvas: refits wait for them, so nothing jumps mid-gesture.
   int _held = 0;
   bool _fitWhenReleased = false;
@@ -71,6 +75,7 @@ class UiCanvasViewportController extends ChangeNotifier {
 
   void _setView(UiViewportView v, {bool notify = true}) {
     _auto = false;
+    _all = false;
     if (v == _view) return;
     _view = v;
     if (notify) notifyListeners();
@@ -101,7 +106,7 @@ class UiCanvasViewportController extends ChangeNotifier {
     if (_held > 0) _held--;
     if (_held == 0 && _fitWhenReleased) {
       _fitWhenReleased = false;
-      if (_auto) fit();
+      if (_auto) fit(all: _all);
     }
   }
 
@@ -110,7 +115,8 @@ class UiCanvasViewportController extends ChangeNotifier {
     if (w <= 0 || h <= 0) return null;
     final p = _padding;
     final cw = math.max(1.0, _content.width), ch = math.max(1.0, _content.height);
-    final zoom = _clamp(math.max(math.min(_fitMinZoom, 1), math.min(1, math.min((w - p * 2) / cw, (h - p * 2) / ch))));
+    final whole = math.min(1.0, math.min((w - p * 2) / cw, (h - p * 2) / ch));
+    final zoom = _clamp(_all ? whole : math.max(math.min(_fitMinZoom, 1), whole));
     // Content too big even at the smallest fit zoom starts at its top-left edge (the content brings
     // its own margin), not a padding in.
     double place(double room, double size) => size * zoom <= room - p * 2 ? (room - size * zoom) / 2 : 0;
@@ -119,8 +125,10 @@ class UiCanvasViewportController extends ChangeNotifier {
 
   /// Shows all the content, centred, never zooming in past 100% or out past the viewport's
   /// `fitMinZoom`; content too big for that shows from its top-left corner (the minimap shows the
-  /// rest). Turns auto-fit back on.
-  void fit() {
+  /// rest). With [all] (the fit button and `0`) it zooms out as far as `minZoom` to show everything.
+  /// Turns auto-fit back on.
+  void fit({bool all = false}) {
+    _all = all;
     final v = _fitView();
     if (v == null) return;
     final changed = v != _view;
@@ -195,7 +203,7 @@ class UiCanvasViewportNoPan extends StatelessWidget {
 ///
 /// - Pan: drag empty space (mouse or one finger), scroll with a trackpad or wheel, or arrow keys.
 /// - Zoom: Ctrl/⌘ + wheel or trackpad pinch, two-finger pinch on touch, `+`/`-`, or the buttons.
-/// - `0` or the fit button shows everything. Until someone pans or zooms (or touches the canvas
+/// - `0` or the fit button shows everything, zooming out past `fitMinZoom` if it must. Until someone pans or zooms (or touches the canvas
 ///   at all), the view keeps fitting the content as its size and the content change.
 ///
 /// Children with their own gestures (cards being dragged, buttons) win over panning: they sit
@@ -229,8 +237,8 @@ class UiCanvasViewport extends StatefulWidget {
   /// Space kept around the content when fitting.
   final double padding;
 
-  /// The smallest zoom fitting uses; below it text is unreadable, so a large diagram starts at its
-  /// top-left corner instead.
+  /// The smallest zoom fitting uses on its own (first view, refits); below it text is hard to read,
+  /// so a large diagram starts at its top-left corner instead. The fit button goes further.
   final double fitMinZoom;
   final bool controls;
   final bool minimap;
@@ -325,7 +333,7 @@ class _UiCanvasViewportState extends State<UiCanvasViewport> {
     } else if (ch == '-' || ch == '_' || k == LogicalKeyboardKey.numpadSubtract) {
       _c.zoomBy(1 / 1.2);
     } else if (ch == '0' || k == LogicalKeyboardKey.numpad0) {
-      _c.fit();
+      _c.fit(all: true);
     } else if (k == LogicalKeyboardKey.arrowLeft) {
       _c.view = v.copyWith(x: v.x + step);
     } else if (k == LogicalKeyboardKey.arrowRight) {
@@ -469,7 +477,7 @@ class _Controls extends StatelessWidget {
           ),
         ),
         btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', () => controller.zoomBy(1.2)),
-        btn(HugeIcons.strokeRoundedFullScreen, 'Fit to view', controller.fit),
+        btn(HugeIcons.strokeRoundedFullScreen, 'Fit to view', () => controller.fit(all: true)),
       ]),
     );
   }

@@ -43,6 +43,14 @@ void main() {
     });
   }
 
+  testWidgets('the picture fits between the chrome: the close button and the strip never sit on it', (tester) async {
+    await photos(tester);
+    await open(tester);
+    final photo = tester.getRect(find.bySemanticsLabel('Photo 0'));
+    expect(tester.getRect(find.bySemanticsLabel('Close')).bottom, lessThanOrEqualTo(photo.top));
+    expect(tester.getRect(find.bySemanticsLabel('Item 1')).top, greaterThanOrEqualTo(photo.bottom));
+  });
+
   testWidgets('counter, swipe to step, filmstrip, the label when no caption', (tester) async {
     await photos(tester);
     await open(tester);

@@ -405,7 +405,7 @@ class _SequencerSectionState extends State<_SequencerSection> {
         markers: _markers,
         showLabels: labels,
         compact: narrow,
-        labelWidth: narrow ? 140 : 200,
+        labelWidth: narrow ? 140 : 240,
         rowHeight: labels ? 34 : 30,
         end: labels ? null : _end,
         endDraggable: !labels,
