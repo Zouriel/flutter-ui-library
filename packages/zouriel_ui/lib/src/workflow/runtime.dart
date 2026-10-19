@@ -138,7 +138,9 @@ class UiWorkflowStateBadge extends StatelessWidget {
           decoration: BoxDecoration(color: c.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(t.radiusPill)),
           child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
             Container(width: 6, height: 6, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-            Text(label, maxLines: 1, style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: c, height: 1)),
+            // The label leans toward the text colour so 11px text stays readable on the tint in every
+            // theme (the web's color-mix 70%); the dot keeps the pure state colour.
+            Text(label, maxLines: 1, style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600, color: Color.lerp(t.text, c, 0.7), height: 1)),
           ]),
         ),
       ),

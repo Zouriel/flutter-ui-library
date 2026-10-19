@@ -35,8 +35,12 @@ void main() {
       await pumpPage(tester, const Column(children: [UiWorkflowStateBadge(label: 'Submitted', tone: 'info'), UiWorkflowStateBadge(label: 'In progress', tone: 'primary')]));
       final t = tester.element(find.text('Submitted')).ui;
       expect(t.info, isNot(t.primary), reason: 'the default theme gives info its own colour');
-      expect(tester.widget<Text>(find.text('Submitted')).style?.color, t.info);
-      expect(tester.widget<Text>(find.text('In progress')).style?.color, t.primary);
+      // The dot is the pure state colour; the label leans 30% toward the text colour for contrast.
+      Color? dot(String label) => ((tester.widget<Container>(find.descendant(of: find.ancestor(of: find.text(label), matching: find.byType(Row)).first, matching: find.byType(Container)).first).decoration) as BoxDecoration).color;
+      expect(dot('Submitted'), t.info);
+      expect(dot('In progress'), t.primary);
+      expect(tester.widget<Text>(find.text('Submitted')).style?.color, Color.lerp(t.text, t.info, 0.7));
+      expect(tester.widget<Text>(find.text('In progress')).style?.color, Color.lerp(t.text, t.primary, 0.7));
     });
   });
 

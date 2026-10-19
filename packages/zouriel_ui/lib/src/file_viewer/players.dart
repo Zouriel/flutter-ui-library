@@ -205,7 +205,7 @@ class _Controls extends StatelessWidget {
     final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
     String rate(double r) => '${r == r.roundToDouble() ? r.toInt() : r}×';
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),
+      padding: EdgeInsets.all(t.space2),
       decoration: BoxDecoration(color: t.surfaceRaised, border: Border(top: BorderSide(color: t.border))),
       child: Row(spacing: uiTouchPlatform(context) ? 0 : t.space1, children: [
         UiIconButton(
