@@ -741,7 +741,15 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
               onPointerHover: (_) {
                 if (!_chrome) _wake();
               },
-              child: DefaultTextStyle(style: context.uiText.body.copyWith(color: onScrim), child: sheet),
+              // Under the sheet, as the web dialog's ::backdrop: an 86% scrim, blurred, that stays while
+              // the sheet fades on a drag-down, so the page never shows through behind the chrome.
+              child: Stack(fit: StackFit.expand, children: [
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: ColoredBox(color: t.mediaScrim.withValues(alpha: 0.86)),
+                ),
+                DefaultTextStyle(style: context.uiText.body.copyWith(color: onScrim), child: sheet),
+              ]),
             ),
           ),
         ),
