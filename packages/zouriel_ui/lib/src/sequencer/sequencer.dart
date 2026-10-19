@@ -308,6 +308,11 @@ class _UiSequencerState extends State<UiSequencer> {
   ({double zoom, double frac, double anchorX})? _pinch;
   double _gridW = 1;
 
+  /// The timeline runs this far in from both ends (half a keyframe's 24px target), so diamonds and
+  /// grips at 0 or the end aren't cut in half.
+  double _inset = 12;
+  double get _trackW => math.max(1, _gridW - 2 * _inset);
+
   @override
   void initState() {
     super.initState();
@@ -336,8 +341,9 @@ class _UiSequencerState extends State<UiSequencer> {
 
   double get _rowH => math.max(_minRowHeight, widget.rowHeight);
   double get _len => widget.length <= 0 ? 1 : widget.length;
-  double _x(double units) => units / _len * _gridW;
-  double get _unitsPerPx => _len / math.max(1, _gridW);
+  double _x(double units) => _inset + _w(units);
+  double _w(double units) => units / _len * _trackW;
+  double get _unitsPerPx => _len / _trackW;
   bool get _free => HardwareKeyboard.instance.isAltPressed;
 
   // ----- Controlled values ------------------------------------------------------------------------
@@ -374,7 +380,7 @@ class _UiSequencerState extends State<UiSequencer> {
     return box == null ? 0 : box.globalToLocal(global).dx;
   }
 
-  void _setPlayheadFromPointer(Offset global) => _setPlayhead(_gridX(global) / _gridW * _len);
+  void _setPlayheadFromPointer(Offset global) => _setPlayhead((_gridX(global) - _inset) / _trackW * _len);
 
   /// Snaps a position to markers, the playhead, the end and other rows' edges within [UiSequencer.snapPixels].
   double _snap(double units, String? excludeRow, double unitsPerPx) {
@@ -443,7 +449,7 @@ class _UiSequencerState extends State<UiSequencer> {
       case _Kind.pageEnd:
         // Under the pointer at the timeline's current scale, and not clamped to its length: the host
         // can grow the timeline while the End is pulled past its edge.
-        var end = math.max(0.0, _gridX(global) / _gridW * _len);
+        var end = math.max(0.0, (_gridX(global) - _inset) / _trackW * _len);
         if (!free) end = _snap(end, null, d.unitsPerPx);
         d.last = (start: 0, end: end, at: end);
         widget.onEndChange?.call(end, false);
@@ -737,6 +743,7 @@ class _UiSequencerState extends State<UiSequencer> {
         final labelW = widget.showLabels ? math.min(widget.labelWidth, w * 0.7) : 0.0;
         final viewW = math.max(1.0, w - labelW);
         _gridW = viewW * _zoom;
+        _inset = t.space3;
         final rowH = _rowH;
         final rowsH = widget.rows.isEmpty ? rowH * 2 : rowH * widget.rows.length;
         final bodyH = math.max(rowsH, h - rowH);
@@ -835,6 +842,30 @@ class _UiSequencerState extends State<UiSequencer> {
     );
   }
 
+  /// How a marker's name fits its stretch of the ruler: whole ('label'), as its number when the
+  /// stretch is too narrow, or not at all ('none') when the End grip sits on it.
+  String _labelFit(int i, TextStyle style, double endW) {
+    final markers = widget.markers;
+    final m = markers[i];
+    final room = _w(math.max(0, (i + 1 < markers.length ? markers[i + 1].at : widget.length) - m.at)) - 8;
+    double widthOf(String s) {
+      final tp = TextPainter(text: TextSpan(text: s, style: style), textDirection: TextDirection.ltr, maxLines: 1)..layout();
+      final w = tp.width;
+      tp.dispose();
+      return w;
+    }
+    final need = widthOf(m.label);
+    final num = widthOf('${i + 1}');
+    final fit = need <= room ? 'label' : num <= room ? 'number' : 'none';
+    final end = widget.endDraggable ? widget.end : null;
+    if (end != null && fit != 'none') {
+      final x = _x(end) - _x(m.at);
+      final textW = fit == 'label' ? need : num;
+      if (x > -endW / 2 - 2 && x < 4 + textW + endW / 2 + 2) return 'none';
+    }
+    return fit;
+  }
+
   Widget _ruler(UiTokens t, bool touch, double rowH) {
     final markers = widget.markers;
     final labelStyle = context.uiText.code.copyWith(fontSize: 11, color: t.textMuted, height: 1.2);
@@ -861,7 +892,7 @@ class _UiSequencerState extends State<UiSequencer> {
           for (var i = 0; i < markers.length; i++)
             Positioned(
               left: _x(markers[i].at),
-              width: _x(math.max(0, (i + 1 < markers.length ? markers[i + 1].at : widget.length) - markers[i].at)),
+              width: _w(math.max(0, (i + 1 < markers.length ? markers[i + 1].at : widget.length) - markers[i].at)),
               top: 0,
               bottom: 0,
               child: IgnorePointer(
@@ -871,7 +902,12 @@ class _UiSequencerState extends State<UiSequencer> {
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Align(
                       alignment: markers[i].at / _len > 0.88 ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Text(markers[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: labelStyle),
+                      child: switch (_labelFit(i, labelStyle, endW)) {
+                        // Too narrow for the name: its number. Under the End grip: nothing, rather than a name with a bar through it.
+                        'label' => Text(markers[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: labelStyle),
+                        'number' => Semantics(label: markers[i].label, excludeSemantics: true, child: Text('${i + 1}', maxLines: 1, softWrap: false, style: labelStyle)),
+                        _ => const SizedBox.shrink(),
+                      },
                     ),
                   ),
                 ),
@@ -1505,10 +1541,12 @@ class _KindBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
+    // One width for every badge (SVG, TEXT, RSVP…), so the names after them start in one column.
     return Container(
+      constraints: const BoxConstraints(minWidth: 11 * 4.5),
       padding: EdgeInsets.symmetric(horizontal: t.space1),
       decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radiusXs)),
-      child: Text(kind.toUpperCase(), maxLines: 1, overflow: TextOverflow.clip, softWrap: false, style: TextStyle(fontSize: 11, height: 14 / 11, letterSpacing: 11 * 0.04, color: t.textMuted)),
+      child: Text(kind.toUpperCase(), maxLines: 1, overflow: TextOverflow.clip, softWrap: false, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, height: 14 / 11, letterSpacing: 11 * 0.04, color: t.textMuted)),
     );
   }
 }

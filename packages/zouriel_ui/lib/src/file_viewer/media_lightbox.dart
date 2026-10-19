@@ -658,13 +658,17 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
           if (count > 1)
             SizedBox(
               height: 54 + t.space2 * 2,
-              child: ListView.separated(
-                controller: _strip,
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space1),
-                itemCount: count,
-                separatorBuilder: (_, _) => SizedBox(width: t.space2),
-                itemBuilder: (context, i) => _StripTile(item: widget.items[i], index: i, current: i == widget.index, onTap: () => _goTo(i)),
+              // Centred under the photo while the set fits; it scrolls from the start once it doesn't.
+              child: Center(
+                child: ListView.separated(
+                  controller: _strip,
+                  shrinkWrap: true,
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space1),
+                  itemCount: count,
+                  separatorBuilder: (_, _) => SizedBox(width: t.space2),
+                  itemBuilder: (context, i) => _StripTile(item: widget.items[i], index: i, current: i == widget.index, onTap: () => _goTo(i)),
+                ),
               ),
             ),
         ]),
@@ -737,7 +741,15 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
               onPointerHover: (_) {
                 if (!_chrome) _wake();
               },
-              child: DefaultTextStyle(style: context.uiText.body.copyWith(color: onScrim), child: sheet),
+              // Under the sheet, as the web dialog's ::backdrop: an 86% scrim, blurred, that stays while
+              // the sheet fades on a drag-down, so the page never shows through behind the chrome.
+              child: Stack(fit: StackFit.expand, children: [
+                BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: ColoredBox(color: t.mediaScrim.withValues(alpha: 0.86)),
+                ),
+                DefaultTextStyle(style: context.uiText.body.copyWith(color: onScrim), child: sheet),
+              ]),
             ),
           ),
         ),

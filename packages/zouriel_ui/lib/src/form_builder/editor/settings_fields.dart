@@ -50,11 +50,13 @@ class UiFbSettingsFields extends StatelessWidget {
       spacing: t.space3,
       children: [
         FbSection(title: 'Questions', children: [
-          FbPair(children: [
-            select('Question text', s.labelPlacement ?? 'top', const [('top', 'Above the box'), ('inside', 'Inside the box'), ('left', 'To the left')], (st, v) => st.labelPlacement = v),
-            select('Error messages', s.errorPlacement ?? 'below', const [('below', 'Below the box'), ('inside', 'Inside the box')], (st, v) => st.errorPlacement = v),
-          ]),
-          const FbHint('Each question can override these. “Inside the box” applies to text boxes only.'),
+          FbHinted(
+            hints: const ['Each question can override these. “Inside the box” applies to text boxes only.'],
+            child: FbPair(children: [
+              select('Question text', s.labelPlacement ?? 'top', const [('top', 'Above the box'), ('inside', 'Inside the box'), ('left', 'To the left')], (st, v) => st.labelPlacement = v),
+              select('Error messages', s.errorPlacement ?? 'below', const [('below', 'Below the box'), ('inside', 'Inside the box')], (st, v) => st.errorPlacement = v),
+            ]),
+          ),
           select(
             'Mark questions',
             s.requiredMarker ?? 'asterisk',
@@ -69,7 +71,7 @@ class UiFbSettingsFields extends StatelessWidget {
             const [('blur', 'When someone leaves a question'), ('submit', 'Only when they continue or submit')],
             (st, v) => st.validateOn = v,
           ),
-          FbSwitch(value: s.errorSummary != false, label: 'List all problems at the top', onChanged: (v) => onPatch((st) => st.errorSummary = v ? null : false)),
+          FbSwitch(size: UiSize.sm, value: s.errorSummary != false, label: 'List all problems at the top', onChanged: (v) => onPatch((st) => st.errorSummary = v ? null : false)),
           FbSetting(
             label: 'Answers to hidden questions',
             hint: 'Saved answers that were already hidden when someone opened the form are always kept.',
@@ -83,7 +85,7 @@ class UiFbSettingsFields extends StatelessWidget {
           ),
         ]),
         FbSection(title: 'Buttons and steps', children: [
-          FbSwitch(value: s.showProgress != false, label: 'Show progress on multi-page forms', onChanged: (v) => onPatch((st) => st.showProgress = v ? null : false)),
+          FbSwitch(size: UiSize.sm, value: s.showProgress != false, label: 'Show progress on multi-page forms', onChanged: (v) => onPatch((st) => st.showProgress = v ? null : false)),
           FbPair(children: [
             input('Submit button', s.submitLabel, 'Submit', 'sl', (st, v) => st.submitLabel = v),
             input('Next button', s.nextLabel, 'Continue', 'nl', (st, v) => st.nextLabel = v),

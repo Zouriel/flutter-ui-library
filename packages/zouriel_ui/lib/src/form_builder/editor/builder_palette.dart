@@ -79,7 +79,7 @@ class _UiFbPaletteState extends State<UiFbPalette> {
         pressScale: false,
         builder: (context, s) => Container(
           constraints: BoxConstraints(minHeight: widget.compact ? 48 : 36),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: widget.compact ? t.space1 : 3),
           decoration: BoxDecoration(
             color: s.hovered || s.pressed ? t.surfaceHover : null,
             borderRadius: BorderRadius.circular(t.radiusXs),
@@ -97,7 +97,8 @@ class _UiFbPaletteState extends State<UiFbPalette> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                 Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 13, color: t.text, height: 1.3)),
                 if (widget.compact)
-                  Text(item.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted, height: 1.3)),
+                  // Up to two lines: a description cut after a few words says nothing.
+                  Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted, height: 1.35)),
               ]),
             ),
           ]),

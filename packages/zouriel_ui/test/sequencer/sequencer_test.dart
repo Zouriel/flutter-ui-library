@@ -179,9 +179,9 @@ void main() {
     await tester.longPress(find.bySemanticsLabel('Keyframe Fade at 50%'));
     await tester.pump();
     expect(_host(tester).menus, hasLength(1));
-    // An empty stretch of Photo's lane, at 30% along the timeline.
+    // An empty stretch of Photo's lane, at 30% along the timeline (which runs 12px in from each end).
     final photo = tester.getRect(_bar('Photo'));
-    await tester.tapAt(Offset(200 + 400 * 0.3, photo.center.dy));
+    await tester.tapAt(Offset(200 + 12 + (400 - 24) * 0.3, photo.center.dy));
     await tester.pump();
     expect(_host(tester).playhead, closeTo(30, 0.5));
     expect(_host(tester).scrubs, hasLength(1));
@@ -227,6 +227,14 @@ void main() {
     await tester.pump();
     expect(_host(tester).ranges, isEmpty);
     expect(find.text('Title'), findsNothing);
+  });
+
+  _testWidgets('a ruler label gives way to the End grip sitting on it', (tester) async {
+    await _pump(tester, const _Host(end: 47, endDraggable: true));
+    expect(find.text('Intro'), findsOneWidget);
+    expect(find.text('Gallery'), findsNothing);
+    await _pump(tester, const _Host(end: 90, endDraggable: true));
+    expect(find.text('Gallery'), findsOneWidget);
   });
 
   _testWidgets('a draggable end reports past the timeline too, and once more when let go; arrows move it', (tester) async {

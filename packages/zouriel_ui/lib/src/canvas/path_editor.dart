@@ -52,9 +52,10 @@ int _itemSeq = 0;
 ///   null = auto). Hold still at the end of a stroke to snap it to a line, circle, ellipse,
 ///   rectangle or triangle. Each finished stroke is reported through [onStroke].
 ///
-/// The view zooms with a two-finger pinch or the mouse wheel, and pans by dragging empty space (or
-/// with two fingers). It never changes [items]: a finished gesture is reported once through
-/// [onItemsChanged], so the host owns undo. While a gesture runs, a draft is drawn instead.
+/// The view zooms with a two-finger pinch or Ctrl/Cmd + wheel (a plain wheel scrolls the page), and
+/// pans by dragging empty space (or with two fingers). It never changes [items]: a finished gesture
+/// is reported once through [onItemsChanged], so the host owns undo. While a gesture runs, a draft
+/// is drawn instead.
 ///
 /// Keyboard: `]` / `[` step the selection through the items, Escape clears points then the item,
 /// arrows nudge (Shift for 10), Delete removes selected points, Ctrl/Cmd+A selects every point, and
@@ -751,11 +752,14 @@ class UiPathEditorState extends State<UiPathEditor> {
 
   void _wheel(PointerSignalEvent e) {
     if (e is! PointerScrollEvent) return;
+    // A plain wheel belongs to the page: zooming on it traps the scroll of anyone passing over the
+    // editor. Ctrl/Cmd + wheel zooms (a pinch zooms through the gesture recogniser).
+    final k = HardwareKeyboard.instance;
+    if (!k.isControlPressed && !k.isMetaPressed) return;
     GestureBinding.instance.pointerSignalResolver.register(e, (event) {
       final s = event as PointerScrollEvent;
       final world = _toUnits(s.localPosition);
-      final ctrl = HardwareKeyboard.instance.isControlPressed;
-      final factor = math.exp(-s.scrollDelta.dy * (ctrl ? 0.01 : 0.0015));
+      final factor = math.exp(-s.scrollDelta.dy * 0.01);
       setState(() {
         _zoom = (_zoom * factor).clamp(0.2, 20);
         _center = world - (s.localPosition - _size.center(Offset.zero)) / _px;

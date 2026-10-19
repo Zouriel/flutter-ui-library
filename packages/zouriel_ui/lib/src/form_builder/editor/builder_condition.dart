@@ -323,42 +323,45 @@ class UiFbConditionEditor extends StatelessWidget {
       final info = operatorInfo(rule.op);
       rows.add(Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
         if (i > 0) joinerText(joiner),
-        Row(spacing: 4, children: [
+        // The remove button sits beside the whole rule, so every row of it ends at the same edge.
+        Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: 4, children: [
           Expanded(
-            child: UiSelect(
-              label: 'Question',
-              size: UiSize.sm,
-              placeholder: 'Choose a question…',
-              invalid: rule.ref.isEmpty,
-              value: rule.ref.isEmpty ? null : rule.ref,
-              options: [
-                for (final o in options)
-                  UiSelectOption(
-                    value: o.id,
-                    label: o.label +
-                        (o.kind == UiFbSubjectKind.group || o.kind == UiFbSubjectKind.repeat ? ' (section)' : o.kind == UiFbSubjectKind.page ? ' (page)' : ''),
-                  ),
-                if (rule.ref.isNotEmpty && subj == null) UiSelectOption(value: rule.ref, label: 'Deleted question'),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
+              UiSelect(
+                label: 'Question',
+                size: UiSize.sm,
+                placeholder: 'Choose a question…',
+                invalid: rule.ref.isEmpty,
+                value: rule.ref.isEmpty ? null : rule.ref,
+                options: [
+                  for (final o in options)
+                    UiSelectOption(
+                      value: o.id,
+                      label: o.label +
+                          (o.kind == UiFbSubjectKind.group || o.kind == UiFbSubjectKind.repeat ? ' (section)' : o.kind == UiFbSubjectKind.page ? ' (page)' : ''),
+                    ),
+                  if (rule.ref.isNotEmpty && subj == null) UiSelectOption(value: rule.ref, label: 'Deleted question'),
+                ],
+                onChanged: (v) => setRef(i, v),
+              ),
+              if (subj != null) ...[
+                UiSelect(
+                  label: 'Comparison',
+                  size: UiSize.sm,
+                  value: rule.op.name,
+                  options: [for (final op in opsFor(subj.kind)) UiSelectOption(value: op.op.name, label: _opLabel(op))],
+                  onChanged: (v) => setOp(i, UiFbOperator(v)),
+                ),
+                if (info.arity >= 1) UiFbValueInput(subject: subj, op: rule.op, operand: rule.value, forId: forId, onChanged: (v) => setValue(i, false, v)),
+                if (info.arity == 2) ...[
+                  joinerText('and'),
+                  UiFbValueInput(subject: subj, op: rule.op, operand: rule.value2, forId: forId, label: 'Second value', onChanged: (v) => setValue(i, true, v)),
+                ],
               ],
-              onChanged: (v) => setRef(i, v),
-            ),
+            ]),
           ),
           FbIconButton(icon: HugeIcons.strokeRoundedCancel01, label: 'Remove this rule', danger: true, onPressed: () => remove(i)),
         ]),
-        if (subj != null) ...[
-          UiSelect(
-            label: 'Comparison',
-            size: UiSize.sm,
-            value: rule.op.name,
-            options: [for (final op in opsFor(subj.kind)) UiSelectOption(value: op.op.name, label: _opLabel(op))],
-            onChanged: (v) => setOp(i, UiFbOperator(v)),
-          ),
-          if (info.arity >= 1) UiFbValueInput(subject: subj, op: rule.op, operand: rule.value, forId: forId, onChanged: (v) => setValue(i, false, v)),
-          if (info.arity == 2) ...[
-            joinerText('and'),
-            UiFbValueInput(subject: subj, op: rule.op, operand: rule.value2, forId: forId, label: 'Second value', onChanged: (v) => setValue(i, true, v)),
-          ],
-        ],
       ]));
     }
     rows.add(Wrap(spacing: t.space3, runSpacing: 4, children: [

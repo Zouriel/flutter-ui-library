@@ -124,6 +124,7 @@ void publish() {
         ApiRow('optionSources', 'List<UiFbOptionSourceDef>', 'Searchable lists for Options, Data source.', def: '[]'),
         ApiRow('globalSettings / httpSources', 'UiFormGlobalSettings? / UiFbHttpSourcesOptions', 'Lists from the global settings editor become data sources too.'),
         ApiRow('actions', 'Widget?', 'Your buttons (Save, Publish) at the end of the top bar.'),
+        ApiRow('showTitle', 'bool', 'Show the form title in the top bar. Turn off when your own header already names the form.', def: 'true'),
       ],
     );
   }

@@ -280,7 +280,7 @@ void main() {
   testWidgets('golden: image viewer, players, code, text, explorer', (tester) async {
     FakeVideoPlatform.install();
     final img = await testImage(tester, w: 320, h: 200);
-    await expectThemedGoldenAfter(tester, 'file_viewers', height: 1060, (context) {
+    await expectThemedGoldenAfter(tester, 'file_viewers', height: 1100, (context) {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 12, children: [
         UiImageViewer(image: img, alt: 'Beach', maxHeight: 230, hasNext: true, onNext: () {}),
         const UiVideoPlayer(src: 'clip.mp4', maxHeight: 120),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -85,6 +86,15 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
     setState(() => _page = p);
     _view.value = Matrix4.identity();
     widget.onPageChanged?.call(p);
+  }
+
+  void _passWheelToPage(PointerSignalEvent e) {
+    if (e is! PointerScrollEvent) return;
+    final k = HardwareKeyboard.instance;
+    if (k.isControlPressed || k.isMetaPressed) return;
+    // Claimed even with no page to scroll, so InteractiveViewer never zooms on a plain wheel.
+    final page = Scrollable.maybeOf(context)?.position;
+    GestureBinding.instance.pointerSignalResolver.register(e, (ev) => page?.pointerScroll((ev as PointerScrollEvent).scrollDelta.dy));
   }
 
   void _zoomBy(double d, Size stage) {
@@ -209,21 +219,26 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
                 maxScale: UiPdfViewer.maxScale,
                 boundaryMargin: EdgeInsets.all(stage.shortestSide),
                 constrained: false,
-                child: SizedBox(
-                  width: stage.width,
-                  height: math.max(stage.height, hgt + pad * 2),
-                  child: Padding(
-                    padding: EdgeInsets.all(pad),
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: Semantics(
-                        label: 'Page $_page',
-                        image: true,
-                        child: Container(
-                          width: w,
-                          height: hgt,
-                          decoration: BoxDecoration(color: t.pdfPageBg, boxShadow: t.shadow2),
-                          child: PdfPageView(document: doc, pageNumber: _page, backgroundColor: t.pdfPageBg),
+                // A plain wheel scrolls the page around the viewer, as on the web; InteractiveViewer
+                // would zoom on it and trap the page. Ctrl/Cmd + wheel still zooms.
+                child: Listener(
+                  onPointerSignal: _passWheelToPage,
+                  child: SizedBox(
+                    width: stage.width,
+                    height: math.max(stage.height, hgt + pad * 2),
+                    child: Padding(
+                      padding: EdgeInsets.all(pad),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: Semantics(
+                          label: 'Page $_page',
+                          image: true,
+                          child: Container(
+                            width: w,
+                            height: hgt,
+                            decoration: BoxDecoration(color: t.pdfPageBg, boxShadow: t.shadow2),
+                            child: PdfPageView(document: doc, pageNumber: _page, backgroundColor: t.pdfPageBg),
+                          ),
                         ),
                       ),
                     ),

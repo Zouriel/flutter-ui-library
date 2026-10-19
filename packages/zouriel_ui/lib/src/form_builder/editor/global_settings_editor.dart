@@ -352,6 +352,8 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
           padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
           decoration: BoxDecoration(
             color: on ? t.selected : (s.hovered || s.pressed ? t.surfaceHover : null),
+            // The same bordered card as the built-in lists below: they are the same kind of thing.
+            border: Border.all(color: t.borderSubtle),
             borderRadius: BorderRadius.circular(t.radius),
             boxShadow: s.focused ? t.focusRing : null,
           ),
@@ -369,12 +371,11 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
       );
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
       Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: t.space3, runSpacing: t.space2, children: [
         Text('Lists that dropdowns and multi-selects can search, in any form.', style: context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary)),
         UiButton(label: 'Add a list', size: UiSize.sm, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: _add),
       ]),
-      SizedBox(height: t.space2),
       if (_sources.isEmpty && widget.builtIn.isEmpty)
         Container(
           padding: EdgeInsets.all(t.space4),
@@ -388,7 +389,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
       for (var i = 0; i < _sources.length; i++) row(i, _sources[i]),
       if (widget.builtIn.isNotEmpty) ...[
         Padding(
-          padding: EdgeInsets.only(top: t.space3, bottom: t.space1),
+          padding: EdgeInsets.only(top: t.space1),
           child: Text('Built into the app', style: context.uiText.label.copyWith(fontSize: 12, color: t.textSecondary)),
         ),
         for (final d in widget.builtIn)
@@ -567,7 +568,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
                       onChanged: (v) => _patchParam(i, {'kind': v}),
                     ),
                   ),
-                  FbSwitch(value: c.params![i].required, label: 'Needed before searching', onChanged: (v) => _patchParam(i, {'required': v ? true : null})),
+                  FbSwitch(size: UiSize.sm, value: c.params![i].required, label: 'Needed before searching', onChanged: (v) => _patchParam(i, {'required': v ? true : null})),
                   FbIconButton(
                     icon: HugeIcons.strokeRoundedDelete02,
                     label: 'Remove setting ${c.params![i].label.isNotEmpty ? c.params![i].label : c.params![i].key}',
@@ -578,7 +579,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
                 if (c.params![i].kind == 'select')
                   FbSetting(
                     label: 'Choices, one per line as value: label',
-                    child: UiTextarea(
+                    child: UiTextarea(size: UiSize.sm, 
                       rows: 3,
                       autosize: true,
                       maxRows: 8,
