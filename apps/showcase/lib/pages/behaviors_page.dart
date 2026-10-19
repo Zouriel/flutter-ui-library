@@ -77,7 +77,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
         DocSection(
           name: 'Infinite scroll',
           widget: 'UiInfiniteScroll',
-          summary: 'Wrap a vertical scrollable: onScrolledToEnd fires once when a scroll brings it within threshold px of the end, and again only after it has been scrolled back above that line. It reacts to scrolling, so content shorter than the viewport never triggers it.',
+          summary: 'Wrap a vertical scrollable: onScrolledToEnd fires once when a scroll brings it within threshold px of the end, and again only after it has been scrolled back above that line. It also re-arms when new rows arrive after a load and checks again, so a scroll that jumps straight to the new end still loads. Content shorter than the viewport never triggers it on its own.',
           // Bordered like the virtual list below, so the scrolling box is visible.
           demo: _box(context, SizedBox(
             height: 200,
@@ -96,6 +96,25 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
             ApiRow('onScrolledToEnd', 'VoidCallback', 'Near the end.'),
             ApiRow('threshold', 'double', 'Distance from the end, px.', def: '120'),
             ApiRow('enabled', 'bool', 'Stop asking (while loading, at the end).', def: 'true'),
+          ],
+        ),
+        DocSection(
+          name: 'Scroll fade',
+          widget: 'UiScrollFade',
+          summary: 'Wrap a sideways scroll view: each edge with more content past it fades out, so a cut-off row reads as one that scrolls on. Nothing changes while the content fits. UiTable and UiSegmented use it.',
+          demo: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: UiScrollFade(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(spacing: t.space2, children: [for (var i = 1; i <= 16; i++) UiBadge(label: 'Tag $i')]),
+              ),
+            ),
+          ),
+          code: 'UiScrollFade(\n  child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: row),\n)',
+          api: const [
+            ApiRow('child', 'Widget', 'A horizontal scroll view.'),
+            ApiRow('size', 'double', 'Width of the fade, px.', def: '24'),
           ],
         ),
         DocSection(

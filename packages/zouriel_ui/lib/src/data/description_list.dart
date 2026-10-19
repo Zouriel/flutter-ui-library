@@ -40,12 +40,9 @@ class UiDescriptionList extends StatelessWidget {
           for (final it in items)
             MergeSemantics(
               child: row
-                  ? Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space4, children: [
-                      // Baseline-aligned by hand: the term is smaller, so it drops to the detail's first line.
-                      SizedBox(
-                        width: termWidth,
-                        child: Padding(padding: EdgeInsets.only(top: (detail.fontSize! - term.fontSize!) * 1.35 / 2), child: Text(it.term, style: term)),
-                      ),
+                  ? Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, spacing: t.space4, children: [
+                      // The term is smaller: it shares the detail's first baseline.
+                      SizedBox(width: termWidth, child: Text(it.term, style: term)),
                       Expanded(child: Text(it.detail, style: detail)),
                     ])
                   : Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [Text(it.term, style: term), Text(it.detail, style: detail)]),

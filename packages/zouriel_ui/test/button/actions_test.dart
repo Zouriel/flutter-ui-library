@@ -275,6 +275,12 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
+    // The open menu on its own: in the row above it opens at a fractional x (the trigger's right
+    // edge), and the contrast sampler then reads the anti-aliased 13px text as dimmer than it is.
+    await pumpUi(tester, Padding(
+      padding: const EdgeInsets.all(16),
+      child: UiDropdownButton<String>(label: 'Actions', items: _items.where((i) => !i.disabled).toList(), onSelected: (_) {}),
+    ));
     await tester.tap(find.text('Actions'));
     await tester.pumpAndSettle();
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));

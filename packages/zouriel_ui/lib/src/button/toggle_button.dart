@@ -6,7 +6,7 @@ import '../theme/theme.dart';
 
 /// `ui-toggle-button`: a two-state button, announced with its on/off state (the web
 /// `aria-pressed`). Controlled: [pressed] + [onChanged]; null [onChanged] disables it. When pressed it
-/// takes a primary tint and border. Use it when several can be on; for one-of-many use [UiSegmented].
+/// takes a solid primary fill. Use it when several can be on; for one-of-many use [UiSegmented].
 class UiToggleButton extends StatelessWidget {
   const UiToggleButton({
     super.key,
@@ -50,12 +50,13 @@ class UiToggleButton extends StatelessWidget {
       toggled: pressed,
       semanticLabel: semanticLabel,
       builder: (context, s) {
+        final fg = pressed ? t.primaryContrast : t.text;
         final style = theme.typography.body.copyWith(
           fontSize: fontSize,
           fontWeight: FontWeight.w500,
           letterSpacing: t.trackingTight * fontSize,
           height: 1.2,
-          color: t.text,
+          color: fg,
         );
         return AnimatedOpacity(
           opacity: s.disabled ? 0.5 : 1,
@@ -67,15 +68,16 @@ class UiToggleButton extends StatelessWidget {
             width: iconOnly ? size.height(t) : null,
             padding: EdgeInsets.symmetric(horizontal: iconOnly ? 0 : padX),
             decoration: BoxDecoration(
-              color: pressed ? t.primary.withValues(alpha: 0.22) : s.hovered || s.pressed ? t.surfaceHover : t.surface,
-              border: Border.all(color: pressed ? t.primary : t.border),
+              // On: a solid primary fill, so it can't be mistaken for the off state in any theme.
+              color: pressed ? (s.hovered || s.pressed ? t.primaryHover : t.primary) : s.hovered || s.pressed ? t.surfaceHover : t.surface,
+              border: Border.all(color: pressed ? t.primary.withValues(alpha: 0) : t.border),
               borderRadius: BorderRadius.circular(r),
               boxShadow: s.focused ? t.focusRing : const [],
             ),
             child: Center(
               widthFactor: iconOnly ? null : 1,
               child: IconTheme.merge(
-                data: IconThemeData(color: t.text, size: switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 }),
+                data: IconThemeData(color: fg, size: switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 }),
                 child: DefaultTextStyle(
                   style: style,
                   child: Row(

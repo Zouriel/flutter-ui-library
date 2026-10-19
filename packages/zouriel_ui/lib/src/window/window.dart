@@ -235,6 +235,9 @@ class UiWindowState extends State<UiWindow> with SingleTickerProviderStateMixin 
   @override
   void minimize() => setState(() => _minimized = true);
 
+  /// Back from minimized, to the size it had (maximized stays maximized).
+  void unminimize() => setState(() => _minimized = false);
+
   /// Un-minimizes and un-maximizes, returning to the bounds it had before it was docked.
   @override
   void restore() => setState(_restore);
@@ -587,7 +590,12 @@ class UiWindowState extends State<UiWindow> with SingleTickerProviderStateMixin 
         ),
         Row(mainAxisSize: MainAxisSize.min, spacing: touch ? 0 : 2, children: [
           if (!sheet) ...[
-            _ChromeButton(icon: HugeIcons.strokeRoundedMinusSign, label: 'Minimize', onTap: minimize),
+            // Minimized, the first control brings the window back (it keeps a maximized size).
+            _ChromeButton(
+              icon: _minimized ? HugeIcons.strokeRoundedBrowser : HugeIcons.strokeRoundedMinusSign,
+              label: _minimized ? 'Restore' : 'Minimize',
+              onTap: _minimized ? unminimize : minimize,
+            ),
             _ChromeButton(
               icon: _maximized ? HugeIcons.strokeRoundedCopy01 : HugeIcons.strokeRoundedSquare,
               label: _maximized ? 'Restore' : 'Maximize',

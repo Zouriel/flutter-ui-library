@@ -135,7 +135,7 @@ typedef UiResizeEvent = Size;
 /// the size itself, starting at [initialSize]. Never smaller than [minWidth] x [minHeight].
 ///
 /// The grab zones sit inside the box. On touch screens they widen to a finger's width (24px edges,
-/// a 48px corner) without changing how the box looks, and a small grip marks the corner.
+/// a 48px corner) without changing how the box looks. A small grip marks the corner.
 class UiResizable extends StatefulWidget {
   const UiResizable({
     super.key,
@@ -217,7 +217,7 @@ class _UiResizableState extends State<UiResizable> {
             width: corner,
             height: corner,
             child: Stack(fit: StackFit.expand, children: [
-              if (touch) Align(alignment: Alignment.bottomRight, child: Padding(padding: const EdgeInsets.all(4), child: CustomPaint(size: const Size(10, 10), painter: _GripPainter(context.ui.textMuted)))),
+              Align(alignment: Alignment.bottomRight, child: Padding(padding: const EdgeInsets.only(right: 3, bottom: 3), child: CustomPaint(size: const Size(10, 10), painter: _GripPainter(context.ui.textMuted)))),
               zone('se', SystemMouseCursors.resizeUpLeftDownRight, x: true, y: true),
             ]),
           ),

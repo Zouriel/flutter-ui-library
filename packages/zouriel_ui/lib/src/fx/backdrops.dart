@@ -13,8 +13,9 @@ import 'motion.dart';
 /// the space it is given) under the content; it ignores touches and screen readers.
 ///
 /// The ramp defaults to the Dark Orange brand colours (ember → blood → rose) and, in themes
-/// without them, a ramp built from the theme's primary and accent. Under reduced motion it draws
-/// one still frame.
+/// without them, a ramp built from the theme's primary and accent. The grid holds only whole
+/// cells, centred, so no row or column is cut at the edge. Under reduced motion it draws one still
+/// frame.
 class UiGlyphField extends StatefulWidget {
   const UiGlyphField({super.key, this.opacity = 0.55, this.chars = '01', this.cell = 16, this.speed = 1, this.colors});
 
@@ -110,7 +111,9 @@ class _GlyphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final t = time.value * speed;
-    final cols = (size.width / cell).ceil(), rows = (size.height / cell).ceil();
+    // Whole cells only, centred: a cut-off row or column reads as a rendering fault.
+    final cols = math.max(1, (size.width / cell).floor()), rows = math.max(1, (size.height / cell).floor());
+    final ox = (size.width - cols * cell) / 2, oy = (size.height - rows * cell) / 2;
     final n = chars.characters.length;
     for (var gy = 0; gy < rows; gy++) {
       for (var gx = 0; gx < cols; gx++) {
@@ -126,7 +129,7 @@ class _GlyphPainter extends CustomPainter {
         final idx = ((h0 * n).floor() + flick) % n;
         final step = (lum.clamp(0.0, 1.0) * (_steps - 1)).round();
         final p = _glyph(idx, step);
-        canvas.drawParagraph(p, Offset(gx * cell + cell / 2 - p.maxIntrinsicWidth / 2, gy * cell + cell / 2 - p.height / 2));
+        canvas.drawParagraph(p, Offset(ox + gx * cell + cell / 2 - p.maxIntrinsicWidth / 2, oy + gy * cell + cell / 2 - p.height / 2));
       }
     }
   }

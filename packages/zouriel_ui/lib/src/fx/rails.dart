@@ -301,11 +301,15 @@ class _UiDriftRowState extends State<UiDriftRow> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    Widget rail = SingleChildScrollView(
-      controller: _scroll,
-      scrollDirection: Axis.horizontal,
-      physics: widget.interactive ? null : const NeverScrollableScrollPhysics(),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: widget.gap, children: widget.children),
+    // No scrollbar (as on the web): on desktop it would sit over the cards' bottom edges.
+    Widget rail = ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: SingleChildScrollView(
+        controller: _scroll,
+        scrollDirection: Axis.horizontal,
+        physics: widget.interactive ? null : const NeverScrollableScrollPhysics(),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: widget.gap, children: widget.children),
+      ),
     );
     rail = NotificationListener<ScrollNotification>(
       onNotification: (n) {

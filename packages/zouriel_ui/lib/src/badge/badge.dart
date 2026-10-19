@@ -154,7 +154,8 @@ class _ChipRemove extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: s.hovered || s.pressed ? t.text.withValues(alpha: 0.18) : null,
-            boxShadow: s.focused ? t.focusRing : const [],
+            // A single 2px band, so the ring stays inside the 4px gap to the label.
+            boxShadow: s.focused ? [BoxShadow(color: t.borderFocus, spreadRadius: 2)] : const [],
           ),
           child: UiIcon(HugeIcons.strokeRoundedCancel01, size: 12, color: t.text, strokeWidth: 2),
         ),
@@ -235,11 +236,13 @@ class _UiAvatarState extends State<UiAvatar> {
 
 /// `ui-avatar-group`: overlapping avatars, with "+N" when there are more than [max].
 class UiAvatarGroup extends StatelessWidget {
-  const UiAvatarGroup({super.key, required this.children, this.max, this.size = UiSize.md, this.overlap = 8});
+  const UiAvatarGroup({super.key, required this.children, this.max, this.size = UiSize.md, this.overlap = 4});
 
   final List<UiAvatar> children;
   final int? max;
   final UiSize size;
+
+  /// How far each avatar overlaps the one before; 4 (plus the 2px ring) keeps its initials readable.
   final double overlap;
 
   @override

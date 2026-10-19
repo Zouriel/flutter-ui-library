@@ -83,11 +83,14 @@ class UiNavbar extends StatelessWidget {
           ),
         );
       }
+      // The links row starts a ghost button's padding (space3) further out than the brand row, so
+      // the first link's label lines up with the brand rather than sitting 12px in.
       return Padding(
-        padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: touch ? 0 : t.space2),
+        padding: EdgeInsets.symmetric(horizontal: t.space4 - t.space3, vertical: touch ? 0 : t.space2),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: touch ? 0 : t.space2, children: [
-          ConstrainedBox(
+          Container(
             constraints: BoxConstraints(minHeight: touch ? uiMinTouchTarget : 36),
+            padding: EdgeInsets.symmetric(horizontal: t.space3),
             child: Row(spacing: t.space2, children: [
               Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: brandW ?? const SizedBox.shrink())),
               if (actions.isNotEmpty) actionsRow,

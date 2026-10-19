@@ -139,7 +139,7 @@ void main() {
     testWidgets('wide: sidebar beside the page, no menu button', (tester) async {
       await pumpUi(tester, SizedBox(width: 1000, height: 600, child: shell()), size: const Size(1000, 600));
       expect(find.bySemanticsLabel('Toggle navigation'), findsNothing);
-      expect(tester.getTopLeft(find.text('NAV')).dx, 0);
+      expect(tester.getTopLeft(find.text('NAV')).dx, 12, reason: 'padded by space3, like the drawer');
       expect(tester.getTopLeft(find.text('Page')).dx, greaterThan(248));
     });
 

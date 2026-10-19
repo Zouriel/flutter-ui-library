@@ -25,7 +25,7 @@ class UiImagePickerItem {
   final String? badge;
   final bool disabled;
 
-  /// Why it is disabled, or anything more to say (read as the hint).
+  /// Why it is disabled (shown on the tile, and read as the hint), or anything more to say.
   final String? hint;
 }
 
@@ -139,6 +139,9 @@ class _CellState extends State<_Cell> {
     final item = widget.item;
     final r = BorderRadius.circular(context.uiTheme.radius());
 
+    // A disabled tile with a reason says why on the tile itself: the art dims, the reason sits on a
+    // strip along the bottom at full strength.
+    final reason = item.disabled && item.hint != null;
     Widget tile(UiStates s) {
       final content = _broken
           ? Column(mainAxisAlignment: MainAxisAlignment.center, spacing: t.space1, children: [
@@ -161,7 +164,7 @@ class _CellState extends State<_Cell> {
       return AspectRatio(
         aspectRatio: 1,
         child: AnimatedOpacity(
-          opacity: s.disabled && !widget.busy ? 0.5 : 1,
+          opacity: s.disabled && !widget.busy && !reason ? 0.5 : 1,
           duration: t.motionBase,
           child: AnimatedContainer(
             duration: context.uiAnimate ? t.motionBase : Duration.zero,
@@ -175,7 +178,7 @@ class _CellState extends State<_Cell> {
               child: CustomPaint(
                 painter: _Checker(t.surface, t.surfaceSubtle),
                 child: Stack(fit: StackFit.expand, children: [
-                  Padding(padding: EdgeInsets.all(t.space2), child: content),
+                  Opacity(opacity: reason ? 0.45 : 1, child: Padding(padding: EdgeInsets.all(t.space2), child: content)),
                   if (item.badge != null)
                     Positioned(
                       top: t.space1,
@@ -184,6 +187,18 @@ class _CellState extends State<_Cell> {
                         padding: EdgeInsets.symmetric(horizontal: t.space1),
                         decoration: BoxDecoration(color: t.primary, borderRadius: BorderRadius.circular(t.radiusPill)),
                         child: Text(item.badge!, style: context.uiText.label.copyWith(fontSize: 11, height: 16 / 11, color: t.primaryContrast)),
+                      ),
+                    ),
+                  if (reason)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: t.space1, vertical: 2),
+                        color: t.surfaceRaised.withValues(alpha: 0.88),
+                        child: Text(item.hint!, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: context.uiText.label.copyWith(fontSize: 11, height: 16 / 11, fontWeight: FontWeight.w500, color: t.text)),
                       ),
                     ),
                   if (widget.busy)
