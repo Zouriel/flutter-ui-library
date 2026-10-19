@@ -58,7 +58,9 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
         final p = showcasePageById(id);
         if (p != null) _go(p);
       },
-      child: KeyedSubtree(key: ValueKey(_page.id), child: Builder(builder: _page.builder)),
+      // Its own traversal group: Tab walks the page in reading order and leaves it only at the end,
+      // instead of jumping into the side menu whenever that sits closer on screen (the web's DOM order).
+      child: FocusTraversalGroup(child: KeyedSubtree(key: ValueKey(_page.id), child: Builder(builder: _page.builder))),
     );
 
     final bar = Container(
@@ -82,7 +84,7 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
     final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [bar, Expanded(child: page)]);
     if (wide) {
       return Row(children: [
-        SizedBox(width: 280, child: _Menu(current: _page, onPick: _go)),
+        SizedBox(width: 280, child: FocusTraversalGroup(child: _Menu(current: _page, onPick: _go))),
         Container(width: 1, color: t.border),
         Expanded(child: body),
       ]);
