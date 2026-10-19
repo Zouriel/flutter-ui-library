@@ -257,6 +257,19 @@ void main() {
       expect(trigger.hasPrimaryFocus, isTrue);
     });
 
+    testWidgets('opened with the mouse, Escape still gives focus to the trigger', (tester) async {
+      final trigger = FocusNode();
+      addTearDown(trigger.dispose);
+      await _place(tester, Alignment.center, menu([], trigger: trigger));
+      await tester.tap(find.text('Actions'), kind: PointerDeviceKind.mouse);
+      await tester.pumpAndSettle();
+      expect(trigger.hasFocus, isFalse, reason: 'a click does not focus the trigger');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Share'), findsNothing);
+      expect(trigger.hasPrimaryFocus, isTrue);
+    });
+
     testWidgets('Escape closes and returns focus; Tab closes and moves on', (tester) async {
       final trigger = FocusNode(), after = FocusNode();
       addTearDown(trigger.dispose);

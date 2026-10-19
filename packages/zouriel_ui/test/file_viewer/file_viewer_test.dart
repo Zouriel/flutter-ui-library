@@ -139,9 +139,13 @@ void main() {
       await tester.pump();
       expect(fake.calls.where((c) => c.startsWith('seek 1')), isNotEmpty);
       expect(int.parse(fake.calls.lastWhere((c) => c.startsWith('seek')).split(' ').last), closeTo(62, 3));
+      final mute = tester.getRect(find.bySemanticsLabel('Mute'));
       await tester.tap(find.bySemanticsLabel('Playback speed 1×'));
       await tester.pump();
       expect(fake.speed[1], 1.5);
+      expect(find.bySemanticsLabel('Playback speed 1.5×'), findsOneWidget);
+      // The wider label keeps the button's width: nothing beside it moves.
+      expect(tester.getRect(find.bySemanticsLabel('Mute')), mute);
       await tester.tap(find.bySemanticsLabel('Mute'));
       await tester.pump();
       expect(fake.volume[1], 0);

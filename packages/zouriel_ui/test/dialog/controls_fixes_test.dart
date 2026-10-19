@@ -167,12 +167,16 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(UiApp(
         theme: theme,
-        home: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 16, children: [
-            UiButton(label: 'Ghost', variant: UiButtonVariant.ghost, onPressed: () {}),
-            UiCalendar(value: '2026-10-19', onChanged: (_) {}),
-          ]),
+        // On the page colour: the ring is an outline, so whatever is under the control shows inside it.
+        home: ColoredBox(
+          color: uiThemeTokens[theme]!.bg,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 16, children: [
+              UiButton(label: 'Ghost', variant: UiButtonVariant.ghost, onPressed: () {}),
+              UiCalendar(value: '2026-10-19', onChanged: (_) {}),
+            ]),
+          ),
         ),
       ));
       Future<void> tab(int n) async {

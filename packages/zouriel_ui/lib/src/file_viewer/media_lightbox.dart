@@ -653,7 +653,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
               ),
               _time(context, cv.duration),
               _Glass(icon: cv.volume == 0 ? HugeIcons.strokeRoundedVolumeMute01 : HugeIcons.strokeRoundedVolumeHigh, semanticLabel: cv.volume == 0 ? 'Unmute' : 'Mute', onTap: _toggleMute),
-              _Glass(label: '${cv.playbackSpeed == cv.playbackSpeed.roundToDouble() ? cv.playbackSpeed.toInt() : cv.playbackSpeed}×', semanticLabel: 'Playback speed', onTap: _cycleRate),
+              _Glass(rate: cv.playbackSpeed, semanticLabel: 'Playback speed', onTap: _cycleRate),
             ]),
           if (count > 1)
             SizedBox(
@@ -793,9 +793,12 @@ class _Scrim extends StatelessWidget {
 /// The one glass treatment for everything floating over the picture: pills with a [label], circles
 /// with an [icon].
 class _Glass extends StatelessWidget {
-  const _Glass({super.key, this.icon, this.label, this.semanticLabel, this.onTap, this.danger = false, this.size = 38});
+  const _Glass({super.key, this.icon, this.label, this.rate, this.semanticLabel, this.onTap, this.danger = false, this.size = 38});
   final UiIconData? icon;
   final String? label;
+
+  /// A playback speed, drawn as a fixed-width label.
+  final double? rate;
   final String? semanticLabel;
   final VoidCallback? onTap;
   final bool danger;
@@ -805,7 +808,7 @@ class _Glass extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     final fg = danger ? t.mediaDanger : t.mediaOnScrim;
-    final circle = icon != null && label == null;
+    final circle = icon != null && label == null && rate == null;
     return UiInteractive(
       onTap: onTap,
       enabled: onTap != null,
@@ -835,7 +838,9 @@ class _Glass extends StatelessWidget {
                 ),
                 foregroundDecoration: s.focused ? BoxDecoration(borderRadius: shape, border: Border.all(color: t.mediaOnScrim, width: 2)) : null,
                 alignment: Alignment.center,
-                child: label != null
+                child: rate != null
+                    ? uiRateLabel(rate!, context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
+                    : label != null
                     ? Text(label!, style: context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
                     : UiIcon(icon!, size: size > 40 ? 22 : 19, strokeWidth: 1.9, color: fg),
               ),

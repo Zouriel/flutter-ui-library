@@ -118,6 +118,8 @@ function dartShadows(s) {
     const [c, rest] = takeColor(p.replace(/\binset\b/, ''));
     const [x, y, blur, spread] = rest.trim().split(/\s+/).map((v) => parseFloat(v) || 0);
     if (inset) throw new Error('inset shadows are not supported: ' + s);
+    // A spread-only shadow is a ring (the focus ring); UiRingShadow paints it outside the box only, as CSS does.
+    if (!x && !y && !blur && spread > 0) return `UiRingShadow(color: ${dartColor(c)}, spread: ${spread})`;
     return `BoxShadow(color: ${dartColor(c)}, offset: Offset(${x}, ${y}), blurRadius: ${blur}, spreadRadius: ${spread ?? 0})`;
   }).join(', ') + ']';
 }
@@ -171,7 +173,7 @@ function lerpExpr(f) {
   switch (f.k) {
     case 'color': return f.nullable ? `Color.lerp(${a}, ${b}, t)` : `Color.lerp(${a}, ${b}, t)!`;
     case 'gradient': return f.nullable ? `UiGradientSpec.lerp(${a}, ${b}, t)` : `UiGradientSpec.lerp(${a}, ${b}, t)!`;
-    case 'shadow': return f.nullable ? `BoxShadow.lerpList(${a}, ${b}, t)` : `BoxShadow.lerpList(${a}, ${b}, t)!`;
+    case 'shadow': return f.nullable ? `UiRingShadow.lerpList(${a}, ${b}, t)` : `UiRingShadow.lerpList(${a}, ${b}, t)!`;
     case 'length': case 'em': case 'number':
       return f.nullable ? `lerpDouble(${a}, ${b}, t)` : `lerpDouble(${a}, ${b}, t)!`;
     default: return `t < 0.5 ? ${a} : ${b}`;

@@ -13,8 +13,8 @@ import 'form_field.dart';
 /// The focus ring an invalid field shows: the web `0 0 0 2px bg, 0 0 0 4px danger`.
 List<BoxShadow> uiDangerRing(UiTokens t) => [
       // Flutter paints the last shadow on top: the outer ring first, the 2px gap over it.
-      BoxShadow(color: t.danger, spreadRadius: 4),
-      BoxShadow(color: t.bg, spreadRadius: 2),
+      UiRingShadow(color: t.danger, spread: 4),
+      UiRingShadow(color: t.bg, spread: 2),
     ];
 
 /// Text size for a control size: sm / md / lg font tokens.
@@ -392,7 +392,7 @@ class _UiTextEditorState extends State<UiTextEditor> implements TextSelectionGes
       mouseCursor: MouseCursor.defer,
       scrollPadding: widget.scrollPadding,
       enableInteractiveSelection: widget.enabled,
-      showSelectionHandles: true,
+      showSelectionHandles: _handles,
       onSelectionChanged: _onSelectionChanged,
       onTapOutside: (e) {
         // Mouse clicks elsewhere blur the field as on the web; touch scrolls keep it focused.
@@ -458,7 +458,19 @@ class _UiTextEditorState extends State<UiTextEditor> implements TextSelectionGes
     );
   }
 
+  // Selection handles are for touch: a mouse click or the keyboard never shows them (as TextField).
+  bool _handles = false;
+
+  bool _shouldShowHandles(SelectionChangedCause? cause) {
+    if (!_gestures.shouldShowSelectionToolbar || cause == SelectionChangedCause.keyboard || !widget.enabled) return false;
+    if (widget.readOnly && widget.controller.selection.isCollapsed) return false;
+    if (cause == SelectionChangedCause.longPress || cause == SelectionChangedCause.stylusHandwriting) return true;
+    return widget.controller.text.isNotEmpty;
+  }
+
   void _onSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
+    final handles = _shouldShowHandles(cause);
+    if (handles != _handles) setState(() => _handles = handles);
     // Show the handles after touch interactions, as text fields do on Android.
     final state = editableTextKey.currentState;
     if (state == null) return;

@@ -155,7 +155,7 @@ class _ChipRemove extends StatelessWidget {
             shape: BoxShape.circle,
             color: s.hovered || s.pressed ? t.text.withValues(alpha: 0.18) : null,
             // A single 2px band, so the ring stays inside the 4px gap to the label.
-            boxShadow: s.focused ? [BoxShadow(color: t.borderFocus, spreadRadius: 2)] : const [],
+            boxShadow: s.focused ? [UiRingShadow(color: t.borderFocus, spread: 2)] : const [],
           ),
           child: UiIcon(HugeIcons.strokeRoundedCancel01, size: 12, color: t.text, strokeWidth: 2),
         ),

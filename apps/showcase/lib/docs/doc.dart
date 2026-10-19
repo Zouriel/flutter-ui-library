@@ -191,10 +191,12 @@ class _DocCodeState extends State<DocCode> {
             ),
           ]),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.all(t.space3),
-          child: Text(widget.code, style: context.uiText.code.copyWith(fontSize: 12.5, height: 1.5)),
+        UiScrollFade(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.all(t.space3),
+            child: Text(widget.code, style: context.uiText.code.copyWith(fontSize: 12.5, height: 1.5)),
+          ),
         ),
       ]),
     );

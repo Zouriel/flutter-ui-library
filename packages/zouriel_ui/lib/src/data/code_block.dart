@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 
+import '../behaviors/scrolling.dart';
+import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../theme/theme.dart';
 
 /// `ui-code-block`: a monospace code panel with a language label and a Copy button. The code keeps
-/// its line breaks and indentation and scrolls sideways instead of wrapping.
+/// its line breaks and indentation and scrolls sideways instead of wrapping, the cut edge fading out.
 ///
 /// The button says "Copied" for a moment after copying, or "Copy failed" when the clipboard refused,
 /// rather than claiming it worked; either is announced to screen readers.
@@ -83,19 +86,29 @@ class _UiCodeBlockState extends State<UiCodeBlock> {
                         borderRadius: BorderRadius.circular(t.radiusXs),
                         boxShadow: s.focused ? t.focusRing : const [],
                       ),
-                      child: Align(
-                        widthFactor: 1,
-                        child: Text(label, style: small.copyWith(color: _state == _CopyState.failed ? t.danger : (s.hovered ? t.text : t.textMuted))),
-                      ),
+                      child: Builder(builder: (context) {
+                        final fg = _state == _CopyState.failed ? t.danger : (s.hovered ? t.text : t.textMuted);
+                        final icon = switch (_state) {
+                          _CopyState.idle => HugeIcons.strokeRoundedCopy01,
+                          _CopyState.copied => HugeIcons.strokeRoundedTick02,
+                          _CopyState.failed => HugeIcons.strokeRoundedAlert02,
+                        };
+                        return Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
+                          UiIcon(icon, size: 14, strokeWidth: 1.5, color: fg),
+                          Text(label, style: small.copyWith(color: fg)),
+                        ]);
+                      }),
                     ),
                   ),
                 ),
               ]),
             ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.all(t.space3),
-              child: Text(widget.code.replaceAll('\t', '  '), softWrap: false, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, height: 1.5, color: t.text)),
+            UiScrollFade(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.all(t.space3),
+                child: Text(widget.code.replaceAll('\t', '  '), softWrap: false, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, height: 1.5, color: t.text)),
+              ),
             ),
           ],
         ),

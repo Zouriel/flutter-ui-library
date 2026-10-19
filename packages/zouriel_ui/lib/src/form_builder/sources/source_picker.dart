@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../combobox/listbox.dart' show uiRevealInList;
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
@@ -273,10 +274,7 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
     setState(() => _active = i);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _rowKeys[i]?.currentContext;
-      if (ctx != null && ctx.mounted) {
-        Scrollable.ensureVisible(ctx, alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd, duration: Duration.zero);
-        Scrollable.ensureVisible(ctx, alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart, duration: Duration.zero);
-      }
+      if (ctx != null && ctx.mounted) uiRevealInList(ctx, _scroll);
     });
     // Reaching the end with the keyboard loads the next page too.
     if (i >= _items.length - 2) _loadMore();

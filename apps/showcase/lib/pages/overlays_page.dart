@@ -571,7 +571,8 @@ if (command != null) run(command.value);''',
     return OverlayPortal(
       controller: _toastLayer,
       overlayChildBuilder: (context) => Stack(children: [
-        Positioned.fill(child: UiToastHost(controller: _toasts, position: _toastPos)),
+        // Side by side rather than nested, so the toast host is told which snackbar to keep clear of.
+        Positioned.fill(child: UiToastHost(controller: _toasts, position: _toastPos, snackbar: _snacks)),
         Positioned.fill(child: UiSnackbarHost(controller: _snacks)),
       ]),
       child: page,
