@@ -177,8 +177,8 @@ const List<({String value, String label})> wfAuditCategories = [
 String wfAuditCategoryLabel(String category) => wfAuditCategories.where((c) => c.value == category).firstOrNull?.label ?? wfHumanize(category);
 
 /// Who did something, as people read it (the web `wfActorLabel`): a person's name; for a workflow,
-/// "Workflow: <title>" (the actor id is the workflow's key, looked up with [workflowTitle]); "System"
-/// for the engine itself.
+/// "Workflow: <title>" (the actor id is the workflow's key, looked up with [workflowTitle]), or "A
+/// workflow" when nothing names it; "System" for the engine itself.
 String wfActorLabel(UiWfAuditEntry e, [String? Function(String key)? workflowTitle]) {
   final name = e.actorName;
   if (e.actorType == 'workflow') {
@@ -186,7 +186,8 @@ String wfActorLabel(UiWfAuditEntry e, [String? Function(String key)? workflowTit
     // The title when it is known: the engine may store the key as the actor's name.
     final known = workflowTitle?.call(key);
     final title = known != null && known.isNotEmpty ? known : (name != null && name.isNotEmpty ? name : null);
-    return 'Workflow: ${title ?? (key.isEmpty ? 'unknown' : wfHumanize(key))}';
+    if (title == null && key.isEmpty) return 'A workflow';
+    return 'Workflow: ${title ?? wfHumanize(key)}';
   }
   if (name != null && name.isNotEmpty) return name;
   if (e.actorType == 'system') return 'System';

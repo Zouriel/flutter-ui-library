@@ -220,7 +220,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(UiApp(home: UiWorkflowBuilder(controller: c)));
     await tester.pumpAndSettle();
-    final scroller = find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal);
+    final scroller = find.descendant(of: find.byType(WfAutomationCanvas), matching: find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal));
     expect(scroller, findsOneWidget, reason: 'six paths need more room than the view');
     final view = tester.getRect(scroller);
     // The card itself: the box inside its 560 limit, not the full-width slot it is centred in.
@@ -230,6 +230,35 @@ void main() {
     final fork = card(find.byWidgetPredicate((w) => w is WfStepCard && w.step.id == 'par'));
     for (final r in [trigger, first, fork]) {
       expect(r.width, lessThanOrEqualTo(560));
+      expect(r.center.dx, moreOrLessEquals(trigger.center.dx, epsilon: 1));
+    }
+    expect(trigger.center.dx, moreOrLessEquals(view.center.dx, epsilon: 2), reason: 'opens scrolled so the trigger is in the middle');
+    expect(tester.widget<SingleChildScrollView>(scroller).controller!.offset, greaterThan(0));
+  });
+  testWidgets('wide branches in a narrow view: the centred cards fit the view whole (never cut at its edges)', (tester) async {
+    final par = UiWfStep.fromJson({
+      ...createStep('parallel').json,
+      'id': 'par',
+      'paths': [for (var i = 0; i < 6; i++) {'id': 'p$i', 'label': 'P$i', 'steps': [_step('n$i').json]}],
+    });
+    final def = insertStep(insertStep(createWorkflow('automation', title: 'Wide', entity: 'application'), 'root', 0, _step('first')), 'root', 1, par);
+    final c = UiWorkflowBuilderController(definition: def);
+    addTearDown(c.dispose);
+    tester.view.physicalSize = const Size(860, 900) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(home: UiWorkflowBuilder(controller: c)));
+    await tester.pumpAndSettle();
+    final scroller = find.descendant(of: find.byType(WfAutomationCanvas), matching: find.byWidgetPredicate((w) => w is SingleChildScrollView && w.scrollDirection == Axis.horizontal));
+    expect(scroller, findsOneWidget, reason: 'six paths need more room than the view');
+    final view = tester.getRect(scroller);
+    // The card itself: the box inside its 560 limit, not the full-width slot it is centred in.
+    Rect card(Finder of) => tester.getRect(find.descendant(of: of, matching: find.byWidgetPredicate((w) => w is ConstrainedBox && w.constraints.maxWidth <= 560 && w.constraints.maxWidth > 0)).first);
+    final trigger = card(find.byType(WfTriggerCard));
+    final first = card(find.byWidgetPredicate((w) => w is WfStepCard && w.step.id == 'first'));
+    final fork = card(find.byWidgetPredicate((w) => w is WfStepCard && w.step.id == 'par'));
+    for (final r in [trigger, first, fork]) {
+      expect(r.left, greaterThanOrEqualTo(view.left - 0.5));
+      expect(r.right, lessThanOrEqualTo(view.right + 0.5));
       expect(r.center.dx, moreOrLessEquals(trigger.center.dx, epsilon: 1));
     }
     expect(trigger.center.dx, moreOrLessEquals(view.center.dx, epsilon: 2), reason: 'opens scrolled so the trigger is in the middle');

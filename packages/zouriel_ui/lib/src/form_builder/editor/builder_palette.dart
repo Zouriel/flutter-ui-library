@@ -77,12 +77,14 @@ class _UiFbPaletteState extends State<UiFbPalette> {
         semanticHint: item.description,
         excludeChildSemantics: true,
         pressScale: false,
+        // Compact (the "Add a field" dialog and sheet): outlined tiles, as the workflow's "Add a step".
         builder: (context, s) => Container(
           constraints: BoxConstraints(minHeight: widget.compact ? 48 : 36),
-          padding: EdgeInsets.symmetric(horizontal: 6, vertical: widget.compact ? t.space1 : 3),
+          padding: widget.compact ? EdgeInsets.all(t.space2) : const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
             color: s.hovered || s.pressed ? t.surfaceHover : null,
-            borderRadius: BorderRadius.circular(t.radiusXs),
+            border: widget.compact ? Border.all(color: t.borderSubtle) : null,
+            borderRadius: BorderRadius.circular(widget.compact ? t.radius : t.radiusXs),
             boxShadow: s.focused ? t.focusRing : null,
           ),
           child: Row(spacing: t.space2, children: [
@@ -95,10 +97,11 @@ class _UiFbPaletteState extends State<UiFbPalette> {
             ),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 13, color: t.text, height: 1.3)),
+                Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: context.uiText.body.copyWith(fontSize: 13, fontWeight: widget.compact ? FontWeight.w500 : null, color: t.text, height: 1.3)),
                 if (widget.compact)
                   // Up to two lines: a description cut after a few words says nothing.
-                  Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted, height: 1.35)),
+                  Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textSecondary, height: 1.3)),
               ]),
             ),
           ]),
@@ -117,13 +120,7 @@ class _UiFbPaletteState extends State<UiFbPalette> {
     }
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      UiInput(
-        size: UiSize.sm,
-        value: _query,
-        placeholder: 'Find a field type…',
-        semanticLabel: 'Find a field type',
-        onChanged: (v) => setState(() => _query = v),
-      ),
+      UiSearchInput(size: UiSize.sm, value: _query, placeholder: 'Find a field type…', label: 'Find a field type', onChanged: (v) => setState(() => _query = v)),
       SizedBox(height: t.space2),
       Expanded(
         child: ListView(
@@ -133,13 +130,25 @@ class _UiFbPaletteState extends State<UiFbPalette> {
             if (cats.isEmpty) Padding(padding: EdgeInsets.all(t.space2), child: FbHint('Nothing matches “$_query”.')),
             for (final c in cats) ...[
               Padding(
-                padding: EdgeInsets.fromLTRB(6, t.space2, 6, 2),
-                child: Semantics(header: true, child: Text(c.name, style: context.uiText.label.copyWith(fontSize: 11, color: t.textMuted))),
+                padding: widget.compact ? EdgeInsets.only(top: t.space2, bottom: t.space1) : EdgeInsets.fromLTRB(6, t.space2, 6, 2),
+                child: Semantics(
+                  header: true,
+                  label: c.name,
+                  child: ExcludeSemantics(
+                    child: Text(
+                      widget.compact ? c.name.toUpperCase() : c.name,
+                      style: widget.compact
+                          ? context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.44, color: t.textMuted)
+                          : context.uiText.label.copyWith(fontSize: 11, color: t.textMuted),
+                    ),
+                  ),
+                ),
               ),
               LayoutBuilder(builder: (context, box) {
-                final cols = widget.compact ? (box.maxWidth / 200).floor().clamp(1, 4) : 1;
-                final w = (box.maxWidth - (cols - 1) * t.space2) / cols;
-                return Wrap(spacing: t.space2, runSpacing: 2, children: [for (final i in c.items) SizedBox(width: w, child: tile(i))]);
+                final cols = widget.compact ? (box.maxWidth / 220).floor().clamp(1, 4) : 1;
+                final gap = widget.compact ? t.space1 : t.space2;
+                final w = (box.maxWidth - (cols - 1) * gap) / cols;
+                return Wrap(spacing: gap, runSpacing: widget.compact ? t.space1 : 2, children: [for (final i in c.items) SizedBox(width: w, child: tile(i))]);
               }),
             ],
             if (!widget.compact && widget.dnd != null)

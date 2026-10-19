@@ -143,10 +143,10 @@ void _phoneSheetTests() {
   }
 
   for (final (sel, name) in [(const UiWfSelection.state('done'), 'Done'), (const UiWfSelection.transition('submit'), 'Submit'), (UiWfSelection.reset, 'Start over')]) {
-    testWidgets('in a bottom sheet (no header) a ${sel.kind} can still be deleted', (tester) async {
+    testWidgets('in a bottom sheet (no header) a ${sel.kind} has no Delete row of its own: the sheet header has it', (tester) async {
       final (_, deleted) = await pumpSheet(tester, sel);
-      await tester.tap(find.bySemanticsLabel('Delete $name'));
-      expect(deleted, [sel.kind]);
+      expect(find.bySemanticsLabel('Delete $name'), findsNothing);
+      expect(deleted, isEmpty);
     });
   }
 

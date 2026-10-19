@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -600,6 +602,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
     return controller.selectedTransition?.label ?? 'Transition';
   }
 
+  bool get _sheetCanDelete => !controller.readOnly && const ['step', 'state', 'transition', 'reset'].contains(controller.selection?.kind);
+
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
@@ -650,6 +654,8 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
                       snap: _sheetSnap,
                       onSnapChanged: (s) => setState(() => _sheetSnap = s),
                       title: _sheetTitle,
+                      // Delete sits in the sheet's header, by its title, as it does in the panel's.
+                      actions: _sheetCanDelete ? FbIconButton(icon: WfIcons.delete02, label: 'Delete $_sheetTitle', danger: true, onPressed: _requestDeleteSelected) : null,
                       builder: (context, scroll) => WfInspector(showHead: false, scrollController: scroll, onDeleteRequest: _requestDeleteSelected),
                     ),
                   if (narrow)
@@ -847,7 +853,9 @@ class _TopBar extends StatelessWidget {
     final persist = state.widget.persist && store.api != null;
     final saveState = state._saving ? 'Saving…' : (state._dirty ? 'Unsaved changes' : (state._savedOnce ? 'Saved' : ''));
 
-    final titleButton = UiInteractive(
+    // Pulled 6px left, its hover padding, so the words line up with the views and the canvas below
+    // (the web `margin-left: -6px`).
+    final titleButton = Transform.translate(offset: const Offset(-6, 0), child: UiInteractive(
       onTap: () {
         store.selection = UiWfSelection.workflow;
         state._ui.inspect();
@@ -864,7 +872,7 @@ class _TopBar extends StatelessWidget {
           Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: t.text)),
         ]),
       ),
-    );
+    ));
 
     final views = UiSegmented<UiWorkflowBuilderView>(
       label: 'View',
@@ -960,7 +968,7 @@ class _TopBar extends StatelessWidget {
     final trailing = <Widget>[
       if (persist && !store.readOnly)
         // Save and Publish stay side by side; the save state shrinks first (wide) or sits out (narrow).
-        Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [
+        Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
           UiButton(label: 'Save', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: state._saving || !state._dirty ? null : state.save),
           UiButton(label: 'Publish…', size: UiSize.sm, onPressed: () => state._setView(UiWorkflowBuilderView.versions)),
         ]),
@@ -981,12 +989,97 @@ class _TopBar extends StatelessWidget {
               ])),
               views,
             ])
-          // Equal sides, so the views stay centred whatever the tools show (a problem count, the save state).
-          : Row(spacing: t.space3, children: [
-              Expanded(child: Align(alignment: Alignment.centerLeft, child: titleButton)),
-              views,
-              Expanded(child: Align(alignment: Alignment.centerRight, child: tools)),
-            ]),
+          // The views stay centred whatever the tools show (a problem count, the save state) while
+          // there is room; when there isn't, the tools keep their width and the title gives way.
+          : _TopBarRow(gap: t.space3, titleMin: t.space20, children: [titleButton, views, tools]),
     );
   }
+}
+
+/// The wide top bar: the title at the start, the views centred, the tools at the end. Like the web
+/// grid (`minmax(80px, 1fr) auto minmax(max-content, 1fr)`): when the tools need more than their
+/// half, they keep their natural width and push the views off centre, and the title (never under
+/// [titleMin]) ellipsizes, rather than the save state being cut next to empty space.
+class _TopBarRow extends MultiChildRenderObjectWidget {
+  const _TopBarRow({required this.gap, required this.titleMin, required super.children}) : assert(children.length == 3);
+  final double gap;
+  final double titleMin;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderTopBarRow(gap, titleMin);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderTopBarRow renderObject) => renderObject
+    ..gap = gap
+    ..titleMin = titleMin;
+}
+
+class _TopBarRowData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderTopBarRow extends RenderBox
+    with ContainerRenderObjectMixin<RenderBox, _TopBarRowData>, RenderBoxContainerDefaultsMixin<RenderBox, _TopBarRowData> {
+  _RenderTopBarRow(this._gap, this._titleMin);
+
+  double _gap;
+  set gap(double v) {
+    if (v == _gap) return;
+    _gap = v;
+    markNeedsLayout();
+  }
+
+  double _titleMin;
+  set titleMin(double v) {
+    if (v == _titleMin) return;
+    _titleMin = v;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _TopBarRowData) child.parentData = _TopBarRowData();
+  }
+
+  Iterable<RenderBox> get _children sync* {
+    var c = firstChild;
+    while (c != null) {
+      yield c;
+      c = childAfter(c);
+    }
+  }
+
+  @override
+  void performLayout() {
+    final title = firstChild!, views = childAfter(title)!, tools = childAfter(views)!;
+    final w = constraints.maxWidth;
+    views.layout(BoxConstraints(maxWidth: w), parentUsesSize: true);
+    final vw = views.size.width;
+    tools.layout(BoxConstraints(maxWidth: math.max(0, w - vw - _gap * 2 - _titleMin)), parentUsesSize: true);
+    final tw = tools.size.width;
+    final vx = math.max(0.0, math.min((w - vw) / 2, w - tw - _gap - vw));
+    title.layout(BoxConstraints(maxWidth: math.max(0, vx - _gap)), parentUsesSize: true);
+    final h = math.max(title.size.height, math.max(views.size.height, tools.size.height));
+    size = constraints.constrain(Size(w, h));
+    void place(RenderBox c, double x) => (c.parentData! as _TopBarRowData).offset = Offset(x, (size.height - c.size.height) / 2);
+    place(title, 0);
+    place(views, vx);
+    place(tools, w - tw);
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) => _children.fold(0, (m, c) => math.max(m, c.getMinIntrinsicHeight(width)));
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => _children.fold(0, (m, c) => math.max(m, c.getMaxIntrinsicHeight(width)));
+
+  @override
+  double computeMinIntrinsicWidth(double height) => _children.fold(_gap * 2, (m, c) => m + c.getMinIntrinsicWidth(height));
+
+  @override
+  double computeMaxIntrinsicWidth(double height) => _children.fold(_gap * 2, (m, c) => m + c.getMaxIntrinsicWidth(height));
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) => defaultHitTestChildren(result, position: position);
 }

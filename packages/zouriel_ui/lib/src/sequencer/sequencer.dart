@@ -842,9 +842,10 @@ class _UiSequencerState extends State<UiSequencer> {
     );
   }
 
-  /// How a marker's name fits its stretch of the ruler: whole ('label'), as its number when the
-  /// stretch is too narrow, or not at all ('none') when the End grip sits on it.
-  String _labelFit(int i, TextStyle style, double endW) {
+  /// How a marker's name fits its stretch of the ruler: whole ('label') or as its number when the
+  /// stretch is too narrow, and how far to move it right. When the End grip sits on the name it moves
+  /// just past the grip; only when the stretch has no room there either does it show nothing ('none').
+  (String, double) _labelFit(int i, TextStyle style, double endW) {
     final markers = widget.markers;
     final m = markers[i];
     final room = _w(math.max(0, (i + 1 < markers.length ? markers[i + 1].at : widget.length) - m.at)) - 8;
@@ -861,9 +862,15 @@ class _UiSequencerState extends State<UiSequencer> {
     if (end != null && fit != 'none') {
       final x = _x(end) - _x(m.at);
       final textW = fit == 'label' ? need : num;
-      if (x > -endW / 2 - 2 && x < 4 + textW + endW / 2 + 2) return 'none';
+      if (x > -endW / 2 - 2 && x < 4 + textW + endW / 2 + 2) {
+        // Past the grip: the text starts 4px after it and must end 4px before the next marker.
+        final shift = math.max(0.0, x + endW / 2);
+        if (shift + need <= room) return ('label', shift);
+        if (shift + num <= room) return ('number', shift);
+        return ('none', 0);
+      }
     }
-    return fit;
+    return (fit, 0);
   }
 
   Widget _ruler(UiTokens t, bool touch, double rowH) {
@@ -898,18 +905,22 @@ class _UiSequencerState extends State<UiSequencer> {
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(border: Border(left: BorderSide(color: t.borderStrong))),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Align(
-                      alignment: markers[i].at / _len > 0.88 ? Alignment.centerRight : Alignment.centerLeft,
-                      child: switch (_labelFit(i, labelStyle, endW)) {
-                        // Too narrow for the name: its number. Under the End grip: nothing, rather than a name with a bar through it.
-                        'label' => Text(markers[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: labelStyle),
-                        'number' => Semantics(label: markers[i].label, excludeSemantics: true, child: Text('${i + 1}', maxLines: 1, softWrap: false, style: labelStyle)),
-                        _ => const SizedBox.shrink(),
-                      },
-                    ),
-                  ),
+                  child: Builder(builder: (context) {
+                    final (fit, shift) = _labelFit(i, labelStyle, endW);
+                    return Padding(
+                      padding: EdgeInsets.only(left: 4 + shift, right: 4),
+                      child: Align(
+                        alignment: shift == 0 && markers[i].at / _len > 0.88 ? Alignment.centerRight : Alignment.centerLeft,
+                        child: switch (fit) {
+                          // Too narrow for the name: its number. Under the End grip: moved past it, or (no room there) nothing
+                          // but its spoken name, rather than a name with a bar through it.
+                          'label' => Text(markers[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: labelStyle),
+                          'number' => Semantics(label: markers[i].label, excludeSemantics: true, child: Text('${i + 1}', maxLines: 1, softWrap: false, style: labelStyle)),
+                          _ => Semantics(label: markers[i].label, child: const SizedBox.shrink()),
+                        },
+                      ),
+                    );
+                  }),
                 ),
               ),
             ),

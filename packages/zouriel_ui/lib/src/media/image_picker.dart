@@ -197,7 +197,7 @@ class _CellState extends State<_Cell> {
                       child: Container(
                         padding: EdgeInsets.symmetric(horizontal: t.space1, vertical: 2),
                         color: t.surfaceRaised.withValues(alpha: 0.88),
-                        child: Text(item.hint!, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        child: Text(item.hint!, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
                             style: context.uiText.label.copyWith(fontSize: 11, height: 16 / 11, fontWeight: FontWeight.w500, color: t.text)),
                       ),
                     ),

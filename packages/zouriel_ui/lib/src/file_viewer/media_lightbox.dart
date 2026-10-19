@@ -599,10 +599,8 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
     final metaLine = (item?.caption?.isNotEmpty ?? false) ? item!.caption! : widget.label;
     final count = widget.items.length;
 
-    final top = _Scrim(
-      top: true,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(t.space4, math.max(t.space3, pad.top), t.space4, t.space6),
+    final top = Padding(
+        padding: EdgeInsets.fromLTRB(t.space4, math.max(t.space3, pad.top), t.space4, t.space3),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
           Expanded(
             child: Semantics(
@@ -622,15 +620,12 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
             _Glass(key: const ValueKey('close'), icon: HugeIcons.strokeRoundedCancel01, semanticLabel: 'Close', onTap: _close),
           ]),
         ]),
-      ),
-    );
+      );
 
     final c = _clip;
     final cv = c?.value;
-    final bottom = _Scrim(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(t.space4, t.space8, t.space4, math.max(t.space3, pad.bottom)),
+    final bottom = Padding(
+        padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, math.max(t.space3, pad.bottom)),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
           if (_isVideo && cv != null)
             Row(spacing: t.space2, children: [
@@ -672,8 +667,25 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
               ),
             ),
         ]),
-      ),
-    );
+      );
+
+    // Faded out, and unpressable with it: chrome you cannot see must not be chrome you can press.
+    // It keeps its room while hidden, so the picture never jumps.
+    Widget chrome(Widget bar, bool isTop) => IgnorePointer(
+          ignoring: !_chrome,
+          child: ExcludeSemantics(
+            excluding: !_chrome,
+            child: AnimatedOpacity(
+              opacity: _chrome ? 1 : 0,
+              duration: context.uiAnimate ? t.motionBase : Duration.zero,
+              child: AnimatedSlide(
+                offset: _chrome ? Offset.zero : Offset(0, isTop ? -0.08 : 0.08),
+                duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                child: bar,
+              ),
+            ),
+          ),
+        );
 
     final veil = _veil;
     final sheet = Transform(
@@ -683,36 +695,23 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
         ..scaleByDouble(1 - 0.06 * (1 - veil), 1 - 0.06 * (1 - veil), 1, 1),
       child: ColoredBox(
         color: t.mediaScrim.withValues(alpha: 0.92 * veil),
-        child: Stack(fit: StackFit.expand, children: [
-          stage,
-          // Faded out, and unpressable with it: chrome you cannot see must not be chrome you can press.
-          for (final (bar, isTop) in [(top, true), (bottom, false)])
-            Positioned(
-              left: 0,
-              right: 0,
-              top: isTop ? 0 : null,
-              bottom: isTop ? null : 0,
-              child: IgnorePointer(
-                ignoring: !_chrome,
-                child: ExcludeSemantics(
-                  excluding: !_chrome,
-                  child: AnimatedOpacity(
-                    opacity: _chrome ? 1 : 0,
-                    duration: context.uiAnimate ? t.motionBase : Duration.zero,
-                    child: AnimatedSlide(
-                      offset: _chrome ? Offset.zero : Offset(0, isTop ? -0.08 : 0.08),
-                      duration: context.uiAnimate ? t.motionBase : Duration.zero,
-                      child: bar,
-                    ),
-                  ),
-                ),
-              ),
+        // The picture fits between the chrome rather than under it: a letterboxed photo's edge never
+        // runs through the buttons, and the strip never sits half on the picture.
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          chrome(top, true),
+          Expanded(
+            child: ClipRect(
+              child: Stack(fit: StackFit.expand, children: [
+                stage,
+                // Pointer-fine only: on a phone the same move is the swipe.
+                if (count > 1 && !touch && wide && _chrome) ...[
+                  Positioned(left: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowLeft01, semanticLabel: 'Previous', size: 48, onTap: _hasPrevious ? () => _step(-1) : null))),
+                  Positioned(right: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowRight01, semanticLabel: 'Next', size: 48, onTap: _hasNext ? () => _step(1) : null))),
+                ],
+              ]),
             ),
-          // Pointer-fine only: on a phone the same move is the swipe.
-          if (count > 1 && !touch && wide && _chrome) ...[
-            Positioned(left: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowLeft01, semanticLabel: 'Previous', size: 48, onTap: _hasPrevious ? () => _step(-1) : null))),
-            Positioned(right: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowRight01, semanticLabel: 'Next', size: 48, onTap: _hasNext ? () => _step(1) : null))),
-          ],
+          ),
+          chrome(bottom, false),
         ]),
       ),
     );
@@ -765,29 +764,6 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
           style: context.uiText.caption.copyWith(fontSize: 12, color: context.ui.mediaOnScrim.withValues(alpha: 0.8), fontFeatures: const [FontFeature.tabularFigures()]),
         ),
       );
-}
-
-/// Top and bottom scrims: dark held through the band the chrome occupies, then let go.
-class _Scrim extends StatelessWidget {
-  const _Scrim({required this.top, required this.child});
-  final bool top;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.ui.mediaScrim;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: top ? Alignment.topCenter : Alignment.bottomCenter,
-          end: top ? Alignment.bottomCenter : Alignment.topCenter,
-          colors: [s.withValues(alpha: top ? 0.78 : 0.85), s.withValues(alpha: top ? 0.5 : 0.62), s.withValues(alpha: 0)],
-          stops: const [0, 0.55, 1],
-        ),
-      ),
-      child: child,
-    );
-  }
 }
 
 /// The one glass treatment for everything floating over the picture: pills with a [label], circles

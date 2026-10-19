@@ -128,7 +128,7 @@ class _UiFbPreviewState extends State<UiFbPreview> {
                 icon: const UiIcon(HugeIcons.strokeRoundedRefresh),
                 onPressed: () => setState(_restart),
               ),
-              FbSwitch(value: _showData, label: 'Show saved data', onChanged: (v) => setState(() => _showData = v)),
+              FbSwitch(size: UiSize.sm, value: _showData, label: 'Show saved data', onChanged: (v) => setState(() => _showData = v)),
             ]),
             if (_mode != UiFormMode.create) ...[
               SizedBox(height: t.space3),

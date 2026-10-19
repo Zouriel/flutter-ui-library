@@ -827,16 +827,15 @@ class WfInspector extends StatelessWidget {
           // In the phone sheet, the sheet's body padding (16px sides, as a modal's), so the settings line up with its title.
           padding: showHead ? EdgeInsets.all(t.space3) : EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            // In a bottom sheet (no header) the way back to the parent and Delete still have to be
-            // somewhere: a small row above the settings.
-            if (!showHead && (parent != null || (canDelete && !store.readOnly)))
+            // In a bottom sheet (no header) the way back to the parent still has to be somewhere: a
+            // link above the settings. Delete is in the sheet's own header.
+            if (!showHead && parent != null)
               Padding(
                 padding: EdgeInsets.only(bottom: t.space2),
-                child: Row(spacing: t.space2, children: [
-                  if (parent != null) FbLink(label: '‹ $parentLabel', fontSize: 12, onTap: () => store.selection = parent),
-                  const Spacer(),
-                  if (canDelete && !store.readOnly) FbIconButton(icon: WfIcons.delete02, label: 'Delete $heading', danger: true, onPressed: onDeleteRequest),
-                ]),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FbLink(label: '‹ $parentLabel', fontSize: 12, onTap: () => store.selection = parent),
+                ),
               ),
             if (problems.isNotEmpty)
               Padding(

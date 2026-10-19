@@ -58,6 +58,22 @@ void main() {
     expect(c.view.y, closeTo((600 - 400 * 0.6) / 2, 1e-9)); // it fits this way: centred
   });
 
+  testWidgets('the fit button shows everything, below the 60% floor, and keeps doing so on resizes', (tester) async {
+    final c = await pumpViewport(tester, cw: 2000, ch: 400);
+    expect(c.view.zoom, 0.6);
+    await tester.tap(find.bySemanticsLabel('Fit to view'));
+    await tester.pump();
+    expect(c.view.zoom, closeTo((800 - 64) / 2000, 1e-9));
+    expect(c.view.x, closeTo((800 - 2000 * c.view.zoom) / 2, 1e-9)); // centred: all of it shows
+    // Until someone pans or zooms, a refit still shows everything.
+    tester.view.physicalSize = const Size(1000, 600) * 2;
+    await tester.pump();
+    expect(c.view.zoom, closeTo((1000 - 64) / 2000, 1e-9));
+    c.zoomBy(1.2);
+    c.fit();
+    expect(c.view.zoom, 0.6); // a plain fit keeps the readable floor
+  });
+
   testWidgets('a refit that comes up while a pointer is down waits for it to lift', (tester) async {
     final c = await pumpViewport(tester);
     final g = await tester.startGesture(const Offset(300, 100));

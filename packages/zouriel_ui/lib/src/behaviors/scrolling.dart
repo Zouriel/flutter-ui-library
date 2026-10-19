@@ -88,16 +88,20 @@ class UiVirtualList<T> extends StatelessWidget {
   }
 }
 
-/// `uiScrollFade`: wrap a sideways scroll view (a horizontal [SingleChildScrollView], say); each edge
-/// with more content past it fades out, so a cut-off row reads as "scrolls on" rather than "ends
-/// here". Nothing changes while the content fits. Used by `UiTable` and `UiSegmented`.
+/// `uiScrollFade`: wrap a scroll view (a horizontal [SingleChildScrollView], say); each edge with more
+/// content past it fades out, so a cut-off row reads as "scrolls on" rather than "ends here". Nothing
+/// changes while the content fits. Used by `UiTable` and `UiSegmented`; [axis] vertical for a column
+/// (`UiWorkflowGlobalSettings` above its footer).
 class UiScrollFade extends StatefulWidget {
-  const UiScrollFade({super.key, required this.child, this.size = 24});
+  const UiScrollFade({super.key, required this.child, this.size = 24, this.axis = Axis.horizontal});
 
   final Widget child;
 
   /// Width of the fade, in logical px.
   final double size;
+
+  /// Which way the wrapped view scrolls.
+  final Axis axis;
 
   @override
   State<UiScrollFade> createState() => _UiScrollFadeState();
@@ -109,7 +113,7 @@ class _UiScrollFadeState extends State<UiScrollFade> {
   final _key = GlobalKey();
 
   bool _onMetrics(ScrollMetrics m) {
-    if (m.axis != Axis.horizontal) return false;
+    if (m.axis != widget.axis) return false;
     final start = m.extentBefore > 0.5, end = m.extentAfter > 0.5;
     if (start != _start || end != _end) {
       setState(() {
@@ -137,8 +141,12 @@ class _UiScrollFadeState extends State<UiScrollFade> {
     return ShaderMask(
       blendMode: BlendMode.dstIn,
       shaderCallback: (r) {
-        final f = r.width <= 0 ? 0.0 : (widget.size / r.width).clamp(0.0, 0.5);
+        final vertical = widget.axis == Axis.vertical;
+        final extent = vertical ? r.height : r.width;
+        final f = extent <= 0 ? 0.0 : (widget.size / extent).clamp(0.0, 0.5);
         return LinearGradient(
+          begin: vertical ? Alignment.topCenter : Alignment.centerLeft,
+          end: vertical ? Alignment.bottomCenter : Alignment.centerRight,
           colors: [_start ? clear : solid, solid, solid, _end ? clear : solid],
           stops: [0, f, 1 - f, 1],
         ).createShader(r);
