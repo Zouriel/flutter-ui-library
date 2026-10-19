@@ -112,7 +112,7 @@ void main() {
     expect(key.currentState!.value.paused, ['application']);
     expect(api.calls, contains('saveSettings:3'));
     expect(find.text('Paused'), findsOneWidget); // the switch says what it is now
-    expect(find.bySemanticsLabel(RegExp('Pause workflows for Application')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Run workflows for Application')), findsOneWidget);
   });
 
   testWidgets('pausing saves only the pause; other edits stay unsaved', (tester) async {
@@ -212,11 +212,11 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       // Two of the section buttons.
-      return (tester.getTopLeft(find.text('Defaults')).dy, tester.getTopLeft(find.text('Channels')).dy);
+      return (tester.getTopLeft(find.text('Time & calendar')).dy, tester.getTopLeft(find.text('Defaults')).dy);
     }
 
     final (phoneA, phoneB) = await navTops(const Size(390, 844));
-    expect(phoneA, phoneB, reason: 'on a phone the sections are one scrolling row');
+    expect(phoneA, phoneB, reason: 'on a phone the sections are rows above the form (wrapping, never cut off)');
     final (wideA, wideB) = await navTops(const Size(1100, 844));
     expect(wideB, greaterThan(wideA), reason: 'wide, they are a column beside the form');
   });

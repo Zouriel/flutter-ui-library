@@ -5,14 +5,17 @@ import 'package:flutter/widgets.dart';
 import '../../core/interactive.dart';
 import '../../theme/theme.dart';
 
-/// The 18px checkbox square: empty, ticked (the tick draws itself in), or mixed (a dash).
+/// The 18px checkbox square (16px when [small]): empty, ticked (the tick draws itself in), or mixed (a dash).
 /// [value] null is the mixed state. Shared by checkbox and checkbox group.
 class UiCheckMark extends StatelessWidget {
-  const UiCheckMark({super.key, required this.value, this.states = const UiStates(), this.invalid = false});
+  const UiCheckMark({super.key, required this.value, this.states = const UiStates(), this.invalid = false, this.small = false});
 
   final bool? value;
   final UiStates states;
   final bool invalid;
+
+  /// The sm checkbox's 16px square.
+  final bool small;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +26,8 @@ class UiCheckMark extends StatelessWidget {
     return AnimatedContainer(
       duration: animate ? t.motionFast : Duration.zero,
       curve: t.easeStandard,
-      width: 18,
-      height: 18,
+      width: small ? 16 : 18,
+      height: small ? 16 : 18,
       margin: const EdgeInsets.only(top: 1),
       decoration: BoxDecoration(
         color: on ? t.primary : t.surface,
@@ -39,7 +42,7 @@ class UiCheckMark extends StatelessWidget {
               tween: Tween(end: value! ? 1 : 0),
               duration: animate ? t.motionBase : Duration.zero,
               curve: t.easeStandard,
-              builder: (context, p, _) => CustomPaint(size: const Size.square(12), painter: _TickPainter(p, t.primaryContrast)),
+              builder: (context, p, _) => CustomPaint(size: Size.square(small ? 11 : 12), painter: _TickPainter(p, t.primaryContrast)),
             ),
     );
   }

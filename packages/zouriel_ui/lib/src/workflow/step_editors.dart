@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 
+import '../core/icon.dart';
 import '../core/types.dart';
 import '../forms/text/inputs.dart';
 import '../forms/text/number_input.dart';
@@ -14,9 +15,7 @@ import 'json.dart';
 import 'schema.dart';
 import 'scope.dart';
 
-const List<WfOption> _tones = [
-  (value: 'neutral', label: 'neutral'), (value: 'primary', label: 'primary'), (value: 'success', label: 'success'), (value: 'warning', label: 'warning'), (value: 'danger', label: 'danger'),
-];
+const List<WfOption> _tones = wfToneOptions;
 /// The only methods a webhook step may use, in the order the picker lists them (spec §13: GET, POST,
 /// PUT, PATCH, DELETE in capitals; anything else is the engine's `badMethod`).
 const List<String> wfWebhookMethods = ['POST', 'PUT', 'PATCH', 'GET', 'DELETE'];
@@ -79,7 +78,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
 
     Widget field(String label, Widget child) => FbSetting(label: label, child: child);
     Widget del(String label, VoidCallback? onPressed) => FbIconButton(icon: WfIcons.delete02, label: label, danger: true, onPressed: onPressed);
-    Widget sw(bool value, String label, ValueChanged<bool> onChanged) => FbSwitch(value: value, label: label, onChanged: onChanged);
+    Widget sw(bool value, String label, ValueChanged<bool> onChanged) => WfSwitch(value: value, label: label, onChanged: onChanged);
     WfAssigneesEditor people(List<UiWfAssignee> value, String label, String emptyText, ValueChanged<List<UiWfAssignee>> onChanged, {bool allowEmail = false, bool managers = false}) => WfAssigneesEditor(
       value: value,
       registry: store.registry,
@@ -147,7 +146,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
       final onError = step.onError;
       final mode = onError == null ? 'stop' : (onError is String ? onError : 'steps');
       children.add(WfSection(title: 'If it fails', children: [
-        FbPair(children: [
+        WfPair(children: [
           field(
             'Try again',
             UiNumberInput(
@@ -183,7 +182,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
     children.add(WfSection(children: [
       field(
         'Note (only builders see it)',
-        UiTextarea(value: step.note ?? '', rows: 2, autosize: true, semanticLabel: 'Note', onChanged: (v) => patch({'note': v.isEmpty ? null : v}, 'note')),
+        UiTextarea(size: UiSize.sm, value: step.note ?? '', rows: 2, autosize: true, semanticLabel: 'Note', onChanged: (v) => patch({'note': v.isEmpty ? null : v}, 'note')),
       ),
     ]));
     return WfStack(spacing: t.space3, children: children);
@@ -207,7 +206,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
       decoration: BoxDecoration(border: Border.all(color: t.borderSubtle), borderRadius: BorderRadius.circular(t.radius)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: children),
     );
-    Widget link(String label, VoidCallback onTap) => Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: label, onTap: onTap));
+    Widget link(String label, VoidCallback onTap, {UiIconData? icon}) => Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: label, icon: icon, onTap: onTap));
     List<String> splitList(String text) => text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
     switch (step.type) {
@@ -216,7 +215,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
         final rt = a.ruleType;
         return [
           field('Who approves', people(a.assignees, 'approvers', 'Add the people who decide.', (v) => patch({'assignees': v}))),
-          FbPair(children: [
+          WfPair(children: [
             field(
               'Decided when',
               WfSelect(
@@ -275,7 +274,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
             ),
           ),
           if (tk.requireComment == 'reject' && !outs.any((o) => o.tone == 'danger'))
-            const FbHint('No button is red yet: colour the negative ones “danger” so they ask for remarks.'),
+            const FbHint('No button is red yet: colour the negative ones “Red” so they ask for remarks.'),
         ];
       case 'branch':
         final b = UiWfBranchStep.of(step);
@@ -289,10 +288,12 @@ class _WfStepEditorState extends State<WfStepEditor> {
               ]),
               WfConditionEditor(value: paths[i].when, tokens: tokens, emptyText: 'Add a condition for this path.', onChanged: (c) => patch({'paths': [...paths]..[i] = paths[i].patch({'when': c.json})})),
             ]),
-          Wrap(spacing: t.space3, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            FbLink(label: 'Add a path', onTap: () => patch({'paths': [...paths, {'id': wfId('p'), 'label': 'Path ${paths.length + 1}', 'when': {'match': 'all', 'conditions': <Object?>[]}, 'steps': <Object?>[]}]})),
-            sw(b.otherwise != null, 'Otherwise path', (on) => patch({'otherwise': on ? {'id': wfId('l'), 'label': 'Otherwise', 'steps': <Object?>[]} : null})),
-          ]),
+          // The add link on its own line, the switch under it: side by side they read as one labelled toggle.
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FbLink(label: 'Add a path', icon: WfIcons.add01, onTap: () => patch({'paths': [...paths, {'id': wfId('p'), 'label': 'Path ${paths.length + 1}', 'when': {'match': 'all', 'conditions': <Object?>[]}, 'steps': <Object?>[]}]})),
+          ),
+          sw(b.otherwise != null, '“Otherwise” path (when none match)', (on) => patch({'otherwise': on ? {'id': wfId('l'), 'label': 'Otherwise', 'steps': <Object?>[]} : null})),
           const FbHint('The first path whose conditions hold runs; if none do, “Otherwise”.'),
         ];
       case 'switch':
@@ -327,10 +328,11 @@ class _WfStepEditorState extends State<WfStepEditor> {
                   onChanged: (v) => patch({'cases': [...cases]..[i] = cases[i].patch({'values': splitList(v)})}, 'case$i'),
                 ),
             ]),
-          Wrap(spacing: t.space3, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            FbLink(label: 'Add a case', onTap: () => patch({'cases': [...cases, {'id': wfId('c'), 'label': 'Case ${cases.length + 1}', 'values': <Object?>[], 'steps': <Object?>[]}]})),
-            sw(sw0.otherwise != null, 'Otherwise path', (on) => patch({'otherwise': on ? {'id': wfId('l'), 'label': 'Otherwise', 'steps': <Object?>[]} : null})),
-          ]),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FbLink(label: 'Add a case', icon: WfIcons.add01, onTap: () => patch({'cases': [...cases, {'id': wfId('c'), 'label': 'Case ${cases.length + 1}', 'values': <Object?>[], 'steps': <Object?>[]}]})),
+          ),
+          sw(sw0.otherwise != null, '“Otherwise” path (any other value)', (on) => patch({'otherwise': on ? {'id': wfId('l'), 'label': 'Otherwise', 'steps': <Object?>[]} : null})),
         ];
       case 'parallel':
         final p = UiWfParallelStep.of(step);
@@ -341,8 +343,8 @@ class _WfStepEditorState extends State<WfStepEditor> {
               Expanded(child: UiInput(size: UiSize.sm, value: paths[i].label ?? '', semanticLabel: 'Path ${i + 1} name', onChanged: (v) => patch({'paths': [...paths]..[i] = UiWfStepList.fromJson({...paths[i].json, 'label': v})}, 'ppath$i'))),
               del('Remove path', paths.length < 3 ? null : () => patch({'paths': [...paths]..removeAt(i)})),
             ]),
-          if (paths.length < 10) link('Add a path', () => patch({'paths': [...paths, {'id': wfId('p'), 'label': 'Path ${paths.length + 1}', 'steps': <Object?>[]}]})),
-          FbPair(children: [
+          if (paths.length < 10) link('Add a path', icon: WfIcons.add01, () => patch({'paths': [...paths, {'id': wfId('p'), 'label': 'Path ${paths.length + 1}', 'steps': <Object?>[]}]})),
+          WfPair(children: [
             field(
               'Continue when',
               WfSelect(
@@ -371,7 +373,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
             ),
           ),
           field('Only items where', WfConditionEditor(value: fe.when, tokens: tokens, emptyText: 'Every item.', onChanged: (c) => patch({'when': c.conditions.isNotEmpty ? c.json : null}))),
-          FbPair(children: [
+          WfPair(children: [
             field(
               'One at a time?',
               WfSelect(
@@ -647,6 +649,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
           field(
             'Body (JSON; use {"ref": "entity.title"} for values)',
             UiTextarea(
+              size: UiSize.sm,
               value: text,
               rows: 5,
               invalid: _bodyInvalid,

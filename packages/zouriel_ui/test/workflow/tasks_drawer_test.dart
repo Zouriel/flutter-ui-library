@@ -392,7 +392,7 @@ void main() {
       await tester.tap(button('Try again'));
       await tester.pumpAndSettle();
       expect(api.fixed, isTrue);
-      await tester.tap(button('‹ Back to the list'));
+      await tester.tap(find.text('‹ Back to the list'));
       await tester.pumpAndSettle();
       expect(find.text('STOPPED WORKFLOWS'), findsNothing);
       expect(find.byType(WfTaskInbox), findsOneWidget);

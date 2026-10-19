@@ -210,7 +210,7 @@ class _WfVersionsState extends State<WfVersions> {
           const FbHint('None. The draft matches the published version.'),
         FbSetting(
           label: 'What changed (kept with the version)',
-          child: UiTextarea(value: _note, rows: 2, autosize: true, placeholder: 'e.g. Added a finance check for large amounts', semanticLabel: 'What changed', onChanged: (v) => setState(() => _note = v)),
+          child: UiTextarea(size: UiSize.sm, value: _note, rows: 2, autosize: true, placeholder: 'e.g. Added a finance check for large amounts', semanticLabel: 'What changed', onChanged: (v) => setState(() => _note = v)),
         ),
         if (_error.isNotEmpty) WfNote(_error),
         Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -402,7 +402,7 @@ class _WfTestState extends State<WfTest> {
         if ((def.entity ?? '').isNotEmpty)
           FbSetting(label: '${store.entity?.label ?? 'Record'} id', child: UiInput(size: UiSize.sm, value: _recordId, placeholder: 'e.g. 1', semanticLabel: 'Record id', onChanged: (v) => setState(() => _recordId = v))),
         if (lc != null)
-          FbPair(children: [
+          WfPair(children: [
             FbSetting(
               label: 'Record is in',
               child: WfSelect(label: 'Record is in', value: _fromState, options: [(value: '', label: '(its current state)'), for (final s in lc.states) (value: s.key, label: s.label)], onChanged: (v) => setState(() => _fromState = v)),
@@ -413,7 +413,7 @@ class _WfTestState extends State<WfTest> {
             ),
           ])
         else if (triggerField != null)
-          FbPair(children: [
+          WfPair(children: [
             FbSetting(label: '${triggerField.label} was', child: WfValueInput(field: triggerField, value: _from, onChanged: (v) => setState(() => _from = v))),
             FbSetting(label: 'and became', child: WfValueInput(field: triggerField, value: _to, onChanged: (v) => setState(() => _to = v))),
           ]),

@@ -212,7 +212,8 @@ UiWfEdgePath edgePath(Offset from, Offset to, bool back, [int lane = 0]) {
   }
   final x1 = from.dx + wfNodeW / 2 + lane * 12, y1 = from.dy + wfNodeH;
   final x2 = to.dx + wfNodeW / 2 + lane * 12, y2 = to.dy + wfNodeH;
-  final low = math.max(y1, y2) + 28 + lane * 14;
+  // Lanes a label's height apart, so stacked arrows' labels don't overlap.
+  final low = math.max(y1, y2) + 28 + lane * 22;
   final dir = x2 > x1 ? 1 : -1;
   return UiWfEdgePath(
     'M ${_n(x1)} ${_n(y1)} V ${_n(low - r)} Q ${_n(x1)} ${_n(low)} ${_n(x1 + dir * r)} ${_n(low)} H ${_n(x2 - dir * r)} Q ${_n(x2)} ${_n(low)} ${_n(x2)} ${_n(low - r)} V ${_n(y2)}',

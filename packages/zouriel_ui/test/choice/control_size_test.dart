@@ -29,4 +29,23 @@ void main() {
     final token = tester.widget<EditableText>(find.descendant(of: find.byKey(const Key('ti')), matching: find.byType(EditableText)));
     expect(token.style.fontSize, t.fontSizeSm);
   });
+
+  testWidgets('checkbox takes sm (13px label, 16px box) for dense panels and defaults to md', (tester) async {
+    late UiTokens t;
+    await pumpUi(
+      tester,
+      Builder(builder: (context) {
+        t = context.ui;
+        return Column(mainAxisSize: MainAxisSize.min, children: [
+          UiCheckbox(key: const Key('md'), value: true, onChanged: (_) {}, label: 'On'),
+          UiCheckbox(key: const Key('sm'), value: true, onChanged: (_) {}, label: 'On', size: UiSize.sm),
+        ]);
+      }),
+    );
+    double font(String k) => DefaultTextStyle.of(tester.element(find.descendant(of: find.byKey(Key(k)), matching: find.text('On')))).style.fontSize!;
+    Size box(String k) => tester.getSize(find.descendant(of: find.byKey(Key(k)), matching: find.byType(UiCheckMark)));
+    expect(font('md'), t.fontSizeMd);
+    expect(font('sm'), t.fontSizeSm);
+    expect(box('sm').width, lessThan(box('md').width));
+  });
 }

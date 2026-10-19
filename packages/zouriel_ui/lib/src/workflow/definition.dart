@@ -1018,6 +1018,9 @@ String describeTrigger(UiWfTrigger? t, UiWfDescribeContext ctx) {
   return t.type;
 }
 
+/// "due in 3 days", or "no deadline" for a task without one (not "due in no time set").
+String _dueText(String? iso) => iso == null || iso.isEmpty ? 'no deadline' : 'due in ${describeDuration(iso)}';
+
 /// One line about what a step does: "any of Finance · due in 3 days".
 String describeStep(UiWfStep step, UiWfDescribeContext ctx) {
   final reg = ctx.registry;
@@ -1027,10 +1030,10 @@ String describeStep(UiWfStep step, UiWfDescribeContext ctx) {
       final a = UiWfApprovalStep.of(step);
       final v = a.ruleValue == null ? '?' : jsNumberToString(a.ruleValue!);
       final rule = switch (a.ruleType) { 'all' => 'all of', 'count' => '$v of', 'percent' => '$v% of', _ => 'any of' };
-      return '$rule ${describeAssignees(a.assignees, ctx)} · due in ${describeDuration(a.due)}';
+      return '$rule ${describeAssignees(a.assignees, ctx)} · ${_dueText(a.due)}';
     case 'task':
       final t = UiWfTaskStep.of(step);
-      return '${describeAssignees(t.assignees, ctx)} · due in ${describeDuration(t.due)}';
+      return '${describeAssignees(t.assignees, ctx)} · ${_dueText(t.due)}';
     case 'branch':
       final b = UiWfBranchStep.of(step);
       final n = b.paths.length;

@@ -410,9 +410,8 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       ),
       footerBuilder: (ctx) => ValueListenableBuilder(
         valueListenable: _stuckTick,
-        builder: (ctx, _, _) => Row(children: [
+        builder: (ctx, _, _) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
           UiButton(label: 'Back', variant: UiButtonVariant.ghost, onPressed: _recordBusy ? null : () => Navigator.of(ctx).pop()),
-          const Spacer(),
           UiButton(
             label: 'Skip it',
             onPressed: _recordBusy
@@ -706,6 +705,9 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
     ]);
   }
 
+  /// A peeking rail's full width (a touch target), of which the gutter's 16px shows.
+  static const double _railPeekWidth = 44;
+
   Widget _railWidget(BuildContext context) {
     if (!_isDrawer) return const SizedBox.shrink();
     final t = context.ui;
@@ -721,6 +723,9 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
     final rr = Radius.circular(t.radiusLg);
     final now = path.steps.isEmpty ? null : path.steps[path.active].label;
     final label = '${widget.title}${now == null ? '' : ': $now, step ${path.active + 1} of ${path.steps.length}'}. ${isOpen ? 'Close' : 'Open'}';
+    // Phones: a side rail only peeks into the page's 16px gutter (dots at its inner edge), so it neither covers the
+    // content nor catches taps meant for it (the web's max-width 600px rule).
+    final peek = vertical && MediaQuery.sizeOf(context).width < 600;
     final rail = MouseRegion(
       onEnter: (e) => _hoverIn(e.kind),
       onExit: (_) => _hoverOut(),
@@ -730,7 +735,11 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
         excludeChildSemantics: true,
         pressScale: false,
         builder: (context, s) => Container(
-          padding: vertical ? EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space3) : EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+          width: peek ? _railPeekWidth : null,
+          alignment: peek ? (edge == UiDrawerSide.left ? Alignment.centerRight : Alignment.centerLeft) : null,
+          padding: peek
+              ? EdgeInsets.symmetric(horizontal: t.space1, vertical: t.space3)
+              : vertical ? EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space3) : EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
           decoration: BoxDecoration(
             color: t.surfaceRaised,
             border: Border.all(color: t.border),
@@ -757,7 +766,15 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
         UiDrawerSide.bottom || UiDrawerSide.top => Alignment.bottomCenter,
         UiDrawerSide.right => Alignment.centerRight,
       },
-      child: SafeArea(left: edge == UiDrawerSide.left, right: edge == UiDrawerSide.right, top: false, bottom: edge == UiDrawerSide.bottom, child: rail),
+      child: SafeArea(
+        left: edge == UiDrawerSide.left,
+        right: edge == UiDrawerSide.right,
+        top: false,
+        bottom: edge == UiDrawerSide.bottom,
+        child: peek
+            ? Transform.translate(offset: Offset((edge == UiDrawerSide.left ? -1 : 1) * (_railPeekWidth - t.space4), 0), child: rail)
+            : rail,
+      ),
     );
   }
 
