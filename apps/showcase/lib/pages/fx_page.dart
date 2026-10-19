@@ -155,19 +155,28 @@ class _FxPageState extends State<FxPage> {
           widget: 'UiGrain · UiScrollProgress',
           summary: 'UiGrain is a film-grain overlay for the top of a Stack over the app; it ignores touches and is hidden under reduced motion. UiScrollProgress wraps a scroll view and draws a 2px bar along its top that fills with the brand gradient as it scrolls; it is decorative and hidden from screen readers.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(t.radius),
-              child: SizedBox(
-                height: 180,
-                child: Stack(children: [
-                  UiScrollProgress(
-                    child: ListView(padding: EdgeInsets.all(t.space4), children: [
-                      for (var i = 1; i <= 20; i++) Padding(padding: EdgeInsets.symmetric(vertical: t.space1), child: UiText('Paragraph $i of a long article.')),
-                    ]),
+            Container(
+              height: 180,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+              child: Stack(children: [
+                UiScrollProgress(
+                  child: ListView(padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, t.space8), children: [
+                    for (var i = 1; i <= 20; i++) Padding(padding: EdgeInsets.symmetric(vertical: t.space1), child: UiText('Paragraph $i of a long article.')),
+                  ]),
+                ),
+                // Fade the cut-off line at the bottom so the box reads as scrollable rather than clipped.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: t.space8,
+                  child: IgnorePointer(
+                    child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [t.surface.withValues(alpha: 0), t.surface]))),
                   ),
-                  if (_grain) const Positioned.fill(child: UiGrain(opacity: 0.12)),
-                ]),
-              ),
+                ),
+                if (_grain) const Positioned.fill(child: UiGrain(opacity: 0.12)),
+              ]),
             ),
             Align(alignment: Alignment.centerLeft, child: UiButton(label: _grain ? 'Hide grain' : 'Show grain', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _grain = !_grain))),
           ]),

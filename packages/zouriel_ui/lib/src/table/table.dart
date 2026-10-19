@@ -180,6 +180,7 @@ class _UiTableState<T> extends State<UiTable<T>> {
     final head = body.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: t.textMuted);
     final pad = EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space3);
     final hasActions = widget.actions.isNotEmpty;
+    final touch = uiTouchPlatform(context);
 
     Alignment align(UiColumnAlign a) => switch (a) { UiColumnAlign.start => Alignment.centerLeft, UiColumnAlign.center => Alignment.center, UiColumnAlign.end => Alignment.centerRight };
     TextAlign textAlign(UiColumnAlign a) => switch (a) { UiColumnAlign.start => TextAlign.start, UiColumnAlign.center => TextAlign.center, UiColumnAlign.end => TextAlign.end };
@@ -240,8 +241,11 @@ class _UiTableState<T> extends State<UiTable<T>> {
               )),
             if (hasActions)
               hoverable(i, Padding(
-                padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space1),
-                child: Row(mainAxisAlignment: MainAxisAlignment.end, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
+                // The same cell padding as the data cells, so action rows are as tall as the web (42px)
+                // and the buttons keep clear of the row lines; space2 between buttons. On touch the
+                // buttons' 48px hit areas already keep them 11px clear, so no extra height there.
+                padding: touch ? EdgeInsets.symmetric(horizontal: t.space3) : pad,
+                child: Row(mainAxisAlignment: MainAxisAlignment.end, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
                   for (final a in widget.actions)
                     _ActionButton(
                       label: a.label,

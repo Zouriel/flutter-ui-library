@@ -209,20 +209,32 @@ String unionBreaks(String type) => type.replaceAll(' | ', '$_nbsp| ');
 
 /// Lays [children] out in equal columns that fill the width: as many as fit at [minWidth] each, but
 /// never fewer than [minColumns] (so phones get two tiles a row instead of one with a gap beside it).
+/// [equalHeight] stretches the tiles of each row to the tallest one, like a CSS grid row.
 class DocGrid extends StatelessWidget {
-  const DocGrid({super.key, required this.minWidth, this.minColumns = 1, this.maxColumns = 99, required this.children});
+  const DocGrid({super.key, required this.minWidth, this.minColumns = 1, this.maxColumns = 99, this.gap, this.equalHeight = false, required this.children});
   final double minWidth;
   final int minColumns;
   final int maxColumns;
+  /// Space between tiles; defaults to space2.
+  final double? gap;
+  final bool equalHeight;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final gap = context.ui.space2;
+    final gap = this.gap ?? context.ui.space2;
     return LayoutBuilder(builder: (context, box) {
       final cols = ((box.maxWidth + gap) / (minWidth + gap)).floor().clamp(minColumns, maxColumns);
       final w = (box.maxWidth - gap * (cols - 1)) / cols;
-      return Wrap(spacing: gap, runSpacing: gap, children: [for (final c in children) SizedBox(width: w, child: c)]);
+      if (!equalHeight) return Wrap(spacing: gap, runSpacing: gap, children: [for (final c in children) SizedBox(width: w, child: c)]);
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: gap, children: [
+        for (var i = 0; i < children.length; i += cols)
+          IntrinsicHeight(
+            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: gap, children: [
+              for (final c in children.skip(i).take(cols)) SizedBox(width: w, child: c),
+            ]),
+          ),
+      ]);
     });
   }
 }

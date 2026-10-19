@@ -18,7 +18,8 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
   bool _visible = false;
   Size? _size;
   double _boxW = 160;
-  Offset _drag = Offset.zero;
+  /// Null until first moved: it starts inset from the corner (space4), not stuck in it.
+  Offset? _drag;
 
   Future<void> _more() async {
     if (_loading || _rows.length >= 80) return;
@@ -244,7 +245,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
               child: LayoutBuilder(builder: (context, box) => Align(
                 alignment: Alignment.topLeft,
                 child: UiDragMove(
-                  offset: _drag,
+                  offset: _drag ?? Offset(t.space4, t.space4),
                   bounds: Rect.fromLTWH(0, 0, box.maxWidth - 110, box.maxHeight - 48),
                   onChanged: (o) => setState(() => _drag = o),
                   child: Container(

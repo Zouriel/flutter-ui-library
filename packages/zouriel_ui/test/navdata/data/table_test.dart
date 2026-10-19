@@ -105,6 +105,36 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('row actions: the web spacing, space2 apart and space2 clear of the row lines', (tester) async {
+    await pumpUi(tester, SizedBox(width: 600, child: UiTable<Item>(columns: _cols, data: [a], actions: [
+      UiRowAction(label: 'Edit', run: (_) {}),
+      UiRowAction(label: 'Remove', run: (_) {}),
+    ])));
+    final t = tester.element(find.byType(UiTable<Item>)).ui;
+    Rect box(String label) => tester.getRect(find.ancestor(of: find.text(label), matching: find.byType(UiInteractive)).first);
+    final edit = box('Edit'), remove = box('Remove');
+    expect(remove.left - edit.right, t.space2);
+    expect(edit.height, t.sizeSm);
+    // The row is the button plus space2 above and below, as tall as a web row (42px plus its line).
+    final pad = EdgeInsets.symmetric(vertical: t.space2, horizontal: t.space3);
+    final cell = tester.getRect(find.ancestor(of: find.text('Edit'), matching: find.byWidgetPredicate((w) => w is Padding && w.padding == pad)).first);
+    expect(edit.top - cell.top, t.space2);
+    expect(cell.bottom - edit.bottom, t.space2);
+    expect(cell.height, t.sizeSm + 2 * t.space2);
+    // The data cells sit on the same middle line as the buttons.
+    expect(tester.getCenter(find.text('item 10')).dy, moreOrLessEquals(edit.center.dy, epsilon: 0.5));
+  }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
+
+  testWidgets('row actions on touch: the 48px hit areas set the row height, no padding on top', (tester) async {
+    await pumpUi(tester, SizedBox(width: 600, child: UiTable<Item>(columns: _cols, data: [a], actions: [UiRowAction(label: 'Edit', run: (_) {})])));
+    final t = tester.element(find.byType(UiTable<Item>)).ui;
+    final cell = tester.getRect(find.ancestor(of: find.text('Edit'), matching: find.byType(MouseRegion)).last);
+    expect(cell.height, uiMinTouchTarget);
+    final visual = tester.getRect(find.ancestor(of: find.text('Edit'), matching: find.byType(AnimatedContainer)).first);
+    expect(visual.height, t.sizeSm);
+    expect(visual.top - cell.top, greaterThan(t.space2));
+  });
+
   testWidgets('empty: shows the empty text under the headers', (tester) async {
     await pumpUi(tester, const SizedBox(width: 390, child: UiTable<Item>(columns: _cols, data: [], emptyText: 'No items yet')));
     expect(find.text('No items yet'), findsOneWidget);

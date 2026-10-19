@@ -226,13 +226,17 @@ class _NavigationPageState extends State<NavigationPage> {
           name: 'Menubar',
           widget: 'UiMenubar',
           summary: 'An application menu bar with dropdowns, one open at a time. On a phone (narrower than breakpoint) it becomes a single overflow button for the app bar, opening one panel with every menu as a titled group. Keyboard: Left/Right move between top items (and switch the open menu), Down opens one and focuses its first item; inside a menu Up/Down, Home and End move, Escape closes it and returns focus to its top item, Tab closes it. Panels flip or shift to stay on screen.',
-          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
-            Row(children: [
-              const Expanded(child: UiText('Overflow (phone)', variant: UiTextVariant.caption)),
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space4, children: [
+            // Each variant sits under its own label, with the control right below it.
+            Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
+              const UiText('Full bar', variant: UiTextVariant.caption),
+              UiMenubar(menus: _menus, breakpoint: 0, onSelect: (i) => setState(() => _menu = i.label)),
+            ]),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
+              const UiText('Overflow (phone)', variant: UiTextVariant.caption),
               // A breakpoint wider than any screen, so this one always shows the phone overflow button.
               UiMenubar(menus: _menus, breakpoint: 100000, onSelect: (i) => setState(() => _menu = i.label)),
             ]),
-            Align(alignment: Alignment.centerLeft, child: UiMenubar(menus: _menus, breakpoint: 0, onSelect: (i) => setState(() => _menu = i.label))),
             UiText(_menu == null ? 'Choose a command.' : 'Chose: $_menu', variant: UiTextVariant.caption),
           ]),
           code: "UiMenubar(\n  menus: [\n    UiMenubarMenu(label: 'File', items: [UiMenubarItem(label: 'New file', value: 'new')]),\n  ],\n  onSelect: (item) => run(item.value),\n)",

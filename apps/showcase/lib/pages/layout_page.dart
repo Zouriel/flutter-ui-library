@@ -175,7 +175,9 @@ class _LayoutPageState extends State<LayoutPage> {
           name: 'Panel section',
           widget: 'UiPanelSection',
           summary: 'A dense, collapsible titled group for inspector and settings panels. The heading is a button announced as expanded or collapsed; a collapsed body is not built. Header actions go in actions; collapsible false gives a fixed heading.',
-          demo: DecoratedBox(
+          demo: Container(
+            // Clip so a heading's hover fill and the section lines stay inside the rounded corners.
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
             child: Column(children: [
               UiPanelSection(

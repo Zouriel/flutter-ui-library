@@ -24,15 +24,12 @@ class FoundationPage extends StatelessWidget {
           name: 'Design tokens',
           widget: 'context.ui',
           summary: 'Components read tokens, never literal values: colours, spacing (4, 8, 12, 16, 24, 32, 48, 80), control sizes (26 / 30 / 38, touch 44), radii, motion and shadows. The swatches show the current theme.',
-          demo: Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          demo: DocGrid(minWidth: 88, gap: t.space3, children: [
             for (final e in swatches.entries)
-              SizedBox(
-                width: 96,
-                child: Column(spacing: 4, children: [
-                  Container(height: 40, decoration: BoxDecoration(color: e.value, borderRadius: BorderRadius.circular(t.radius), border: Border.all(color: t.border))),
-                  UiText(e.key, variant: UiTextVariant.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
-                ]),
-              ),
+              Column(spacing: 4, children: [
+                Container(height: 40, decoration: BoxDecoration(color: e.value, borderRadius: BorderRadius.circular(t.radius), border: Border.all(color: t.border))),
+                UiText(e.key, variant: UiTextVariant.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ]),
           ]),
           code: 'final t = context.ui;\nContainer(\n  padding: EdgeInsets.all(t.space4),\n  color: t.surface,\n  child: Text(\'Hi\', style: context.uiText.body),\n)',
         ),

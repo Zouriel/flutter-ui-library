@@ -112,7 +112,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
             UiPopover(
               label: 'About',
               placement: UiPopoverPlacement.top,
-              builder: (context, toggle, open) => UiButton(label: 'Opens above', variant: UiButtonVariant.ghost, onPressed: toggle),
+              builder: (context, toggle, open) => UiButton(label: 'Opens above', variant: UiButtonVariant.outline, onPressed: toggle),
               content: UiText('Placement top, centred on the trigger.', variant: UiTextVariant.caption),
             ),
           ]),
@@ -198,7 +198,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
             for (final s in [UiModalSize.sm, UiModalSize.md, UiModalSize.lg, UiModalSize.full])
               UiButton(
                 label: 'Open ${s.name}',
-                variant: s == UiModalSize.md ? UiButtonVariant.primary : UiButtonVariant.outline,
+                variant: UiButtonVariant.outline,
                 onPressed: () async {
                   final r = await showUiModal<String>(
                     context: context,

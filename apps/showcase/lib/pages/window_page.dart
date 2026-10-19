@@ -205,8 +205,9 @@ class _WindowPageState extends State<WindowPage> {
                       minWidth: 120,
                       minHeight: 70,
                       onResized: (s) => setState(() => _size = s),
+                      // The label sits top-left, away from the resize grip in the bottom-right corner.
                       child: Container(
-                        alignment: Alignment.bottomRight,
+                        alignment: Alignment.topLeft,
                         padding: EdgeInsets.all(t.space2),
                         decoration: BoxDecoration(
                           color: t.surfaceRaised,

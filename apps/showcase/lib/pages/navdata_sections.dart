@@ -32,6 +32,9 @@ List<Widget> navdataFeedbackSections() => const [
 
 typedef _Member = Map<String, Object?>;
 
+/// An empty cell shows a dash (as on the web) rather than a blank.
+String _orDash(Object? v, _Member _) => v == null ? '\u2014' : '$v';
+
 class _TableSection extends StatefulWidget {
   const _TableSection();
   @override
@@ -62,7 +65,7 @@ class _TableSectionState extends State<_TableSection> {
           columns: const [
             UiColumn(key: 'name', header: 'Name', sortable: true),
             UiColumn(key: 'role', header: 'Role', sortable: true),
-            UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end),
+            UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end, format: _orDash),
           ],
           data: _rows,
           actions: [
@@ -80,7 +83,7 @@ class _TableSectionState extends State<_TableSection> {
         UiText('$_selected selected${_last == null ? '' : ' · $_last'}', variant: UiTextVariant.caption),
         const UiTable<_Member>(columns: [UiColumn(key: 'name', header: 'Name'), UiColumn(key: 'role', header: 'Role')], data: [], emptyText: 'No members yet'),
       ]),
-      code: "UiTable<Map<String, Object?>>(\n  selectable: true,\n  columns: [\n    UiColumn(key: 'name', header: 'Name', sortable: true),\n    UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end),\n  ],\n  data: rows,\n  actions: [UiRowAction(label: 'Edit', run: edit)],\n  onSelectionChanged: (rows) => setState(() => picked = rows),\n)",
+      code: "UiTable<Map<String, Object?>>(\n  selectable: true,\n  columns: [\n    UiColumn(key: 'name', header: 'Name', sortable: true),\n    UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end, format: (v, _) => v == null ? '\\u2014' : '\$v'),\n  ],\n  data: rows,\n  actions: [UiRowAction(label: 'Edit', run: edit)],\n  onSelectionChanged: (rows) => setState(() => picked = rows),\n)",
       api: const [
         ApiRow('columns', 'List<UiColumn<T>>', 'key, header, sortable, align, value (reader), format.'),
         ApiRow('data', 'List<T>', 'Rows; maps are read by column key.'),
@@ -251,10 +254,10 @@ class _StatCardSection extends StatelessWidget {
       name: 'Stat card',
       widget: 'UiStatCard',
       summary: 'A KPI tile: label, a large value, an optional delta with a drawn up or down marker (green up, red down; the direction is also spoken) and an optional icon. Read by screen readers as one sentence. glass and radius follow UiConfig.',
-      demo: Wrap(spacing: t.space3, runSpacing: t.space3, children: const [
-        SizedBox(width: 170, child: UiStatCard(label: 'Revenue', value: r'$48.2k', delta: '12.5%', icon: UiIcon(HugeIcons.strokeRoundedDollar01))),
-        SizedBox(width: 170, child: UiStatCard(label: 'Churn', value: '2.1%', delta: '0.4%', trend: UiTrend.down)),
-        SizedBox(width: 170, child: UiStatCard(label: 'Active users', value: '1,204')),
+      demo: DocGrid(minWidth: 170, minColumns: 2, maxColumns: 3, gap: t.space3, equalHeight: true, children: const [
+        UiStatCard(label: 'Revenue', value: r'$48.2k', delta: '12.5%', icon: UiIcon(HugeIcons.strokeRoundedDollar01)),
+        UiStatCard(label: 'Churn', value: '2.1%', delta: '0.4%', trend: UiTrend.down),
+        UiStatCard(label: 'Active users', value: '1,204'),
       ]),
       code: "UiStatCard(label: 'Revenue', value: r'\$48.2k', delta: '12.5%', icon: UiIcon(HugeIcons.strokeRoundedDollar01))\nUiStatCard(label: 'Churn', value: '2.1%', delta: '0.4%', trend: UiTrend.down)",
       api: const [

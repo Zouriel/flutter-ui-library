@@ -55,7 +55,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
               UiButton(label: 'Get started', variant: UiButtonVariant.brand, onPressed: () {}),
             ]),
             // The borderless variants get their own row: wrapped to the start of a line they read as stray text.
-            Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+            Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
               UiButton(label: 'Ghost', variant: UiButtonVariant.ghost, onPressed: () {}),
               UiButton(label: 'Link', variant: UiButtonVariant.link, onPressed: () {}),
             ]),

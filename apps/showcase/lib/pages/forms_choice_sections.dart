@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/widgets.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
@@ -223,7 +225,7 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
             onFilesSelected: (f) => setState(() => _files = f),
             onRejected: (f) => setState(() => _rejected = f),
           ),
-          Text('Selected ${_files.length}; rejected: ${_rejected.map((f) => f.name).join(', ')}', style: caption),
+          Text('Selected ${_files.length}; rejected: ${_rejected.isEmpty ? 'none' : _rejected.map((f) => f.name).join(', ')}', style: caption),
         ]),
         code: '''UiFileUpload(
   multiple: true,
@@ -264,16 +266,22 @@ typedef UiFilePicker = Future<List<UiPickedFile>?> Function({required bool multi
             enabled: enabled,
             onChanged: (v) => setState(() => _effect = v),
             onPicked: (c) => setState(() => _lastPicked = c.label),
+            // Wider tiles and a full first group, so the grid fills the demo instead of a corner of it.
+            minTile: 120,
             tileBuilder: (context, item, selected) => _EffectArt(effect: item.value, selected: selected),
             options: const [
               UiChoice(value: 'fade', label: 'Fade', group: 'Entrances'),
               UiChoice(value: 'rise', label: 'Rise', group: 'Entrances'),
               UiChoice(value: 'zoom', label: 'Zoom', group: 'Entrances'),
+              UiChoice(value: 'slide', label: 'Slide', group: 'Entrances'),
+              UiChoice(value: 'blur', label: 'Blur', group: 'Entrances'),
+              UiChoice(value: 'drop', label: 'Drop', group: 'Entrances'),
               UiChoice(value: 'pulse', label: 'Pulse', group: 'Loops', description: 'A gentle beat'),
+              UiChoice(value: 'float', label: 'Float', group: 'Loops'),
               UiChoice(value: 'spin', label: 'Spin', group: 'Loops', disabled: true),
             ],
           ),
-          Text('Chosen: $_effect · last picked: $_lastPicked', style: caption),
+          Text('Chosen: $_effect · last picked: ${_lastPicked.isEmpty ? 'none yet' : _lastPicked}', style: caption),
         ]),
         code: '''UiChoiceGrid<String>(
   value: effect,
@@ -381,6 +389,10 @@ class _EffectArt extends StatelessWidget {
       'fade' => Opacity(opacity: 0.45, child: block),
       'rise' => Transform.translate(offset: const Offset(0, 6), child: block),
       'zoom' => Transform.scale(scale: 0.6, child: block),
+      'slide' => Transform.translate(offset: const Offset(-8, 0), child: block),
+      'blur' => ImageFiltered(imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2), child: block),
+      'drop' => Transform.translate(offset: const Offset(0, -6), child: block),
+      'float' => Transform.translate(offset: const Offset(0, -3), child: Opacity(opacity: 0.75, child: block)),
       'pulse' => Transform.scale(scale: 1.25, child: block),
       _ => Transform.rotate(angle: 0.6, child: block),
     };
