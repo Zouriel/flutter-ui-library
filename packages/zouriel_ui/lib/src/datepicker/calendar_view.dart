@@ -81,6 +81,8 @@ class UiCalendarViewState extends State<UiCalendarView> {
       n.addListener(_rebuild);
     }
     FocusManager.instance.addHighlightModeListener(_onHighlight);
+    uiWatchFocusVisible();
+    uiFocusVisible.addListener(_rebuild);
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // An empty or malformed value is no date, so focus goes to today rather than nowhere.
@@ -107,6 +109,7 @@ class UiCalendarViewState extends State<UiCalendarView> {
   @override
   void dispose() {
     FocusManager.instance.removeHighlightModeListener(_onHighlight);
+    uiFocusVisible.removeListener(_rebuild);
     _dayFocus.dispose();
     _monthFocus.dispose();
     _yearFocus.dispose();
@@ -119,7 +122,8 @@ class UiCalendarViewState extends State<UiCalendarView> {
 
   void _onHighlight(FocusHighlightMode _) => _rebuild();
 
-  bool get _keyboard => FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+  // A day opened with the mouse gets focus but no ring (the web :focus-visible); keys bring it back.
+  bool get _keyboard => FocusManager.instance.highlightMode == FocusHighlightMode.traditional && uiShowFocusRing;
 
   bool _blocked(String iso) => (widget.min != null && iso.compareTo(widget.min!) < 0) || (widget.max != null && iso.compareTo(widget.max!) > 0);
 

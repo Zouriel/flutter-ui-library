@@ -193,7 +193,7 @@ extension on UiStepper {
             shape: BoxShape.circle,
             color: reached ? toneColor : t.text,
             // The current step: a ring in the tone, with a gap in the surface colour.
-            boxShadow: st == UiStepState.active ? [BoxShadow(color: t.surface, spreadRadius: 2), BoxShadow(color: toneColor, spreadRadius: 4)] : null,
+            boxShadow: st == UiStepState.active ? [BoxShadow(color: toneColor, spreadRadius: 4), BoxShadow(color: t.surface, spreadRadius: 2)] : null,
           ),
         ),
       );

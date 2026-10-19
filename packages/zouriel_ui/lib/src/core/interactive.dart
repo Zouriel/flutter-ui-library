@@ -1,9 +1,50 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../theme/theme.dart';
+
+/// Whether focus rings should show: true after a key press, false after a pointer goes down, like
+/// the web's `:focus-visible`. Flutter's own highlight mode stays "traditional" after a mouse
+/// click on desktop, so a menu opened with the mouse would ring its first item; this tracks the
+/// input instead. Starts true, so focus moved before any input still shows. Widgets that read it
+/// call [uiWatchFocusVisible] first.
+final ValueNotifier<bool> uiFocusVisible = ValueNotifier<bool>(true);
+
+final Set<LogicalKeyboardKey> _modifiers = {
+  LogicalKeyboardKey.shiftLeft, LogicalKeyboardKey.shiftRight, LogicalKeyboardKey.controlLeft, LogicalKeyboardKey.controlRight,
+  LogicalKeyboardKey.altLeft, LogicalKeyboardKey.altRight, LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.metaRight,
+};
+
+bool _onKeyForFocusVisible(KeyEvent e) {
+  if (e is KeyDownEvent && !_modifiers.contains(e.logicalKey)) uiFocusVisible.value = true;
+  return false;
+}
+
+void _onPointerForFocusVisible(PointerEvent e) {
+  if (e is PointerDownEvent) uiFocusVisible.value = false;
+}
+
+bool _pointerRouteAdded = false;
+
+/// Makes sure the key and pointer listeners behind [uiFocusVisible] are in place. Re-adding the key
+/// handler each time is cheap and survives anything that resets the keyboard's handlers.
+void uiWatchFocusVisible() {
+  HardwareKeyboard.instance
+    ..removeHandler(_onKeyForFocusVisible)
+    ..addHandler(_onKeyForFocusVisible);
+  if (!_pointerRouteAdded) {
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_onPointerForFocusVisible);
+    _pointerRouteAdded = true;
+  }
+}
+
+/// Whether a focused control should draw its ring now: after a key press ([uiFocusVisible]), or
+/// always when the app forces [FocusHighlightStrategy.alwaysTraditional].
+bool get uiShowFocusRing =>
+    uiFocusVisible.value || FocusManager.instance.highlightStrategy == FocusHighlightStrategy.alwaysTraditional;
 
 /// The visual states of an interactive widget.
 @immutable
@@ -117,9 +158,26 @@ class _UiInteractiveState extends State<UiInteractive> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    uiWatchFocusVisible();
+    uiFocusVisible.addListener(_onFocusVisible);
+  }
+
+  @override
+  void dispose() {
+    uiFocusVisible.removeListener(_onFocusVisible);
+    super.dispose();
+  }
+
+  void _onFocusVisible() {
+    if (_focused && mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final states = UiStates(hovered: _hovered && _enabled, pressed: _pressed && _enabled, focused: _focused && _enabled, disabled: !_enabled);
+    final states = UiStates(hovered: _hovered && _enabled, pressed: _pressed && _enabled, focused: _focused && _enabled && uiShowFocusRing, disabled: !_enabled);
     Widget visual = widget.builder(context, states);
     if (widget.pressScale && context.uiAnimate) {
       visual = AnimatedScale(

@@ -111,7 +111,9 @@ function dartGradient(s) {
 }
 function dartShadows(s) {
   if (s === 'none') return 'const <BoxShadow>[]';
-  return '[' + splitTop(s).map((p) => {
+  // CSS paints the first shadow on top; Flutter paints a BoxShadow list in order, the last on top.
+  // Reverse it, so a ring like the focus ring ("2px page colour, then 4px focus colour") keeps its gap.
+  return '[' + splitTop(s).reverse().map((p) => {
     const inset = /\binset\b/.test(p);
     const [c, rest] = takeColor(p.replace(/\binset\b/, ''));
     const [x, y, blur, spread] = rest.trim().split(/\s+/).map((v) => parseFloat(v) || 0);

@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -129,6 +132,68 @@ void main() {
     expect(painted.glassBg, uiThemeTokens[UiThemeName.dark]!.glassBg);
     expect(island.glassPanelBg.a, greaterThanOrEqualTo(0.85));
   });
+
+  testWidgets('a menu opened with the mouse rings no item; a key press brings the ring back', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    await pumpUi(
+      tester,
+      UiMenu(
+        items: const [UiMenuItem(label: 'Edit', value: 'edit'), UiMenuItem(label: 'Share', value: 'share')],
+        onSelect: (_) {},
+        builder: (context, toggle, open) => UiButton(label: 'Actions', onPressed: toggle),
+      ),
+    );
+    bool ringed(String label) {
+      final box = tester.widget<AnimatedContainer>(find.ancestor(of: find.text(label), matching: find.byType(AnimatedContainer)).first);
+      final border = (box.decoration as BoxDecoration).border as Border?;
+      return border != null && border.top.color.a > 0;
+    }
+
+    await tester.tap(find.text('Actions'), kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(find.text('Edit'), findsOneWidget);
+    expect(ringed('Edit'), isFalse, reason: 'focused, but opened with the mouse');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(ringed('Share'), isTrue);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  for (final theme in [UiThemeName.dark, UiThemeName.light]) {
+    testWidgets('golden: focus rings on a ghost button and a calendar day, ${theme.name} (2px gap, then the ring)', (tester) async {
+      debugDisableShadows = false;
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(300, 400) * 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(UiApp(
+        theme: theme,
+        home: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 16, children: [
+            UiButton(label: 'Ghost', variant: UiButtonVariant.ghost, onPressed: () {}),
+            UiCalendar(value: '2026-10-19', onChanged: (_) {}),
+          ]),
+        ),
+      ));
+      Future<void> tab(int n) async {
+        for (var i = 0; i < n; i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      try {
+        // First Tab: the ghost button. Five more (prev, month, year, next, days): the chosen day.
+        await tab(1);
+        await expectLater(find.byType(Column).first, matchesGoldenFile('goldens/focus_ring_ghost_${theme.name}.png'));
+        await tab(5);
+        await expectLater(find.byType(Column).first, matchesGoldenFile('goldens/focus_ring_day_${theme.name}.png'));
+      } finally {
+        debugDisableShadows = true;
+      }
+    });
+  }
 
   test('the neutral progress tone is its own grey, not the muted (blue) text', () {
     for (final name in [UiThemeName.dark, UiThemeName.light]) {

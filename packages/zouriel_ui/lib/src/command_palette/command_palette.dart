@@ -196,6 +196,8 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
     final t = theme.tokens;
     final full = widget.fullScreen;
     final items = _filtered;
+    // Every shortcut in view: rows reserve the widest one's width, so groups line up down the list.
+    final shortcuts = {for (final c in items) ?c.shortcut}.toList();
     final rowH = _rowHeight(context);
 
     final field = _SearchField(
@@ -221,6 +223,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
             itemExtent: rowH,
             itemBuilder: (context, i) => _Row(
               command: items[i],
+              shortcuts: shortcuts,
               active: i == _active,
               onTap: () => _run(items[i]),
               onHover: () => setState(() => _active = i),
@@ -342,9 +345,12 @@ class _SearchField extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.command, required this.active, required this.onTap, required this.onHover});
+  const _Row({required this.command, required this.active, required this.onTap, required this.onHover, this.shortcuts = const []});
 
   final UiCommand command;
+
+  /// The shortcuts of all rows in view; the shortcut slot is as wide as the widest of them.
+  final List<String> shortcuts;
   final bool active;
   final VoidCallback onTap;
   final VoidCallback onHover;
@@ -384,7 +390,13 @@ class _Row extends StatelessWidget {
                   ),
                 Expanded(child: Text(c.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: small)),
                 if (c.group != null) Text(c.group!, style: small.copyWith(color: t.textMuted)),
-                if (c.shortcut != null) _Kbd(c.shortcut!),
+                // A slot as wide as the widest shortcut in view (each one laid out, only this row's
+                // shown), so the group column sits at the same x with or without a shortcut.
+                if (shortcuts.isNotEmpty)
+                  Stack(alignment: AlignmentDirectional.centerEnd, children: [
+                    for (final k in shortcuts)
+                      Visibility(visible: k == c.shortcut, maintainSize: true, maintainAnimation: true, maintainState: true, child: _Kbd(k)),
+                  ]),
               ],
             ),
           ),
