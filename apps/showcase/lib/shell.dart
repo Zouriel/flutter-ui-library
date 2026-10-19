@@ -83,10 +83,16 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
     // Stretch, so every page gets the full width: a page that is a Stack of positioned layers (the
     // window system) has nothing to size itself by and would otherwise collapse to zero width.
     // The maldives theme's fx layer, like the web shell: the tide along the bottom, behind the page.
+    // Always a Stack with a keyed page layer, so switching theme only adds or drops the waves: had the
+    // page moved in the tree it would be rebuilt from scratch, and Find Doctor (which switches the
+    // theme on opening and back on leaving) then flipped the theme every frame.
     final sea = widget.controller.theme == UiThemeName.maldives;
     final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       bar,
-      Expanded(child: sea ? Stack(children: [const Positioned.fill(child: UiWaveFooter(height: 96, opacity: 0.35)), Positioned.fill(child: page)]) : page),
+      Expanded(child: Stack(children: [
+        if (sea) const Positioned.fill(child: UiWaveFooter(height: 96, opacity: 0.35)),
+        Positioned.fill(key: const ValueKey('page'), child: page),
+      ])),
     ]);
     if (wide) {
       return Row(children: [
