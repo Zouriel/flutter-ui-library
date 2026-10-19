@@ -50,7 +50,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('window', 'Flagship', 'Window system', HugeIcons.strokeRoundedBrowser, (_) => const WindowPage()),
   ShowcasePage('design-tools', 'Flagship', 'Design tools', HugeIcons.strokeRoundedPenTool01, (_) => const DesignToolsPage()),
   ShowcasePage('fx', 'Motion', 'Motion & FX', HugeIcons.strokeRoundedMagicWand01, (_) => const FxPage()),
-  ShowcasePage('behaviors', 'Motion', 'Behavior directives', HugeIcons.strokeRoundedTouch01, (_) => const BehaviorsPage()),
+  ShowcasePage('behaviors', 'Motion', 'Behaviors', HugeIcons.strokeRoundedTouch01, (_) => const BehaviorsPage()),
 ];
 
 /// Old page ids that moved, and where they went.

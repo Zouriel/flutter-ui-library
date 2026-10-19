@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
+import 'docs/doc.dart' show DocGrid;
 import 'pages/registry.dart';
 
 const themeLabels = {
@@ -71,7 +72,6 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
             label: 'Open menu',
             onPressed: () => _menuOpen.value = true,
           ),
-        if (wide) const _Brand(),
         Expanded(child: wide ? const SizedBox() : Text(_page.label, style: context.uiText.label.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis)),
         _ThemeButton(controller: widget.controller),
       ]),
@@ -265,7 +265,7 @@ class _ThemeSheet extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
           Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: t.borderStrong, borderRadius: BorderRadius.circular(2)))),
           const UiText('Theme', variant: UiTextVariant.h4, heading: true),
-          Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          DocGrid(minWidth: 150, minColumns: 2, maxColumns: 3, children: [
             for (final th in UiThemeName.values)
               _ThemeTile(
                 theme: th,
@@ -299,7 +299,6 @@ class _ThemeTile extends StatelessWidget {
       excludeChildSemantics: true,
       padTouchTarget: false,
       builder: (context, s) => Container(
-        width: 160,
         padding: EdgeInsets.all(t.space2),
         decoration: BoxDecoration(
           color: tok.bg,
@@ -307,9 +306,12 @@ class _ThemeTile extends StatelessWidget {
           border: Border.all(color: selected ? t.primary : t.border, width: selected ? 2 : 1),
           boxShadow: s.focused ? t.focusRing : const [],
         ),
-        child: Row(spacing: t.space2, children: [
-          for (final c in [tok.primary, tok.surfaceRaised, tok.text]) Container(width: 12, height: 12, decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: Border.all(color: tok.border))),
-          Expanded(child: Text(themeLabels[theme]!, style: context.uiText.caption.copyWith(color: tok.text), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        // Swatches above the name, so the longest name ("Light Purple Gold") gets the tile's full width.
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space1, children: [
+          Row(spacing: t.space1, children: [
+            for (final c in [tok.primary, tok.surfaceRaised, tok.text]) Container(width: 12, height: 12, decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: Border.all(color: tok.border))),
+          ]),
+          Text(themeLabels[theme]!, style: context.uiText.caption.copyWith(color: tok.text), maxLines: 1, overflow: TextOverflow.ellipsis),
         ]),
       ),
     );

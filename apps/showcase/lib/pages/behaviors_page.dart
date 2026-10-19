@@ -31,6 +31,15 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
     });
   }
 
+  /// The bordered, clipped frame the scrolling demos sit in (the same one the virtual list draws).
+  Widget _box(BuildContext context, Widget child) {
+    final t = context.ui;
+    return DecoratedBox(
+      decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+      child: ClipRRect(borderRadius: BorderRadius.circular(t.radius), child: child),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
@@ -49,6 +58,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
             onSwipeRight: () => setState(() => _tab = (_tab - 1).clamp(0, 2)),
             child: Container(
               height: 120,
+              padding: EdgeInsets.symmetric(horizontal: t.space4),
               decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, spacing: t.space2, children: [
                 UiText(tabs[_tab], variant: UiTextVariant.h4),
@@ -68,7 +78,8 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
           name: 'Infinite scroll',
           widget: 'UiInfiniteScroll',
           summary: 'Wrap a vertical scrollable: onScrolledToEnd fires once when a scroll brings it within threshold px of the end, and again only after it has been scrolled back above that line. It reacts to scrolling, so content shorter than the viewport never triggers it.',
-          demo: SizedBox(
+          // Bordered like the virtual list below, so the scrolling box is visible.
+          demo: _box(context, SizedBox(
             height: 200,
             child: UiInfiniteScroll(
               onScrolledToEnd: _more,
@@ -76,10 +87,10 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
                 itemCount: _rows.length + 1,
                 itemBuilder: (context, i) => i == _rows.length
                     ? Padding(padding: EdgeInsets.all(t.space3), child: Center(child: _loading ? const UiSpinner() : UiText(_rows.length >= 80 ? 'That is everything' : 'Scroll for more', variant: UiTextVariant.caption)))
-                    : Padding(padding: EdgeInsets.symmetric(vertical: t.space2), child: UiText('Message ${_rows[i]}')),
+                    : Padding(padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2), child: UiText('Message ${_rows[i]}')),
               ),
             ),
-          ),
+          )),
           code: 'UiInfiniteScroll(\n  threshold: 120,\n  onScrolledToEnd: loadMore,\n  child: ListView.builder(...),\n)',
           api: const [
             ApiRow('onScrolledToEnd', 'VoidCallback', 'Near the end.'),
@@ -114,7 +125,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
           summary: 'Reports whether its child is on screen: the first state once laid out (false when it starts out of view), then each change as the scroll views around it move. threshold asks for a share of it to be visible, rootMargin grows or shrinks the visible area, once stops after the first true.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             UiText(_visible ? 'The marker is in view' : 'Scroll the box until the marker shows', variant: UiTextVariant.label, color: _visible ? t.success : t.textMuted),
-            SizedBox(
+            _box(context, SizedBox(
               height: 120,
               child: ListView(children: [
                 const SizedBox(height: 200, child: Center(child: UiText('Keep scrolling', variant: UiTextVariant.caption))),
@@ -125,7 +136,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
                 ),
                 const SizedBox(height: 200),
               ]),
-            ),
+            )),
           ]),
           code: 'UiIntersect(\n  threshold: 0.5,\n  onChange: (visible) => ...,\n  child: marker,\n)',
           api: const [
@@ -140,7 +151,8 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
           widget: 'UiCopyToClipboard',
           summary: 'Copies text when its builder\'s copy is called; for 1.5s after a copy the builder gets copied true. The result is announced to screen readers, including a hint to copy by hand if the clipboard refuses.',
           demo: Row(spacing: t.space3, children: [
-            const Expanded(child: UiText('flutter pub add zouriel_ui', variant: UiTextVariant.code)),
+            // A read-only field at the button's height, so the command reads as a value next to its action.
+            const Expanded(child: UiInput(value: 'flutter pub add zouriel_ui', readOnly: true, size: UiSize.sm, semanticLabel: 'Install command')),
             UiCopyToClipboard(
               text: 'flutter pub add zouriel_ui',
               builder: (context, copied, copy) => UiButton(

@@ -50,7 +50,7 @@ class _FormsChoiceSectionsState extends State<FormsChoiceSections> {
         name: 'Checkbox & switch',
         widget: 'UiCheckbox · UiSwitch',
         summary: 'Boolean controls with their label beside them; the whole row is the touch target and Space toggles a focused control. A null value draws the checkbox\'s mixed state (a dash), announced as mixed. The switch is announced as a switch and its thumb springs across. Leave onChanged null to disable either.',
-        demo: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
           UiSwitch(value: _disabled, label: 'Disable the controls below', onChanged: (v) => setState(() => _disabled = v)),
           UiCheckbox(value: _terms, label: 'I agree to the terms', onChanged: enabled ? (v) => setState(() => _terms = v) : null),
           UiCheckbox(value: _news, label: 'Send me the newsletter', invalid: !_news, onChanged: enabled ? (v) => setState(() => _news = v) : null),
@@ -194,10 +194,10 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
         widget: 'UiColorPicker',
         summary: 'A colour well, a hex field and preset swatches; the value is a lower-case #rrggbb string. The hex field passes a colour on only once it is a whole #rgb or #rrggbb (the # optional); leaving the field puts the current colour back. Phones have no native colour dialog, so the well opens a saturation/brightness square over a hue strip.',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
-          UiColorPicker(value: _colour, onChanged: enabled ? (v) => setState(() => _colour = v) : null),
+          UiColorPicker(value: _colour, swatches: const ['#1b3d59', '#6a97c0', '#a83a3f'], onChanged: enabled ? (v) => setState(() => _colour = v) : null),
           Text('Value: $_colour', style: caption),
         ]),
-        code: "UiColorPicker(value: colour, swatches: const ['#1b3d59', '#a83a3f'], onChanged: (hex) => setState(() => colour = hex))",
+        code: "UiColorPicker(value: colour, swatches: const ['#1b3d59', '#6a97c0', '#a83a3f'], onChanged: (hex) => setState(() => colour = hex))",
         api: const [
           ApiRow('value', 'String', 'Hex colour.'),
           ApiRow('onChanged', 'ValueChanged<String>?', 'Lower-case #rrggbb. Null disables it.'),

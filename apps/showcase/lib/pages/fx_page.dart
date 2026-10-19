@@ -169,7 +169,7 @@ class _FxPageState extends State<FxPage> {
                 ]),
               ),
             ),
-            UiButton(label: _grain ? 'Hide grain' : 'Show grain', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _grain = !_grain)),
+            Align(alignment: Alignment.centerLeft, child: UiButton(label: _grain ? 'Hide grain' : 'Show grain', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _grain = !_grain))),
           ]),
           code: 'Stack(children: [\n  UiScrollProgress(child: articleListView),\n  const Positioned.fill(child: UiGrain()),\n])',
           api: const [
@@ -198,10 +198,13 @@ class _FxPageState extends State<FxPage> {
                 ]),
               ),
             ),
-            UiButton(label: 'Replay', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() {
-              _introRun++;
-              _introDone = false;
-            })),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: UiButton(label: 'Replay', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() {
+                _introRun++;
+                _introDone = false;
+              })),
+            ),
           ]),
           code: 'Stack(children: [\n  app,\n  UiIntroLoader(child: logo, onDone: () => ...),\n])',
           api: const [

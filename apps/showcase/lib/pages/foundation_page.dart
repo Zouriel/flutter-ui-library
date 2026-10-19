@@ -40,25 +40,22 @@ class FoundationPage extends StatelessWidget {
           name: 'Themes',
           widget: 'UiThemeController',
           summary: 'Thirteen themes: Winter Dark and Winter Light (the defaults), ten colour palettes, and Dark Orange with its own fonts. Each tile below renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
-          demo: Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          demo: DocGrid(minWidth: 168, minColumns: 2, children: [
             for (final th in UiThemeName.values)
-              SizedBox(
-                width: 168,
-                child: UiThemeScope(
-                  theme: th,
-                  child: Builder(builder: (context) {
-                    final s = context.ui;
-                    return Container(
-                      padding: EdgeInsets.all(s.space3),
-                      decoration: BoxDecoration(border: Border.all(color: s.border), borderRadius: BorderRadius.circular(s.radius)),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: s.space2, children: [
-                        UiText(themeLabels[th]!, variant: UiTextVariant.label),
-                        UiButton(label: 'Button', size: UiSize.sm, onPressed: () {}),
-                        const UiBadge(label: 'Badge', tone: UiStatus.success),
-                      ]),
-                    );
-                  }),
-                ),
+              UiThemeScope(
+                theme: th,
+                child: Builder(builder: (context) {
+                  final s = context.ui;
+                  return Container(
+                    padding: EdgeInsets.all(s.space3),
+                    decoration: BoxDecoration(border: Border.all(color: s.border), borderRadius: BorderRadius.circular(s.radius)),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: s.space2, children: [
+                      UiText(themeLabels[th]!, variant: UiTextVariant.label),
+                      UiButton(label: 'Button', size: UiSize.sm, onPressed: () {}),
+                      const UiBadge(label: 'Badge', tone: UiStatus.success),
+                    ]),
+                  );
+                }),
               ),
           ]),
           code: 'final themes = UiThemeController(theme: UiThemeName.dark);\nUiApp(controller: themes, home: ...);\nthemes.set(UiThemeName.lightTeal);\nthemes.toggle(); // Winter dark <-> light\n\n// A different theme for one part of a page:\nUiThemeScope(theme: UiThemeName.light, child: ...)',

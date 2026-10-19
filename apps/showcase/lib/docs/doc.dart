@@ -146,7 +146,7 @@ class DocDemo extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(t.space4),
       decoration: BoxDecoration(
-        color: t.surfaceSubtle,
+        color: t.surface,
         border: Border.all(color: t.border),
         borderRadius: BorderRadius.vertical(top: Radius.circular(t.radiusSm)),
       ),
@@ -201,6 +201,32 @@ class _DocCodeState extends State<DocCode> {
   }
 }
 
+final _nbsp = String.fromCharCode(0xa0);
+
+/// A type for display: a union only breaks after a `|`, so no line starts with a bare `|` and each
+/// member stays whole (the web docs do the same).
+String unionBreaks(String type) => type.replaceAll(' | ', '$_nbsp| ');
+
+/// Lays [children] out in equal columns that fill the width: as many as fit at [minWidth] each, but
+/// never fewer than [minColumns] (so phones get two tiles a row instead of one with a gap beside it).
+class DocGrid extends StatelessWidget {
+  const DocGrid({super.key, required this.minWidth, this.minColumns = 1, this.maxColumns = 99, required this.children});
+  final double minWidth;
+  final int minColumns;
+  final int maxColumns;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final gap = context.ui.space2;
+    return LayoutBuilder(builder: (context, box) {
+      final cols = ((box.maxWidth + gap) / (minWidth + gap)).floor().clamp(minColumns, maxColumns);
+      final w = (box.maxWidth - gap * (cols - 1)) / cols;
+      return Wrap(spacing: gap, runSpacing: gap, children: [for (final c in children) SizedBox(width: w, child: c)]);
+    });
+  }
+}
+
 /// A compact API table that stacks on phones: each row shows name and type, then the description.
 class ApiTable extends StatelessWidget {
   const ApiTable({super.key, required this.title, required this.rows});
@@ -225,8 +251,8 @@ class ApiTable extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
                   Wrap(spacing: t.space2, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text(rows[i].name, style: context.uiText.code.copyWith(fontSize: 13, color: t.text, fontWeight: FontWeight.w700)),
-                    Text(rows[i].type, style: context.uiText.code.copyWith(fontSize: 12, color: t.primary)),
-                    if (rows[i].def != null) Text('= ${rows[i].def}', style: context.uiText.code.copyWith(fontSize: 12, color: t.textMuted)),
+                    Text(unionBreaks(rows[i].type), style: context.uiText.code.copyWith(fontSize: 12, color: t.primary)),
+                    if (rows[i].def != null) Text('= ${rows[i].def}'.replaceAll(' ', _nbsp), style: context.uiText.code.copyWith(fontSize: 12, color: t.textMuted)),
                   ]),
                   UiText(rows[i].desc, variant: UiTextVariant.caption),
                 ]),

@@ -115,7 +115,7 @@ class _LayoutPageState extends State<LayoutPage> {
               for (var i = 1; i <= 12; i++) Padding(padding: EdgeInsets.symmetric(vertical: t.space1), child: UiText('Row $i')),
             ]),
           ),
-          code: 'UiScrollArea(maxHeight: 240, axis: UiScrollAxis.y, child: list)',
+          code: 'UiScrollArea(maxHeight: 140, axis: UiScrollAxis.y, child: list)',
           api: const [
             ApiRow('maxHeight', 'double', 'Height before it scrolls.', def: '240'),
             ApiRow('axis', 'UiScrollAxis', 'y, x or both.', def: 'y'),

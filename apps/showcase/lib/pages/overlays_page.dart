@@ -17,7 +17,7 @@ const _commands = [
   UiCommand(label: 'Open recent', value: 'recent', group: 'File', icon: UiIcon(HugeIcons.strokeRoundedClock01)),
   UiCommand(label: 'Toggle dark mode', value: 'theme', group: 'View', keywords: 'theme night light', icon: UiIcon(HugeIcons.strokeRoundedMoon02)),
   UiCommand(label: 'Search docs', value: 'docs', group: 'Help', icon: UiIcon(HugeIcons.strokeRoundedSearch01), shortcut: 'Ctrl+K'),
-  UiCommand(label: 'Settings', value: 'settings', icon: Text('S'), shortcut: 'Ctrl+,'),
+  UiCommand(label: 'Settings', value: 'settings', icon: UiIcon(HugeIcons.strokeRoundedSettings01), shortcut: 'Ctrl+,'),
 ];
 
 /// Overlays & dialogs: tooltip, popover, menu, context menu, modal, drawer, confirm, backdrop,
@@ -356,8 +356,8 @@ if (ok == true) delete();''',
           summary: 'A panel resting at the bottom of the screen that is dragged between heights: the mobile stand-in for a sidebar. Put it last in a Stack over the page. Drag or flick the header; dragging the body moves the sheet when the content can\'t use the drag (pulling down at its top, or pushing up while there\'s a taller snap). The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. Non-modal by default: opening it does not move focus and Tab can leave it. With backdrop it is modal while open: the page dims and a tap on it closes the sheet, focus moves to the handle and stays inside, and screen readers can\'t reach the page. Escape (focus inside) and the back button close it; closing sends focus back where it came from. Focusing a text field inside raises it to its tallest snap on a phone, and while the keyboard is up it rests on top of it.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             row([
-              UiButton(label: 'Open half', variant: UiButtonVariant.secondary, onPressed: () => setState(() => _sheetSnap = 1)),
-              UiButton(label: 'Open full', variant: UiButtonVariant.ghost, onPressed: () => setState(() => _sheetSnap = 2)),
+              UiButton(label: 'Open half', variant: UiButtonVariant.outline, onPressed: () => setState(() => _sheetSnap = 1)),
+              UiButton(label: 'Open full', variant: UiButtonVariant.outline, onPressed: () => setState(() => _sheetSnap = 2)),
               UiButton(label: 'With backdrop', variant: UiButtonVariant.outline, onPressed: () => setState(() {
                     _sheetModal = true;
                     _sheetSnap = 1;
@@ -439,8 +439,8 @@ if (ok == true) delete();''',
           summary: 'Transient notifications. Create a UiToastController, put one UiToastHost near the app root (UiApp.builder) so toasts float over every route, then call show(message) or info/success/warning/danger(message, title:) from anywhere; UiToastController.of(context) finds it. Each returns an id; dismiss(id) removes it. Toasts stack at the host\'s position (a corner, or centred on the top or bottom edge), newest last, slide in from that side and back out toward it, can be swiped away sideways, and leave on their own after duration (4 s by default; zero keeps them). The countdown pauses while a finger, the pointer or focus is on a toast and resumes with the time left, at least one more second. Each toast is a live region, so screen readers announce it. For a quick note about something the person just did, like Deleted with Undo, use the snackbar below.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
             row([
-              UiButton(label: 'Success', variant: UiButtonVariant.secondary, onPressed: () => _toasts.success('Changes saved', title: 'Success')),
-              UiButton(label: 'Error', variant: UiButtonVariant.ghost, onPressed: () => _toasts.danger('Could not connect', title: 'Error')),
+              UiButton(label: 'Success', variant: UiButtonVariant.outline, onPressed: () => _toasts.success('Changes saved', title: 'Success')),
+              UiButton(label: 'Error', variant: UiButtonVariant.outline, onPressed: () => _toasts.danger('Could not connect', title: 'Error')),
               UiButton(
                 label: 'With action',
                 variant: UiButtonVariant.outline,
@@ -490,7 +490,7 @@ UiToastAction({required String label, required VoidCallback run})''',
           summary: 'A short note about something the person just did, with at most one action: Deleted with Undo, Grouped, Keyframe added. It is a compact inverted bar centred at the bottom of the screen, the one the form builder uses. Only one shows at a time; a new one replaces it. Put one UiSnackbarHost near the app root (UiApp.builder) and call show(message) on its controller; UiSnackbarController.of(context) finds it. It leaves after 4 s, or 10 s when it has an action so there is time to reach Undo, and holds while a finger, the pointer or focus is on it. offset lifts it above a bottom bar; it also stays above the keyboard. On touch it is one touch target (48dp) tall. Each notice is a live region, so screen readers announce it. Use toasts instead for messages that should stack or carry a tone, such as errors. Editors that place it themselves (the form builder does) can use the bare UiSnackbar.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             row([
-              UiButton(label: 'Simple', variant: UiButtonVariant.secondary, onPressed: () => _snacks.show('Grouped')),
+              UiButton(label: 'Simple', variant: UiButtonVariant.outline, onPressed: () => _snacks.show('Grouped')),
               UiButton(
                 label: 'Deleted, with Undo',
                 variant: UiButtonVariant.outline,
@@ -498,7 +498,7 @@ UiToastAction({required String label, required VoidCallback run})''',
               ),
               UiButton(
                 label: 'With a title',
-                variant: UiButtonVariant.ghost,
+                variant: UiButtonVariant.outline,
                 onPressed: () => _snacks.show('Move or delete that keyframe to trim further.', title: 'Stopped at a keyframe'),
               ),
             ]),

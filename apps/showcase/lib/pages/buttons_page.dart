@@ -51,10 +51,13 @@ class _ButtonsPageState extends State<ButtonsPage> {
               UiButton(label: 'Primary', onPressed: () => setState(() => _count++)),
               UiButton(label: 'Secondary', variant: UiButtonVariant.secondary, onPressed: () {}),
               UiButton(label: 'Outline', variant: UiButtonVariant.outline, onPressed: () {}),
-              UiButton(label: 'Ghost', variant: UiButtonVariant.ghost, onPressed: () {}),
-              UiButton(label: 'Link', variant: UiButtonVariant.link, onPressed: () {}),
               UiButton(label: 'Delete', variant: UiButtonVariant.destructive, onPressed: () {}),
               UiButton(label: 'Get started', variant: UiButtonVariant.brand, onPressed: () {}),
+            ]),
+            // The borderless variants get their own row: wrapped to the start of a line they read as stray text.
+            Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+              UiButton(label: 'Ghost', variant: UiButtonVariant.ghost, onPressed: () {}),
+              UiButton(label: 'Link', variant: UiButtonVariant.link, onPressed: () {}),
             ]),
             Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
               UiButton(label: 'Small', size: UiSize.sm, onPressed: () {}),
@@ -91,12 +94,12 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
           name: 'Icon button',
           widget: 'UiIconButton',
           summary: 'A square, icon-only action. label is required: it is what screen readers announce. Defaults to the ghost variant; round makes it a circle.',
-          demo: Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          demo: Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
             for (final v in [UiButtonVariant.ghost, UiButtonVariant.outline, UiButtonVariant.primary, UiButtonVariant.secondary, UiButtonVariant.destructive])
               UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSettings01), label: 'Settings (${v.name})', variant: v, onPressed: () {}),
             UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedFavourite), label: 'Like', round: true, variant: UiButtonVariant.outline, onPressed: () {}),
             UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedDelete02), label: 'Delete', size: UiSize.lg, onPressed: () {}),
-            const UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedLock), label: 'Locked', onPressed: null),
+            const UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedLockKeyhole), label: 'Locked', onPressed: null),
           ]),
           code: "UiIconButton(\n  icon: UiIcon(HugeIcons.strokeRoundedSettings01),\n  label: 'Settings',\n  onPressed: openSettings,\n)",
           api: const [
@@ -117,7 +120,7 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
             UiButton(label: 'Redo', variant: UiButtonVariant.outline, onPressed: () => _did('Redo')),
             UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSettings01), label: 'History settings', variant: UiButtonVariant.outline, onPressed: () => _did('Settings')),
           ]),
-          code: "UiButtonGroup(label: 'History', children: [\n  UiButton(label: 'Undo', variant: UiButtonVariant.outline, onPressed: undo),\n  UiButton(label: 'Redo', variant: UiButtonVariant.outline, onPressed: redo),\n])",
+          code: "UiButtonGroup(label: 'History', children: [\n  UiButton(label: 'Undo', variant: UiButtonVariant.outline, onPressed: undo),\n  UiButton(label: 'Redo', variant: UiButtonVariant.outline, onPressed: redo),\n  UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSettings01), label: 'History settings', variant: UiButtonVariant.outline, onPressed: openSettings),\n])",
           api: const [
             ApiRow('children', 'List<Widget>', 'The buttons (UiButton or UiIconButton).'),
             ApiRow('label', 'String?', 'Accessible name of the group.'),

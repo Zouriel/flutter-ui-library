@@ -104,14 +104,18 @@ class _WindowPageState extends State<WindowPage> {
                       'A ChangeNotifier every open window registers with. It keeps the stacking order (the last focused window in front), '
                       'count and focusedId, and runs bulk operations; tile() fills the viewport with a grid. Windows use the manager from the '
                       'nearest UiWindowScope, or UiWindowManager.instance when there is none.',
-                  demo: Wrap(
-                    spacing: t.space2,
-                    runSpacing: t.space2,
-                    children: [
-                      UiButton(label: 'Tile', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => _wm.tile()),
-                      UiButton(label: 'Minimize all', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _wm.minimizeAll),
-                      UiButton(label: 'Restore all', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _wm.restoreAll),
-                    ],
+                  // Disabled while no window is open, when they would do nothing.
+                  demo: ListenableBuilder(
+                    listenable: _wm,
+                    builder: (context, _) => Wrap(
+                      spacing: t.space2,
+                      runSpacing: t.space2,
+                      children: [
+                        UiButton(label: 'Tile', variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: _wm.count == 0 ? null : () => _wm.tile()),
+                        UiButton(label: 'Minimize all', variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: _wm.count == 0 ? null : _wm.minimizeAll),
+                        UiButton(label: 'Restore all', variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: _wm.count == 0 ? null : _wm.restoreAll),
+                      ],
+                    ),
                   ),
                   code:
                       'final wm = UiWindowScope.of(context); // or UiWindowManager.instance\n'

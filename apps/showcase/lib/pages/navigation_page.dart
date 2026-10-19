@@ -229,7 +229,8 @@ class _NavigationPageState extends State<NavigationPage> {
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             Row(children: [
               const Expanded(child: UiText('Overflow (phone)', variant: UiTextVariant.caption)),
-              UiMenubar(menus: _menus, onSelect: (i) => setState(() => _menu = i.label)),
+              // A breakpoint wider than any screen, so this one always shows the phone overflow button.
+              UiMenubar(menus: _menus, breakpoint: 100000, onSelect: (i) => setState(() => _menu = i.label)),
             ]),
             Align(alignment: Alignment.centerLeft, child: UiMenubar(menus: _menus, breakpoint: 0, onSelect: (i) => setState(() => _menu = i.label))),
             UiText(_menu == null ? 'Choose a command.' : 'Chose: $_menu', variant: UiTextVariant.caption),
