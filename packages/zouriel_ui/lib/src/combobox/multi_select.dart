@@ -220,7 +220,7 @@ class UiMultiSelectState extends State<UiMultiSelect> {
             invalid: uiFieldInvalid(context, widget.invalid),
             enabled: widget.enabled,
             radius: widget.radius,
-            padding: EdgeInsets.symmetric(horizontal: t.space1, vertical: touch ? 0 : 2),
+            padding: EdgeInsetsDirectional.fromSTEB(t.space1, touch ? 0 : 2, t.space3, touch ? 0 : 2),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: minH - (touch ? 2 : 6)),
               child: Row(children: [
@@ -254,6 +254,13 @@ class UiMultiSelectState extends State<UiMultiSelect> {
                 ),
                 if (widget.clearable && widget.value.isNotEmpty && widget.enabled)
                   SizedBox(height: rowH, child: UiFieldButton(label: 'Clear all', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2))),
+                // The chevron, as on the combobox, centred on the whole field however many rows the chips take.
+                SizedBox(width: t.space1),
+                AnimatedRotation(
+                  turns: _open ? 0.5 : 0,
+                  duration: context.uiAnimate ? t.motionFast : Duration.zero,
+                  child: UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14, strokeWidth: 2, color: t.textMuted),
+                ),
               ]),
             ),
           ),
@@ -299,7 +306,7 @@ class _Chip extends StatelessWidget {
     final hit = touch ? uiMinTouchTarget : 24.0;
     final style = context.uiText.body.copyWith(fontSize: t.fontSizeSm, color: t.text, height: 1.2);
     // The 16px remove circle sits near the chip's end; its hit area reaches past the chip's edge.
-    final overhang = touch ? (hit / 2 - 13).clamp(0.0, double.infinity) : 0.0;
+    final overhang = touch && enabled ? (hit / 2 - 13).clamp(0.0, double.infinity) : 0.0;
     return SizedBox(
       height: height,
       child: Stack(alignment: AlignmentDirectional.centerStart, children: [
@@ -307,7 +314,7 @@ class _Chip extends StatelessWidget {
           padding: EdgeInsetsDirectional.only(end: overhang),
           child: Container(
             height: 22,
-            padding: EdgeInsetsDirectional.only(start: t.space2, end: t.space1),
+            padding: EdgeInsetsDirectional.only(start: t.space2, end: enabled ? t.space1 : t.space2),
             decoration: BoxDecoration(
               color: uiMix(t.primary, 0.18, t.surface),
               border: Border.all(color: t.primary.withValues(alpha: 0.45)),
@@ -315,11 +322,12 @@ class _Chip extends StatelessWidget {
             ),
             child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
               Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style)),
-              const SizedBox(width: 16),
+              if (enabled) const SizedBox(width: 16),
             ]),
           ),
         ),
-        PositionedDirectional(
+        // A disabled field has nothing to remove, so its chips carry no x (as Clear all hides).
+        if (enabled) PositionedDirectional(
           end: 0,
           top: 0,
           bottom: 0,

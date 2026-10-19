@@ -257,7 +257,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
     final r = (widget.radius ?? theme.config.radius) ? t.radiusLg : 0.0;
     Widget panel = DecoratedBox(
       decoration: BoxDecoration(
-        color: isGlass ? t.glassBg : t.surfaceRaised,
+        color: isGlass ? t.glassPanelBg : t.surfaceRaised,
         border: Border.all(color: isGlass ? t.glassBorder : t.border),
         borderRadius: BorderRadius.circular(r),
         boxShadow: t.shadow3,

@@ -151,7 +151,8 @@ class _UiProgressBarState extends State<UiProgressBar> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final fill = widget.tone.color(t);
+    // Neutral is a grey (--ui-progress-neutral), so it never reads as the primary fill.
+    final fill = widget.tone == UiStatus.neutral ? t.progressNeutral : widget.tone.color(t);
     final v = widget.value?.clamp(0, 100).toDouble();
     return Semantics(
       label: widget.label,

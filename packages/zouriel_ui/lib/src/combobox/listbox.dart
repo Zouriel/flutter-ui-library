@@ -115,7 +115,9 @@ class _UiListboxPanelState extends State<UiListboxPanel> {
     Widget row(int i) {
       final item = widget.items[i];
       final active = i == widget.activeIndex;
-      final fill = item.selected
+      // With checkboxes the ticked box marks a chosen row, so the one fill is the active row's and
+      // two fills never compete; a single-choice list tints the chosen row as well.
+      final fill = item.selected && !widget.checkboxes
           ? (active ? uiMix(t.selected, 0.5, t.elevatedHover) : t.selected)
           : active
               ? t.elevatedHover
@@ -139,7 +141,8 @@ class _UiListboxPanelState extends State<UiListboxPanel> {
             padTouchTarget: false,
             builder: (context, s) => Container(
               constraints: BoxConstraints(minHeight: touch ? uiMinTouchTarget : 0),
-              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+              // 4px panel + 8px row padding: the text starts under the field's text.
+              padding: EdgeInsets.all(t.space2),
               alignment: AlignmentDirectional.centerStart,
               decoration: BoxDecoration(color: fill, borderRadius: BorderRadius.circular(theme.radius(t.radiusXs))),
               child: Row(spacing: t.space2, children: [
@@ -166,7 +169,7 @@ class _UiListboxPanelState extends State<UiListboxPanel> {
         ),
         child: widget.items.isEmpty
             ? Padding(
-                padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
+                padding: EdgeInsets.all(t.space3),
                 child: Text(widget.emptyText, style: ty.caption.copyWith(height: 1.35)),
               )
             : ClipRRect(

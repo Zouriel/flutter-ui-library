@@ -144,7 +144,7 @@ class UiDrawer extends StatelessWidget {
 
     Widget panel = DecoratedBox(
       decoration: BoxDecoration(
-        color: isGlass ? t.glassBg : t.surface,
+        color: isGlass ? t.glassPanelBg : t.surface,
         borderRadius: shape,
         border: Border.all(color: isGlass ? t.glassBorder : t.border),
         boxShadow: t.shadow3,

@@ -199,6 +199,13 @@ ${fields.map((f) => `  /// \`${f.n}\`\n  final ${f.type} ${f.name};`).join('\n')
   UiTokens lerp(UiTokens other, double t) => UiTokens(
 ${fields.map((f) => `        ${f.name}: ${lerpExpr(f)},`).join('\n')}
       );
+
+  /// A copy with some tokens replaced (e.g. a theme island's glass).
+  UiTokens copyWith({
+${fields.map((f) => `    ${f.type.endsWith('?') ? f.type : f.type + '?'} ${f.name},`).join('\n')}
+  }) => UiTokens(
+${fields.map((f) => `        ${f.name}: ${f.name} ?? this.${f.name},`).join('\n')}
+      );
 }
 
 /// Resolved tokens for each built-in theme.

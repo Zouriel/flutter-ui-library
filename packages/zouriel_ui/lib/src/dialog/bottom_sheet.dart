@@ -55,6 +55,13 @@ class UiBottomSheet extends StatefulWidget {
   /// Builds your own scrolling content; put [controller] on its scroll view.
   final Widget Function(BuildContext context, ScrollController controller)? builder;
 
+  /// The body padding a [child] gets (12px top and bottom, 16px sides, as in UiModal and UiDrawer).
+  /// A [builder]'s own scroll view should use it too, so its content lines up with the title.
+  static EdgeInsets bodyPadding(BuildContext context) {
+    final t = context.ui;
+    return EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3);
+  }
+
   /// Resting heights as fractions (0 to 1) of the room the sheet has; ascending.
   final List<double> snaps;
   final int snap;
@@ -376,7 +383,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
           if (showHeader)
             Padding(
               // On touch the buttons' 48dp areas already leave room below their visible boxes.
-              padding: EdgeInsetsDirectional.fromSTEB(t.space4, 0, t.space3, touch ? 0 : t.space2),
+              padding: EdgeInsetsDirectional.fromSTEB(t.space4, 0, t.space4, touch ? 0 : t.space2),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 32),
                 child: Row(
@@ -404,7 +411,8 @@ class UiBottomSheetState extends State<UiBottomSheet> {
         : SingleChildScrollView(
             controller: scroll,
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(bottom: bottomPad),
+            // Same body padding as UiModal and UiDrawer, so content lines up with the title.
+            padding: UiBottomSheet.bodyPadding(context).copyWith(bottom: t.space3 + bottomPad),
             child: widget.child,
           );
     return Semantics(

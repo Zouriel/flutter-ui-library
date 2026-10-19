@@ -9,6 +9,7 @@ import '../core/icon.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
+import 'snackbar.dart';
 
 /// Toast tones, the web `UiToastTone`.
 enum UiToastTone { info, success, warning, danger }
@@ -151,11 +152,17 @@ class _UiToastScope extends InheritedWidget {
 ///
 /// Wrap the app's content with it (e.g. in `UiApp.builder`) so toasts float above every route.
 /// Without a [child] it is just the toast layer, filling its parent.
+///
+/// A bottom stack moves up above a snackbar that would otherwise cover it (on a phone both sit at
+/// the bottom): [snackbar], or the nearest [UiSnackbarHost]'s controller.
 class UiToastHost extends StatefulWidget {
-  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomRight, this.child});
+  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomRight, this.snackbar, this.child});
 
   final UiToastController controller;
   final UiToastPosition position;
+
+  /// The snackbar to keep clear of; defaults to [UiSnackbarController.maybeOf].
+  final UiSnackbarController? snackbar;
   final Widget? child;
 
   @override
@@ -171,6 +178,46 @@ class _Entry {
 
 class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin {
   final List<_Entry> _entries = [];
+  final GlobalKey _stack = GlobalKey();
+  UiSnackbarController? _snackbar;
+
+  /// Extra bottom padding that keeps a bottom stack above an overlapping snackbar.
+  double _lift = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _watch(widget.snackbar ?? UiSnackbarController.maybeOf(context));
+  }
+
+  void _watch(UiSnackbarController? c) {
+    if (c == _snackbar) return;
+    _snackbar?.area.removeListener(_clearSnackbar);
+    _snackbar = c;
+    c?.area.addListener(_clearSnackbar);
+    _clearSnackbar();
+  }
+
+  /// Lifts a bottom stack whose column the bar overlaps, so its lowest toast sits 8px above the bar.
+  void _clearSnackbar() {
+    if (!mounted) return;
+    final bar = _snackbar?.area.value;
+    final pos = widget.position;
+    final bottom = pos == UiToastPosition.bottomLeft || pos == UiToastPosition.bottomRight || pos == UiToastPosition.bottomCenter;
+    final box = _stack.currentContext?.findRenderObject() as RenderBox?;
+    var lift = 0.0;
+    if (bar != null && bottom && box != null && box.hasSize) {
+      // The column's horizontal extent depends only on its position and the screen width.
+      final r = box.localToGlobal(Offset.zero) & box.size;
+      if (bar.left < r.right && bar.right > r.left) {
+        final t = context.ui;
+        // Where the lowest toast's bottom edge sits without a lift (the column hugs the bottom).
+        final restingBottom = r.bottom - t.space4;
+        lift = math.max(0, restingBottom - (bar.top - t.space2));
+      }
+    }
+    if (lift != _lift) setState(() => _lift = lift);
+  }
 
   @override
   void initState() {
@@ -182,6 +229,8 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
   @override
   void didUpdateWidget(UiToastHost oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.snackbar != widget.snackbar) _watch(widget.snackbar ?? UiSnackbarController.maybeOf(context));
+    if (oldWidget.position != widget.position) WidgetsBinding.instance.addPostFrameCallback((_) => _clearSnackbar());
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_sync);
       widget.controller.addListener(_sync);
@@ -191,6 +240,7 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _snackbar?.area.removeListener(_clearSnackbar);
     widget.controller.removeListener(_sync);
     for (final e in _entries) {
       e.anim.dispose();
@@ -223,6 +273,8 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
         c.forward();
       }
     });
+    // The column's width follows its toasts (an empty one is narrow), so re-check the snackbar.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _clearSnackbar());
   }
 
   /// A toast swiped away is gone at once (no exit animation: it already left).
@@ -260,9 +312,12 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
         child: Align(
           alignment: alignment,
           child: ConstrainedBox(
+            key: _stack,
             constraints: const BoxConstraints(maxWidth: 380),
-            child: Padding(
-              padding: EdgeInsets.all(t.space4),
+            child: AnimatedPadding(
+              duration: context.uiAnimate ? t.motionBase : Duration.zero,
+              curve: t.easeStandard,
+              padding: EdgeInsets.all(t.space4).copyWith(bottom: t.space4 + _lift),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -419,7 +474,7 @@ class UiToastView extends StatelessWidget {
                 ),
                 if (toast.action != null)
                   UiButton(label: toast.action!.label, variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: onAction),
-                if (onDismiss != null) UiDialogCloseButton(label: 'Dismiss', onPressed: onDismiss!, edgePadding: t.space3),
+                if (onDismiss != null) UiDialogCloseButton(label: 'Dismiss', onPressed: onDismiss!, edgePadding: t.space3, outset: t.space1),
               ],
             ),
           ),

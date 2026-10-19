@@ -117,7 +117,7 @@ class UiModal extends StatelessWidget {
           );
     Widget panel = DecoratedBox(
       decoration: BoxDecoration(
-        color: isGlass ? t.glassBg : t.surface,
+        color: isGlass ? t.glassPanelBg : t.surface,
         borderRadius: BorderRadius.circular(r),
         border: full ? null : Border.all(color: isGlass ? t.glassBorder : t.border),
         boxShadow: full ? null : t.shadow3,
@@ -246,10 +246,14 @@ class UiDialogHeader extends StatelessWidget {
 
 /// The small close button in dialog headers (the web `.x`): 26px, 48dp to the touch.
 class UiDialogCloseButton extends StatelessWidget {
-  const UiDialogCloseButton({super.key, required this.onPressed, this.label = 'Close', this.edgePadding});
+  const UiDialogCloseButton({super.key, required this.onPressed, this.label = 'Close', this.edgePadding, this.outset = 0});
 
   final VoidCallback onPressed;
   final String label;
+
+  /// How far the visible box is pulled past the padding edge. 0 (dialogs, sheets): its right edge
+  /// lines up with the body and footer buttons, 16px in. The toast pulls it 4px out.
+  final double outset;
 
   /// The padding between the button and its container's edge. The button shifts toward the edge
   /// by at most this much, so its touch area never sticks out of the container (and get clipped).
@@ -257,12 +261,10 @@ class UiDialogCloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Pulled out by 4px on each side like the web's negative margin, so the glyph lines up with
-    // the panel padding while the hover box stays generous.
     final t = context.ui;
-    // The invisible part of the 48dp touch area sticks out too; shift it so the visible box sits
+    // The invisible part of the 48dp touch area sticks out; shift it so the visible box sits
     // where the web's does.
-    final shift = math.min(t.space1 + (uiTouchPlatform(context) ? (uiMinTouchTarget - t.sizeSm) / 2 : 0), edgePadding ?? double.infinity);
+    final shift = math.min(outset + (uiTouchPlatform(context) ? (uiMinTouchTarget - t.sizeSm) / 2 : 0), edgePadding ?? double.infinity);
     return Transform.translate(
       offset: Offset(Directionality.of(context) == TextDirection.ltr ? shift : -shift, 0),
       child: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedCancel01), label: label, size: UiSize.sm, onPressed: onPressed),
