@@ -256,10 +256,13 @@ void main() {
       addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
       await pumpUi(tester, const SizedBox(width: 390, child: UiCodeBlock(code: 'final x = 1;\n\tprint(x);', language: 'dart')));
       expect(find.text('DART'), findsOneWidget);
+      // Icon plus label, like the other copy buttons; the icon follows the state.
+      expect(find.byWidgetPredicate((w) => w is UiIcon && w.icon == HugeIcons.strokeRoundedCopy01), findsOneWidget);
       await tester.tap(find.text('Copy'));
       await tester.pump();
       expect(copied, 'final x = 1;\n\tprint(x);');
       expect(find.text('Copied'), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is UiIcon && w.icon == HugeIcons.strokeRoundedTick02), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1600));
       expect(find.text('Copy'), findsOneWidget);
       fail = true;
@@ -274,6 +277,8 @@ void main() {
       expect(tester.getSize(find.byType(UiCodeBlock)).width, 300);
       expect(tester.getSize(find.textContaining('xxxx')).height, lessThan(30));
       expect(tester.takeException(), isNull);
+      // The cut-off right edge fades out.
+      expect(find.descendant(of: find.byType(UiScrollFade), matching: find.byType(ShaderMask)), findsOneWidget);
     });
   });
 

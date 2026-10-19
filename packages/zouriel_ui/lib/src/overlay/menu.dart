@@ -74,8 +74,25 @@ mixin _AnchoredOpenState<W extends StatefulWidget> on State<W> {
   final OverlayPortalController portal = OverlayPortalController();
   bool _open = false;
 
-  /// What had focus when it opened: where Escape (or choosing) sends focus back.
+  /// The trigger's focus: where Escape (or choosing) sends focus back.
   FocusNode? returnTo;
+
+  /// Wraps the trigger, so focus can go back to it even when a mouse click opened the menu and
+  /// nothing had focus.
+  final FocusNode triggerArea = FocusNode(debugLabel: 'menu trigger', canRequestFocus: false, skipTraversal: true);
+
+  @override
+  void dispose() {
+    triggerArea.dispose();
+    super.dispose();
+  }
+
+  /// Whatever in the trigger has focus, else the trigger's first focusable control, else what had focus.
+  FocusNode? _focusToReturn() {
+    final f = FocusManager.instance.primaryFocus;
+    if (f != null && (f == triggerArea || f.ancestors.contains(triggerArea))) return f;
+    return triggerArea.traversalDescendants.firstOrNull ?? f;
+  }
 
   bool? get controlledOpen;
   ValueChanged<bool>? get openChanged;
@@ -84,7 +101,7 @@ mixin _AnchoredOpenState<W extends StatefulWidget> on State<W> {
 
   void setOpen(bool v) {
     if (v == isOpen) return;
-    if (v) returnTo = FocusManager.instance.primaryFocus;
+    if (v) returnTo = _focusToReturn();
     // Rebuild either way, so the portal follows a controlled value that didn't change.
     setState(() => _open = v);
     openChanged?.call(v);
@@ -101,7 +118,7 @@ mixin _AnchoredOpenState<W extends StatefulWidget> on State<W> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (isOpen && !portal.isShowing) {
-        returnTo ??= FocusManager.instance.primaryFocus;
+        returnTo ??= _focusToReturn();
         portal.show();
       } else if (!isOpen && portal.isShowing) {
         portal.hide();
@@ -149,7 +166,7 @@ class _UiMenuState extends State<UiMenu> with _AnchoredOpenState<UiMenu> {
           });
         },
       ),
-      child: widget.builder(context, () => setOpen(!isOpen), isOpen),
+      child: Focus(focusNode: triggerArea, child: widget.builder(context, () => setOpen(!isOpen), isOpen)),
     );
   }
 }

@@ -351,7 +351,7 @@ class UiTokenInputState extends State<UiTokenInput> {
             border: Border.all(color: t.primary.withValues(alpha: 0.45)),
             borderRadius: BorderRadius.circular(t.radiusPill),
           ),
-          child: Text((widget.tokenLabel ?? (s) => s)(token), maxLines: 1, style: style.copyWith(fontSize: size, height: 1.55, color: t.text)),
+          child: Text((widget.tokenLabel ?? (s) => s)(token), maxLines: 1, style: style.copyWith(fontSize: size, height: 1.55, leadingDistribution: TextLeadingDistribution.even, color: t.text)),
         ),
       ),
     );

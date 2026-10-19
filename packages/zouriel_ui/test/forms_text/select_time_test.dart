@@ -56,7 +56,43 @@ String? _familyOf(WidgetTester tester, String text) {
 
 void main() {
   group('select', () {
-    testWidgets('shows the placeholder, opens on tap, picks an option and closes', (tester) async {
+    testWidgets('opening a long list scrolls only the list to the chosen row, never the page', (tester) async {
+    final page = ScrollController();
+    final many = [for (var i = 1; i <= 40; i++) UiSelectOption(label: 'Option $i', value: '$i')];
+    await pumpUi(
+      tester,
+      SingleChildScrollView(
+        controller: page,
+        // In a scrolling panel inside the scrolling page (an inspector), where the page used to jump.
+        child: Column(children: [
+          const SizedBox(height: 500),
+          SizedBox(
+            height: 400,
+            child: SingleChildScrollView(child: Column(children: [const SizedBox(height: 300), _Sel(initial: '30', options: many, log: []), const SizedBox(height: 600)])),
+          ),
+          const SizedBox(height: 900),
+        ]),
+      ),
+    );
+    page.jumpTo(400);
+    await tester.pump();
+    await tester.tap(find.byType(UiSelect));
+    await tester.pumpAndSettle();
+    expect(page.offset, 400);
+    final list = find.descendant(of: find.byType(UiListboxPanel), matching: find.byType(Scrollable));
+    expect(tester.state<ScrollableState>(list).position.pixels, greaterThan(0));
+    final row = tester.getRect(find.text('Option 30').last), box = tester.getRect(list);
+    expect(box.contains(row.center), isTrue);
+    // The keyboard moves the active row; the page stays put.
+    for (var i = 0; i < 8; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.pumpAndSettle();
+    expect(page.offset, 400);
+    expect(box.contains(tester.getRect(find.text('Option 38')).center), isTrue);
+  });
+
+  testWidgets('shows the placeholder, opens on tap, picks an option and closes', (tester) async {
       final handle = tester.ensureSemantics();
       final log = <String>[];
       await pumpUi(tester, _Sel(log: log));

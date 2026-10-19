@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart' show RenderAbstractViewport;
 import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
@@ -62,6 +63,22 @@ class UiListboxPanel extends StatefulWidget {
   State<UiListboxPanel> createState() => _UiListboxPanelState();
 }
 
+/// Scrolls [list] (and nothing else) so [row] is in view: just enough, or centred with [center].
+/// Scrollable.ensureVisible would also scroll every scrollable above it, and an overlay list's
+/// ancestors include the page under the field, which then jumps.
+void uiRevealInList(BuildContext row, ScrollController list, {bool center = false}) {
+  final ro = row.findRenderObject();
+  if (ro == null || !ro.attached || !list.hasClients) return;
+  final pos = list.position;
+  // Only when the row really sits in this list (a short list may have no scroll view of its own).
+  if (!identical(Scrollable.maybeOf(row)?.position, pos)) return;
+  final vp = RenderAbstractViewport.maybeOf(ro);
+  if (vp == null) return;
+  final top = vp.getOffsetToReveal(ro, 0).offset, bottom = vp.getOffsetToReveal(ro, 1).offset;
+  final to = center ? vp.getOffsetToReveal(ro, 0.5).offset : pos.pixels.clamp(math.min(top, bottom), math.max(top, bottom));
+  pos.jumpTo(to.clamp(pos.minScrollExtent, pos.maxScrollExtent).toDouble());
+}
+
 class _UiListboxPanelState extends State<UiListboxPanel> {
   final ScrollController _scroll = ScrollController();
   final Map<int, GlobalKey> _keys = {};
@@ -92,16 +109,7 @@ class _UiListboxPanelState extends State<UiListboxPanel> {
   void _reveal({bool center = false}) {
     if (!mounted) return;
     final ctx = _keys[widget.activeIndex]?.currentContext;
-    if (ctx == null) return;
-    Scrollable.ensureVisible(
-      ctx,
-      alignment: center ? 0.5 : 0,
-      alignmentPolicy: center ? ScrollPositionAlignmentPolicy.explicit : ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      duration: Duration.zero,
-    );
-    if (!center) {
-      Scrollable.ensureVisible(ctx, alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart, duration: Duration.zero);
-    }
+    if (ctx != null) uiRevealInList(ctx, _scroll, center: center);
   }
 
   @override

@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'tokens.dart';
 
-export 'tokens.dart' show UiGradientSpec, UiThemeName, UiTokens, uiThemeTokens;
+export 'tokens.dart' show UiGradientSpec, UiRingShadow, UiThemeName, UiTokens, uiThemeTokens;
 
 /// The package that ships the bundled fonts (Space Grotesk, Bricolage Grotesque, JetBrains Mono).
 const String uiFontPackage = 'zouriel_ui';

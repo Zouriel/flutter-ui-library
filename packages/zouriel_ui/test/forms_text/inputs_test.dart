@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -50,6 +51,19 @@ void main() {
     await tester.tap(find.byType(EditableText));
     await tester.pumpAndSettle();
     expect(tester.widget<UiFieldFrame>(find.byType(UiFieldFrame)).focused, isTrue);
+  });
+
+  testWidgets('input: selection handles only after a touch, never after a mouse click', (tester) async {
+    await pumpUi(tester, const SizedBox(width: 300, child: UiInput(value: 'Ada Lovelace', semanticLabel: 'Name')));
+    bool handles() => tester.widget<EditableText>(find.byType(EditableText)).showSelectionHandles;
+    final field = tester.getRect(find.byType(EditableText));
+    await tester.tapAt(field.centerLeft + const Offset(20, 0));
+    await tester.pumpAndSettle();
+    expect(handles(), isTrue);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tapAt(field.centerLeft + const Offset(60, 0), kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(handles(), isFalse);
   });
 
   testWidgets('input: disabled ignores taps and is half opacity', (tester) async {

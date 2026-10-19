@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -92,9 +93,15 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
     if (e is! PointerScrollEvent) return;
     final k = HardwareKeyboard.instance;
     if (k.isControlPressed || k.isMetaPressed) return;
-    // Claimed even with no page to scroll, so InteractiveViewer never zooms on a plain wheel.
+    // InteractiveViewer zooms on every wheel event without asking the resolver, so this runs
+    // before it (see _SignalFirst), keeps the view as it was, and puts it back once the event has
+    // been handled; the wheel then scrolls the page around the viewer instead.
+    final keep = _view.value.clone();
     final page = Scrollable.maybeOf(context)?.position;
-    GestureBinding.instance.pointerSignalResolver.register(e, (ev) => page?.pointerScroll((ev as PointerScrollEvent).scrollDelta.dy));
+    GestureBinding.instance.pointerSignalResolver.register(e, (ev) {
+      _view.value = keep;
+      page?.pointerScroll((ev as PointerScrollEvent).scrollDelta.dy);
+    });
   }
 
   void _zoomBy(double d, Size stage) {
@@ -213,16 +220,16 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
             color: t.bg,
             child: GestureDetector(
               onDoubleTap: () => _scale > 1.01 ? _view.value = Matrix4.identity() : _zoomBy(1, stage),
-              child: InteractiveViewer(
-                transformationController: _view,
-                minScale: UiPdfViewer.minScale,
-                maxScale: UiPdfViewer.maxScale,
-                boundaryMargin: EdgeInsets.all(stage.shortestSide),
-                constrained: false,
-                // A plain wheel scrolls the page around the viewer, as on the web; InteractiveViewer
-                // would zoom on it and trap the page. Ctrl/Cmd + wheel still zooms.
-                child: Listener(
-                  onPointerSignal: _passWheelToPage,
+              child: _SignalFirst(
+                onSignal: _passWheelToPage,
+                child: InteractiveViewer(
+                  transformationController: _view,
+                  minScale: UiPdfViewer.minScale,
+                  maxScale: UiPdfViewer.maxScale,
+                  boundaryMargin: EdgeInsets.all(stage.shortestSide),
+                  constrained: false,
+                  // A plain wheel scrolls the page around the viewer, as on the web (_SignalFirst
+                  // above); Ctrl/Cmd + wheel still zooms.
                   child: SizedBox(
                     width: stage.width,
                     height: math.max(stage.height, hgt + pad * 2),
@@ -265,5 +272,38 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
         ],
       );
     }
+  }
+}
+
+/// Hands pointer signals (the wheel) to [onSignal] before anything below it sees them: it puts
+/// itself first in the hit test, where a plain [Listener] comes after its children.
+class _SignalFirst extends SingleChildRenderObjectWidget {
+  const _SignalFirst({required this.onSignal, super.child});
+
+  final PointerSignalEventListener onSignal;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSignalFirst(onSignal);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderSignalFirst renderObject) => renderObject.onSignal = onSignal;
+}
+
+class _RenderSignalFirst extends RenderProxyBox {
+  _RenderSignalFirst(this.onSignal);
+
+  PointerSignalEventListener onSignal;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!size.contains(position)) return false;
+    result.add(BoxHitTestEntry(this, position));
+    hitTestChildren(result, position: position);
+    return true;
+  }
+
+  @override
+  void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
+    if (event is PointerSignalEvent) onSignal(event);
   }
 }

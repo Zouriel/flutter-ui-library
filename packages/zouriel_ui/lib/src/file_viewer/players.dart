@@ -203,7 +203,6 @@ class _Controls extends StatelessWidget {
     final v = p.value;
     final ready = v.isInitialized && !host.hasError;
     final time = context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
-    String rate(double r) => '${r == r.roundToDouble() ? r.toInt() : r}×';
     return Container(
       padding: EdgeInsets.all(t.space2),
       decoration: BoxDecoration(color: t.surfaceRaised, border: Border(top: BorderSide(color: t.border))),
@@ -226,7 +225,7 @@ class _Controls extends StatelessWidget {
           onPressed: ready ? () => p.setVolume(v.volume == 0 ? 1 : 0) : null,
         ),
         _RateButton(
-          text: rate(v.playbackSpeed),
+          rate: v.playbackSpeed,
           onTap: ready ? () => p.setPlaybackSpeed(_rates[(_rates.indexOf(v.playbackSpeed) + 1) % _rates.length]) : null,
         ),
         if (onFullscreen != null || fullscreen)
@@ -243,8 +242,8 @@ class _Controls extends StatelessWidget {
 
 /// Playback speed: a compact text button that steps 1× → 1.5× → 2× → 0.5×.
 class _RateButton extends StatelessWidget {
-  const _RateButton({required this.text, required this.onTap});
-  final String text;
+  const _RateButton({required this.rate, required this.onTap});
+  final double rate;
   final VoidCallback? onTap;
 
   @override
@@ -253,7 +252,7 @@ class _RateButton extends StatelessWidget {
     return UiInteractive(
       onTap: onTap,
       enabled: onTap != null,
-      semanticLabel: 'Playback speed $text',
+      semanticLabel: 'Playback speed ${rate == rate.roundToDouble() ? rate.toInt() : rate}×',
       excludeChildSemantics: true,
       builder: (context, s) => AnimatedContainer(
         duration: context.uiAnimate ? t.motionBase : Duration.zero,
@@ -267,7 +266,7 @@ class _RateButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(t.radiusXs),
           boxShadow: uiFocusRing(t, show: s.focused),
         ),
-        child: Text(text, style: context.uiText.caption.copyWith(color: t.text, fontFeatures: const [FontFeature.tabularFigures()])),
+        child: uiRateLabel(rate, context.uiText.caption.copyWith(color: t.text, fontFeatures: const [FontFeature.tabularFigures()])),
       ),
     );
   }

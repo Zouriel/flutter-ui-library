@@ -149,7 +149,7 @@ class _UiChipInputState extends State<UiChipInput> {
             boxShadow: !focused
                 ? const []
                 : widget.invalid
-                    ? [BoxShadow(color: t.danger, spreadRadius: 4), BoxShadow(color: t.bg, spreadRadius: 2)]
+                    ? [UiRingShadow(color: t.danger, spread: 4), UiRingShadow(color: t.bg, spread: 2)]
                     : t.focusRing,
           ),
           child: LayoutBuilder(builder: (context, c) {

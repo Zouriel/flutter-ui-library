@@ -155,3 +155,13 @@ class _SeekPainter extends CustomPainter {
   bool shouldRepaint(_SeekPainter o) =>
       o.played != played || o.loaded != loaded || o.thick != thick || o.knob != knob || o.track != track || o.fill != fill || o.buffer != buffer || o.ring != ring;
 }
+
+/// A playback-speed label ("1.5×") that keeps the width of the widest rate, so stepping through the
+/// rates never nudges the controls beside it.
+Widget uiRateLabel(double rate, TextStyle style) {
+  final text = '${rate == rate.roundToDouble() ? rate.toInt() : rate}×';
+  return Stack(alignment: Alignment.center, children: [
+    ExcludeSemantics(child: Opacity(opacity: 0, child: Text('0.5×', style: style))),
+    Text(text, style: style),
+  ]);
+}
