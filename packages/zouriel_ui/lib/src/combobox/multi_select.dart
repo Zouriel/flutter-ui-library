@@ -253,7 +253,7 @@ class UiMultiSelectState extends State<UiMultiSelect> {
                   ),
                 ),
                 if (widget.clearable && widget.value.isNotEmpty && widget.enabled)
-                  SizedBox(height: rowH, child: UiFieldButton(label: 'Clear all', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2))),
+                  SizedBox(height: rowH, child: UiFieldButton(label: context.uiStrings.clearAll, visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2))),
                 // The chevron, as on the combobox, centred on the whole field however many rows the chips take.
                 SizedBox(width: t.space1),
                 AnimatedRotation(

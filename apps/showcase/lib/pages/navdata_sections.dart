@@ -88,7 +88,8 @@ class _TableSectionState extends State<_TableSection> {
         ApiRow('columns', 'List<UiColumn<T>>', 'key, header, sortable, align, value (reader), format.'),
         ApiRow('data', 'List<T>', 'Rows; maps are read by column key.'),
         ApiRow('selectable', 'bool', 'Adds a checkbox column.', def: 'false'),
-        ApiRow('actions', 'List<UiRowAction<T>>', 'label, run, disabled(row), semanticLabel(row).'),
+        ApiRow('actions', 'List<UiRowAction<T>>', 'label, run, disabled(row), semanticLabel(row). space2 apart at the row end.'),
+        ApiRow('UiRowActions', 'widget: children, align (start / end)', 'For a table you build yourself: a row\'s buttons space2 apart at the end, wrapping when narrow.'),
         ApiRow('emptyText', 'String', 'Shown with no rows.', def: "'No data'"),
         ApiRow('onSelectionChanged', 'ValueChanged<List<T>>?', 'The selected rows after each change.'),
       ],
@@ -304,16 +305,23 @@ class _TimelineSection extends StatelessWidget {
   Widget build(BuildContext context) => DocSection(
         name: 'Timeline',
         widget: 'UiTimeline',
-        summary: 'A vertical sequence of events joined by a line, read as a list. Each event has a tone-coloured dot, or with an icon a 20px marker; a title with optional meta (usually a time) and a description. Markers carry a ring in ringColor so the line breaks around them; set it to the colour behind the timeline.',
-        demo: UiTimeline(ringColor: context.ui.surfaceSubtle, items: const [
+        summary: 'A vertical sequence of events joined by a line, read as a list. Each event has a tone-coloured dot, or with an icon a 20px marker; a title with optional meta (usually a time) and a description. Markers carry a ring in ringColor so the line breaks around them; set it to the colour behind the timeline. In a flow give items a state: done (as without one), current (read as the current step, with a halo) or upcoming (muted, with a hollow dot).',
+        demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space6, children: [UiTimeline(ringColor: context.ui.surfaceSubtle, items: const [
           UiTimelineItem(title: 'Order placed', meta: '09:12', description: 'Two items, paid by card'),
           UiTimelineItem(title: 'Payment confirmed', meta: '09:13', tone: UiStatus.success, icon: HugeIcons.strokeRoundedTick02),
           UiTimelineItem(title: 'Address check', meta: '10:40', tone: UiStatus.warning, description: 'Waiting on the courier'),
           UiTimelineItem(title: 'Delivered', tone: UiStatus.neutral),
         ]),
+          UiTimeline(ringColor: context.ui.surfaceSubtle, items: const [
+            UiTimelineItem(title: 'Request sent', meta: '09:12', state: UiTimelineItemState.done),
+            UiTimelineItem(title: 'Nurse assigned', meta: '09:20', description: 'Aminath Hassan, RN', state: UiTimelineItemState.done),
+            UiTimelineItem(title: 'On the way', meta: 'Now', state: UiTimelineItemState.current),
+            UiTimelineItem(title: 'Visit', state: UiTimelineItemState.upcoming),
+          ]),
+        ]),
         code: "UiTimeline(items: [\n  UiTimelineItem(title: 'Order placed', meta: '09:12'),\n  UiTimelineItem(title: 'Paid', tone: UiStatus.success, icon: HugeIcons.strokeRoundedTick02),\n])",
         api: const [
-          ApiRow('items', 'List<UiTimelineItem>', 'title, description, meta, tone, icon.'),
+          ApiRow('items', 'List<UiTimelineItem>', 'title, description, meta, tone, icon, state (UiTimelineItemState: done, current, upcoming).'),
           ApiRow('ringColor', 'Color?', 'Ring around the markers.', def: 'surface'),
         ],
       );

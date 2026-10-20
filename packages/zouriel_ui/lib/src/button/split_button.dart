@@ -25,7 +25,7 @@ class UiSplitButton<T> extends StatelessWidget {
     this.variant = UiButtonVariant.primary,
     this.size = UiSize.md,
     this.radius,
-    this.menuLabel = 'More actions',
+    this.menuLabel,
   });
 
   final String label;
@@ -45,7 +45,8 @@ class UiSplitButton<T> extends StatelessWidget {
   final bool? radius;
 
   /// The caret's accessible name.
-  final String menuLabel;
+  /// The menu button's accessible name; defaults to [UiStrings.moreActions].
+  final String? menuLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +65,7 @@ class UiSplitButton<T> extends StatelessWidget {
       // needs no sideways padding that would open a gap between the halves.
       final button = UiButton(
         icon: UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 14),
-        semanticLabel: menuLabel,
+        semanticLabel: menuLabel ?? context.uiStrings.moreActions,
         variant: v,
         size: size,
         radius: radius,

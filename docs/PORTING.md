@@ -101,6 +101,26 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**0.34.0 additions.** `UiStrings` is `UiConfig.strings` (the web `provideUiStrings`, same keys),
+read with `context.uiStrings`; the web default "Click to upload" is "Tap to upload" here. The old
+`UiFloatingPanel` (the menu and popover surface) is renamed `UiOverlayPanel`, because the web
+`ui-floating-panel` (a card floating over a map) now has that name; no app used the old one. The
+new `UiFloatingPanel` is a `Positioned`, so it goes straight into a Stack. Timeline states: the
+web marks the current step with `aria-current="step"`; Flutter semantics has no such flag, so
+current and upcoming items carry a hint ("Current step", "Upcoming"). `UiRowActions` is a Wrap.
+Buttons, toggle and split buttons, and the switch already had `semanticLabel` here, which is what
+the web's new `ariaLabel` inputs match.
+
+**Page transitions (0.34.0).** `UiPageRoute` takes `transition: UiPageTransition` (fade, the old
+default; slideFromStart; slideFromEnd). The web twin is `uiSlideTransition` on a region or router
+outlet, which uses the View Transitions API: Flutter's equivalent of a view change is a route push,
+so the API lives on the route. The page beneath doesn't move (the web's old view gives way by 30%),
+since a route can't know whether the route covering it slides. The iOS/macOS swipe back is a
+strip on the edge the page slid away from with its own HorizontalDragGestureRecognizer fed from a
+Listener, as in Cupertino; `popGestureEnabled` is checked when a finger lands, not in
+buildTransitions, because it turns false while a gesture runs and checking it there tore the
+detector down mid-swipe. The finger drives the animation linearly until the release settles.
+
 **0.33.1 fixes.** The field placeholder is a `Text`, which merges its style into the ambient
 DefaultTextStyle; that merge re-applied the library's font package to an already resolved family
 ('packages/zouriel_ui/packages/zouriel_ui/Poppins', and an app's 'Faruma' fallback prefixed too). It is

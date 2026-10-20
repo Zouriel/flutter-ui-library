@@ -44,6 +44,38 @@ class _LayoutPageState extends State<LayoutPage> {
       lead: 'Structural primitives: grid, stack, spacer, container, aspect ratio, scroll area, splitter, resize handle, panel section and the sidebar app shell.',
       children: [
         DocSection(
+          name: 'Floating panel',
+          widget: 'UiFloatingPanel',
+          summary: 'A raised surface floating over the bottom (or top) of a Stack: the details card over a map. Put it in the Stack directly. Non-modal: it takes no focus and only its own box takes touches, so what is around it stays usable and draggable. It sits 16px in from the edges plus the safe-area insets, up to 480 wide and centred, so it fits a 390px phone with a 16px gutter. With semanticLabel it is a named container.',
+          demo: SizedBox(
+            height: 260,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(t.radius),
+              child: Stack(children: [
+                Positioned.fill(child: ColoredBox(color: t.surfaceSubtle, child: Center(child: UiText('The map', variant: UiTextVariant.caption)))),
+                UiFloatingPanel(
+                  semanticLabel: 'Nurse',
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: const [
+                    UiText('Aminath Hassan, RN', variant: UiTextVariant.label),
+                    UiText('12 min away · Home visits', variant: UiTextVariant.caption),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+          code: '''Stack(children: [
+  UiMap(...),
+  UiFloatingPanel(semanticLabel: 'Nurse', child: NurseCard()),
+])''',
+          api: const [
+            ApiRow('child', 'Widget', 'The content.'),
+            ApiRow('placement', 'UiFloatingPanelPlacement', 'bottom or top of the Stack.', def: 'bottom'),
+            ApiRow('semanticLabel', 'String?', 'Names it for screen readers.'),
+            ApiRow('maxWidth', 'double', 'Its widest.', def: '480'),
+            ApiRow('glass / radius', 'bool?', 'Default to UiConfig.'),
+          ],
+        ),
+        DocSection(
           name: 'Grid',
           widget: 'UiGrid',
           summary: 'Equal columns with a token gap: a fixed count (columns), or responsive with minColumnWidth, which fits as many columns of at least that width as there is room for (CSS auto-fit: a short last row of items widens to fill). Cells in a row share the row\'s height.',

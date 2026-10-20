@@ -81,7 +81,7 @@ class UiAlert extends StatelessWidget {
                 offset: Offset(t.space1, -t.space1),
                 child: UiInteractive(
                   onTap: onDismiss,
-                  semanticLabel: 'Dismiss',
+                  semanticLabel: context.uiStrings.dismiss,
                   excludeChildSemantics: true,
                   builder: (context, s) => AnimatedContainer(
                     duration: t.motionFast,

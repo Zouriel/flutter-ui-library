@@ -245,6 +245,8 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
           ApiRow('accept', 'String?', 'Web-style list: .pdf,image/png,image/*.'),
           ApiRow('acceptLabel', 'String?', 'What to show instead of accept.'),
           ApiRow('dropEnabled', 'bool', 'Mention drag and drop in the hint.', def: 'false'),
+          ApiRow('label', 'String?', 'The action, in bold.', def: 'strings.uploadLabel (Tap to upload)'),
+          ApiRow('hint', 'String?', 'What follows it with dropEnabled; empty hides it.', def: 'strings.uploadHint (or drag & drop)'),
           ApiRow('enabled', 'bool', 'Disable the zone.', def: 'true'),
         ],
         callbacks: const [

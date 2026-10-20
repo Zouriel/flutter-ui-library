@@ -101,6 +101,12 @@ File: `behaviors/src/ripple.ts`
 - Inputs: `uiRippleDisabled` = false; `uiRippleColor` = 'currentColor'
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiSlideTransition (directive, `[uiSlideTransition]`) (0.34)
+File: `behaviors/src/slide-transition.ts`  
+`uiSlideTransition` — slides a routed or stacked view in from start or end (View Transitions API, with a short fallback); `uiSlideRouteTransition` for the router. Flutter twin: `UiPageRoute(transition: UiPageTransition.slideFromStart / slideFromEnd)`, the Flutter way to change views.  
+- Inputs: `uiSlideTransition`: UiSlideFrom = 'end'; method `run(update, { from?, back? })`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiSwipe (directive, `[uiSwipe]`)
 File: `behaviors/src/swipe.ts`  
 `uiSwipe` — reports a horizontal swipe across the host, and gets out of the way of everything else the finger might have meant. <h4>Why this listens to touch events and not pointer events</h4> <p>Pointer events are the modern, unified API and they are the wrong tool here. A browser does not promote a touch to a pointer event until it knows the touch is not a gesture, and a swipe IS a gesture — so the promotion never happens. Measured on Chromium, the same finger produces:</p> <pre> tap     pointerdown + touchstart ............ pointerup + touchend swipe   touchstart + touchmove x12 + touchend        (no pointer events at all) </pre> <p>Not a `pointercancel` to react to, not a truncated stream to salvage — nothing. Anything built on pointer events can answer a tap and can never answer a swipe. Touch events, by contrast, are delivered in full and uninterrupted throughout, which is exactly why every swipe library worth the name is built on them. So: touch events carry the finger, and pointer events are kept only for the mouse and the pen, which are never subject to that arbitration.</p> <p>Nothing here calls `preventDefault`, and the host is deliberately left with its normal `touch-action`: the page must still scroll down under exactly the same finger, and a strip that scrolls sideways inside it must keep doing that too — which rules out the usual `touch-action: pan-y`, since a descendant cannot take back a direction an ancestor gave away. The drag is instead measured as it happens, against the shared thresholds in {@link isSwipe}, and answered the moment it qualifies. That reads better anyway: the screen turns under the finger rather than after it.</p> <p>It declines far more often than it fires, and that is the point:</p> <ul> <li><b>A second finger</b> cancels the candidate outright. A pinch is not half a swipe.</li> <li><b>The screen's edges</b> belong to the browser — that is where back and forward live on both iOS and Android, and a page that answered there would fire alongside them.</li> <li><b>Anything scrollable sideways</b> under the finger keeps its own drag: a tab strip, a carousel, a wide table. Reaching the end of one is not permission to leave the page.</li> <li><b>Fields, sliders and editable text</b>, which are dragged for their own reasons.</li> <li><b>The mouse</b>, unless asked for. A mouse drag across a page is a text selection, and whoever has one also has the whole navigation on screen.</li> </ul> <p>Anything else can opt out by marking a subtree `data-no-swipe`.</p>  
@@ -1626,3 +1632,15 @@ REST client for the engine (UiWorkflowApi).
 File: `canvas/src/viewport.ts`  
 Pan/zoom surface with fit, minimap and zoom controls.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [ ] showcase (used by the workflow page)
+
+### UiFloatingPanel (component, `ui-floating-panel`) (0.34)
+File: `layout/src/floating-panel.ts`  
+`ui-floating-panel` — a non-modal raised card over the bottom or top of its positioned parent (over a map); safe-area aware, 16px gutter, up to 480px.  
+- Inputs: `placement`: 'bottom' | 'top' = 'bottom'; `ariaLabel`; `glass`; `radius`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiRowActions (component, `ui-row-actions`) (0.34)
+File: `table/src/table.ts`  
+`ui-row-actions` — a row's buttons space-2 apart at the end, wrapping when narrow.  
+- Inputs: `align`: 'start' | 'end' = 'end'
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase

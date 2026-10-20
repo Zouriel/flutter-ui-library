@@ -80,6 +80,24 @@ class _NavigationPageState extends State<NavigationPage> {
           ],
         ),
         DocSection(
+          name: 'Page transition',
+          widget: 'UiPageRoute · UiPageTransition',
+          summary: 'How a pushed page enters. fade (the default) is a short fade with a slight rise; slideFromStart and slideFromEnd slide the page in from that edge and back out to it, following the text direction (start is the left in LTR, the right in RTL). On iOS and macOS a slide follows the swipe back: drag from the edge it slid away from toward the one it came from, past half way or with a flick to go back. Under reduced motion the slides become a plain fade; with the library\'s animations off pages change at once.',
+          demo: Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+            for (final tr in UiPageTransition.values)
+              UiButton(label: tr.name, variant: UiButtonVariant.outline, onPressed: () => Navigator.of(context).push(UiPageRoute<void>(transition: tr, builder: (_) => _TransitionDemoPage(transition: tr, step: 1)))),
+          ]),
+          code: '''Navigator.of(context).push(UiPageRoute<void>(
+  transition: UiPageTransition.slideFromStart, // left in LTR, right in RTL
+  builder: (context) => const NurseListPage(),
+));''',
+          api: const [
+            ApiRow('transition', 'UiPageTransition', 'fade, slideFromStart, slideFromEnd.', def: 'fade'),
+            ApiRow('builder', 'WidgetBuilder', 'The page.'),
+            ApiRow('settings / fullscreenDialog', 'RouteSettings? / bool', 'As on any PageRoute; a fullscreen dialog has no swipe back.', def: 'null / false'),
+          ],
+        ),
+        DocSection(
           name: 'Tabs',
           widget: 'UiTabs · UiTab',
           summary: 'Tabs over panels. One tab stop; Left/Right select the next tab (wrapping, skipping disabled ones), Home/End jump to the ends. The strip scrolls sideways when the tabs do not fit and keeps the selected one in view. Inactive panels stay mounted, so their state survives, but take no space and are hidden from screen readers. A tab may carry a Hugeicons icon; with iconOnly the label stays its accessible name, and an all-icon strip shares the width evenly.',
@@ -311,6 +329,35 @@ class _NavigationPageState extends State<NavigationPage> {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// A page of the Page transition demo: says how it came in and can push the next step the same way.
+class _TransitionDemoPage extends StatelessWidget {
+  const _TransitionDemoPage({required this.transition, required this.step});
+
+  final UiPageTransition transition;
+  final int step;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.all(t.space4),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+          UiText('Step $step', variant: UiTextVariant.h3),
+          UiText('Came in with ${transition.name}. Go back with the button, or on iOS by swiping from the edge.', variant: UiTextVariant.body),
+          Wrap(spacing: t.space2, children: [
+            UiButton(label: 'Back', variant: UiButtonVariant.outline, onPressed: () => Navigator.of(context).pop()),
+            UiButton(
+              label: 'Next step',
+              onPressed: () => Navigator.of(context).push(UiPageRoute<void>(transition: transition, builder: (_) => _TransitionDemoPage(transition: transition, step: step + 1))),
+            ),
+          ]),
+        ]),
+      ),
     );
   }
 }

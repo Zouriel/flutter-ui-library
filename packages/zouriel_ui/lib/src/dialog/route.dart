@@ -45,6 +45,7 @@ class UiDialogRoute<T> extends PopupRoute<T> {
       builder: builder,
       barrierTint: t.overlay,
       dismissible: dismissible,
+      label: context.uiStrings.close,
       duration: animate ? (duration ?? t.motionBase) : Duration.zero,
       reverse: animate ? (reverse ?? t.motionBase) : Duration.zero,
       transitions: transitions,

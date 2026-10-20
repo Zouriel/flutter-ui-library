@@ -78,8 +78,8 @@ class UiPagination extends StatelessWidget {
           items = uiPaginationItems(page, total, --sib);
         }
         final compact = box.maxWidth.isFinite && width(items) > box.maxWidth;
-        final prev = _PageButton(dim: dim, semanticLabel: 'Previous page', onTap: page > 1 ? () => _go(page - 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, size: 14, strokeWidth: 2));
-        final next = _PageButton(dim: dim, semanticLabel: 'Next page', onTap: page < total ? () => _go(page + 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, strokeWidth: 2));
+        final prev = _PageButton(dim: dim, semanticLabel: context.uiStrings.previousPage, onTap: page > 1 ? () => _go(page - 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, size: 14, strokeWidth: 2));
+        final next = _PageButton(dim: dim, semanticLabel: context.uiStrings.nextPage, onTap: page < total ? () => _go(page + 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, strokeWidth: 2));
         return Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
           prev,
           if (compact)

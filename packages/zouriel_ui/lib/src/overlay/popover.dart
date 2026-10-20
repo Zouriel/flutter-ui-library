@@ -113,7 +113,7 @@ class _UiPopoverState extends State<UiPopover> {
           onKeyEvent: _onKey,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 180, maxWidth: 320),
-            child: UiFloatingPanel(
+            child: UiOverlayPanel(
               glass: widget.glass,
               radius: widget.radius,
               origin: origin,

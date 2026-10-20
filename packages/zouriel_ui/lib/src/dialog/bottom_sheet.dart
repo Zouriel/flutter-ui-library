@@ -283,7 +283,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                       opacity: modal ? 1 : 0,
                       duration: context.uiAnimate ? (modal ? t.motionBase : t.motionFast) : Duration.zero,
                       curve: t.easeStandard,
-                      child: UiBackdrop(onTap: modal ? close : null, semanticLabel: modal ? 'Close' : null, opacity: kAlwaysCompleteAnimation),
+                      child: UiBackdrop(onTap: modal ? close : null, semanticLabel: modal ? context.uiStrings.close : null, opacity: kAlwaysCompleteAnimation),
                     ),
                   )
                 : const SizedBox.shrink(),

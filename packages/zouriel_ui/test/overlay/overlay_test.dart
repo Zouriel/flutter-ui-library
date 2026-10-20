@@ -177,11 +177,11 @@ void main() {
       await _place(tester, Alignment.center, KeyedSubtree(key: const Key('a'), child: pop(placement: UiPopoverPlacement.top)));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      expect(tester.getRect(find.byType(UiFloatingPanel)).bottom, lessThanOrEqualTo(tester.getRect(find.text('Close')).top));
+      expect(tester.getRect(find.byType(UiOverlayPanel)).bottom, lessThanOrEqualTo(tester.getRect(find.text('Close')).top));
       await _place(tester, Alignment.bottomLeft, KeyedSubtree(key: const Key('b'), child: pop()));
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      expect(tester.getRect(find.byType(UiFloatingPanel)).bottom, lessThanOrEqualTo(tester.getRect(find.text('Close')).top));
+      expect(tester.getRect(find.byType(UiOverlayPanel)).bottom, lessThanOrEqualTo(tester.getRect(find.text('Close')).top));
     });
 
     testWidgets('controlled: open and onOpenChanged', (tester) async {
@@ -300,7 +300,7 @@ void main() {
       await tester.tap(find.text('Actions'));
       await tester.pumpAndSettle();
       final trigger = tester.getRect(find.byType(UiButton));
-      expect(tester.getRect(find.byType(UiFloatingPanel)).right, closeTo(trigger.right, 0.01));
+      expect(tester.getRect(find.byType(UiOverlayPanel)).right, closeTo(trigger.right, 0.01));
     });
 
     testWidgets('items are 48dp tall on touch and meet the guidelines', (tester) async {
@@ -334,12 +334,12 @@ void main() {
       await _place(tester, Alignment.topLeft, area(log));
       await tester.longPressAt(const Offset(100, 120));
       await tester.pumpAndSettle();
-      final panel = tester.getRect(find.byType(UiFloatingPanel));
+      final panel = tester.getRect(find.byType(UiOverlayPanel));
       expect(panel.topLeft, const Offset(100, 120));
       await tester.tap(find.text('Edit'));
       await tester.pumpAndSettle();
       expect(log, ['edit']);
-      expect(find.byType(UiFloatingPanel), findsNothing);
+      expect(find.byType(UiOverlayPanel), findsNothing);
     });
 
     testWidgets('right-click opens it; it flips and shifts near the corner; a tap outside closes it', (tester) async {
@@ -347,14 +347,14 @@ void main() {
       final p = tester.getBottomRight(find.byKey(const Key('area'))) - const Offset(5, 5);
       await tester.tapAt(p, buttons: kSecondaryMouseButton, kind: PointerDeviceKind.mouse);
       await tester.pumpAndSettle();
-      final panel = tester.getRect(find.byType(UiFloatingPanel));
+      final panel = tester.getRect(find.byType(UiOverlayPanel));
       expect(panel.bottom, lessThanOrEqualTo(844 - 8));
       expect(panel.right, lessThanOrEqualTo(390 - 8));
       expect(panel.bottom, lessThanOrEqualTo(p.dy), reason: 'flipped above the pointer');
       expect(panel.top, lessThan(p.dy - 100));
       await tester.tapAt(const Offset(20, 20));
       await tester.pumpAndSettle();
-      expect(find.byType(UiFloatingPanel), findsNothing);
+      expect(find.byType(UiOverlayPanel), findsNothing);
     });
 
     testWidgets('Escape closes it and gives focus back', (tester) async {
@@ -371,7 +371,7 @@ void main() {
       expect(before.hasPrimaryFocus, isFalse, reason: 'the first item has focus');
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
-      expect(find.byType(UiFloatingPanel), findsNothing);
+      expect(find.byType(UiOverlayPanel), findsNothing);
       expect(before.hasPrimaryFocus, isTrue);
     });
 
@@ -382,7 +382,7 @@ void main() {
       expect(node.getSemanticsData().hasAction(SemanticsAction.longPress), isTrue);
       node.owner!.performAction(node.id, SemanticsAction.longPress);
       await tester.pumpAndSettle();
-      expect(find.byType(UiFloatingPanel), findsOneWidget);
+      expect(find.byType(UiOverlayPanel), findsOneWidget);
       handle.dispose();
     });
   });

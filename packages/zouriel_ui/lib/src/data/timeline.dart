@@ -5,10 +5,18 @@ import '../core/icon.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
 
+/// A timeline item's place in a flow (the web `UiTimelineState`).
+enum UiTimelineItemState { done, current, upcoming }
+
 /// An event in a [UiTimeline].
 @immutable
 class UiTimelineItem {
-  const UiTimelineItem({required this.title, this.description, this.meta, this.tone = UiStatus.primary, this.icon});
+  const UiTimelineItem({required this.title, this.description, this.meta, this.tone = UiStatus.primary, this.icon, this.state});
+
+  /// Where it stands in a flow (a booking's steps). [UiTimelineItemState.done] and null look as they
+  /// always have; current is announced as the current step and gets a halo; upcoming is muted with
+  /// a hollow dot.
+  final UiTimelineItemState? state;
 
   final String title;
   final String? description;
@@ -53,6 +61,12 @@ class UiTimeline extends StatelessWidget {
             Semantics(
               container: true,
               role: SemanticsRole.listItem,
+              // The web's aria-current="step": Flutter has no such flag, so the state is read out.
+              hint: switch (items[i].state) {
+                UiTimelineItemState.current => 'Current step',
+                UiTimelineItemState.upcoming => 'Upcoming',
+                _ => null,
+              },
               child: IntrinsicHeight(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   SizedBox(
@@ -64,8 +78,18 @@ class UiTimeline extends StatelessWidget {
                         child: Container(
                           width: items[i].icon != null ? 20 : 11,
                           height: items[i].icon != null ? 20 : 11,
-                          decoration: BoxDecoration(color: fill(items[i].tone), shape: BoxShape.circle, boxShadow: [BoxShadow(color: ring, spreadRadius: 2)]),
-                          child: items[i].icon == null ? null : Center(child: UiIcon(items[i].icon!, size: 12, strokeWidth: 2, color: on(items[i].tone))),
+                          decoration: BoxDecoration(
+                            color: items[i].state == UiTimelineItemState.upcoming ? t.surface : fill(items[i].tone),
+                            shape: BoxShape.circle,
+                            border: items[i].state == UiTimelineItemState.upcoming ? Border.all(color: t.borderStrong, width: items[i].icon != null ? 1.5 : 2) : null,
+                            boxShadow: [
+                              BoxShadow(color: ring, spreadRadius: 2),
+                              if (items[i].state == UiTimelineItemState.current) BoxShadow(color: t.primary.withValues(alpha: 0.3), spreadRadius: 5),
+                            ],
+                          ),
+                          child: items[i].icon == null
+                              ? null
+                              : Center(child: UiIcon(items[i].icon!, size: 12, strokeWidth: 2, color: items[i].state == UiTimelineItemState.upcoming ? t.textMuted : on(items[i].tone))),
                         ),
                       ),
                     ]),
@@ -77,7 +101,18 @@ class UiTimeline extends StatelessWidget {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text.rich(
                           TextSpan(children: [
-                            TextSpan(text: items[i].title, style: context.uiText.body.copyWith(fontWeight: FontWeight.w500, height: 1.35)),
+                            TextSpan(
+                              text: items[i].title,
+                              style: context.uiText.body.copyWith(
+                                height: 1.35,
+                                fontWeight: switch (items[i].state) {
+                                  UiTimelineItemState.current => FontWeight.w600,
+                                  UiTimelineItemState.upcoming => FontWeight.w400,
+                                  _ => FontWeight.w500,
+                                },
+                                color: items[i].state == UiTimelineItemState.upcoming ? t.textMuted : null,
+                              ),
+                            ),
                             if (items[i].meta != null)
                               TextSpan(
                                 text: '  ${items[i].meta}',

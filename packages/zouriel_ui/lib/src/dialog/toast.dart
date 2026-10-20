@@ -474,7 +474,7 @@ class UiToastView extends StatelessWidget {
                 ),
                 if (toast.action != null)
                   UiButton(label: toast.action!.label, variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: onAction),
-                if (onDismiss != null) UiDialogCloseButton(label: 'Dismiss', onPressed: onDismiss!, edgePadding: t.space3, outset: t.space1),
+                if (onDismiss != null) UiDialogCloseButton(label: context.uiStrings.dismiss, onPressed: onDismiss!, edgePadding: t.space3, outset: t.space1),
               ],
             ),
           ),

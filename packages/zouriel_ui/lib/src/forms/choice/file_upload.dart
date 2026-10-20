@@ -72,7 +72,16 @@ class UiFileUpload extends StatefulWidget {
     this.dropEnabled = false,
     this.enabled = true,
     this.radius,
+    this.label,
+    this.hint,
   });
+
+  /// The action, in bold (the web `label`); defaults to [UiStrings.uploadLabel] ("Tap to upload").
+  final String? label;
+
+  /// What follows it when [dropEnabled] (the web `hint`); defaults to [UiStrings.uploadHint]
+  /// ("or drag & drop"); '' hides it.
+  final String? hint;
 
   /// Null (or [enabled] false) disables the dropzone.
   final UiFilePicker? picker;
@@ -181,8 +190,9 @@ class UiFileUploadState extends State<UiFileUpload> {
                       UiIcon(HugeIcons.strokeRoundedCloudUpload, size: 22, color: t.textMuted),
                       Text.rich(
                         TextSpan(children: [
-                          TextSpan(text: 'Tap to upload', style: const TextStyle(fontWeight: FontWeight.w600)),
-                          if (widget.dropEnabled) const TextSpan(text: ' or drag & drop'),
+                          TextSpan(text: widget.label ?? context.uiStrings.uploadLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          if (widget.dropEnabled && (widget.hint ?? context.uiStrings.uploadHint).isNotEmpty)
+                            TextSpan(text: ' ${widget.hint ?? context.uiStrings.uploadHint}'),
                         ]),
                         textAlign: TextAlign.center,
                         style: body.copyWith(fontSize: t.fontSizeMd, height: 1.35, color: t.text),

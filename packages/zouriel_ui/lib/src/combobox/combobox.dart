@@ -289,7 +289,7 @@ class UiComboboxState extends State<UiCombobox> {
             ),
           ),
           if (showClear)
-            UiFieldButton(label: 'Clear', visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
+            UiFieldButton(label: context.uiStrings.clear, visual: 24, onTap: clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
           SizedBox(width: showClear ? t.space1 : t.space2),
           AnimatedRotation(
             turns: _open ? 0.5 : 0,

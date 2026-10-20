@@ -18,7 +18,7 @@ const String uiDefaultFamily = 'Roboto';
 /// Library-wide defaults, the Flutter twin of the web library's `provideUiConfig`.
 @immutable
 class UiConfig {
-  const UiConfig({this.glass = false, this.radius = true, this.animations = true, this.fontFamily});
+  const UiConfig({this.glass = false, this.radius = true, this.animations = true, this.fontFamily, this.strings = const UiStrings()});
 
   /// Frosted, translucent surfaces on components that support them (navbar, bottom nav, cards).
   final bool glass;
@@ -32,12 +32,54 @@ class UiConfig {
   /// Overrides the theme's default font family.
   final String? fontFamily;
 
-  UiConfig copyWith({bool? glass, bool? radius, bool? animations, String? fontFamily}) => UiConfig(
+  /// The library's built-in words (the web `provideUiStrings`).
+  final UiStrings strings;
+
+  UiConfig copyWith({bool? glass, bool? radius, bool? animations, String? fontFamily, UiStrings? strings}) => UiConfig(
         glass: glass ?? this.glass,
         radius: radius ?? this.radius,
         animations: animations ?? this.animations,
         fontFamily: fontFamily ?? this.fontFamily,
+        strings: strings ?? this.strings,
       );
+}
+
+/// The library's own words: names of icon-only buttons and a few default labels (the web
+/// `UiStrings`, same keys). English by default; give the app's language with
+/// `UiConfig(strings: UiStrings(close: 'ބަންދުކުރޭ', …))` (the rest stay English). Read them with
+/// `context.uiStrings`. Text from the app (titles, labels, items) is never here.
+@immutable
+class UiStrings {
+  const UiStrings({
+    this.close = 'Close',
+    this.dismiss = 'Dismiss',
+    this.clear = 'Clear',
+    this.clearAll = 'Clear all',
+    this.clearSearch = 'Clear search',
+    this.previousPage = 'Previous page',
+    this.nextPage = 'Next page',
+    this.previousMonth = 'Previous month',
+    this.nextMonth = 'Next month',
+    this.chooseDate = 'Choose a date',
+    this.moreActions = 'More actions',
+    this.uploadLabel = 'Tap to upload',
+    this.uploadHint = 'or drag & drop',
+  });
+
+  /// Close buttons of modal, drawer, bottom sheet, lightbox.
+  final String close;
+
+  /// Dismiss buttons of toast, alert, hint.
+  final String dismiss;
+  final String clear, clearAll, clearSearch;
+  final String previousPage, nextPage, previousMonth, nextMonth, chooseDate;
+
+  /// The split button's menu button.
+  final String moreActions;
+
+  /// File upload: the action (in bold; "Tap" on a phone, where the web says "Click") and what
+  /// follows it when drops are enabled.
+  final String uploadLabel, uploadHint;
 }
 
 /// The type scale from the web `ui-text` variants, built from a theme's tokens.
@@ -160,6 +202,9 @@ extension UiThemeContext on BuildContext {
 
   /// Whether motion should play: the library config and the OS "remove animations" setting.
   bool get uiAnimate => UiTheme.of(this).config.animations && !(MediaQuery.maybeDisableAnimationsOf(this) ?? false);
+
+  /// The library's built-in words in effect ([UiConfig.strings]).
+  UiStrings get uiStrings => UiTheme.of(this).config.strings;
 }
 
 /// Animates between themes when [data] changes, the way the web tokens transition.

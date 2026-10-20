@@ -467,3 +467,28 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
+
+/// `ui-row-actions`: the buttons of a row in a table you build yourself (or any small group of
+/// actions): space2 apart so neighbours never touch, at the end of the row (the start with
+/// [align] start), wrapping onto another line when there isn't room. Follows the text direction.
+class UiRowActions extends StatelessWidget {
+  const UiRowActions({super.key, required this.children, this.align = UiRowActionsAlign.end});
+
+  final List<Widget> children;
+  final UiRowActionsAlign align;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Wrap(
+      spacing: t.space2,
+      runSpacing: t.space2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      alignment: align == UiRowActionsAlign.end ? WrapAlignment.end : WrapAlignment.start,
+      children: children,
+    );
+  }
+}
+
+/// Which end of the cell [UiRowActions] sit at.
+enum UiRowActionsAlign { start, end }

@@ -149,7 +149,7 @@ class _UiDatePickerState extends State<UiDatePicker> {
         scopesRoute: true,
         namesRoute: true,
         explicitChildNodes: true,
-        label: 'Choose a date',
+        label: context.uiStrings.chooseDate,
         // Tab stays inside the popover.
         child: FocusScope(
           child: Container(

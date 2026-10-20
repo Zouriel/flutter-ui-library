@@ -7,8 +7,8 @@ import '../theme/theme.dart';
 /// The raised surface that menus, popovers and context menus float on: the web `.ui-menu` /
 /// `.ui-popover` box (raised surface, 1px border, shadow 2), frosted when [glass], square when
 /// [radius] is off. It scales and fades in like the web `ui-scale-in`, from [origin].
-class UiFloatingPanel extends StatelessWidget {
-  const UiFloatingPanel({
+class UiOverlayPanel extends StatelessWidget {
+  const UiOverlayPanel({
     super.key,
     required this.child,
     this.glass,

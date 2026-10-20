@@ -536,7 +536,7 @@ class _UiSearchInputState extends State<UiSearchInput> with UiTextControllerMixi
           ),
           if (controller.text.isNotEmpty)
             UiFieldButton(
-              label: 'Clear search',
+              label: context.uiStrings.clearSearch,
               visual: 20,
               round: true,
               focusable: true,

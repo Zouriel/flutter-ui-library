@@ -287,7 +287,7 @@ class UiMenuPanelState extends State<UiMenuPanel> {
         onKeyEvent: _onKey,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 180),
-          child: UiFloatingPanel(
+          child: UiOverlayPanel(
             glass: widget.glass,
             radius: widget.radius,
             origin: widget.origin,

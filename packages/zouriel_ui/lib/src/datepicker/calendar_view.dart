@@ -332,7 +332,7 @@ class UiCalendarViewState extends State<UiCalendarView> {
     final yearRange = '$pageStart – ${pageStart + 11}';
 
     final (prevLabel, nextLabel) = switch (_mode) {
-      _Mode.days => ('Previous month', 'Next month'),
+      _Mode.days => (context.uiStrings.previousMonth, context.uiStrings.nextMonth),
       _Mode.months => ('Previous year', 'Next year'),
       _Mode.years => ('Previous years', 'Next years'),
     };

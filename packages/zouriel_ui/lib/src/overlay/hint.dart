@@ -288,7 +288,7 @@ class UiHintBubble extends StatelessWidget {
                 SizedBox(width: t.space2),
                 UiInteractive(
                   onTap: onTap,
-                  semanticLabel: 'Dismiss',
+                  semanticLabel: context.uiStrings.dismiss,
                   excludeChildSemantics: true,
                   // The whole bubble is a tap target that dismisses, so the × stays small.
                   padTouchTarget: false,
