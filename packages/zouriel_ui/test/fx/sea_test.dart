@@ -213,11 +213,13 @@ void main() {
   });
 
   group('text effects', () {
-    testWidgets('UiGradientText reads as its text; the tide runs only in maldives', (tester) async {
+    testWidgets('UiGradientText reads as its text; the tide runs only in maldives (day and night)', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpBox(tester, const UiGradientText('Find Doctor'));
       expect(find.bySemanticsLabel('Find Doctor'), findsOneWidget);
       expect(await stillTicking(tester), isTrue);
+      await pumpBox(tester, const UiGradientText('Find Doctor'), theme: UiThemeName.maldivesDark);
+      expect(await stillTicking(tester), isTrue, reason: 'the night variant keeps the tide');
       await pumpBox(tester, const UiGradientText('Find Doctor'), theme: UiThemeName.lightTeal);
       expect(await stillTicking(tester), isFalse, reason: 'other themes draw it still');
       handle.dispose();

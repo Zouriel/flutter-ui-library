@@ -365,7 +365,7 @@ class _FxPageState extends State<FxPage> {
           code: 'UiSeaSurface(\n  coral: UiDecorCorner.bl,\n  palm: UiDecorCorner.br,\n  child: content,\n)',
           api: const [
             ApiRow('child', 'Widget', 'The region content, above the backdrop.'),
-            ApiRow('theme', 'UiThemeName?', 'Theme scoped to the region; null keeps the surrounding theme.', def: 'maldives'),
+            ApiRow('theme', 'UiThemeName?', 'Theme scoped to the region (maldivesDark for the night sea); null keeps the surrounding theme.', def: 'maldives'),
             ApiRow('waves', 'bool', 'Show the wave footer.', def: 'true'),
             ApiRow('waveLayers', 'int', 'Wave bands.', def: '3'),
             ApiRow('waveHeight', 'double', 'Wave footer height.', def: '120'),

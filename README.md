@@ -1,7 +1,7 @@
 # zouriel_ui (Flutter)
 
 The [@zouriel/ui](https://github.com/Zouriel/angular-ui-library) design system for Flutter: the same
-tokens, 14 themes and components as the Angular library, built on Flutter's widgets layer (no
+tokens, 15 themes and components as the Angular library, built on Flutter's widgets layer (no
 Material), accessible, and tested component by component. Web docs for the Angular version:
 <https://zouriel.com/uilib/>.
 
@@ -47,6 +47,11 @@ void main() => runApp(UiApp(
 
 `UiApp` replaces `MaterialApp`. Read tokens with `context.ui`, text styles with `context.uiText`;
 switch themes with a `UiThemeController`; scope a theme with `UiThemeScope`.
+
+The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
+(the web's `maldives` and `maldives-dark`): a night toggle is
+`controller.set(isNight ? UiThemeName.maldivesDark : UiThemeName.maldives)`. `UiSeaSurface` scopes
+`maldives` unless given `theme: UiThemeName.maldivesDark` or `theme: null` (follow the app).
 
 ## Develop
 

@@ -66,6 +66,28 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
+  testWidgets('opened at night (Maldives Dark), the page keeps it, with no switch either way', (tester) async {
+    final c = UiThemeController(theme: UiThemeName.maldivesDark);
+    var switches = 0;
+    c.addListener(() => switches++);
+    final show = ValueNotifier(true);
+    addTearDown(show.dispose);
+    await tester.pumpWidget(UiApp(
+      controller: c,
+      home: ValueListenableBuilder<bool>(valueListenable: show, builder: (_, on, _) => on ? const FindDoctorPage() : const SizedBox()),
+    ));
+    await tester.pump();
+    await tester.pump();
+    expect(c.theme, UiThemeName.maldivesDark);
+    show.value = false;
+    await tester.pump();
+    await tester.pump();
+    expect(c.theme, UiThemeName.maldivesDark);
+    expect(switches, 0);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
+  });
+
   testWidgets('a theme picked while on the page stays after leaving', (tester) async {
     final c = UiThemeController(theme: UiThemeName.dark);
     final show = ValueNotifier(true);

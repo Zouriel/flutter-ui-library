@@ -26,7 +26,8 @@ class _FindDoctorPageState extends State<FindDoctorPage> {
       final c = _controller = mounted ? UiThemeController.maybeOf(context) : null;
       if (c == null) return;
       _previous = c.theme;
-      c.set(UiThemeName.maldives);
+      // Already on a Maldives variant (day or night): keep it.
+      if (c.theme != UiThemeName.maldives && c.theme != UiThemeName.maldivesDark) c.set(UiThemeName.maldives);
     });
   }
 
@@ -120,9 +121,11 @@ class _FindDoctorScreens extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(t.space4, t.space4, t.space4, t.space8),
             child: Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               const UiSunrise(size: 80, child: UiIcon(HugeIcons.strokeRoundedStethoscope02)),
+              // Over the deep water: Sand is a light ink there in maldives and maldivesDark alike
+              // (primaryContrast is the night canvas colour in the dark one).
               Column(spacing: t.space1, children: [
-                Text('Find Doctor', style: context.uiText.h2.copyWith(color: t.primaryContrast, fontWeight: FontWeight.w600)),
-                Text('CARE ACROSS THE ATOLLS', style: context.uiText.caption.copyWith(color: t.primaryContrast, letterSpacing: t.trackingWide * t.fontSizeSm)),
+                Text('Find Doctor', style: context.uiText.h2.copyWith(color: t.sand ?? t.primaryContrast, fontWeight: FontWeight.w600)),
+                Text('CARE ACROSS THE ATOLLS', style: context.uiText.caption.copyWith(color: t.sand ?? t.primaryContrast, letterSpacing: t.trackingWide * t.fontSizeSm)),
               ]),
             ]),
           ),

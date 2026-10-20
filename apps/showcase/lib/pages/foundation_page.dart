@@ -36,7 +36,7 @@ class FoundationPage extends StatelessWidget {
         DocSection(
           name: 'Themes',
           widget: 'UiThemeController',
-          summary: 'Fourteen themes: Winter Dark and Winter Light (the defaults), ten colour palettes, Dark Orange with its own fonts, and Maldives, the light sea theme with Poppins and its own sea backdrops (see Motion & FX). Each tile below renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
+          summary: 'Fifteen themes: Winter Dark and Winter Light (the defaults), ten colour palettes, Dark Orange with its own fonts, and Maldives and Maldives Dark, the sea theme by day and by night with Poppins and its own sea backdrops (see Motion & FX). Each tile below renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
           demo: DocGrid(minWidth: 168, minColumns: 2, children: [
             for (final th in UiThemeName.values)
               UiThemeScope(
@@ -61,7 +61,7 @@ class FoundationPage extends StatelessWidget {
             ApiRow('toggle()', 'method', 'Winter dark and light; from any other theme goes to dark.'),
             ApiRow('setConfig(config)', 'method', 'Change UiConfig (glass, radius, animations, font).'),
           ],
-          shapes: 'enum UiThemeName { dark, light, lightOrange, lightPink, lightTeal, lightPurple,\n  lightPurpleGold, darkPink, darkTeal, darkPurple, goldBlack, goldRed, darkOrange }',
+          shapes: 'enum UiThemeName { dark, light, lightOrange, lightPink, lightTeal, lightPurple,\n  lightPurpleGold, darkPink, darkTeal, darkPurple, goldBlack, goldRed, darkOrange,\n  maldives, maldivesDark }',
         ),
         DocSection(
           name: 'Library defaults',

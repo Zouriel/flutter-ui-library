@@ -21,6 +21,7 @@ const themeLabels = {
   UiThemeName.goldRed: 'Gold Red',
   UiThemeName.darkOrange: 'Dark Orange',
   UiThemeName.maldives: 'Maldives',
+  UiThemeName.maldivesDark: 'Maldives Dark',
 };
 
 /// The showcase frame: a top bar (menu, title, theme picker) over the current page. On a wide
@@ -82,11 +83,11 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
 
     // Stretch, so every page gets the full width: a page that is a Stack of positioned layers (the
     // window system) has nothing to size itself by and would otherwise collapse to zero width.
-    // The maldives theme's fx layer, like the web shell: the tide along the bottom, behind the page.
+    // The maldives themes' fx layer (day and night), like the web shell: the tide along the bottom, behind the page.
     // Always a Stack with a keyed page layer, so switching theme only adds or drops the waves: had the
     // page moved in the tree it would be rebuilt from scratch, and Find Doctor (which switches the
     // theme on opening and back on leaving) then flipped the theme every frame.
-    final sea = widget.controller.theme == UiThemeName.maldives;
+    final sea = widget.controller.theme == UiThemeName.maldives || widget.controller.theme == UiThemeName.maldivesDark;
     final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       bar,
       Expanded(child: Stack(children: [

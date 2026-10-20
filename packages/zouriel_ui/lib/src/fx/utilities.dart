@@ -4,8 +4,11 @@ import '../theme/theme.dart';
 import 'motion.dart';
 
 // The web fx.css utility classes, with the maldives theme's signature motion from
-// theme-animations.css. Only maldives' motion is ported (the tide on the gradient, the shimmer on
+// theme-animations.css. Only maldives' motion (day and night) is ported (the tide on the gradient, the shimmer on
 // the glow); in the other themes these draw still. See docs/PORTING.md.
+
+/// The themes with the sea signature motion: maldives and its night variant.
+bool _seaMotion(UiThemeName name) => name == UiThemeName.maldives || name == UiThemeName.maldivesDark;
 
 /// `.ui-gradient-text`: [text] filled with the theme's brand gradient. In maldives the gradient
 /// washes slowly one way and back (the web `ui-fx-tide`, 14 seconds), at full motion only.
@@ -23,7 +26,7 @@ class UiGradientText extends StatefulWidget {
 class _UiGradientTextState extends State<UiGradientText> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 14));
 
-  bool _tide(BuildContext context) => context.uiTheme.name == UiThemeName.maldives && uiFxMotion(context) == UiFxMotion.full;
+  bool _tide(BuildContext context) => _seaMotion(context.uiTheme.name) && uiFxMotion(context) == UiFxMotion.full;
 
   @override
   void didChangeDependencies() {
@@ -84,7 +87,7 @@ class UiGlow extends StatefulWidget {
 class _UiGlowState extends State<UiGlow> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 8));
 
-  bool _shimmer(BuildContext context) => context.uiTheme.name == UiThemeName.maldives && uiFxMotion(context) == UiFxMotion.full;
+  bool _shimmer(BuildContext context) => _seaMotion(context.uiTheme.name) && uiFxMotion(context) == UiFxMotion.full;
 
   @override
   void didChangeDependencies() {

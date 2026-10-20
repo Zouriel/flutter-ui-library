@@ -14,7 +14,7 @@ void main() {
     expect(dark.sizeMd, 30);
     expect(dark.motionBase, const Duration(milliseconds: 200));
     expect(uiThemeTokens[UiThemeName.darkOrange]!.fontDefault, 'Space Grotesk');
-    expect(uiThemeTokens.length, 14);
+    expect(uiThemeTokens.length, 15);
     // The maldives theme and its brand tokens (theme-maldives.css).
     final m = uiThemeTokens[UiThemeName.maldives]!;
     expect(m.bg, const Color(0xfff3f8fb));
@@ -32,6 +32,20 @@ void main() {
     expect(m.shadow2.single.blurRadius, 16);
     expect(m.icon, const Color(0xff4a90a4));
     expect(uiThemeTokens[UiThemeName.darkOrange]!.icon, isNull, reason: 'only maldives tints icons');
+    // Its night variant (maldives-dark): the same brand tokens re-tuned for a dark page, so Ocean Deep
+    // (the ink) is a light Foam and Mist (the canvas the waves blend into) is the night sea.
+    final n = uiThemeTokens[UiThemeName.maldivesDark]!;
+    expect(n.bg, const Color(0xff071b23));
+    expect(n.mist, n.bg);
+    expect(n.text, const Color(0xffe6f1f3));
+    expect(n.oceanDeep, n.text);
+    expect(n.primary, const Color(0xff6cc0d4));
+    expect(n.lagoon, const Color(0xff5fb4c9));
+    expect(n.coral, const Color(0xffff8a84));
+    expect(n.accentContrast, n.bg);
+    expect(n.fontDefault, 'Poppins');
+    expect(UiThemeData(name: UiThemeName.maldivesDark).brightness, Brightness.dark);
+    expect(UiThemeData(name: UiThemeName.maldives).brightness, Brightness.light);
     // Brand-only tokens are absent elsewhere; the rating fill defaults to the warning colour.
     expect(dark.lagoon, isNull);
     expect(dark.ratingFill, dark.warning);

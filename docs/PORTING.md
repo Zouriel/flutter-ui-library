@@ -43,7 +43,7 @@ flutterUiLib/
 **Tokens and themes.** `tool/gen_tokens.py` reads the Angular `styles/tokens.css`,
 `theme-palettes.css` and `theme-dark-orange.css` and writes `lib/src/theme/tokens.g.dart`: every
 `--ui-color-*`, spacing (1/2/3/4/6/8/12/20 → 4..80 px), radius, size (sm/md/lg/touch), font sizes,
-motion durations and easings, for all 14 themes. `UiTokens` is a `ThemeExtension`-style immutable
+motion durations and easings, for all 15 themes. `UiTokens` is a `ThemeExtension`-style immutable
 class with `lerp` so theme changes animate. Nothing in a widget hard-codes a colour or spacing; a
 test fails on literal `Color(0x...)` in `lib/src` outside the generated file (mirror of the Angular
 style-contract spec).
@@ -100,6 +100,13 @@ as a gradient ebb, `ui-fx-shimmer` as a glow lift: Flutter strengthens the glow 
 filtering brightness). The other palettes' sheen/breathe/aurora motion is still web-only.
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
+
+**Maldives Dark (0.32.0).** The web's `[data-theme="maldives-dark"]` (a second block in
+`theme-maldives.css`) is `UiThemeName.maldivesDark`: `gen_tokens.mjs` camelCases a hyphenated web
+name for the enum value. It has maldives' full token set, the brand tokens included, with values
+for a dark page (`oceanDeep` is the light Foam ink, `mist` the night canvas), and the same sea
+signature motion (`_seaMotion` in `fx/utilities.dart`). `UiSeaSurface` still scopes `maldives` by
+default; pass `theme: UiThemeName.maldivesDark` (or `null` to follow the app) for the night sea.
 
 **Theme icon colour (0.31.0).** The web's `--ui-color-icon` is `UiTokens.icon`, set only by maldives.
 On the web one global rule colours every `hugeicons-icon` with it and filled or state-coloured
