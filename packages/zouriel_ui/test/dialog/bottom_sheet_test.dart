@@ -188,7 +188,10 @@ void main() {
     await tester.tapAt(const Offset(195, 100));
     await tester.pumpAndSettle();
     expect(h.snap, 0);
-    expect(find.byType(UiBackdrop), findsNothing);
+    // Faded out (it stays mounted at 0 so it never brightens again mid-close) and out of the way.
+    expect(find.byType(UiBackdrop).hitTestable(), findsNothing);
+    expect(tester.widget<AnimatedOpacity>(find.ancestor(of: find.byType(UiBackdrop), matching: find.byType(AnimatedOpacity))).opacity, 0);
+    expect(find.semantics.byLabel('Close'), findsNothing);
     expect(page.hasPrimaryFocus, isTrue);
     handle.dispose();
   });

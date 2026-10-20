@@ -17,4 +17,5 @@ export '../forms/text/otp_input.dart';
 export '../forms/text/select.dart';
 export '../forms/text/text_core.dart'
     show UiFieldFrame, UiFieldButton, UiTextEditor, UiTextSelectionControls, uiTextSelectionControls, uiTextContextMenu, UiTextContextMenu, uiFieldTextStyle, uiFieldFontSize, uiDangerRing;
+export '../forms/text/text_dir.dart';
 export '../forms/text/time_picker.dart';

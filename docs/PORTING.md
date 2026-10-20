@@ -101,6 +101,34 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**Field slots, dir and textStyle (0.33.0).** The web `[textarea-leading]` / `[textarea-trailing]`
+(and `[input-…]`) are `leading` / `trailing` widgets. UiInput puts them in a Row inside its fixed-height
+frame, which on touch screens is already laid out 48dp tall, so a slot's UiIconButton gets its full
+touch target. UiTextarea draws the frame behind a Row of [slot, text, slot] aligned to the bottom,
+each slot as tall as the last line box; on touch screens it adds a transparent margin above and
+below (`uiSlotTouchMargin`) because a hit test stops at a widget's bounds, so a 48dp button centred
+on a ~40px line box would otherwise lose taps at its edges. The visible box keeps its height. A tap
+on a slot's empty space focuses the field (a GestureDetector that loses the arena to any button
+inside). `dir` is `UiTextDir` (ltr, rtl, auto: the first strong character, as the web resolves
+`dir="auto"`), applied with a Directionality so the slots swap too. `textStyle` is merged with
+`uiMergeFieldStyle`, not `TextStyle.merge`: merge keeps the base style's package and would turn an
+app font like `'Faruma'` into `'packages/zouriel_ui/Faruma'`. A one-row textarea's text area is
+still shorter than 48dp (as before; the slots are not).
+
+**UiHint (0.33.0).** The web `[uiHint]` directive is a wrapper widget: `open` + `onOpenChanged` for
+the model, `onClosed` for the output. It reuses UiTooltipLayout (preferred side, opposite, then the
+perpendicular ones) with a 10px gap; the layout records the side and the anchor centre's offset in a
+notifier the arrow painter reads, so the arrow keeps pointing at the anchor after a shift. Escape
+comes from a HardwareKeyboard handler that never consumes the key (the hint never has focus), and a
+tap on the anchor from a Listener, which is outside the gesture arena so the anchor's own tap still
+fires. The text is set 30ms after the bubble appears, as on the web, so the live region announces it.
+
+**Dialog close fade (0.33.0).** On the web 0.32 drawer the backdrop's short leave fade ended before
+the panel's slide, Angular (22.2) dropped the leave class, and the backdrop flashed back to full for a
+frame or two. Flutter routes fade the barrier with the route animation, so it can only fall during a
+close (`close_flicker_test.dart` checks drawer and modal frame by frame). UiBottomSheet's backdrop
+used to vanish at once; it now fades out and stays mounted at 0, ignoring touches.
+
 **Maldives Dark (0.32.0).** The web's `[data-theme="maldives-dark"]` (a second block in
 `theme-maldives.css`) is `UiThemeName.maldivesDark`: `gen_tokens.mjs` camelCases a hyphenated web
 name for the enum value. It has maldives' full token set, the brand tokens included, with values

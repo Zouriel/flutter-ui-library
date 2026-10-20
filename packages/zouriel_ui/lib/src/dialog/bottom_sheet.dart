@@ -273,7 +273,21 @@ class UiBottomSheetState extends State<UiBottomSheet> {
       child: Stack(
         children: [
           // Always present, so the sheet below keeps its place in the Stack (and its state).
-          Positioned.fill(child: modal ? UiBackdrop(onTap: close, semanticLabel: 'Close') : const SizedBox.shrink()),
+          // The backdrop fades in and out with the sheet (it used to vanish at once on close), and never
+          // brightens again on the way out: it stays mounted at 0 while closed, ignoring touches.
+          Positioned.fill(
+            child: widget.backdrop
+                ? IgnorePointer(
+                    ignoring: !modal,
+                    child: AnimatedOpacity(
+                      opacity: modal ? 1 : 0,
+                      duration: context.uiAnimate ? (modal ? t.motionBase : t.motionFast) : Duration.zero,
+                      curve: t.easeStandard,
+                      child: UiBackdrop(onTap: modal ? close : null, semanticLabel: modal ? 'Close' : null, opacity: kAlwaysCompleteAnimation),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
           Positioned.fill(
             child: Padding(
               padding: EdgeInsets.only(top: widget.topInset, bottom: _bottom),

@@ -40,6 +40,10 @@ class _OverlaysPageState extends State<OverlaysPage> {
   String _confirmResult = 'not asked';
   String _paletteResult = 'nothing run yet';
   bool _backdrop = false;
+  bool _hint = false;
+  bool _hintSticky = false;
+  UiHintPlacement _hintPlacement = UiHintPlacement.top;
+  String _hintReason = '—';
   int _sheetSnap = 0;
   bool _sheetModal = false;
 
@@ -93,6 +97,49 @@ class _OverlaysPageState extends State<OverlaysPage> {
             ApiRow('position', 'UiTooltipPosition', 'Preferred side: top, bottom, left, right. The opposite side is used when this one has no room.', def: 'top'),
             ApiRow('touchDuration', 'Duration', 'How long it stays after a long-press ends.', def: '1500ms'),
             ApiRow('child', 'Widget', 'What it describes; a single control.'),
+          ],
+        ),
+        DocSection(
+          name: 'Hint',
+          widget: 'UiHint',
+          summary: 'A coachmark: a small callout pointed at its child, opened from code (a first-run tip, "hold to record"). Not a dialog: it is a polite live region, never takes focus and never blocks typing or touches outside it. It closes on a tap on it or on its anchor, on Escape, or after duration (zero keeps it until dismissed), and onClosed says why. It flips to the opposite side, then the perpendicular ones, to stay on screen, and the arrow keeps pointing at the anchor. start and end follow the text direction. Primary colours from the theme; under reduced motion it only fades.',
+          demo: Padding(
+            padding: EdgeInsets.only(top: t.space12),
+            child: row([
+              UiHint(
+                message: 'Hold to record a voice note',
+                open: _hint,
+                placement: _hintPlacement,
+                duration: _hintSticky ? Duration.zero : const Duration(milliseconds: 6000),
+                dismissible: _hintSticky,
+                onOpenChanged: (v) => setState(() => _hint = v),
+                onClosed: (r) => setState(() => _hintReason = r.name),
+                child: UiIconButton(label: 'Record a voice note', variant: UiButtonVariant.outline, onPressed: () {}, icon: const UiIcon(HugeIcons.strokeRoundedMic01)),
+              ),
+              UiButton(label: 'Show hint', size: UiSize.sm, onPressed: () => setState(() => _hint = true)),
+              for (final p in UiHintPlacement.values)
+                UiButton(label: p.name, size: UiSize.sm, variant: _hintPlacement == p ? UiButtonVariant.secondary : UiButtonVariant.ghost, onPressed: () => setState(() => _hintPlacement = p)),
+              UiButton(label: 'Until dismissed, with ×', size: UiSize.sm, variant: _hintSticky ? UiButtonVariant.secondary : UiButtonVariant.ghost, onPressed: () => setState(() => _hintSticky = !_hintSticky)),
+              note('Closed by: $_hintReason'),
+            ]),
+          ),
+          code: '''UiHint(
+  message: 'Hold to record a voice note',
+  open: showHint,
+  onOpenChanged: (v) => setState(() => showHint = v),
+  placement: UiHintPlacement.top,
+  duration: Duration(milliseconds: 6000), // Duration.zero: until dismissed
+  onClosed: (reason) => log(reason),       // timeout, tap or escape
+  child: UiIconButton(label: 'Record', onPressed: record, icon: UiIcon(HugeIcons.strokeRoundedMic01)),
+)''',
+          api: const [
+            ApiRow('message', 'String', 'The hint text.'),
+            ApiRow('open / onOpenChanged', 'bool / ValueChanged<bool>?', 'Set open to show it; it hides itself on closing and calls onOpenChanged(false).', def: 'false'),
+            ApiRow('placement', 'UiHintPlacement', 'top, bottom, start, end (start/end follow the text direction). Flips to the opposite, then the perpendicular sides, to stay on screen.', def: 'top'),
+            ApiRow('duration', 'Duration', 'How long it stays; Duration.zero keeps it until it is tapped or Escape is pressed.', def: '6000ms'),
+            ApiRow('dismissible', 'bool', 'Show a small × ("Dismiss"); it closes with reason tap.', def: 'false'),
+            ApiRow('onClosed', 'ValueChanged<UiHintCloseReason>?', 'It closed by itself or by the person: timeout, tap (on it, its × or its anchor) or escape. Not called when open turns false.'),
+            ApiRow('child', 'Widget', 'The anchor; its own taps still work.'),
           ],
         ),
         DocSection(

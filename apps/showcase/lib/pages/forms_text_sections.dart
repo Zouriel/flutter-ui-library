@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
@@ -52,6 +53,8 @@ class _FormsTextSectionsState extends State<FormsTextSections> {
 
   String _name = 'Ada Lovelace';
   String _bio = '';
+  String _message = '';
+  int _sent = 0;
   num? _qty = 2;
   num? _width = 240;
   String _password = '';
@@ -202,7 +205,71 @@ UiFormField(label: 'Name', error: nameError, child: UiInput(value: name, onChang
           ApiRow('maxRows', 'int', 'With autosize: most lines before it scrolls.', def: '8'),
           ApiRow('maxLength', 'int?', 'The most characters it takes (the web maxlength): typing and pasting stop there.', def: 'null'),
           ApiRow('placeholder', 'String', 'Shown while empty.', def: "''"),
+          ApiRow('dir', 'UiTextDir?', 'Writing direction: ltr, rtl, or auto (follows the first strong character typed). See Field slots.', def: 'null'),
+          ApiRow('textStyle', 'TextStyle?', 'Merged over the field font, e.g. an app font for Thaana with fontFamilyFallback.', def: 'null'),
           _invalidRow, _radiusRow, _enabledRow,
+        ],
+      ),
+      DocSection(
+        name: 'Field slots',
+        widget: 'UiTextarea / UiInput leading, trailing',
+        summary:
+            'Content inside the border of a textarea or input: an icon, or a small UiIconButton to attach or send. leading sits at the inline start and trailing at the inline end, so they swap sides in RTL; on the textarea both are aligned to the last line and stay at the bottom while autosize grows. The text keeps clear of them, the focus ring and the invalid border go round the whole field, a tap on a slot\'s empty space focuses the field (buttons in it take their own taps), and an icon button keeps its 48dp touch target on phones without making the box taller. dir auto follows what is typed, so a Thaana message turns the field right to left; textStyle lets an app type in its own font.',
+        demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+          UiTextarea(
+            value: _message,
+            rows: 1,
+            autosize: true,
+            maxRows: 5,
+            dir: UiTextDir.auto,
+            placeholder: 'Message… (try ދިވެހި)',
+            semanticLabel: 'Message',
+            onChanged: (v) => setState(() => _message = v),
+            leading: UiIconButton(label: 'Attach a file', size: UiSize.sm, onPressed: () {}, icon: const UiIcon(HugeIcons.strokeRoundedAttachment01)),
+            trailing: UiIconButton(
+              label: 'Send',
+              size: UiSize.sm,
+              variant: UiButtonVariant.primary,
+              onPressed: _message.trim().isEmpty ? null : () => setState(() {
+                _sent++;
+                _message = '';
+              }),
+              icon: const UiIcon(HugeIcons.strokeRoundedSent),
+            ),
+          ),
+          Directionality(
+            textDirection: TextDirection.rtl,
+            child: UiTextarea(
+              rows: 1,
+              autosize: true,
+              placeholder: 'ސިޓީ ލިޔުއްވާ…',
+              semanticLabel: 'Message, right to left',
+              leading: UiIconButton(label: 'Attach a file', size: UiSize.sm, onPressed: () {}, icon: const UiIcon(HugeIcons.strokeRoundedAttachment01)),
+              trailing: UiIconButton(label: 'Send', size: UiSize.sm, variant: UiButtonVariant.primary, onPressed: () {}, icon: const UiIcon(HugeIcons.strokeRoundedSent)),
+            ),
+          ),
+          const UiInput(type: UiInputType.email, placeholder: 'you@example.com', semanticLabel: 'Email', leading: UiIcon(HugeIcons.strokeRoundedMail01)),
+          _caption('$_sent sent'),
+        ]),
+        code: '''UiTextarea(
+  value: message,
+  rows: 1,
+  autosize: true,
+  dir: UiTextDir.auto,                       // Thaana typed: right to left
+  textStyle: TextStyle(fontFamily: 'Faruma'), // the app's own font
+  onChanged: setMessage,
+  leading: UiIconButton(label: 'Attach a file', size: UiSize.sm, onPressed: attach,
+      icon: UiIcon(HugeIcons.strokeRoundedAttachment01)),
+  trailing: UiIconButton(label: 'Send', size: UiSize.sm, variant: UiButtonVariant.primary, onPressed: send,
+      icon: UiIcon(HugeIcons.strokeRoundedSent)),
+)
+
+UiInput(leading: UiIcon(HugeIcons.strokeRoundedMail01), semanticLabel: 'Email')''',
+        api: const [
+          ApiRow('leading', 'Widget?', 'Inside the border at the inline start (left in LTR, right in RTL); on the textarea, on the last line.'),
+          ApiRow('trailing', 'Widget?', 'Inside the border at the inline end; on the textarea, on the last line.'),
+          ApiRow('dir', 'UiTextDir?', 'ltr, rtl, or auto (follows the first strong character typed); the slots follow it. null keeps the surrounding Directionality.', def: 'null'),
+          ApiRow('textStyle', 'TextStyle?', 'Merged over the field font (fontFamily, fontFamilyFallback); the app font is used as given.', def: 'null'),
         ],
       ),
       DocSection(

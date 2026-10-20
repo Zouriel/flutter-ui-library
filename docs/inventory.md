@@ -613,7 +613,8 @@ File: `form/src/form-field.ts`
 ### UiInput (component, `ui-input`)
 File: `form/src/input.ts`  
 `ui-input` — single-line text field. Implements ControlValueAccessor so it works with template-driven, reactive, and Signal Forms.  
-- Inputs: `type`: 'text' | 'email' | 'url' | 'tel' | 'password' | 'search' = 'text'; `placeholder` = ''; `inputmode`: string; `autocomplete`: string; `name`: string; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius
+- Inputs: `type`: 'text' | 'email' | 'url' | 'tel' | 'password' | 'search' = 'text'; `placeholder` = ''; `inputmode`: string; `autocomplete`: string; `name`: string; `size`: UiSize = 'md'; `invalid` = false; `radius`: boolean = this.config.radius; `dir`: UiTextDir | null = null (0.33)
+- Slots: `[input-leading]`, `[input-trailing]` (0.33; Flutter `leading` / `trailing`, plus `dir` and `textStyle`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiNumberLabel (directive, `[uiNumberLabel]`)
@@ -681,7 +682,8 @@ File: `form/src/switch.ts`
 ### UiTextarea (component, `ui-textarea`)
 File: `form/src/textarea.ts`  
 `ui-textarea` — multi-line text field (CVA). `autosize` makes it grow with what is typed, from `rows` lines up to `maxRows`, and takes away the drag handle: a comment box people resize by hand is a box that was the wrong size.  
-- Inputs: `placeholder` = ''; `rows` = 4; `autocomplete`: string; `name`: string; `invalid` = false; `radius`: boolean = this.config.radius; `autosize` = false; `maxRows` = 8
+- Inputs: `placeholder` = ''; `rows` = 4; `autocomplete`: string; `name`: string; `invalid` = false; `radius`: boolean = this.config.radius; `autosize` = false; `maxRows` = 8; `dir`: UiTextDir | null = null (0.33)
+- Slots: `[textarea-leading]`, `[textarea-trailing]`, on the last line (0.33; Flutter `leading` / `trailing`, plus `dir` and `textStyle`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTimePicker (component, `ui-time-picker`)
@@ -1373,6 +1375,20 @@ File: `overlay/src/tooltip.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiTooltipPosition` (tooltip.ts)
+
+### UiHintPanel (component, `ui-hint-panel`)
+File: `overlay/src/hint.ts`  
+Internal callout rendered inside the CDK overlay (Flutter `UiHintBubble`).  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiHint (directive, `[uiHint]`) (0.33)
+File: `overlay/src/hint.ts`  
+`uiHint` — a coachmark opened from code: a polite live region pointed at its host, never a dialog, never takes focus. Closes on a tap on it or its anchor, Escape, or a timeout.  
+- Inputs: `uiHint`: string; `uiHintOpen`: boolean (model) = false; `uiHintPlacement`: UiHintPlacement = 'top'; `uiHintDuration` = 6000; `uiHintDismissible` = false
+- Outputs: `uiHintClosed`: UiHintCloseReason
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- types `UiHintPlacement`, `UiHintCloseReason` (hint.ts)
 
 ## pdf-viewer
 

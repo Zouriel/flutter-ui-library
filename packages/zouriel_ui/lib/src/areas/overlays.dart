@@ -2,6 +2,7 @@
 library;
 
 export '../overlay/backdrop.dart';
+export '../overlay/hint.dart';
 export '../overlay/menu.dart';
 export '../overlay/panel.dart';
 export '../overlay/popover.dart';

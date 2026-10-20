@@ -1,4 +1,4 @@
-/// @zouriel/ui for Flutter: token-driven components with 14 themes, built on the widgets layer.
+/// @zouriel/ui for Flutter: token-driven components with 15 themes, built on the widgets layer.
 library;
 
 export 'src/badge/badge.dart';

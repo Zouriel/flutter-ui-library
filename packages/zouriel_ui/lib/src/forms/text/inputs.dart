@@ -9,6 +9,7 @@ import '../../core/types.dart';
 import '../../theme/theme.dart';
 import 'form_field.dart';
 import 'text_core.dart';
+import 'text_dir.dart';
 
 /// The web input `type`s: each picks the matching keyboard (and [password] hides the text).
 enum UiInputType { text, email, url, tel, password, search }
@@ -26,6 +27,12 @@ TextInputType _keyboardFor(UiInputType type) => switch (type) {
 /// Controlled with [value] + [onChanged], or pass a [controller]. [autofillHints] is the web
 /// `autocomplete` (e.g. `[AutofillHints.email]`). Inside a [UiFormField] it takes the field's label
 /// as its accessible name and shows the field's error.
+///
+/// [leading] and [trailing] are content slots inside the border (the web `[input-leading]` /
+/// `[input-trailing]`): an icon or a small [UiIconButton], at the inline start and end (they swap in
+/// RTL), with the text between them. A tap on a slot's empty space focuses the field. [dir] sets the
+/// writing direction ([UiTextDir.auto] follows the text typed), [textStyle] is merged over the field
+/// font (e.g. `TextStyle(fontFamily: 'Faruma')` to type Thaana in the app's own font).
 class UiInput extends StatefulWidget {
   const UiInput({
     super.key,
@@ -47,6 +54,10 @@ class UiInput extends StatefulWidget {
     this.textInputAction,
     this.inputFormatters,
     this.semanticLabel,
+    this.leading,
+    this.trailing,
+    this.dir,
+    this.textStyle,
   });
 
   final String? value;
@@ -54,6 +65,18 @@ class UiInput extends StatefulWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final UiInputType type;
+
+  /// Inside the border at the inline start (the web `[input-leading]`).
+  final Widget? leading;
+
+  /// Inside the border at the inline end (the web `[input-trailing]`).
+  final Widget? trailing;
+
+  /// The writing direction (the web `dir`); null keeps the surrounding [Directionality].
+  final UiTextDir? dir;
+
+  /// Merged over the field's text style (and its placeholder): a font family, `fontFamilyFallback`.
+  final TextStyle? textStyle;
   final String placeholder;
 
   /// The web `inputmode`: overrides the keyboard the [type] picks.
@@ -99,7 +122,11 @@ class _UiInputState extends State<UiInput> with UiTextControllerMixin {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    return ListenableBuilder(
+    final lead = widget.leading, trail = widget.trailing;
+    return UiFieldDirection(
+      dir: widget.dir,
+      controller: controller,
+      child: ListenableBuilder(
       listenable: focusNode,
       builder: (context, _) => UiFieldFrame(
         height: widget.size.height(t),
@@ -107,11 +134,11 @@ class _UiInputState extends State<UiInput> with UiTextControllerMixin {
         invalid: uiFieldInvalid(context, widget.invalid),
         enabled: widget.enabled,
         radius: widget.radius,
-        padding: EdgeInsets.symmetric(horizontal: t.space3),
-        child: UiTextEditor(
+        padding: EdgeInsetsDirectional.only(start: lead != null ? t.space1 : t.space3, end: trail != null ? t.space1 : t.space3),
+        child: _withSlots(t, UiTextEditor(
           controller: controller,
           focusNode: focusNode,
-          style: uiFieldTextStyle(context, widget.size),
+          style: uiMergeFieldStyle(uiFieldTextStyle(context, widget.size), widget.textStyle),
           placeholder: widget.placeholder,
           enabled: widget.enabled,
           readOnly: widget.readOnly,
@@ -124,9 +151,20 @@ class _UiInputState extends State<UiInput> with UiTextControllerMixin {
           onSubmitted: widget.onSubmitted,
           autofocus: widget.autofocus,
           semanticLabel: widget.semanticLabel,
-        ),
+        )),
+      ),
       ),
     );
+  }
+
+  Widget _withSlots(UiTokens t, Widget editor) {
+    final lead = widget.leading, trail = widget.trailing;
+    if (lead == null && trail == null) return editor;
+    return Row(children: [
+      if (lead != null) ...[UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, child: lead), SizedBox(width: t.space2)],
+      Expanded(child: editor),
+      if (trail != null) ...[SizedBox(width: t.space2), UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, child: trail)],
+    ]);
   }
 }
 
@@ -134,6 +172,12 @@ class _UiInputState extends State<UiInput> with UiTextControllerMixin {
 ///
 /// Shows [rows] lines. With [autosize] it grows with the text from [rows] up to [maxRows] lines,
 /// then scrolls; without it, it stays [rows] tall and scrolls.
+///
+/// [leading] and [trailing] are content slots inside the border (the web `[textarea-leading]` /
+/// `[textarea-trailing]`), at the inline start and end (they swap in RTL), aligned to the last line
+/// so they stay at the bottom while it grows. A tap on a slot's empty space focuses the field; a
+/// [UiIconButton] in a slot keeps its 48dp touch target without making the box taller. [dir] and
+/// [textStyle] as on [UiInput].
 class UiTextarea extends StatefulWidget {
   const UiTextarea({
     super.key,
@@ -154,7 +198,23 @@ class UiTextarea extends StatefulWidget {
     this.semanticLabel,
     this.maxLength,
     this.size = UiSize.md,
+    this.leading,
+    this.trailing,
+    this.dir,
+    this.textStyle,
   });
+
+  /// Inside the border at the inline start, on the last line (the web `[textarea-leading]`).
+  final Widget? leading;
+
+  /// Inside the border at the inline end, on the last line (the web `[textarea-trailing]`).
+  final Widget? trailing;
+
+  /// The writing direction (the web `dir`); null keeps the surrounding [Directionality].
+  final UiTextDir? dir;
+
+  /// Merged over the field's text style (and its placeholder): a font family, `fontFamilyFallback`.
+  final TextStyle? textStyle;
 
   final String? value;
   final ValueChanged<String>? onChanged;
@@ -205,16 +265,9 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final style = context.uiText.body.copyWith(fontSize: uiFieldFontSize(t, widget.size), height: 1.5, color: t.text);
-    return ListenableBuilder(
-      listenable: focusNode,
-      builder: (context, _) => UiFieldFrame(
-        focused: focusNode.hasFocus,
-        invalid: uiFieldInvalid(context, widget.invalid),
-        enabled: widget.enabled,
-        radius: widget.radius,
-        padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: widget.size == UiSize.sm ? t.space1 : t.space2),
-        child: UiTextEditor(
+    final style = uiMergeFieldStyle(context.uiText.body.copyWith(fontSize: uiFieldFontSize(t, widget.size), height: 1.5, color: t.text), widget.textStyle);
+    final padY = widget.size == UiSize.sm ? t.space1 : t.space2;
+    final editor = UiTextEditor(
           controller: controller,
           focusNode: focusNode,
           style: style,
@@ -228,7 +281,57 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
           autofocus: widget.autofocus,
           semanticLabel: widget.semanticLabel,
           inputFormatters: widget.maxLength == null ? null : [LengthLimitingTextInputFormatter(widget.maxLength)],
-        ),
+        );
+    final lead = widget.leading, trail = widget.trailing;
+    return UiFieldDirection(
+      dir: widget.dir,
+      controller: controller,
+      child: ListenableBuilder(
+        listenable: focusNode,
+        builder: (context, _) {
+          final invalid = uiFieldInvalid(context, widget.invalid);
+          if (lead == null && trail == null) {
+            return UiFieldFrame(
+              focused: focusNode.hasFocus,
+              invalid: invalid,
+              enabled: widget.enabled,
+              radius: widget.radius,
+              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: padY),
+              child: editor,
+            );
+          }
+          // With slots: the box is drawn behind a row of [slot, text, slot]. The slots are as tall as
+          // the last line (its padding included) and sit at the bottom, so they stay on the line
+          // being typed as the box grows. On touch screens a transparent margin above and below
+          // keeps a slot button's 48dp hit area inside the widget without making the box taller.
+          final lineBox = (style.fontSize ?? t.fontSizeMd) * MediaQuery.textScalerOf(context).scale(1) * 1.5 + 2 * padY;
+          final m = uiSlotTouchMargin(context, lineBox);
+          const border = 1.0;
+          return Opacity(
+            opacity: widget.enabled ? 1 : 0.5,
+            child: Stack(children: [
+              Positioned.fill(
+                top: m,
+                bottom: m,
+                child: UiFieldFrame(focused: focusNode.hasFocus, invalid: invalid, radius: widget.radius, child: const SizedBox.expand()),
+              ),
+              Padding(
+                padding: EdgeInsetsDirectional.only(start: border + (lead != null ? t.space1 : t.space3), end: border + (trail != null ? t.space1 : t.space3)),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  if (lead != null) ...[
+                    UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, height: lineBox + 2 * m, child: lead),
+                    SizedBox(width: t.space2),
+                  ],
+                  Expanded(child: Padding(padding: EdgeInsets.symmetric(vertical: m + border + padY), child: editor)),
+                  if (trail != null) ...[
+                    SizedBox(width: t.space2),
+                    UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, height: lineBox + 2 * m, child: trail),
+                  ],
+                ]),
+              ),
+            ]),
+          );
+        },
       ),
     );
   }
