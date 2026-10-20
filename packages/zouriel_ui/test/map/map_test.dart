@@ -107,6 +107,24 @@ void main() {
     expect(find.byType(ColorFiltered), findsWidgets);
   });
 
+  testWidgets('tile headers keep the User-Agent and work with an offline provider', (tester) async {
+    final tiles = UiMapBlankTiles();
+    await tester.pumpWidget(UiApp(
+      home: SizedBox(
+        width: 390,
+        height: 400,
+        child: UiMap(
+          tileProvider: tiles,
+          tileHeaders: const {'Referer': 'https://example.test/'},
+          userAgentPackageName: 'mv.example.app',
+        ),
+      ),
+    ));
+    await tester.pump();
+    expect(tiles.headers, containsPair('Referer', 'https://example.test/'));
+    expect(tiles.headers, containsPair('User-Agent', 'flutter_map (mv.example.app)'));
+  });
+
   testWidgets('Enter on the focused map in pin mode drops the pin at the centre', (tester) async {
     final h = await _pump(tester, pinMode: true);
     await tester.tapAt(const Offset(200, 200));

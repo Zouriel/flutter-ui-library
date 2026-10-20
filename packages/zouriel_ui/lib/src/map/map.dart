@@ -193,6 +193,8 @@ class UiMapState extends State<UiMap> {
     final motion = uiFxMotion(context);
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final pin = _dragging ?? widget.pin;
+    final tileProvider = widget.tileProvider ?? NetworkTileProvider(headers: {...?widget.tileHeaders});
+    if (widget.tileHeaders != null) tileProvider.headers.addAll(widget.tileHeaders!);
 
     final map = FlutterMap(
       key: _box,
@@ -214,7 +216,7 @@ class UiMapState extends State<UiMap> {
         TileLayer(
           urlTemplate: widget.tileUrl,
           userAgentPackageName: widget.userAgentPackageName,
-          tileProvider: widget.tileProvider ?? (widget.tileHeaders == null ? null : NetworkTileProvider(headers: {...widget.tileHeaders!})),
+          tileProvider: tileProvider,
           tileBuilder: dark ? _dim : null,
         ),
         MarkerLayer(markers: [

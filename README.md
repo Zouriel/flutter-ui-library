@@ -49,7 +49,10 @@ void main() => runApp(UiApp(
 switch themes with a `UiThemeController`; scope a theme with `UiThemeScope`.
 
 The map is a separate library on flutter_map (pinned 8.3.2): `import 'package:zouriel_ui/map.dart';`
-for `UiMap`. Apps that don't import it don't build it in.
+for `UiMap`. Apps that don't import it don't build it in. `UiMapMarker.semanticLabel` names a
+marker without exposing its id; `pinDraggable: false` shows a read-only pin; `tileHeaders` adds
+request headers. Widget tests can pass `UiMapBlankTiles()` to avoid the network without adding
+flutter_map as a direct dependency. Map control words are in `UiStrings`.
 
 The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
 (the web's `maldives` and `maldives-dark`): a night toggle is

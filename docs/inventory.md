@@ -1658,7 +1658,7 @@ Round progress, determinate or turning; centre content slot (Flutter `child`).
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiChatBubble (component, `ui-chat-bubble`) (0.35)
-File: `data/src/chat-bubble.ts`  
+File: `chat-bubble/src/chat-bubble.ts`
 A message: mine at the inline end in primary, theirs at the start on the raised surface; meta line.  
 - Inputs: `mine` = false; `meta`; `ariaLabel`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
@@ -1666,7 +1666,6 @@ A message: mine at the inline end in primary, theirs at the start on the raised 
 ### UiMap (component, `ui-map`) (0.35)
 File: `map/src/map.ts`  
 OpenStreetMap map (Leaflet on the web, flutter_map here) with markers, a draggable pin, themed controls and dimmed dark tiles. Flutter: `package:zouriel_ui/map.dart`.  
-- Inputs: `center`; `zoom`; `markers`; `pin` (model); `pinMode`; `pinLabel`; `tileUrl`; `attribution`; `ariaLabel`
-- Outputs: `markerSelected`; `centerChanged`
+- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `tileUrl`; `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
+- Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
-
