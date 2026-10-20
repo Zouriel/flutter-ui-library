@@ -17,7 +17,11 @@ class UiProgressCircle extends StatefulWidget {
     this.tone = UiStatus.primary,
     this.label = 'Progress',
     this.showValue = false,
+    this.child,
   });
+
+  /// Drawn in the middle instead of the percentage: a countdown's seconds (the web's projected content).
+  final Widget? child;
 
   final double? value;
   final double size;
@@ -93,12 +97,23 @@ class _UiProgressCircleState extends State<UiProgressCircle> with SingleTickerPr
           dimension: widget.size,
           child: Stack(fit: StackFit.expand, children: [
             ring,
-            if (widget.showValue && v != null)
+            if (widget.child != null)
+              Center(
+                child: DefaultTextStyle.merge(
+                  style: context.uiText.label.copyWith(
+                    fontSize: (widget.size * 0.26).clamp(11.0, 32.0),
+                    height: 1,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                  child: widget.child!,
+                ),
+              )
+            else if (widget.showValue && v != null)
               Center(
                 child: Text(
                   '${v.round()}%',
                   style: context.uiText.label.copyWith(
-                    fontSize: (widget.size * 0.26).clamp(9.0, 22.0),
+                    fontSize: (widget.size * 0.26).clamp(11.0, 32.0),
                     height: 1,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),

@@ -19,7 +19,7 @@ List<BoxShadow> uiDangerRing(UiTokens t) => [
 
 /// Text size for a control size: sm / md / lg font tokens.
 double uiFieldFontSize(UiTokens t, UiSize size) =>
-    switch (size) { UiSize.sm => t.fontSizeSm, UiSize.md => t.fontSizeMd, UiSize.lg => t.fontSizeLg };
+    switch (size) { UiSize.sm => t.fontSizeSm, UiSize.md => t.fontSizeMd, UiSize.lg => t.fontSizeLg, UiSize.xl => t.fontSizeLg };
 
 /// The text style fields type in: the theme body font at the size's font size.
 TextStyle uiFieldTextStyle(BuildContext context, UiSize size) {

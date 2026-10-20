@@ -1644,3 +1644,29 @@ File: `table/src/table.ts`
 `ui-row-actions` — a row's buttons space-2 apart at the end, wrapping when narrow.  
 - Inputs: `align`: 'start' | 'end' = 'end'
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiHoldButton (component, `ui-hold-button`) (0.35)
+File: `hold-button/src/hold-button.ts`  
+Press and hold to confirm; a tap, quick Enter or assistive activation opens a confirm dialog.  
+- Inputs: `hold` = 2000; `variant`; `size`: UiButtonSize; `block`; `disabled`; `ariaLabel`; `holdHint`; `confirmTitle`; `confirmMessage`; `confirmLabel`; `destructive`
+- Outputs: `confirmed`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiProgressCircle (component, `ui-progress-circle`) (0.35 on the web)
+File: `progress/src/progress-circle.ts`  
+Round progress, determinate or turning; centre content slot (Flutter `child`).  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiChatBubble (component, `ui-chat-bubble`) (0.35)
+File: `data/src/chat-bubble.ts`  
+A message: mine at the inline end in primary, theirs at the start on the raised surface; meta line.  
+- Inputs: `mine` = false; `meta`; `ariaLabel`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiMap (component, `ui-map`) (0.35)
+File: `map/src/map.ts`  
+OpenStreetMap map (Leaflet on the web, flutter_map here) with markers, a draggable pin, themed controls and dimmed dark tiles. Flutter: `package:zouriel_ui/map.dart`.  
+- Inputs: `center`; `zoom`; `markers`; `pin` (model); `pinMode`; `pinLabel`; `tileUrl`; `attribution`; `ariaLabel`
+- Outputs: `markerSelected`; `centerChanged`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+

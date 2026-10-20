@@ -64,6 +64,10 @@ class UiStrings {
     this.moreActions = 'More actions',
     this.uploadLabel = 'Tap to upload',
     this.uploadHint = 'or drag & drop',
+    this.holdHint = 'Press and hold to confirm',
+    this.confirmTitle = 'Are you sure?',
+    this.confirm = 'Confirm',
+    this.cancel = 'Cancel',
   });
 
   /// Close buttons of modal, drawer, bottom sheet, lightbox.
@@ -80,6 +84,9 @@ class UiStrings {
   /// File upload: the action (in bold; "Tap" on a phone, where the web says "Click") and what
   /// follows it when drops are enabled.
   final String uploadLabel, uploadHint;
+
+  /// Hold button: what holding does (read with the button), and its confirm dialog.
+  final String holdHint, confirmTitle, confirm, cancel;
 }
 
 /// The type scale from the web `ui-text` variants, built from a theme's tokens.

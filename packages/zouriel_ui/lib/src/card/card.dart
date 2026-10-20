@@ -37,7 +37,7 @@ class UiCard extends StatelessWidget {
     final t = theme.tokens;
     final isGlass = glass ?? theme.config.glass;
     final r = (radius ?? theme.config.radius) ? t.radiusLg : 0.0;
-    final pad = switch (padding) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6 };
+    final pad = switch (padding) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6, UiSize.xl => t.space8 };
 
     Widget body(UiStates s) {
       final lifted = s.hovered || s.pressed;

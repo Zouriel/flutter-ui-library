@@ -40,7 +40,7 @@ the app's version.
   //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
   ```
 - Install with `NODE_AUTH_TOKEN=$(gh auth token) npm i @zouriel/ui@^X.Y.Z @angular/cdk @hugeicons/angular @hugeicons/core-free-icons`
-  (plus `pdfjs-dist` only for the PDF viewer). The token needs the `read:packages` scope.
+  (plus `pdfjs-dist` only for the PDF viewer, and `leaflet@~1.9.4` only for `@zouriel/ui/map`). The token needs the `read:packages` scope.
 - Docker builds: pass the token as a build secret (`RUN --mount=type=secret,id=npm_token NODE_AUTH_TOKEN=$(cat /run/secrets/npm_token) npm ci`),
   not as an `ARG`/`ENV`, which stays in the image.
 - Load `@zouriel/ui/styles/tokens.css` and `animations.css` globally (without tokens.css nothing has

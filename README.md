@@ -48,6 +48,9 @@ void main() => runApp(UiApp(
 `UiApp` replaces `MaterialApp`. Read tokens with `context.ui`, text styles with `context.uiText`;
 switch themes with a `UiThemeController`; scope a theme with `UiThemeScope`.
 
+The map is a separate library on flutter_map (pinned 8.3.2): `import 'package:zouriel_ui/map.dart';`
+for `UiMap`. Apps that don't import it don't build it in.
+
 The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
 (the web's `maldives` and `maldives-dark`): a night toggle is
 `controller.set(isNight ? UiThemeName.maldivesDark : UiThemeName.maldives)`. `UiSeaSurface` scopes

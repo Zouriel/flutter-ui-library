@@ -69,6 +69,25 @@ class _FeedbackPageState extends State<FeedbackPage> {
           ],
         ),
         DocSection(
+          name: 'Progress circle',
+          widget: 'UiProgressCircle',
+          summary: 'The round sibling of the progress bar: determinate with a value (0–100), a turning arc without one. showValue writes the percentage in the middle; child goes in the middle instead, such as a countdown\'s seconds. Announced with its label and percentage.',
+          demo: Wrap(spacing: t.space4, runSpacing: t.space3, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            UiProgressCircle(value: _progress, showValue: true, label: 'Upload'),
+            const UiProgressCircle(label: 'Loading'),
+            const UiProgressCircle(value: 40, size: 96, strokeWidth: 6, tone: UiStatus.success, label: 'Seconds left', child: Text('12')),
+          ]),
+          code: "UiProgressCircle(value: left / 30 * 100, size: 96, strokeWidth: 6, label: 'Seconds left', child: Text('\$left'))",
+          api: const [
+            ApiRow('value', 'double?', '0–100; null for an indeterminate arc.'),
+            ApiRow('size / strokeWidth', 'double', 'Diameter and ring thickness.', def: '40 / 4'),
+            ApiRow('tone', 'UiStatus', 'Arc colour.', def: 'primary'),
+            ApiRow('label', 'String', 'Accessible name.', def: "'Progress'"),
+            ApiRow('showValue', 'bool', 'Write the percentage in the middle.', def: 'false'),
+            ApiRow('child', 'Widget?', 'Shown in the middle instead (countdown seconds).'),
+          ],
+        ),
+        DocSection(
           name: 'Spinner',
           widget: 'UiSpinner',
           summary: 'An indeterminate loading ring, announced as "Loading". Under reduced motion it keeps turning, slower: a frozen spinner reads as a hang.',

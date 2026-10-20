@@ -40,8 +40,8 @@ class UiToggleButton extends StatelessWidget {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final r = (radius ?? theme.config.radius) ? t.radius : 0.0;
-    final fontSize = switch (size) { UiSize.sm => 13.0, UiSize.md => 14.0, UiSize.lg => 15.0 };
-    final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6 };
+    final fontSize = switch (size) { UiSize.sm => 13.0, UiSize.md => 14.0, UiSize.lg => 15.0, UiSize.xl => 17.0 };
+    final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6, UiSize.xl => t.space8 };
     final iconOnly = label == null && child == null;
     return UiInteractive(
       onTap: onChanged == null ? null : () => onChanged!(!pressed),
@@ -77,7 +77,7 @@ class UiToggleButton extends StatelessWidget {
             child: Center(
               widthFactor: iconOnly ? null : 1,
               child: IconTheme.merge(
-                data: IconThemeData(color: pressed ? fg : (t.icon ?? fg), size: switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 }),
+                data: IconThemeData(color: pressed ? fg : (t.icon ?? fg), size: switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 22.0 }),
                 child: DefaultTextStyle(
                   style: style,
                   child: Row(

@@ -93,6 +93,7 @@ class UiButton extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.semanticLabel,
+    this.semanticHint,
     this.minWidth,
     this.padding,
   }) : assert(label != null || child != null || (icon != null && semanticLabel != null), 'Give the button a label, a child, or an icon and a semanticLabel.');
@@ -118,6 +119,9 @@ class UiButton extends StatelessWidget {
   final bool autofocus;
   final String? semanticLabel;
 
+  /// Read after the name (what activating it does), e.g. the hold button's "Press and hold to confirm".
+  final String? semanticHint;
+
   /// Minimum visual width (e.g. 48 so a narrow joined button needs no touch padding sideways).
   final double? minWidth;
 
@@ -131,9 +135,9 @@ class UiButton extends StatelessWidget {
     final rounded = radius ?? theme.config.radius;
     final isLink = variant == UiButtonVariant.link;
     final isBrand = variant == UiButtonVariant.brand;
-    final fontSize = switch (size) { UiSize.sm => 13.0, UiSize.md => 14.0, UiSize.lg => 15.0 };
-    final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6 };
-    final r = !rounded ? 0.0 : isBrand ? t.radiusPill : t.radius;
+    final fontSize = switch (size) { UiSize.sm => 13.0, UiSize.md => 14.0, UiSize.lg => 15.0, UiSize.xl => 17.0 };
+    final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6, UiSize.xl => t.space8 };
+    final r = !rounded ? 0.0 : isBrand ? t.radiusPill : size == UiSize.xl ? t.radiusLg : t.radius;
     final shape = UiButtonJoin.shape(context, r);
 
     return UiInteractive(
@@ -142,18 +146,19 @@ class UiButton extends StatelessWidget {
       focusNode: focusNode,
       autofocus: autofocus,
       semanticLabel: semanticLabel ?? (loading ? '${label ?? ''} (busy)'.trim() : null),
+      semanticHint: semanticHint,
       builder: (context, s) {
         final look = _look(variant, t, s);
         final style = theme.typography.body.copyWith(
           fontSize: fontSize,
-          fontWeight: isBrand ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: isBrand || size == UiSize.xl ? FontWeight.w600 : FontWeight.w500,
           letterSpacing: t.trackingTight * fontSize,
           height: 1.2,
           color: look.fg,
           decoration: isLink ? TextDecoration.underline : TextDecoration.none,
           decorationColor: look.fg,
         );
-        final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 };
+        final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 22.0 };
         final content = <Widget>[
           if (loading) UiSpinner(size: fontSize, color: look.fg, decorative: true),
           if (!loading) ?icon,
@@ -169,7 +174,7 @@ class UiButton extends StatelessWidget {
             child: Row(
               mainAxisSize: block ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
-              spacing: t.space2,
+              spacing: size == UiSize.xl ? t.space3 : t.space2,
               children: content,
             ),
           ),
@@ -251,7 +256,7 @@ class UiIconButton extends StatelessWidget {
     final dim = size.height(t);
     final r = round ? t.radiusPill : rounded ? t.radius : 0.0;
     final shape = UiButtonJoin.shape(context, r);
-    final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0 };
+    final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 24.0 };
     return UiInteractive(
       onTap: onPressed,
       enabled: onPressed != null,

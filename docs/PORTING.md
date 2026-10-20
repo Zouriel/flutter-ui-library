@@ -101,6 +101,20 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**0.35.0 additions.** `UiSize.xl` (56) is a new enum value, so every switch on UiSize handles it:
+buttons, icon buttons, toggles and avatars have their own xl look; other controls take its height
+with lg text. (The web keeps `UiSize` at sm/md/lg and adds `UiButtonSize = UiSize | 'xl'` for the
+controls that have an xl look.) `UiHoldButton` wraps UiButton: a Listener drives the fill (outside
+the gesture arena, so the button's own tap still arrives); the button's tap is the fallback that
+opens `showUiConfirm` unless it ends a completed hold or a press that lasted past 300ms, which is
+measured from the fill's progress so tests with a fake clock agree. Keyboard holds use the button's
+FocusNode `onKeyEvent`, which runs before the button's activation shortcuts. UiButton gained
+`semanticHint` for it. The map is its own library, `package:zouriel_ui/map.dart` (not exported from
+`zouriel_ui.dart`), on flutter_map 8.3.2 and latlong2 0.10.1, pinned. flutter_map has no zoom
+control or draggable marker: the zoom buttons are UiIconButtons, and the pin follows a pan gesture
+through `screenOffsetToLatLng`. The map itself lays out LTR (tiles are physical); its controls follow
+the app's direction.
+
 **0.34.0 additions.** `UiStrings` is `UiConfig.strings` (the web `provideUiStrings`, same keys),
 read with `context.uiStrings`; the web default "Click to upload" is "Tap to upload" here. The old
 `UiFloatingPanel` (the menu and popover surface) is renamed `UiOverlayPanel`, because the web

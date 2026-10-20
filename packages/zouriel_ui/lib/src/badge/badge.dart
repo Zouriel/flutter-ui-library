@@ -166,7 +166,11 @@ class _ChipRemove extends StatelessWidget {
 
 /// `ui-avatar`: an image with an initials fallback (also used when the image fails to load).
 class UiAvatar extends StatefulWidget {
-  const UiAvatar({super.key, this.image, this.name, this.alt, this.size = UiSize.md, this.square = false});
+  const UiAvatar({super.key, this.image, this.name, this.alt, this.size = UiSize.md, this.square = false, this.dimension});
+
+  /// A size in dp, for a profile photo bigger than xl (96, 128); overrides [size], and the initials
+  /// scale with it.
+  final double? dimension;
 
   /// Usually a `NetworkImage` or `AssetImage`.
   final ImageProvider? image;
@@ -201,8 +205,10 @@ class _UiAvatarState extends State<UiAvatar> {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final dim = widget.size.height(t);
-    final fontSize = switch (widget.size) { UiSize.sm => 11.0, UiSize.md => t.fontSizeSm, UiSize.lg => t.fontSizeMd };
+    final dim = widget.dimension ?? widget.size.height(t);
+    final fontSize = widget.dimension != null
+        ? (widget.dimension! * 0.38).roundToDouble()
+        : switch (widget.size) { UiSize.sm => 11.0, UiSize.md => t.fontSizeSm, UiSize.lg => t.fontSizeMd, UiSize.xl => 21.0 };
     final shape = widget.square ? BorderRadius.circular(t.radius) : BorderRadius.circular(dim);
     final initials = Center(
       child: Text(_initials, style: context.uiText.body.copyWith(fontSize: fontSize, fontWeight: FontWeight.w600, color: t.text, height: 1)),

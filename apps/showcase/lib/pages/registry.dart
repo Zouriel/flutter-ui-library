@@ -10,6 +10,7 @@ import 'file_viewer_page.dart';
 import 'find_doctor_page.dart';
 import 'form_builder_page.dart';
 import 'forms_page.dart';
+import 'map_page.dart';
 import 'foundation_page.dart';
 import 'fx_page.dart';
 import 'layout_page.dart';
@@ -44,6 +45,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('navigation', 'Components', 'Navigation', HugeIcons.strokeRoundedNavigation03, (_) => const NavigationPage()),
   ShowcasePage('data', 'Components', 'Data display', HugeIcons.strokeRoundedTable01, (_) => const DataPage()),
   ShowcasePage('media', 'Components', 'Media', HugeIcons.strokeRoundedImage01, (_) => const MediaPage()),
+  ShowcasePage('map', 'Components', 'Map', HugeIcons.strokeRoundedMaps, (_) => const MapPage()),
   ShowcasePage('file-viewer', 'Flagship', 'File viewer', HugeIcons.strokeRoundedFile02, (_) => const FileViewerPage()),
   ShowcasePage('form-builder', 'Flagship', 'Form builder', HugeIcons.strokeRoundedTask01, (_) => const FormBuilderPage()),
   ShowcasePage('workflow-builder', 'Flagship', 'Workflow builder', HugeIcons.strokeRoundedWorkflowSquare01, (_) => const WorkflowBuilderPage()),

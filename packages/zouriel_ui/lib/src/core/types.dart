@@ -3,14 +3,16 @@ import 'package:flutter/widgets.dart';
 import '../theme/theme.dart';
 
 /// Control size, the web `UiSize`.
-enum UiSize { sm, md, lg }
+/// Control sizes (the web `UiSize`); [xl] (56) is for buttons, icon buttons, the hold button and
+/// avatars: the one big action on a phone screen. Other controls take its height with lg text.
+enum UiSize { sm, md, lg, xl }
 
 /// Status tones shared by badges, chips and progress (the web `UiStatus`).
 enum UiStatus { neutral, primary, success, warning, danger }
 
 extension UiSizeTokens on UiSize {
-  /// Control height for this size: 26 / 30 / 38.
-  double height(UiTokens t) => switch (this) { UiSize.sm => t.sizeSm, UiSize.md => t.sizeMd, UiSize.lg => t.sizeLg };
+  /// Control height for this size: 26 / 30 / 38 / 56.
+  double height(UiTokens t) => switch (this) { UiSize.sm => t.sizeSm, UiSize.md => t.sizeMd, UiSize.lg => t.sizeLg, UiSize.xl => t.sizeXl };
 }
 
 extension UiStatusColors on UiStatus {

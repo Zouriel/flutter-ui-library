@@ -14,6 +14,7 @@ class ButtonsPage extends StatefulWidget {
 class _ButtonsPageState extends State<ButtonsPage> {
   bool _saving = false;
   int _count = 0;
+  int _held = 0;
   String? _view = 'week';
   String? _align = 'left';
   bool _bold = true, _italic = false;
@@ -45,7 +46,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
         DocSection(
           name: 'Button',
           widget: 'UiButton',
-          summary: 'The action primitive. Eight variants: primary for the main action, secondary, outline, ghost, link, destructive, brand (the theme\'s gradient, pill-shaped) for the one hero action per screen, and accent, filled with the theme\'s accent (the coral call to action in Maldives; secondary in themes without an accent of their own). Leave onPressed null to disable it. While loading it shows a spinner, is announced as busy and ignores taps. Enter and Space activate it when focused.',
+          summary: 'The action primitive. Eight variants: primary for the main action, secondary, outline, ghost, link, destructive, brand (the theme\'s gradient, pill-shaped) for the one hero action per screen, and accent, filled with the theme\'s accent (the coral call to action in Maldives; secondary in themes without an accent of their own). Leave onPressed null to disable it. While loading it shows a spinner, is announced as busy and ignores taps. Enter and Space activate it when focused. Four sizes; xl (56) is for the one big action on a phone screen.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Wrap(spacing: t.space2, runSpacing: t.space2, children: [
               UiButton(label: 'Primary', onPressed: () => setState(() => _count++)),
@@ -90,6 +91,39 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
             ApiRow('radius', 'bool?', 'Rounded corners; defaults to UiConfig.radius.'),
           ],
           shapes: 'enum UiButtonVariant { primary, secondary, outline, ghost, link, destructive, brand }\nenum UiSize { sm, md, lg }',
+        ),
+        DocSection(
+          name: 'Hold button',
+          widget: 'UiHoldButton',
+          summary: 'Press and hold to confirm, for an action that shouldn\'t happen on a stray tap (start a visit, mark as arrived). A fill grows across the button while it is held; letting go early cancels it, and haptics mark the start and the confirmation. With a keyboard, Space or Enter held does the same. Holding isn\'t accessible to everyone, so a tap, a quick Enter or a screen reader\'s double-tap opens a confirm dialog instead, which confirms the same way. The button is read with holdHint.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            UiHoldButton(label: "I've arrived", size: UiSize.xl, block: true, onConfirmed: () => setState(() => _held++)),
+            UiHoldButton(
+              label: 'Hold to cancel the visit',
+              variant: UiButtonVariant.destructive,
+              hold: const Duration(milliseconds: 1500),
+              destructive: true,
+              confirmTitle: 'Cancel the visit?',
+              onConfirmed: () => setState(() => _held++),
+            ),
+            UiText('Confirmed $_held times', variant: UiTextVariant.caption),
+          ]),
+          code: '''UiHoldButton(
+  label: "I've arrived",
+  size: UiSize.xl,
+  block: true,
+  hold: Duration(seconds: 2),
+  onConfirmed: arrive,
+)''',
+          api: const [
+            ApiRow('label / child', 'String? / Widget?', 'The button text.'),
+            ApiRow('onConfirmed', 'VoidCallback?', 'Held to the end, or confirmed in the dialog; null disables it.'),
+            ApiRow('hold', 'Duration', 'How long to hold.', def: '2s'),
+            ApiRow('variant / size / block / icon', 'as UiButton', 'Look; size takes xl.', def: 'primary / md / false'),
+            ApiRow('semanticLabel', 'String?', 'Accessible name override.'),
+            ApiRow('holdHint', 'String?', 'Read with the button.', def: "strings.holdHint ('Press and hold to confirm')"),
+            ApiRow('confirmTitle / confirmMessage / confirmLabel / destructive', 'String? / String / String? / bool', 'The tap fallback dialog.'),
+          ],
         ),
         DocSection(
           name: 'Icon button',
