@@ -236,6 +236,7 @@ class UiTextEditor extends StatefulWidget {
     this.scrollPadding = const EdgeInsets.all(20),
     this.semanticsMaxLength,
     this.onTap,
+    this.padding = EdgeInsets.zero,
   });
 
   final TextEditingController controller;
@@ -268,6 +269,10 @@ class UiTextEditor extends StatefulWidget {
 
   /// Called after a tap in the text has placed the caret (a combobox reopens its list).
   final VoidCallback? onTap;
+
+  /// Space around the text inside the editor's own tap and semantics area, so a multi-line field's
+  /// node covers its whole box rather than only the lines of text.
+  final EdgeInsetsGeometry padding;
 
   @override
   State<UiTextEditor> createState() => _UiTextEditorState();
@@ -410,7 +415,10 @@ class _UiTextEditorState extends State<UiTextEditor> implements TextSelectionGes
                 child: IgnorePointer(
                   child: Text(
                     widget.placeholder!,
-                    style: widget.placeholderStyle ?? widget.style.copyWith(color: t.textMuted),
+                    // inherit: false, so Text does not merge it into the ambient DefaultTextStyle: that
+                    // merge re-applies the library font package to an already resolved family and an app
+                    // font ('Faruma' became 'packages/zouriel_ui/Faruma', Poppins doubly prefixed).
+                    style: (widget.placeholderStyle ?? widget.style.copyWith(color: t.textMuted)).copyWith(inherit: false),
                     maxLines: multiline ? null : 1,
                     overflow: multiline ? null : TextOverflow.ellipsis,
                     textAlign: widget.textAlign,
@@ -450,7 +458,10 @@ class _UiTextEditorState extends State<UiTextEditor> implements TextSelectionGes
                 : null,
             child: _gestures.buildGestureDetector(
               behavior: HitTestBehavior.translucent,
-              child: Align(alignment: AlignmentDirectional.centerStart, heightFactor: multiline ? 1 : null, child: editable),
+              child: Padding(
+                padding: widget.padding,
+                child: Align(alignment: AlignmentDirectional.centerStart, heightFactor: multiline ? 1 : null, child: editable),
+              ),
             ),
           )),
         ),

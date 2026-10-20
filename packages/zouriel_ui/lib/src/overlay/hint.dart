@@ -29,8 +29,9 @@ const double _kArrow = 7;
 /// the reason (the web `[(uiHintOpen)]` and `(uiHintClosed)`). Not a dialog: it is a polite live
 /// region, never takes focus and never blocks typing or touches outside itself. It closes on a tap
 /// on it or on its anchor, Escape, or after [duration] ([Duration.zero] keeps it until dismissed).
-/// It prefers [placement], flips to the opposite side and then the perpendicular ones to stay on
-/// screen, and its arrow points at the anchor. Primary colours from the theme; it only fades under
+/// It prefers [placement]; above or below, it slides along that side to stay on screen and flips
+/// to the opposite side only when there is no room (never beside the anchor unless placed there).
+/// It follows the anchor when it moves, and its arrow points at it. Primary colours from the theme; it only fades under
 /// reduced motion, and appears at once with the library's animations off.
 class UiHint extends StatefulWidget {
   const UiHint({
@@ -202,6 +203,43 @@ class _HintLayout extends UiTooltipLayout {
   _HintLayout({required super.anchor, required super.position, required super.safe, required this.geometry}) : super(gap: _kGap);
 
   final _HintGeometry geometry;
+
+  static const _opposite = {
+    UiTooltipPosition.top: UiTooltipPosition.bottom,
+    UiTooltipPosition.bottom: UiTooltipPosition.top,
+    UiTooltipPosition.left: UiTooltipPosition.right,
+    UiTooltipPosition.right: UiTooltipPosition.left,
+  };
+
+  double _room(Rect area, UiTooltipPosition p) => switch (p) {
+        UiTooltipPosition.top => anchor.top - gap - area.top,
+        UiTooltipPosition.bottom => area.bottom - anchor.bottom - gap,
+        UiTooltipPosition.left => anchor.left - gap - area.left,
+        UiTooltipPosition.right => area.right - anchor.right - gap,
+      };
+
+  /// Above or below: that side, else the opposite one, else the roomier of the two; it slides along
+  /// the side to stay on screen and never moves beside the anchor, where it would cover what sits
+  /// next to it. Beside (start/end): that side, the opposite one, then above or below.
+  @override
+  UiTooltipPosition resolve(Size size, Size childSize) {
+    final area = safe.deflateRect(Offset.zero & size);
+    final vertical = position == UiTooltipPosition.top || position == UiTooltipPosition.bottom;
+    final order = [
+      position,
+      _opposite[position]!,
+      if (!vertical) ...const [UiTooltipPosition.top, UiTooltipPosition.bottom],
+    ];
+    bool fits(UiTooltipPosition p) {
+      final v = p == UiTooltipPosition.top || p == UiTooltipPosition.bottom;
+      return _room(area, p) >= (v ? childSize.height : childSize.width);
+    }
+
+    for (final p in order) {
+      if (fits(p)) return p;
+    }
+    return order.reduce((a, b) => _room(area, b) > _room(area, a) ? b : a);
+  }
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {

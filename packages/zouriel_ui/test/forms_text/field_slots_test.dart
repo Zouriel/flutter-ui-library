@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -185,5 +186,68 @@ void main() {
             ),
           ],
         ));
+  });
+
+  // 0.33.0: Text merged the placeholder's resolved style into the app's DefaultTextStyle, which
+  // re-applied the library font package: 'packages/zouriel_ui/packages/zouriel_ui/Poppins', and the
+  // app's fallback became 'packages/zouriel_ui/Noto Sans Thaana'. Typed text was fine.
+  testWidgets('the placeholder resolves to exactly the app font, and to a once-prefixed library font', (tester) async {
+    TextStyle placeholder(String text) => tester.renderObject<RenderParagraph>(find.text(text)).text.style!;
+    const app = TextStyle(fontFamily: 'Faruma', fontFamilyFallback: ['Noto Sans Thaana']);
+    for (final field in [
+      const UiTextarea(placeholder: 'ލިޔުއްވާ', textStyle: app, semanticLabel: 'Note'),
+      const UiInput(placeholder: 'ލިޔުއްވާ', textStyle: app, semanticLabel: 'Name'),
+    ]) {
+      await tester.pumpWidget(const SizedBox());
+      await pumpUi(tester, SizedBox(width: 300, child: field), theme: UiThemeName.maldives);
+      final s = placeholder('ލިޔުއްވާ');
+      expect(s.fontFamily, 'Faruma');
+      expect(s.fontFamilyFallback, ['Noto Sans Thaana']);
+      final typed = tester.widget<EditableText>(find.byType(EditableText)).style;
+      expect(typed.fontFamily, 'Faruma');
+      expect(typed.fontFamilyFallback, ['Noto Sans Thaana']);
+    }
+    for (final field in [const UiTextarea(placeholder: 'Write', semanticLabel: 'Note'), const UiInput(placeholder: 'Write', semanticLabel: 'Name')]) {
+      await tester.pumpWidget(const SizedBox());
+      await pumpUi(tester, SizedBox(width: 300, child: field), theme: UiThemeName.maldives);
+      expect(placeholder('Write').fontFamily, 'packages/zouriel_ui/Poppins');
+      expect(tester.widget<EditableText>(find.byType(EditableText)).style.fontFamily, 'packages/zouriel_ui/Poppins');
+    }
+  });
+
+  // 0.33.0: the textarea's node was only its lines of text (about 254x21 at one row), though the
+  // whole box took taps.
+  testWidgets('the textarea field node covers its whole box and is at least 48dp; slot buttons keep their own nodes', (tester) async {
+    final handle = tester.ensureSemantics();
+    for (final w in [
+      const SizedBox(width: 300, child: UiTextarea(rows: 1, autosize: true, semanticLabel: 'One row')),
+      const SizedBox(width: 300, child: UiTextarea(rows: 3, semanticLabel: 'Three rows')),
+      _composer(onSend: () {}),
+    ]) {
+      await tester.pumpWidget(const SizedBox());
+      await pumpUi(tester, w);
+      final box = _box(tester, find.byType(UiTextarea));
+      final node = tester.getRect(find.byType(UiTextEditor));
+      expect(node.height, greaterThanOrEqualTo(48));
+      expect(node.top, lessThanOrEqualTo(box.top + 1));
+      expect(node.bottom, greaterThanOrEqualTo(box.bottom - 1));
+      final semantics = tester.getSemantics(find.byType(EditableText)).rect;
+      expect(semantics.height, greaterThanOrEqualTo(48));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    }
+    // Slots: the send button is its own node, beside the field's, and the clip leaves the field's width alone.
+    expect(find.bySemanticsLabel('Send'), findsOneWidget);
+    final field = tester.getRect(find.byType(UiTextEditor));
+    expect(field.right, lessThanOrEqualTo(tester.getRect(find.byKey(const Key('send'))).left + 0.5));
+    handle.dispose();
+  });
+
+  testWidgets('a tap in the textarea padding (not on a line) focuses it', (tester) async {
+    await pumpUi(tester, const SizedBox(width: 300, child: UiTextarea(rows: 3, semanticLabel: 'Note')));
+    final box = _box(tester, find.byType(UiTextarea));
+    await tester.tapAt(box.bottomLeft + const Offset(6, -3));
+    await tester.pump();
+    expect(tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus, isTrue);
   });
 }

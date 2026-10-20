@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 import '../../core/icon.dart';
+import '../../core/interactive.dart';
 import '../../core/types.dart';
 import '../../theme/theme.dart';
 import 'form_field.dart';
@@ -267,6 +268,22 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
     final t = context.ui;
     final style = uiMergeFieldStyle(context.uiText.body.copyWith(fontSize: uiFieldFontSize(t, widget.size), height: 1.5, color: t.text), widget.textStyle);
     final padY = widget.size == UiSize.sm ? t.space1 : t.space2;
+    final lead = widget.leading, trail = widget.trailing;
+    const border = 1.0;
+    // One text line, and the last line's box with its padding (where the slots sit).
+    final line = (style.fontSize ?? t.fontSizeMd) * MediaQuery.textScalerOf(context).scale(1) * 1.5;
+    final lineBox = line + 2 * padY;
+    // On touch screens the widget lays out at least 48dp tall, with the visible box centred (as a
+    // single-line field does), so the text field's own tap target and semantics node are 48dp
+    // even at one row. With slots, also enough for a 48dp button centred on the last line.
+    final box = widget.rows * line + 2 * padY + 2 * border;
+    final touch = uiTouchPlatform(context);
+    final m = math.max(
+      touch ? math.max(0.0, (uiMinTouchTarget - box) / 2) : 0.0,
+      lead != null || trail != null ? uiSlotTouchMargin(context, lineBox) : 0.0,
+    );
+    // The editor's padding is inside its own tap and semantics area, so the field's node covers
+    // the whole box (and the touch margin), not just the lines of text.
     final editor = UiTextEditor(
           controller: controller,
           focusNode: focusNode,
@@ -281,8 +298,8 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
           autofocus: widget.autofocus,
           semanticLabel: widget.semanticLabel,
           inputFormatters: widget.maxLength == null ? null : [LengthLimitingTextInputFormatter(widget.maxLength)],
+          padding: EdgeInsetsDirectional.fromSTEB(lead != null ? t.space2 : t.space3, m + border + padY, trail != null ? t.space2 : t.space3, m + border + padY),
         );
-    final lead = widget.leading, trail = widget.trailing;
     return UiFieldDirection(
       dir: widget.dir,
       controller: controller,
@@ -290,23 +307,10 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
         listenable: focusNode,
         builder: (context, _) {
           final invalid = uiFieldInvalid(context, widget.invalid);
-          if (lead == null && trail == null) {
-            return UiFieldFrame(
-              focused: focusNode.hasFocus,
-              invalid: invalid,
-              enabled: widget.enabled,
-              radius: widget.radius,
-              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: padY),
-              child: editor,
-            );
-          }
-          // With slots: the box is drawn behind a row of [slot, text, slot]. The slots are as tall as
-          // the last line (its padding included) and sit at the bottom, so they stay on the line
-          // being typed as the box grows. On touch screens a transparent margin above and below
-          // keeps a slot button's 48dp hit area inside the widget without making the box taller.
-          final lineBox = (style.fontSize ?? t.fontSizeMd) * MediaQuery.textScalerOf(context).scale(1) * 1.5 + 2 * padY;
-          final m = uiSlotTouchMargin(context, lineBox);
-          const border = 1.0;
+          // The box is drawn behind a row of [slot, text, slot]. The slots are as tall as the last
+          // line box (plus the touch margin) and sit at the bottom, so they stay on the line being
+          // typed as the box grows; a slot button keeps its 48dp hit area inside the widget without
+          // making the box taller.
           return Opacity(
             opacity: widget.enabled ? 1 : 0.5,
             child: Stack(children: [
@@ -316,17 +320,11 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
                 child: UiFieldFrame(focused: focusNode.hasFocus, invalid: invalid, radius: widget.radius, child: const SizedBox.expand()),
               ),
               Padding(
-                padding: EdgeInsetsDirectional.only(start: border + (lead != null ? t.space1 : t.space3), end: border + (trail != null ? t.space1 : t.space3)),
+                padding: EdgeInsetsDirectional.only(start: border + (lead != null ? t.space1 : 0), end: border + (trail != null ? t.space1 : 0)),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  if (lead != null) ...[
-                    UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, height: lineBox + 2 * m, child: lead),
-                    SizedBox(width: t.space2),
-                  ],
-                  Expanded(child: Padding(padding: EdgeInsets.symmetric(vertical: m + border + padY), child: editor)),
-                  if (trail != null) ...[
-                    SizedBox(width: t.space2),
-                    UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, height: lineBox + 2 * m, child: trail),
-                  ],
+                  if (lead != null) UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, height: lineBox + 2 * m, child: lead),
+                  Expanded(child: editor),
+                  if (trail != null) UiFieldSlot(focusNode: focusNode, enabled: widget.enabled, height: lineBox + 2 * m, child: trail),
                 ]),
               ),
             ]),

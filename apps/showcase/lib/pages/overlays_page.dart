@@ -102,7 +102,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
         DocSection(
           name: 'Hint',
           widget: 'UiHint',
-          summary: 'A coachmark: a small callout pointed at its child, opened from code (a first-run tip, "hold to record"). Not a dialog: it is a polite live region, never takes focus and never blocks typing or touches outside it. It closes on a tap on it or on its anchor, on Escape, or after duration (zero keeps it until dismissed), and onClosed says why. It flips to the opposite side, then the perpendicular ones, to stay on screen, and the arrow keeps pointing at the anchor. start and end follow the text direction. Primary colours from the theme; under reduced motion it only fades.',
+          summary: 'A coachmark: a small callout pointed at its child, opened from code (a first-run tip, "hold to record"). Not a dialog: it is a polite live region, never takes focus and never blocks typing or touches outside it. It closes on a tap on it or on its anchor, on Escape, or after duration (zero keeps it until dismissed), and onClosed says why. Above or below, it slides along that side to stay on screen and flips to the opposite side only when there is no room; it never moves beside the anchor unless placed there. It follows the anchor when it moves, and the arrow keeps pointing at it. start and end follow the text direction. Primary colours from the theme; under reduced motion it only fades.',
           demo: Padding(
             padding: EdgeInsets.only(top: t.space12),
             child: row([
@@ -135,7 +135,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
           api: const [
             ApiRow('message', 'String', 'The hint text.'),
             ApiRow('open / onOpenChanged', 'bool / ValueChanged<bool>?', 'Set open to show it; it hides itself on closing and calls onOpenChanged(false).', def: 'false'),
-            ApiRow('placement', 'UiHintPlacement', 'top, bottom, start, end (start/end follow the text direction). Flips to the opposite, then the perpendicular sides, to stay on screen.', def: 'top'),
+            ApiRow('placement', 'UiHintPlacement', 'top, bottom, start, end (start/end follow the text direction). Above/below slide along their side and flip only to the opposite one; start/end may fall back to above or below.', def: 'top'),
             ApiRow('duration', 'Duration', 'How long it stays; Duration.zero keeps it until it is tapped or Escape is pressed.', def: '6000ms'),
             ApiRow('dismissible', 'bool', 'Show a small × ("Dismiss"); it closes with reason tap.', def: 'false'),
             ApiRow('onClosed', 'ValueChanged<UiHintCloseReason>?', 'It closed by itself or by the person: timeout, tap (on it, its × or its anchor) or escape. Not called when open turns false.'),

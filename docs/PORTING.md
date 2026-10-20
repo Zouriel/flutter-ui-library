@@ -101,6 +101,17 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**0.33.1 fixes.** The field placeholder is a `Text`, which merges its style into the ambient
+DefaultTextStyle; that merge re-applied the library's font package to an already resolved family
+('packages/zouriel_ui/packages/zouriel_ui/Poppins', and an app's 'Faruma' fallback prefixed too). It is
+now drawn with `inherit: false`. UiTextarea's text node covered only its lines (about 254x21 at one
+row): UiTextEditor takes a `padding` that sits inside its own tap and semantics area, the textarea
+always draws its box behind the editor, and on touch screens lays out at least 48dp tall with the box
+centred (as single-line fields do). UiHint above or below never falls back to the sides of its anchor
+(it slides along its side; the opposite side only when there is no room). It already followed a moving
+anchor: `OverlayPortal.overlayChildLayoutBuilder` lays the hint out again whenever the anchor's paint
+transform changes, which a test now covers. The web needed a frame loop for the same.
+
 **Field slots, dir and textStyle (0.33.0).** The web `[textarea-leading]` / `[textarea-trailing]`
 (and `[input-…]`) are `leading` / `trailing` widgets. UiInput puts them in a Row inside its fixed-height
 frame, which on touch screens is already laid out 48dp tall, so a slot's UiIconButton gets its full

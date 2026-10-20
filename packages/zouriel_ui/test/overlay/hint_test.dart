@@ -228,4 +228,72 @@ void main() {
       }
     }
   });
+
+  testWidgets('near the left edge it stays above and slides along, with the arrow on the anchor', (tester) async {
+    final h = await _pump(tester, at: Alignment.centerLeft, duration: Duration.zero);
+    await _open(tester, h);
+    final b = tester.getRect(_bubble), a = tester.getRect(find.byKey(const Key('mic')));
+    expect(b.bottom, lessThanOrEqualTo(a.top), reason: 'still above, not beside');
+    expect(b.left, greaterThanOrEqualTo(8));
+    expect(b.left, lessThan(a.center.dx));
+  });
+
+  testWidgets('never moves beside the anchor when above and below are both short of room', (tester) async {
+    tester.view.physicalSize = const Size(390, 120) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    var open = false;
+    late StateSetter set;
+    await tester.pumpWidget(UiApp(home: StatefulBuilder(builder: (context, s) {
+      set = s;
+      return Center(
+        child: UiHint(
+          message: 'A long hint that wraps over a few lines because the screen is short and narrow anyway',
+          open: open,
+          duration: Duration.zero,
+          child: UiIconButton(key: const Key('mic'), label: 'Record', onPressed: () {}, icon: const SizedBox(width: 16, height: 16)),
+        ),
+      );
+    })));
+    set(() => open = true);
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final b = tester.getRect(_bubble), a = tester.getRect(find.byKey(const Key('mic')));
+    final beside = b.right <= a.left || b.left >= a.right;
+    expect(beside, isFalse);
+  });
+
+  testWidgets('follows its anchor when it moves, even when only layout changes (a slot icon swapping sides)', (tester) async {
+    tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    final gap = ValueNotifier(20.0);
+    addTearDown(gap.dispose);
+    // The hint widget itself is built once; only a sibling's width changes, moving the anchor.
+    final hint = UiHint(
+      message: 'Hold to record',
+      open: true,
+      duration: Duration.zero,
+      child: UiIconButton(key: const Key('mic'), label: 'Record', onPressed: () {}, icon: const SizedBox(width: 16, height: 16)),
+    );
+    await tester.pumpWidget(UiApp(
+      home: Padding(
+        padding: const EdgeInsets.only(top: 400),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [ValueListenableBuilder<double>(valueListenable: gap, builder: (_, w, _) => SizedBox(width: w)), hint]),
+        ),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final first = tester.getRect(_bubble);
+    gap.value = 200;
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    final a = tester.getRect(find.byKey(const Key('mic')));
+    final b = tester.getRect(_bubble);
+    expect(a.left, greaterThan(190));
+    expect(b.center.dx, closeTo(a.center.dx, 1), reason: 'centred on the anchor where it is now (it was at ${first.center.dx})');
+    expect(b.bottom, lessThanOrEqualTo(a.top));
+  });
 }
