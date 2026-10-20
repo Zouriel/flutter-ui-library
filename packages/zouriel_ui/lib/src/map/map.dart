@@ -1,3 +1,5 @@
+import 'dart:convert' show base64Decode;
+
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -33,12 +35,27 @@ class UiLatLng {
 /// A marker: a tone-coloured dot with an optional label beside it (the web `UiMapMarker`).
 @immutable
 class UiMapMarker {
-  const UiMapMarker({required this.id, required this.lat, required this.lng, this.tone = UiStatus.primary, this.label});
+  const UiMapMarker({required this.id, required this.lat, required this.lng, this.tone = UiStatus.primary, this.label, this.semanticLabel});
   final String id;
   final double lat;
   final double lng;
   final UiStatus tone;
   final String? label;
+
+  /// The marker's accessible name when the label doesn't say enough, or there is no label (the id
+  /// is never read out).
+  final String? semanticLabel;
+}
+
+/// Tiles without the network: every tile a transparent pixel. For widget tests of screens with a
+/// map, and for a map that only shows markers: `UiMap(tileProvider: UiMapBlankTiles())`.
+class UiMapBlankTiles extends TileProvider {
+  UiMapBlankTiles();
+
+  static final MemoryImage _pixel = MemoryImage(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+
+  @override
+  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) => _pixel;
 }
 
 /// Where the map is looking (the web `UiMapView`).
@@ -79,6 +96,8 @@ class UiMap extends StatefulWidget {
     this.onPinChanged,
     this.pinMode = false,
     this.pinLabel = 'Chosen location',
+    this.pinDraggable = true,
+    this.tileHeaders,
     this.tileUrl = uiMapOsmTiles,
     this.attribution = '© OpenStreetMap contributors',
     this.onAttributionTap,
@@ -100,6 +119,12 @@ class UiMap extends StatefulWidget {
   /// A tap on the map moves the pin there.
   final bool pinMode;
   final String pinLabel;
+
+  /// Whether the pin can be dragged; false shows a fixed location with the pin's look.
+  final bool pinDraggable;
+
+  /// Extra HTTP headers for tile requests (the User-Agent from [userAgentPackageName] is always sent).
+  final Map<String, String>? tileHeaders;
   final String tileUrl;
   final String attribution;
 
@@ -116,7 +141,6 @@ class UiMap extends StatefulWidget {
 class UiMapState extends State<UiMap> {
   final MapController _controller = MapController();
   final GlobalKey _box = GlobalKey();
-  final FocusNode _focus = FocusNode(debugLabel: 'UiMap');
 
   /// The pin while a finger drags it.
   UiLatLng? _dragging;
@@ -140,7 +164,6 @@ class UiMapState extends State<UiMap> {
   @override
   void dispose() {
     _controller.dispose();
-    _focus.dispose();
     super.dispose();
   }
 
@@ -181,7 +204,6 @@ class UiMapState extends State<UiMap> {
         onMapReady: () => _ready = true,
         onMapEvent: _onEvent,
         onTap: (_, ll) {
-          _focus.requestFocus();
           if (widget.pinMode) widget.onPinChanged?.call(UiLatLng(ll.latitude, ll.longitude));
         },
         interactionOptions: InteractionOptions(
@@ -192,15 +214,15 @@ class UiMapState extends State<UiMap> {
         TileLayer(
           urlTemplate: widget.tileUrl,
           userAgentPackageName: widget.userAgentPackageName,
-          tileProvider: widget.tileProvider,
+          tileProvider: widget.tileProvider ?? (widget.tileHeaders == null ? null : NetworkTileProvider(headers: {...widget.tileHeaders!})),
           tileBuilder: dark ? _dim : null,
         ),
         MarkerLayer(markers: [
           for (final m in widget.markers)
             Marker(
               point: LatLng(m.lat, m.lng),
-              width: 220,
-              height: 28,
+              width: 248,
+              height: 48,
               alignment: Alignment.centerRight,
               child: _MarkerChip(marker: m, onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m)),
             ),
@@ -214,6 +236,7 @@ class UiMapState extends State<UiMap> {
               alignment: Alignment.topCenter,
               child: _Pin(
                 label: widget.pinLabel,
+                draggable: widget.pinDraggable,
                 onDrag: (global) {
                   final box = _box.currentContext?.findRenderObject() as RenderBox?;
                   if (box == null) return;
@@ -233,8 +256,8 @@ class UiMapState extends State<UiMap> {
     );
 
     final zoom = Column(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
-      UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'Zoom in', variant: UiButtonVariant.outline, onPressed: () => _zoomBy(1)),
-      UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMinusSign), label: 'Zoom out', variant: UiButtonVariant.outline, onPressed: () => _zoomBy(-1)),
+      UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: context.uiStrings.zoomIn, variant: UiButtonVariant.outline, onPressed: () => _zoomBy(1)),
+      UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMinusSign), label: context.uiStrings.zoomOut, variant: UiButtonVariant.outline, onPressed: () => _zoomBy(-1)),
     ]);
     final attribution = GestureDetector(
       onTap: widget.onAttributionTap,
@@ -248,9 +271,14 @@ class UiMapState extends State<UiMap> {
     return Semantics(
       container: true,
       label: widget.semanticLabel,
-      customSemanticsActions: widget.pinMode ? {const CustomSemanticsAction(label: 'Place the pin at the centre'): _placeAtCentre} : null,
+      customSemanticsActions: widget.pinMode ? {CustomSemanticsAction(label: context.uiStrings.placePinAtCentre): _placeAtCentre} : null,
+      // Not focusable itself: flutter_map's own surface takes focus (and the arrow keys); Enter
+      // bubbles up to here. A second focusable node would split the map in two for screen readers,
+      // leaving the tappable surface unnamed.
       child: Focus(
-        focusNode: _focus,
+        canRequestFocus: false,
+        skipTraversal: true,
+        includeSemantics: false,
         onKeyEvent: (node, e) {
           if (widget.pinMode && e is KeyDownEvent && (e.logicalKey == LogicalKeyboardKey.enter || e.logicalKey == LogicalKeyboardKey.numpadEnter)) {
             _placeAtCentre();
@@ -298,32 +326,44 @@ class _MarkerChip extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Transform.translate(
-        // The dot's centre on the point.
-        offset: const Offset(-8, 0),
+        // A 48dp square around the dot is the tap target; its centre (the dot) on the point.
+        offset: const Offset(-24, 0),
         child: Semantics(
+          container: true,
           button: onTap != null,
-          label: marker.label ?? marker.id,
+          label: marker.semanticLabel ?? marker.label,
           onTap: onTap,
           excludeSemantics: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
-            child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.surfaceRaised, width: 3), boxShadow: t.shadow2),
-              ),
-              if (marker.label != null)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 196),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 2),
-                    decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radiusPill), border: Border.all(color: t.border), boxShadow: t.shadow1),
-                    child: Text(marker.label!, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12)),
+            child: SizedBox(
+              height: 48,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(
+                  width: 48,
+                  child: Center(
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.surfaceRaised, width: 3), boxShadow: t.shadow2),
+                    ),
                   ),
                 ),
-            ]),
+                if (marker.label != null)
+                  Transform.translate(
+                    offset: Offset(-t.space3, 0),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 196),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 2),
+                        decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radiusPill), border: Border.all(color: t.border), boxShadow: t.shadow1),
+                        child: Text(marker.label!, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12)),
+                      ),
+                    ),
+                  ),
+              ]),
+            ),
           ),
         ),
       ),
@@ -332,30 +372,33 @@ class _MarkerChip extends StatelessWidget {
 }
 
 class _Pin extends StatelessWidget {
-  const _Pin({required this.label, required this.onDrag, required this.onDragEnd});
+  const _Pin({required this.label, required this.onDrag, required this.onDragEnd, this.draggable = true});
   final String label;
+  final bool draggable;
   final ValueChanged<Offset> onDrag;
   final VoidCallback onDragEnd;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    return Semantics(
-      label: label,
-      hint: 'Drag to move',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanUpdate: (d) => onDrag(d.globalPosition + const Offset(0, 24)),
-        onPanEnd: (_) => onDragEnd(),
-        onPanCancel: onDragEnd,
-        child: Align(
+    final pin = Align(
           alignment: Alignment.bottomCenter,
           child: SizedBox(
             width: 28,
             height: 36,
             child: CustomPaint(painter: _PinPainter(fill: t.accent, ring: t.surfaceRaised, shadow: t.shadow2)),
           ),
-        ),
+        );
+    // A fixed pin is an image with a name; a draggable one also takes the drag.
+    if (!draggable) return Semantics(container: true, label: label, image: true, child: IgnorePointer(child: pin));
+    return Semantics(
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onPanUpdate: (d) => onDrag(d.globalPosition + const Offset(0, 24)),
+        onPanEnd: (_) => onDragEnd(),
+        onPanCancel: onDragEnd,
+        child: pin,
       ),
     );
   }

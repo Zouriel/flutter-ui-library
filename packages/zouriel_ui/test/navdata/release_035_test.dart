@@ -116,6 +116,38 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets('disabled inside onConfirmed while the finger is still down: no build-phase setState, nothing else fires', (tester) async {
+      var confirmed = 0;
+      late StateSetter set;
+      var enabled = true;
+      await pumpUi(tester, StatefulBuilder(builder: (context, s) {
+        set = s;
+        return Center(
+          child: UiHoldButton(
+            label: 'Arrived',
+            hold: const Duration(seconds: 1),
+            onConfirmed: enabled
+                ? () {
+                    confirmed++;
+                    set(() => enabled = false);
+                  }
+                : null,
+          ),
+        );
+      }));
+      final g = await tester.startGesture(tester.getCenter(find.byType(UiHoldButton)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1100));
+      await tester.pump();
+      expect(confirmed, 1);
+      expect(tester.takeException(), isNull);
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(confirmed, 1);
+      expect(find.text('Are you sure?'), findsNothing);
+    });
+
     testWidgets('keyboard: Space held confirms; a quick Enter opens the dialog', (tester) async {
       final log = await pump(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);

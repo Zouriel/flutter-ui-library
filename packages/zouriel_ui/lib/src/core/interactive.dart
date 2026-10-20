@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -171,7 +172,31 @@ class _UiInteractiveState extends State<UiInteractive> {
   }
 
   void _onFocusVisible() {
-    if (_focused && mounted) setState(() {});
+    if (_focused) _set(() {});
+  }
+
+  /// setState, but safe from callbacks the framework fires while it builds: a gesture recognizer
+  /// cancels its tap when a rebuild disables or removes it (a hold button disabled by its own
+  /// onConfirmed while the finger is still down), and a focus or hover highlight can change while
+  /// the tree is laid out. Then the change waits for the end of the frame.
+  void _set(VoidCallback fn) {
+    if (!mounted) return;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.persistentCallbacks || phase == SchedulerPhase.midFrameMicrotasks) {
+      fn();
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+    setState(fn);
+  }
+
+  @override
+  void didUpdateWidget(UiInteractive oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Disabled while pressed or hovered: drop those states without a setState mid-build.
+    if (!_enabled) _pressed = _hovered = false;
   }
 
   @override
@@ -206,14 +231,14 @@ class _UiInteractiveState extends State<UiInteractive> {
         }),
         ...?widget.actions,
       },
-      onShowHoverHighlight: (v) => setState(() => _hovered = v),
-      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      onShowHoverHighlight: (v) => _set(() => _hovered = v),
+      onShowFocusHighlight: (v) => _set(() => _focused = v),
       onFocusChange: widget.onFocusChange,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTapDown: _enabled ? (_) => setState(() => _pressed = true) : null,
-        onTapUp: _enabled ? (_) => setState(() => _pressed = false) : null,
-        onTapCancel: _enabled ? () => setState(() => _pressed = false) : null,
+        onTapDown: _enabled ? (_) => _set(() => _pressed = true) : null,
+        onTapUp: _enabled ? (_) => _set(() => _pressed = false) : null,
+        onTapCancel: _enabled ? () => _set(() => _pressed = false) : null,
         onTap: _enabled && widget.onTap != null ? _activate : null,
         onLongPress: _enabled ? widget.onLongPress : null,
         excludeFromSemantics: true,

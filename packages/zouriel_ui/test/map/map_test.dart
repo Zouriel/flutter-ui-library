@@ -1,23 +1,14 @@
-import 'dart:convert';
-
 import 'package:flutter/semantics.dart' show SemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_map/flutter_map.dart' show TileCoordinates, TileLayer, TileProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
-/// Tiles without the network: a transparent pixel each.
-class _Blank extends TileProvider {
-  static final _px = MemoryImage(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
-  @override
-  ImageProvider getImage(TileCoordinates coordinates, TileLayer options) => _px;
-}
-
 const _markers = [
   UiMapMarker(id: 'n1', lat: 4.1762, lng: 73.5105, label: 'Aminath Hassan, RN', tone: UiStatus.success),
   UiMapMarker(id: 'n2', lat: 4.1738, lng: 73.5072, label: 'Ibrahim Rasheed, RN'),
+  UiMapMarker(id: 'secret-id-7', lat: 4.1750, lng: 73.5080, semanticLabel: 'Clinic'),
 ];
 
 class _Host {
@@ -27,12 +18,13 @@ class _Host {
   late StateSetter set;
 }
 
-Future<_Host> _pump(WidgetTester tester, {bool pinMode = false, UiThemeName theme = UiThemeName.light, TextDirection dir = TextDirection.ltr}) async {
+Future<_Host> _pump(WidgetTester tester, {bool pinMode = false, bool pinDraggable = true, UiConfig config = const UiConfig(), UiThemeName theme = UiThemeName.light, TextDirection dir = TextDirection.ltr}) async {
   tester.view.physicalSize = const Size(390, 500) * tester.view.devicePixelRatio;
   addTearDown(tester.view.reset);
   final h = _Host();
   await tester.pumpWidget(UiApp(
     theme: theme,
+    config: config,
     home: Directionality(
       textDirection: dir,
       child: StatefulBuilder(builder: (context, set) {
@@ -43,8 +35,9 @@ Future<_Host> _pump(WidgetTester tester, {bool pinMode = false, UiThemeName them
           child: UiMap(
             zoom: 15,
             markers: _markers,
-            tileProvider: _Blank(),
+            tileProvider: UiMapBlankTiles(), // exported by map.dart: no flutter_map dependency needed
             pinMode: pinMode,
+            pinDraggable: pinDraggable,
             pin: h.pin,
             onPinChanged: (p) => set(() => h.pin = p),
             onMarkerSelected: (m) => h.picked.add(m.id),
@@ -123,5 +116,40 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(h.pin, isNotNull);
+  });
+
+  testWidgets('every tap target is named and 48dp, in pin mode too; markers use semanticLabel, never the id', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, pinMode: true);
+    await tester.tapAt(const Offset(60, 300));
+    await tester.pump(const Duration(milliseconds: 400));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    expect(find.bySemanticsLabel('Clinic'), findsOneWidget);
+    expect(find.bySemanticsLabel('secret-id-7'), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('a fixed pin (pinDraggable false) shows the place, named, and does not move', (tester) async {
+    final handle = tester.ensureSemantics();
+    final h = await _pump(tester, pinDraggable: false);
+    h.set(() => h.pin = const UiLatLng(4.1755, 73.5093));
+    await tester.pump();
+    expect(find.bySemanticsLabel('Chosen location'), findsOneWidget);
+    final before = h.pin;
+    await tester.dragFrom(tester.getCenter(find.bySemanticsLabel('Chosen location')), const Offset(80, 0));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(h.pin, before);
+    handle.dispose();
+  });
+
+  testWidgets('zoom and pin words come from UiStrings', (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, pinMode: true, config: const UiConfig(strings: UiStrings(zoomIn: 'ބޮޑުކުރޭ', placePinAtCentre: 'މެދަށް')));
+    expect(find.bySemanticsLabel('ބޮޑުކުރޭ'), findsOneWidget);
+    expect(find.bySemanticsLabel('Zoom out'), findsOneWidget);
+    final node = tester.getSemantics(find.byType(UiMap));
+    expect(node.getSemanticsData().customSemanticsActionIds, isNotEmpty);
+    handle.dispose();
   });
 }

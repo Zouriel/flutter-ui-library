@@ -101,6 +101,16 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**0.35.1 fixes.** UiInteractive sets its pressed/hover/focus state through `_set`, which defers to
+the end of the frame when called while the tree builds: a recognizer cancels its tap when a rebuild
+disables it (a hold button disabled by its own onConfirmed with the finger still down threw
+"setState() called during build"). UiMap no longer has its own focusable Focus: with two focusable
+nodes the map split in two for screen readers and flutter_map's tappable surface had no name; its
+key handler (Enter places the pin) now sits on a non-focusable Focus the key bubbles to. Markers
+are 48dp targets centred on the dot. The web map loads Leaflet lazily and needed a destroyed-while-
+loading guard; Flutter's map has no lazy load (flutter_map is compiled in), so nothing to guard.
+`UiMapBlankTiles` is exported for tests without the network.
+
 **0.35.0 additions.** `UiSize.xl` (56) is a new enum value, so every switch on UiSize handles it:
 buttons, icon buttons, toggles and avatars have their own xl look; other controls take its height
 with lg text. (The web keeps `UiSize` at sm/md/lg and adds `UiButtonSize = UiSize | 'xl'` for the

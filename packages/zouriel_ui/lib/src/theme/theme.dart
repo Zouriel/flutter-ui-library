@@ -68,6 +68,9 @@ class UiStrings {
     this.confirmTitle = 'Are you sure?',
     this.confirm = 'Confirm',
     this.cancel = 'Cancel',
+    this.zoomIn = 'Zoom in',
+    this.zoomOut = 'Zoom out',
+    this.placePinAtCentre = 'Place the pin at the centre',
   });
 
   /// Close buttons of modal, drawer, bottom sheet, lightbox.
@@ -87,6 +90,9 @@ class UiStrings {
 
   /// Hold button: what holding does (read with the button), and its confirm dialog.
   final String holdHint, confirmTitle, confirm, cancel;
+
+  /// Map: the zoom buttons, and placing the pin at the centre (keyboard / screen reader).
+  final String zoomIn, zoomOut, placePinAtCentre;
 }
 
 /// The type scale from the web `ui-text` variants, built from a theme's tokens.
