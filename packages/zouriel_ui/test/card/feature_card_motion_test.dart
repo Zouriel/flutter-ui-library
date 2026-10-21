@@ -197,6 +197,41 @@ void main() {
       expect((_cardBox(tester).border! as Border).top.color, uiParseColor('#4B8791'));
     }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
 
+    // 0.40.2: on the web a device in dark mode with a light app showed the dark pair (the tokens were read
+    // before the stylesheet loaded). Here the card reads the UiApp theme, never the platform brightness.
+    testWidgets('a device in dark mode with a light UiApp: the light pair on the very first frame', (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      await _pump(tester, Row(children: [Expanded(child: _tile(colors: _mint)), Expanded(child: _tile(colors: _blue))]));
+      // No pumpAndSettle: the first frame already has them.
+      final boxes = tester
+          .widgetList<AnimatedContainer>(find.descendant(of: find.byKey(const ValueKey('card')), matching: find.byType(AnimatedContainer)))
+          .map((c) => c.decoration)
+          .whereType<BoxDecoration>()
+          .map((d) => d.color)
+          .toSet();
+      expect(boxes, containsAll([uiParseColor('#E1F4EF'), uiParseColor('#E5F0FA')]));
+    });
+
+    testWidgets('with a UiThemeController (device dark): light first, follows a switch to dark and back', (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      final c = UiThemeController(theme: UiThemeName.maldives);
+      addTearDown(c.dispose);
+      await tester.pumpWidget(UiApp(
+        controller: c,
+        home: Align(alignment: Alignment.topLeft, child: Padding(padding: const EdgeInsets.all(16), child: _tile(colors: _mint))),
+      ));
+      expect(_cardBox(tester).color, uiParseColor('#E1F4EF'));
+      c.set(UiThemeName.maldivesDark);
+      await tester.pumpAndSettle();
+      expect(_cardBox(tester).color, isNot(uiParseColor('#E1F4EF')));
+      expect(_cardBox(tester).color!.computeLuminance(), lessThan(0.2));
+      c.set(UiThemeName.maldives);
+      await tester.pumpAndSettle();
+      expect(_cardBox(tester).color, uiParseColor('#E1F4EF'));
+    });
+
     test('the same colours as the web (light mint, derived maldives-dark and darkTeal, measured in Chrome)', () {
       Color rgb(int r, int g, int b) => Color.fromARGB(255, r, g, b);
       UiFeatureResolvedColors on(UiThemeName n) {

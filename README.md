@@ -99,6 +99,11 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Feature card colours follow the active theme (0.40.2):** a web fix (a card created while the
+app's stylesheet was still loading kept the dark pair on a light theme). `UiFeatureCard` already takes
+dark or light from the `UiApp` theme (its surface), never the platform brightness, on the very first
+frame; tests now pin that, with a device in dark mode and a light `UiApp` (fixed or controller).
+
 **48dp map controls on touch, LTR attribution (0.40.1):** on touch platforms `UiMapLocateButton`
 keeps its 44dp circle in the same place with a 48dp hit area around it (it meets
 `androidTapTargetGuideline`, like the zoom buttons), and the `UiMap` attribution is laid out LTR, so

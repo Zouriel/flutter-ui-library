@@ -170,6 +170,18 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.40.2.** Feature-card colours and the theme: on the web the card read the theme tokens with
+`getComputedStyle` once, when `colors` was set, and again only on `data-theme` mutations; a
+critical-CSS build (Angular's default) inlines only the `:root` (Winter Dark) tokens and loads the
+stylesheet with the `[data-theme]` rules afterwards, so a card created in between kept the dark pair.
+The web now shares `uiWatchTheme` (re-read after render and on data-theme / class / style changes up
+the tree, stylesheets added or loaded, `prefers-color-scheme` changes) for the feature card, the
+Google button's auto theme and the map's dark tiles. Flutter needs no change: the card resolves its
+colours in `build` from `context.uiTheme` (dark = the theme surface's luminance < 0.2), which is the
+`UiApp` theme from the first frame and never `MediaQuery.platformBrightness`; two tests pin it
+(device dark + `UiApp(theme: maldives)`; device dark + a `UiThemeController` switched to
+maldivesDark and back), and fail when the card is made to use the platform brightness.
+
 **0.40.1.** Touch targets: `UiMapLocateButton` no longer opts out of `UiInteractive`'s touch
 padding, so on touch platforms its 44dp circle gets a 48dp `UiTouchTarget` around it; the map pulls
 its `AnimatedPositionedDirectional` out by `UiMapLocateButton.touchSlop` (2dp) so the circle stays at
