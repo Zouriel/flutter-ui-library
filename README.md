@@ -73,6 +73,14 @@ page: an icon in a tinted badge, eyebrow, title, description and an action, with
 accent, brand, neutral), `layout` (vertical, horizontal) and `size` (md, lg); with `onPressed` the
 whole card is one button.
 
+**Compact tinted feature card (0.38):** `UiFeatureCard` gains `size: UiSize.sm` (16 padding, 40 badge,
+20 icon, body-strong title), `surface: UiFeatureSurface.tinted` (a soft wash in the tone, no border,
+shadow only on hover), `controlRadius` (a text field's corners), `trailingArrow` (with `onPressed` and
+no `actionLabel`, the whole card is one button named "title, description" with an arrow that points
+the reading way) and `descriptionLines` (clamp with an ellipsis). Two of them in an
+`IntrinsicHeight` + stretched `Row` under a `UiInput` make a start screen's shortcut tiles, exactly
+the field's width and equal in height.
+
 The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
 (the web's `maldives` and `maldives-dark`): a night toggle is
 `controller.set(isNight ? UiThemeName.maldivesDark : UiThemeName.maldives)`. `UiSeaSurface` scopes

@@ -19,6 +19,8 @@ class _DataPageState extends State<DataPage> {
   UiFeatureLayout _ftLayout = UiFeatureLayout.vertical;
   UiSize _ftSize = UiSize.md;
   int _ftTaps = 0;
+  bool _ftRtl = false;
+  String _ftOpened = '';
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +180,11 @@ class _DataPageState extends State<DataPage> {
                 size: UiSize.sm,
                 value: _ftSize,
                 onChanged: (v) => setState(() => _ftSize = v),
-                options: const [UiSegmentedOption(value: UiSize.md, label: 'md'), UiSegmentedOption(value: UiSize.lg, label: 'lg')],
+                options: const [
+                  UiSegmentedOption(value: UiSize.sm, label: 'sm'),
+                  UiSegmentedOption(value: UiSize.md, label: 'md'),
+                  UiSegmentedOption(value: UiSize.lg, label: 'lg'),
+                ],
               ),
             ]),
             UiFeatureCard(
@@ -212,12 +218,72 @@ class _DataPageState extends State<DataPage> {
             ApiRow('actionLabel', 'String?', 'The action drawn at the bottom with an arrow.'),
             ApiRow('tone', 'UiFeatureTone', 'primary, accent (solid badge), brand (gradient border and ring), neutral.', def: 'primary'),
             ApiRow('layout', 'UiFeatureLayout', 'vertical, or horizontal with the badge at the start.', def: 'vertical'),
-            ApiRow('size', 'UiSize', 'md (24 padding, 48 badge) or lg (32, 56).', def: 'md'),
+            ApiRow('size', 'UiSize', 'sm (16 padding, 40 badge, 20 icon, body-strong title, small description: the compact tile), md (24, 48) or lg (32, 56). xl counts as lg.', def: 'md'),
+            ApiRow('surface', 'UiFeatureSurface', 'standard, or tinted: a soft wash in the tone (8%), no border, shadow only on hover; muted and primary words deepened to stay AA on the wash. Ignores glass. (Web: \'default\' | \'tinted\'.)', def: 'standard'),
+            ApiRow('trailingArrow', 'bool', 'Without actionLabel, the whole card is one button named "title, description", with a small arrow that flips in RTL: at the end of the badge row when vertical, the end of the title row when horizontal or without an icon. Ignored with actionLabel.', def: 'false'),
+            ApiRow('descriptionLines', 'int?', 'Clamp the description to this many lines with an ellipsis; null or 0 shows it all.'),
+            ApiRow('controlRadius', 'bool', 'Use a text field\'s corner radius (t.radius) instead of the card\'s (t.radiusLg), so a tile matches the field above it. Still square when radius / UiConfig.radius is off. (Web: radius="control".)', def: 'false'),
             ApiRow('enabled', 'bool', 'false: dimmed and not tappable.', def: 'true'),
             ApiRow('glass / radius', 'bool?', 'Frosted surface, rounded corners; default from UiConfig.'),
-            ApiRow('semanticLabel', 'String?', 'Replaces the spoken "title, action label".'),
+            ApiRow('semanticLabel', 'String?', 'Replaces the spoken "title, action label" (or "title, description" for a trailingArrow card).'),
           ],
           callbacks: const [ApiRow('onPressed', 'VoidCallback?', 'Makes the whole card one button. Null: a static card.')],
+        ),
+        DocSection(
+          name: 'Feature card: compact tinted',
+          widget: 'UiFeatureCard',
+          summary: 'The start-screen tile: two cards side by side under a text field, together exactly its width and equal in height (IntrinsicHeight + a stretched Row). size sm, surface tinted (a soft wash in the tone instead of a bordered card), controlRadius (the field\'s corners), trailingArrow (the whole card is one button named by its title and description, with an arrow that points the reading way) and descriptionLines: 2. They lift and cast a shadow on hover, scale a little on press, show the focus ring, and keep still when animations are off.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            UiSegmented<bool>(
+              label: 'Direction',
+              size: UiSize.sm,
+              value: _ftRtl,
+              onChanged: (v) => setState(() => _ftRtl = v),
+              options: const [UiSegmentedOption(value: false, label: 'LTR'), UiSegmentedOption(value: true, label: 'RTL')],
+            ),
+            Directionality(
+              textDirection: _ftRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+                  const UiInput(placeholder: 'Describe how you feel', semanticLabel: 'Ask'),
+                  IntrinsicHeight(
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+                      Expanded(
+                        child: UiFeatureCard(
+                          icon: const UiIcon(HugeIcons.strokeRoundedStethoscope),
+                          title: 'Find a doctor',
+                          description: _ftRtl ? 'Book a clinic visit near you' : 'Book a clinic visit near you.',
+                          size: UiSize.sm,
+                          surface: UiFeatureSurface.tinted,
+                          controlRadius: true,
+                          trailingArrow: true,
+                          descriptionLines: 2,
+                          onPressed: () => setState(() => _ftOpened = 'Find a doctor'),
+                        ),
+                      ),
+                      Expanded(
+                        child: UiFeatureCard(
+                          icon: const UiIcon(HugeIcons.strokeRoundedAmbulance),
+                          title: 'Nurse at home',
+                          description: _ftRtl ? 'A nurse comes to you' : 'A nurse comes to you.',
+                          tone: UiFeatureTone.accent,
+                          size: UiSize.sm,
+                          surface: UiFeatureSurface.tinted,
+                          controlRadius: true,
+                          trailingArrow: true,
+                          descriptionLines: 2,
+                          onPressed: () => setState(() => _ftOpened = 'Nurse at home'),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+            UiText(_ftOpened.isEmpty ? 'Tap a tile.' : 'Opened: $_ftOpened', variant: UiTextVariant.caption),
+          ]),
+          code: "Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [\n  const UiInput(placeholder: 'Describe how you feel', semanticLabel: 'Ask'),\n  IntrinsicHeight(\n    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [\n      Expanded(\n        child: UiFeatureCard(\n          icon: const UiIcon(HugeIcons.strokeRoundedStethoscope),\n          title: 'Find a doctor',\n          description: 'Book a clinic visit near you.',\n          size: UiSize.sm,\n          surface: UiFeatureSurface.tinted,\n          controlRadius: true,\n          trailingArrow: true,\n          descriptionLines: 2,\n          onPressed: openDoctors,\n        ),\n      ),\n      Expanded(child: UiFeatureCard(/* ... */ tone: UiFeatureTone.accent, /* ... */)),\n    ]),\n  ),\n])",
         ),
         DocSection(
           name: 'Divider',

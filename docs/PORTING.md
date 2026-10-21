@@ -123,6 +123,25 @@ The web's `UiGoogleAuthorization` (an OAuth access token for extra scopes throug
 Services' token client) has no Flutter twin: a Flutter app asks for scopes with the `google_sign_in`
 package's `authorizationClient` (`authorizeScopes`), and there is no widget for the library to add.
 
+**0.38.0 additions.** `UiFeatureCard`: `size: UiSize.sm` is now the compact tile (it counted as md
+before; 16 padding, 40 badge with a `t.radiusSm` corner, 20 icon, body-strong title, `fontSizeSm`
+description). `surface` is the enum `UiFeatureSurface { standard, tinted }` (web `'default' |
+'tinted'`; `default` is a Dart keyword). The web `radius: boolean | 'control'` is two fields here:
+`radius` (bool?, on/off as before) and `controlRadius` (bool, `t.radius` instead of `t.radiusLg`),
+since Dart has no bool-or-enum union; both sides keep the corners square when `UiConfig.radius` is
+off, like a text field. `trailingArrow` + `onPressed` without `actionLabel` names the one button
+"title, description" with no hint (the web: `aria-labelledby` title + description, no
+`aria-describedby`); on the web `trailingArrow` alone makes the card interactive, in Flutter it still
+needs `onPressed`. The arrow sits at the end of the badge row in the vertical layout (the title keeps
+its full width on a narrow tile) and at the end of the title row when horizontal or without an icon.
+`descriptionLines` is `maxLines` + `TextOverflow.ellipsis` (web `line-clamp`). Without an action row
+the card no longer wraps its content in a `LayoutBuilder` (it only decides whether the action keeps
+to the bottom), so tiles can be made equal height with `IntrinsicHeight`; the look is unchanged.
+Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral `lerp(surface, text,
+.05)`), muted and primary words are `lerp(x, text, .25)`, the primary badge tint is 18%; the web uses
+the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
+hair; both suites check AA in every theme).
+
 **0.36.0 additions.** `UiGoogleSignInButton` (web `ui-google-button`) draws Google's sign-in
 button to https://developers.google.com/identity/branding-guidelines: the colours are Google's
 (`UiGoogleBrand`), the one file `style_contract_test` lets use literal colours; 40 high, 12 before

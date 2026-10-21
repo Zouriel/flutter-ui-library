@@ -289,7 +289,7 @@ File: `card/src/stat-card.ts`
 ### UiFeatureCard (component, `ui-feature-card`) (0.37)
 File: `card/src/feature-card.ts`  
 Product or service card for a landing page: icon in a tinted badge, eyebrow, title, description and an action; the whole card is one target.  
-- Inputs: `title`; `description`; `eyebrow`; `actionLabel`; `href` (web only); `tone` (primary | accent | brand | neutral); `layout` (vertical | horizontal); `size` (md | lg); `disabled` (Flutter `enabled: false`); `glass`; `radius`; `[icon]` slot (Flutter `icon`)
+- Inputs: `title`; `description`; `eyebrow`; `actionLabel`; `href` (web only); `tone` (primary | accent | brand | neutral); `layout` (vertical | horizontal); `size` (sm | md | lg; sm since 0.38); `surface` (default | tinted, Flutter `UiFeatureSurface.standard | tinted`, 0.38); `trailingArrow` (0.38); `descriptionLines` (0.38); `disabled` (Flutter `enabled: false`); `glass`; `radius` (boolean | 'control', Flutter `radius` + `controlRadius`, 0.38); `[icon]` slot (Flutter `icon`)
 - Outputs: `action` (Flutter `onPressed`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
