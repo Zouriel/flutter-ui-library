@@ -99,6 +99,15 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Image and PDF viewers can fill the page (0.41.1):** `UiImageViewer(fill: true)` and
+`UiPdfViewer(fill: true)` take all the height their parent gives (an `Expanded` under a page title, a
+full route) with no frame: the photo or page is fitted (contain, centred; 100% is fitted), pinch,
+double tap, Ctrl+wheel and the buttons zoom, a zoomed photo pans, and the controls float over the
+bottom as a pill on the glass panel surface, above `MediaQuery.paddingOf(context).bottom`, instead of
+a bar of their own. The PDF viewer adds a Fit button. In an unbounded parent `fill` falls back to
+`maxHeight`. Without `fill` nothing changes, except that a picture smaller than the stage is now fitted
+up to it like a larger one is fitted down (the zoom clamp already assumed it was).
+
 **Fixed header and footer in drawers and sidebars (0.41.0):** `showUiDrawer` takes `headerBuilder`
 and `footerBuilder` (`UiDrawer.header` / `footer`), placed outside the body's scroll view: title bar,
 fixed header, the scrolling body, fixed footer (above the home indicator and, on a left or right

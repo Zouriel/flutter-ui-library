@@ -38,6 +38,7 @@ class FileViewerPage extends StatefulWidget {
 
 class _FileViewerPageState extends State<FileViewerPage> {
   int _photo = 0;
+  String _fillKind = 'image';
   UiFileNode _file = const UiFileNode.file('handbook.pdf', url: 'assets/demo/handbook.pdf');
   final List<String> _log = [];
 
@@ -110,6 +111,40 @@ class _FileViewerPageState extends State<FileViewerPage> {
             ApiRow('hasPrevious / hasNext', 'bool', 'Whether neighbours exist.', def: 'false'),
             ApiRow('onPrevious / onNext', 'VoidCallback?', 'A swipe, key or step button asking for the neighbour.'),
             ApiRow('maxHeight', 'double?', 'Default 70% of the screen.'),
+            ApiRow('fill', 'bool', 'The whole page: no cap, the controls floating over the bottom. See Full-page document viewer.', def: 'false'),
+          ],
+        ),
+        DocSection(
+          name: 'Full-page document viewer',
+          widget: 'UiImageViewer(fill: true) · UiPdfViewer(fill: true)',
+          summary: 'For a page whose whole point is one document, such as a payment slip opened from a list: put the viewer in an Expanded (or a full route) and set fill. It takes all of that space with no frame, the photo or page is fitted into it (contain, centred; 100% is fitted), pinch, double tap, Ctrl+wheel and the buttons still zoom and a zoomed photo still pans, and the controls float over the bottom on the glass surface, above the home indicator, instead of a bar of their own. The PDF viewer adds a Fit button.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            UiSegmented<String>(
+              label: 'Document',
+              value: _fillKind,
+              options: const [UiSegmentedOption(value: 'image', label: 'Photo'), UiSegmentedOption(value: 'pdf', label: 'PDF')],
+              onChanged: (v) => setState(() => _fillKind = v),
+            ),
+            // A phone-sized page: the title, then the viewer filling everything below it.
+            Container(
+              key: const ValueKey('fill-demo'),
+              constraints: const BoxConstraints(maxWidth: 390),
+              height: 640,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(color: t.bg, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radiusLg)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Padding(padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3), child: const UiText('Payment slip', variant: UiTextVariant.h5)),
+                Expanded(
+                  child: _fillKind == 'pdf'
+                      ? const UiPdfViewer(src: 'assets/demo/handbook.pdf', fill: true)
+                      : const UiImageViewer(image: AssetImage('assets/demo/slip.jpg'), alt: 'Photo of a payment receipt', fill: true),
+                ),
+              ]),
+            ),
+          ]),
+          code: "Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [\n  UiText('Payment slip', variant: UiTextVariant.h5),\n  Expanded(\n    child: slip.isPdf\n        ? UiPdfViewer(data: slip.bytes, fill: true)\n        : UiImageViewer(image: MemoryImage(slip.bytes), alt: 'Payment slip', fill: true),\n  ),\n])",
+          api: const [
+            ApiRow('fill', 'bool', 'UiImageViewer and UiPdfViewer: take all the space the parent gives, fitted, with floating controls. In an unbounded parent it falls back to maxHeight.', def: 'false'),
           ],
         ),
         DocSection(
@@ -197,6 +232,7 @@ class _FileViewerPageState extends State<FileViewerPage> {
             ApiRow('initialPage', 'int', 'First page shown.', def: '1'),
             ApiRow('onPageChanged', 'ValueChanged<int>?', 'Each page turn.'),
             ApiRow('maxHeight', 'double?', 'Height in an unbounded parent (70% of the screen).'),
+            ApiRow('fill', 'bool', 'The whole page: each page fitted (100% = fitted), controls floating at the bottom, a Fit button.', def: 'false'),
           ],
         ),
       ],

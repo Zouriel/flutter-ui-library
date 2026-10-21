@@ -529,10 +529,11 @@ File: `file-viewer/src/file-viewer.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `clampOffset` (gestures.ts)
+- function `fitContain` (gestures.ts; Flutter `uiFitContain`)
 ### UiImageViewer (component, `ui-image-viewer`)
 File: `file-viewer/src/image-viewer.ts`  
 `ui-image-viewer` — zoom (buttons, wheel, pinch), pan (drag, wheel), fit/reset, and — when the host says there is somewhere to go — swipe between images. <p>Gestures are handled here rather than left to the browser, which is why the stage sets `touch-action: none`: a two-finger pinch that the browser claims first never reaches us, and the page would zoom instead of the image. Owning the gesture is what makes pinch work at all.</p> <p>It follows that navigation has to live here too. A gallery cannot listen for its own swipes over a stage that has already captured the pointer, so the viewer detects the gesture and the host moves: {@link hasPrevious}/{@link hasNext} say what exists, {@link previous}/{@link next} report the intent, and the list itself stays where it belongs — with whoever owns it.</p>  
-- Inputs: `src`: string; `alt` = ''; `kind`: 'image' | 'video' = 'image'; `hasPrevious` = false; `hasNext` = false
+- Inputs: `src`: string; `alt` = ''; `kind`: 'image' | 'video' = 'image'; `hasPrevious` = false; `hasNext` = false; `fill` = false (0.41.1)
 - Outputs: `previous`: void; `next`: void
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1411,7 +1412,7 @@ File: `overlay/src/hint.ts`
 ### UiPdfViewer (component, `ui-pdf-viewer`)
 File: `pdf-viewer/src/pdf-viewer.ts`  
 `ui-pdf-viewer` — renders a PDF with page navigation and zoom. `pdfjs-dist` is loaded via a dynamic import so it ships only when this component is used (its own secondary entry point; pair with `@defer` for full lazy loading). Override `workerSrc` to self-host the worker instead of the CDN default.  
-- Inputs: `src`: string; `workerSrc`: string
+- Inputs: `src`: string; `workerSrc`: string; `fill` = false (0.41.1)
 - [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (PDFium does not load under flutter test; check on device)  - [x] showcase
 
 

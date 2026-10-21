@@ -12,6 +12,7 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
+import 'viewer_overlay.dart';
 
 const double _minZoom = 0.25;
 const double _maxZoom = 6;
@@ -50,7 +51,12 @@ Size uiFitContain(Size content, Size stage) {
 /// enclosing [UiSwipe].
 ///
 /// The viewer bounds itself to [maxHeight] (70% of the screen by default) so the control bar is
-/// always on screen.
+/// always on screen. The picture is fitted (contain, centred) into the stage whatever its size.
+///
+/// With [fill] it is the whole page instead (a payment slip opened from a list): it takes all the
+/// height its parent gives (an [Expanded] child, a full route), with no cap and no frame, and the
+/// zoom controls float over the bottom of the picture on the glass panel surface, above the safe
+/// area, instead of sitting in a bar of their own.
 class UiImageViewer extends StatefulWidget {
   const UiImageViewer({
     super.key,
@@ -61,6 +67,7 @@ class UiImageViewer extends StatefulWidget {
     this.onPrevious,
     this.onNext,
     this.maxHeight,
+    this.fill = false,
   });
 
   final ImageProvider image;
@@ -70,6 +77,10 @@ class UiImageViewer extends StatefulWidget {
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
   final double? maxHeight;
+
+  /// Take all the space the parent gives, with the controls floating over the picture. In an
+  /// unbounded parent it falls back to [maxHeight].
+  final bool fill;
 
   @override
   State<UiImageViewer> createState() => _UiImageViewerState();
@@ -262,10 +273,13 @@ class _UiImageViewerState extends State<UiImageViewer> {
                   curve: t.easeStandard,
                   transform: transform,
                   transformAlignment: Alignment.center,
-                  child: Center(
+                  // Expanded to the stage and contained in it: a small picture is fitted up to the
+                  // stage like a large one is fitted down, and _clamp's fitted size is what is drawn.
+                  child: SizedBox.expand(
                     child: Image(
                       image: widget.image,
                       fit: BoxFit.contain,
+                      alignment: Alignment.center,
                       // Named by the stage's own semantics node.
                       excludeFromSemantics: true,
                       gaplessPlayback: true,
@@ -312,6 +326,35 @@ class _UiImageViewerState extends State<UiImageViewer> {
 
     Widget btn(UiIconData icon, String label, VoidCallback? onTap) =>
         UiIconButton(icon: UiIcon(icon), label: label, size: UiSize.sm, onPressed: onTap);
+
+    if (widget.fill) {
+      final overlay = uiViewerOverlayBar(context, [
+        if (_navigable) btn(HugeIcons.strokeRoundedArrowLeft01, 'Previous image', widget.hasPrevious ? widget.onPrevious : null),
+        btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', _zoom <= _minZoom ? null : () => _setZoom(_zoom - 0.25)),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 42),
+          child: Text(pct, textAlign: TextAlign.center, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
+        ),
+        btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', _zoom >= _maxZoom ? null : () => _setZoom(_zoom + 0.25)),
+        UiButton(label: 'Fit', semanticLabel: 'Reset view', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _reset),
+        if (_navigable) btn(HugeIcons.strokeRoundedArrowRight01, 'Next image', widget.hasNext ? widget.onNext : null),
+      ], touch: touch);
+      return LayoutBuilder(builder: (context, box) {
+        final h = box.maxHeight.isFinite ? box.maxHeight : maxH;
+        return SizedBox(
+          height: h,
+          child: Stack(children: [
+            Positioned.fill(child: focusable),
+            Positioned(
+              left: t.space3,
+              right: t.space3,
+              bottom: t.space3 + MediaQuery.paddingOf(context).bottom,
+              child: Center(child: overlay),
+            ),
+          ]),
+        );
+      });
+    }
 
     final bar = Container(
       padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),

@@ -170,6 +170,30 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.41.1.** Image and PDF viewers can fill the page (Dhirumi nurse app: the payment slip "is opening
+in a weird window": a fixed-height framed box with its zoom bar under it and the page empty below).
+Both libraries: `fill` on `UiImageViewer` / `ui-image-viewer` and `UiPdfViewer` / `ui-pdf-viewer`.
+The viewer takes the parent's height (web: `height: 100%` with the cap and spacer removed; Flutter:
+`box.maxHeight`, `maxHeight` when unbounded), has no frame (PDF: radius 0, `bg` instead of
+`surface`), and the controls are a pill on `glassPanelBg` with `glassBlur`/`shadow2`, centred
+`space3` above the bottom plus the safe area (web `env(safe-area-inset-bottom)`, Flutter
+`MediaQuery.paddingOf(context).bottom`; `viewer_overlay.dart`, not exported). The picture is fitted
+into the whole stage: web `img`/`video` are `position: absolute; inset: 0; width/height: 100%;
+object-fit: contain` and the pan clamp uses the contained size from `naturalWidth/Height`
+(`fitContain`, the twin of `uiFitContain`); Flutter wraps the `Image` in `SizedBox.expand` (it was
+`Center`, so a small picture stayed small while the clamp assumed it was fitted). That fitting applies
+without `fill` too. PDF fill: each page is fitted whole into the area above the overlay (web: the
+scroller's content box, whose bottom padding reserves the bar; Flutter: `overlayReserve`), zoom is
+relative to that fit (100% = fitted, 40-400%), and a Fit button (`Fit page`) resets it. Web-only
+changes with no Flutter counterpart needed: without `fill` the web viewers used to collapse to a
+200 px stage in a parent with no definite height (`height: 100%` of auto); a stage `::before` spacer
+(`--ui-image-viewer-min-height` / `--ui-pdf-viewer-min-height`, default 60svh) now gives them that
+height while a parent with a height still wins (Flutter already took 70% of the screen when
+unbounded and the full height in an `Expanded`). The web PDF viewer gains Ctrl+wheel and two-finger
+pinch zoom (live CSS scale, one re-render on release), which Flutter had through `InteractiveViewer`,
+and one render at a time (a newer render cancels the previous); the web image viewer takes `+ = - 0`
+like Flutter's, and is focusable (role group, named by `alt`) in fill.
+
 **0.41.0.** Fixed header and footer in drawers and sidebars (Dhirumi: "My nurse visits" and the
 profile must stay in the viewport, not sit at the end of the chats list). Web: `ui-drawer` gets
 `[drawer-header]` / `[drawer-footer]` slots (`.dh` / `.df` around `.bd`, kebab names like

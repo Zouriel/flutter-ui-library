@@ -13,7 +13,9 @@ import '../core/interactive.dart';
 import '../core/types.dart';
 import '../feedback/spinner.dart';
 import '../theme/theme.dart';
+import 'image_viewer.dart' show uiFitContain;
 import 'sources.dart';
+import 'viewer_overlay.dart';
 
 /// `ui-pdf-viewer`: a PDF, one page at a time, with previous/next page buttons and zoom from 40% to
 /// 400% (buttons, pinch, double tap); 100% fits the page to the width. [src] is a URL, file path
@@ -21,8 +23,12 @@ import 'sources.dart';
 ///
 /// Rendered by PDFium through `pdfrx`, drawn sharp at the current zoom. If the file can't be
 /// loaded the error shows in place of the page.
+///
+/// With [fill] it is the whole page instead: it takes all the height its parent gives, with no frame,
+/// each page is fitted whole (contain, centred; 100% is fitted), and the controls, with a Fit
+/// button, float over the bottom on the glass panel surface above the safe area.
 class UiPdfViewer extends StatefulWidget {
-  const UiPdfViewer({super.key, this.src, this.data, this.documentRef, this.initialPage = 1, this.onPageChanged, this.maxHeight})
+  const UiPdfViewer({super.key, this.src, this.data, this.documentRef, this.initialPage = 1, this.onPageChanged, this.maxHeight, this.fill = false})
     : assert(src != null || data != null || documentRef != null, 'Give the viewer a src, data or documentRef.');
 
   final String? src;
@@ -35,6 +41,9 @@ class UiPdfViewer extends StatefulWidget {
 
   /// The viewer's height when its parent leaves it unbounded (default 70% of the screen).
   final double? maxHeight;
+
+  /// Take all the space the parent gives, the page fitted whole and the controls floating over it.
+  final bool fill;
 
   static const double minScale = 0.4, maxScale = 4;
 
@@ -121,11 +130,12 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
       builder: (context, box) {
         final h = box.maxHeight.isFinite ? box.maxHeight : (widget.maxHeight ?? MediaQuery.sizeOf(context).height * 0.7);
         return SizedBox(
-          height: math.max(240, h),
+          height: widget.fill ? h : math.max(240, h),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(context.uiTheme.radius()),
+            // fill: no frame, the viewer is the page.
+            borderRadius: BorderRadius.circular(widget.fill ? 0 : context.uiTheme.radius()),
             child: ColoredBox(
-              color: t.surface,
+              color: widget.fill ? t.bg : t.surface,
               child: PdfDocumentViewBuilder(
                 documentRef: _ref,
                 loadingBuilder: (context) => _shell(context, null, _message(context, 'Loading PDF…')),
@@ -209,8 +219,50 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
         ),
       );
 
+      // fill: the controls float over the bottom, so a fitted page stops short of them.
+      final safeBottom = MediaQuery.paddingOf(context).bottom;
+      final overlayReserve = (touch ? t.sizeTouch : t.sizeSm) + t.space1 * 2 + t.space3 * 2 + safeBottom;
+
       Widget body(Size stage) {
         if (message != null || page == null) return Center(child: message ?? const SizedBox());
+        if (widget.fill) {
+          final pad = t.space3;
+          final room = Size(math.max(1.0, stage.width - pad * 2), math.max(1.0, stage.height - pad - overlayReserve));
+          final shown = uiFitContain(Size(page.width, page.height), room);
+          return GestureDetector(
+            onDoubleTap: () => _scale > 1.01 ? _view.value = Matrix4.identity() : _zoomBy(1, stage),
+            child: _SignalFirst(
+              onSignal: _passWheelToPage,
+              child: InteractiveViewer(
+                transformationController: _view,
+                minScale: UiPdfViewer.minScale,
+                maxScale: UiPdfViewer.maxScale,
+                boundaryMargin: EdgeInsets.all(stage.shortestSide),
+                constrained: false,
+                child: SizedBox(
+                  width: stage.width,
+                  height: stage.height,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(pad, pad, pad, overlayReserve),
+                    child: Center(
+                      child: Semantics(
+                        label: 'Page $_page',
+                        image: true,
+                        child: Container(
+                          key: const ValueKey('ui-pdf-page'),
+                          width: shown.width,
+                          height: shown.height,
+                          decoration: BoxDecoration(color: t.pdfPageBg, boxShadow: t.shadow2),
+                          child: PdfPageView(document: doc, pageNumber: _page, backgroundColor: t.pdfPageBg),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
         {
           // 100% fits the page to the width; a tall page pans up and down.
           final pad = t.space3;
@@ -241,6 +293,7 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
                           label: 'Page $_page',
                           image: true,
                           child: Container(
+                            key: const ValueKey('ui-pdf-page'),
                             width: w,
                             height: hgt,
                             decoration: BoxDecoration(color: t.pdfPageBg, boxShadow: t.shadow2),
@@ -255,6 +308,42 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
             ),
           );
         }
+      }
+
+      if (widget.fill) {
+        final overlay = uiViewerOverlayBar(context, [
+          btn(HugeIcons.strokeRoundedArrowLeft01, 'Previous page', page != null && _page > 1 ? () => _go(_page - 1, pages) : null),
+          Semantics(
+            liveRegion: true,
+            label: pages == 0 ? null : 'Page $_page of $pages',
+            child: ExcludeSemantics(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 42),
+                child: Text('$_page / ${pages == 0 ? '—' : pages}', textAlign: TextAlign.center, style: mono),
+              ),
+            ),
+          ),
+          btn(HugeIcons.strokeRoundedArrowRight01, 'Next page', page != null && _page < pages ? () => _go(_page + 1, pages) : null),
+          SizedBox(width: t.space2),
+          btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', page != null && _scale > UiPdfViewer.minScale + 0.001 ? () => _zoomBy(-0.2, _stage) : null),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 42),
+            child: Text('${(_scale * 100).round()}%', textAlign: TextAlign.center, style: mono),
+          ),
+          btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', page != null && _scale < UiPdfViewer.maxScale - 0.001 ? () => _zoomBy(0.2, _stage) : null),
+          UiButton(label: 'Fit', semanticLabel: 'Fit page', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => _view.value = Matrix4.identity()),
+        ], touch: touch);
+        return Stack(children: [
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, box) {
+                _stage = box.biggest;
+                return body(_stage);
+              },
+            ),
+          ),
+          Positioned(left: t.space3, right: t.space3, bottom: t.space3 + safeBottom, child: Center(child: overlay)),
+        ]);
       }
 
       return Column(
