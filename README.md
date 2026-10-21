@@ -99,6 +99,16 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Map tiles, my location, a sheet that holds still (0.40):** `UiMap` gains `tileUrlDark` (tiles drawn
+for dark themes, shown undimmed and swapped live with the theme; `tileHeaders` go with both),
+`tileSize` / `zoomOffset` (512 px tiles: 512, -1) and `{r}` retina URLs (`@2x` on a high-density
+screen); `locateControl` (a round "Show my location" button at the bottom-end of the visible part,
+just above a bottom sheet, with `locating` (spinner) and `locateOff` (struck through, "Location is
+off") states, `onLocate`), `userLocation: UiMapUserLocation(lat, lng, accuracy:)` (the "you are here"
+dot, tokens `location` / `locationRing`, over a halo sized in metres) and `UiMapState.flyTo`.
+`UiBottomSheet` reads an index past the end of `snaps` as the last snap (it threw a RangeError),
+stays at the same height when `snaps` changes, and `expandOnFocus` raises it once per field.
+
 **Feature card colours and motion (0.39):** `UiFeatureCard` gains `badgeTone` (the badge in its own
 tone), `colors: UiFeatureCardColors(surface:, accent:, surfaceDark:, accentDark:)` (or
 `UiFeatureCardColors.tryParse` from hex/rgb strings: an app's own surface and accent, with the dark

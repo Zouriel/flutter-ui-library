@@ -71,6 +71,9 @@ class UiStrings {
     this.zoomIn = 'Zoom in',
     this.zoomOut = 'Zoom out',
     this.placePinAtCentre = 'Place the pin at the centre',
+    this.mapLocate = 'Show my location',
+    this.mapLocationOff = 'Location is off',
+    this.mapYourLocation = 'Your location',
     this.googleSignIn = 'Sign in with Google',
     this.googleSignUp = 'Sign up with Google',
     this.googleContinue = 'Continue with Google',
@@ -100,6 +103,9 @@ class UiStrings {
 
   /// Map: the zoom buttons, and placing the pin at the centre (keyboard / screen reader).
   final String zoomIn, zoomOut, placePinAtCentre;
+
+  /// Map: the "my location" button, its off state (location off or denied), and the "you are here" dot.
+  final String mapLocate, mapLocationOff, mapYourLocation;
 
   /// Google sign-in button: Google's approved wordings (translations must keep the meaning:
   /// signing in to this app with a Google account, not creating one).

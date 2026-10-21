@@ -170,6 +170,38 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.40.0 additions.** Dark tiles: one `TileLayer` whose `urlTemplate` is `uiMapTileUrl(tileUrl,
+tileUrlDark, dark)` (dark = the theme's brightness), so a theme change swaps the URL on the same
+layer state; the web does the same with Leaflet `setUrl` on the same layer (a new layer only when
+size, offset, attribution or referrer change) and leaves the dimming filter off with
+`data-dark-tiles`. `{r}`: flutter_map's `retinaMode` (server mode, `@2x`) is on when the URL has
+`{r}` and the device pixel ratio is above 1; Leaflet fills `{r}` from `Browser.retina` itself. The
+web's `tileSize` maps to flutter_map's `tileDimension`. The tile provider is shared by both URLs, so
+`tileHeaders` (a Referer for a key restricted to a web origin) go with the dark tiles too; the web
+sends the browser's own Referer under `tileReferrerPolicy`. The locate button is `UiMapLocateButton`
+(UiInteractive, a circle, 38px or `sizeTouch` 44px on touch), positioned with
+AnimatedPositionedDirectional at `viewInsets.bottom + space8` / `viewInsets.end + space3`; the web
+is a `<button>` over the canvas at `calc(var(--ui-map-inset-bottom) + var(--ui-space-8))` and
+`inset-inline-end`. "Location is off" is a `UiTooltip` (its message merges into the button's
+semantics node as its tooltip) and `aria-description` plus `uiTooltip` on the web. The dot is a
+MarkerLayer between the pulse and the markers whose halo reads `MapCamera.of(context).zoom`; on the
+web a divIcon in its own pane (z-index 500, between the pulse's 450 and the markers' 600) redrawn
+on `zoomend`. The halo sum `uiMapAccuracyPx` is the same in both (Web Mercator, 256 px at zoom 0,
+rounded, clamped 28..240). The colours are new tokens (`--ui-color-location` #1a73e8 and
+`--ui-color-location-ring` #fff, the same in every theme), so the generated tokens carry them.
+`flyTo` moves without animation in Flutter (as `center` does) and animates on the web unless
+reduced motion.
+
+Bottom sheet: the web bug (Dhirumi, a phone browser with `interactive-widget=resizes-content`) was an
+app whose snaps were sized to the window: the keyboard shrank it, the app's snaps lost a step, the
+sheet's index then pointed past the end, read as height 0 (closed), went `inert`, the field lost
+focus, the keyboard closed, the snaps came back and the sheet re-opened: over and over. Both
+libraries now read the index clamped to the snaps, and when `snaps` changes while `snap` doesn't,
+move to the snap nearest the old resting fraction and report it (Flutter through `onSnapChanged`
+after the frame; Flutter used to throw a RangeError there). `expandOnFocus` raises once per field:
+focus coming back to the field that raised it within 600 ms of leaving it is ignored (a Timer in
+Flutter, the focus event's timeStamp on the web).
+
 **0.39.0 additions.** The map pulse is a `MarkerLayer` between the tiles and the markers holding
 `UiMapPulseRings` (one AnimationController repeating 2.4s and a CustomPainter; ring i starts i/3 of
 a loop late, as the web's animation-delay, using the controller's elapsed time). It exists only

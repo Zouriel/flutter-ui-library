@@ -16,6 +16,26 @@ class _MapPageState extends State<MapPage> {
   UiMapMarker? _picked;
   UiMapView? _view;
   UiLatLng? _pin = const UiLatLng(4.1745, 73.5085);
+  // Styled tiles: URLs pasted into the demo (never stored).
+  String _tileLight = '', _tileDark = '';
+  // My location: a stand-in position (the showcase doesn't ask for the real one).
+  final _small = GlobalKey<UiMapState>();
+  UiMapUserLocation? _me;
+  bool _locating = false, _off = false;
+
+  void _findMe() {
+    if (_off) return; // an app would ask for permission here
+    setState(() => _locating = true);
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      const me = UiMapUserLocation(4.1768, 73.5121, accuracy: 35);
+      setState(() {
+        _me = me;
+        _locating = false;
+      });
+      _small.currentState?.flyTo(const UiLatLng(4.1768, 73.5121), zoom: 16);
+    });
+  }
 
   static const _markers = [
     UiMapMarker(id: 'n1', lat: 4.1762, lng: 73.5105, label: 'Aminath Hassan, RN', tone: UiStatus.success),
@@ -108,6 +128,100 @@ class _MapPageState extends State<MapPage> {
           ],
         ),
         DocSection(
+          name: 'Styled tiles',
+          widget: 'UiMap tileUrl · tileUrlDark',
+          summary: 'Any raster tile service: tileUrl for light themes and tileUrlDark for dark ones. On a dark theme the dark tiles are shown as they are (no dimming), and the map swaps between the two the moment the theme changes, in the same tile layer. Without tileUrlDark the light tiles are dimmed on dark themes. {r} in the URL becomes @2x on a high-density screen; for 512 px tiles pass tileSize 512 and zoomOffset -1. tileHeaders (a Referer for a key restricted to a web origin) go with both. Paste your own URLs to try a style (nothing is stored).',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            UiFormField(
+              label: 'Light tile URL',
+              hint: 'Empty: OpenStreetMap',
+              child: UiInput(placeholder: 'https://api.maptiler.com/maps/dataviz/256/{z}/{x}/{y}{r}.png?key=YOUR_KEY', value: _tileLight, onChanged: (v) => setState(() => _tileLight = v.trim())),
+            ),
+            UiFormField(
+              label: 'Dark tile URL',
+              hint: 'Empty: the light tiles, dimmed',
+              child: UiInput(placeholder: 'https://api.maptiler.com/maps/dataviz-dark/256/{z}/{x}/{y}{r}.png?key=YOUR_KEY', value: _tileDark, onChanged: (v) => setState(() => _tileDark = v.trim())),
+            ),
+            SizedBox(
+              height: 320,
+              child: UiMap(
+                zoom: 15,
+                markers: _markers,
+                tileUrl: _tileLight.isEmpty ? uiMapOsmTiles : _tileLight,
+                tileUrlDark: _tileDark.isEmpty ? null : _tileDark,
+                attribution: _tileLight.isEmpty ? '© OpenStreetMap contributors' : 'Tiles from your URL © OpenStreetMap contributors',
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'Styled map',
+              ),
+            ),
+          ]),
+          code: '''// MapTiler raster (256 px): {r} is @2x on high-density screens. Serve the key from your API.
+UiMap(
+  tileUrl: 'https://api.maptiler.com/maps/dataviz/256/{z}/{x}/{y}{r}.png?key=\$key',
+  tileUrlDark: 'https://api.maptiler.com/maps/dataviz-dark/256/{z}/{x}/{y}{r}.png?key=\$key',
+  attribution: '© MapTiler © OpenStreetMap contributors',
+  tileHeaders: {'Referer': 'https://your.site/'}, // a key restricted to a web origin
+)
+// 512 px tiles: tileSize: 512, zoomOffset: -1''',
+          api: const [
+            ApiRow('tileUrl', 'String', 'Tile URL template for light themes. {r} is @2x on a high-density screen, empty otherwise.', def: 'OSM'),
+            ApiRow('tileUrlDark', 'String?', 'Tiles for dark themes, shown undimmed; swapped live on a theme change. null: the light tiles, dimmed.'),
+            ApiRow('tileSize / zoomOffset', 'int / double', 'For 512 px tiles: 512 and -1.', def: '256 / 0'),
+            ApiRow('tileHeaders', 'Map<String, String>?', 'Sent with the light and the dark tiles.'),
+          ],
+        ),
+        DocSection(
+          name: 'My location',
+          widget: 'UiMap locateControl · userLocation',
+          summary: 'locateControl adds a round Show my location button at the bottom-end corner of the visible part: it follows viewInsets, so on a map page it floats just above the bottom sheet and moves with it. It calls onLocate; the app finds the position itself, sets userLocation and moves the map with UiMapState.flyTo, which centres in the visible part. locating shows a spinner and ignores taps; locateOff shows the icon struck through with the tooltip Location is off, and a tap still calls onLocate so the app can ask again. userLocation draws the you-are-here dot, blue with a white ring, over a soft halo as wide as the accuracy in metres (28 to 240 px across), above the tiles and below markers and the pin, read out as Your location.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            SizedBox(
+              height: 320,
+              child: UiMap(
+                key: _small,
+                zoom: 15,
+                userLocation: _me,
+                locateControl: true,
+                locating: _locating,
+                locateOff: _off,
+                onLocate: _findMe,
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'Where you are',
+              ),
+            ),
+            UiSegmented<bool>(
+              label: 'Location (demo)',
+              size: UiSize.sm,
+              options: const [UiSegmentedOption(value: false, label: 'On'), UiSegmentedOption(value: true, label: 'Off')],
+              value: _off,
+              onChanged: (v) => setState(() => _off = v),
+            ),
+          ]),
+          code: '''UiMap(
+  key: mapKey,
+  viewInsets: EdgeInsetsDirectional.only(bottom: sheetCover),
+  userLocation: me, // UiMapUserLocation(lat, lng, accuracy: metres)
+  locateControl: true,
+  locating: locating,
+  locateOff: denied,
+  onLocate: () async {
+    setState(() => locating = true);
+    final p = await Geolocator.getCurrentPosition();
+    setState(() { me = UiMapUserLocation(p.latitude, p.longitude, accuracy: p.accuracy); locating = false; });
+    mapKey.currentState!.flyTo(UiLatLng(p.latitude, p.longitude), zoom: 16);
+  },
+)''',
+          api: const [
+            ApiRow('locateControl', 'bool', 'A round Show my location button at the bottom-end of the visible part; follows viewInsets.', def: 'false'),
+            ApiRow('locating', 'bool', 'A spinner instead of the icon; taps do nothing.', def: 'false'),
+            ApiRow('locateOff', 'bool', 'Struck-through icon and the tooltip Location is off (read out too); taps still call onLocate.', def: 'false'),
+            ApiRow('onLocate', 'VoidCallback?', 'The button was tapped (not while locating).'),
+            ApiRow('userLocation', 'UiMapUserLocation?', 'The you-are-here dot (tokens location / locationRing) over an accuracy halo sized in metres.'),
+            ApiRow('UiMapState.flyTo(point, {zoom})', 'void', 'Moves the map so the point is in the middle of the visible part.'),
+            ApiRow('UiStrings mapLocate / mapLocationOff / mapYourLocation', 'String', 'The words.', def: "'Show my location' / 'Location is off' / 'Your location'"),
+          ],
+        ),
+        DocSection(
           name: 'Map page',
           widget: 'UiMap fill · pulse · viewInsets',
           summary: 'A full-screen map with the form in a UiBottomSheet and a UiFloatingPanel status card at the top. fill gives square corners. pulse draws soft rings radiating from a point while the app searches (one still halo under reduced motion); they move with the map, sit under the markers and the pin, and say nothing to screen readers, so put the words in the status card. viewInsets is how much of each edge the sheet and the card cover, straight from their onCoverChanged: the map still draws edge to edge, but its centre, the pin\'s centre, onCenterChanged, the zoom buttons and the attribution use the part between them. When the sheet moves to another snap, the map pans so the point in the middle of the visible part stays in the middle of the new visible part.',
@@ -179,6 +293,22 @@ class _MapPageDemoState extends State<MapPageDemo> {
   double _cardCover = 0, _sheetCover = 0;
   String _when = 'now';
   TextDirection _dir = TextDirection.ltr;
+  final _map = GlobalKey<UiMapState>();
+  UiMapUserLocation? _me;
+  bool _locating = false, _off = false;
+
+  void _findMe() {
+    if (_off) return; // an app would ask for permission here
+    setState(() => _locating = true);
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() {
+        _me = const UiMapUserLocation(4.1768, 73.5121, accuracy: 35);
+        _locating = false;
+      });
+      _map.currentState?.flyTo(const UiLatLng(4.1768, 73.5121), zoom: 16);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -190,8 +320,14 @@ class _MapPageDemoState extends State<MapPageDemo> {
         child: Stack(children: [
           Positioned.fill(
             child: UiMap(
+              key: _map,
               fill: true,
               center: _home,
+              userLocation: _me,
+              locateControl: true,
+              locating: _locating,
+              locateOff: _off,
+              onLocate: _findMe,
               zoom: 15,
               markers: _MapPageState._markers,
               pin: _home,
@@ -237,6 +373,13 @@ class _MapPageDemoState extends State<MapPageDemo> {
                 options: const [UiSegmentedOption(value: 'now', label: 'Now'), UiSegmentedOption(value: 'later', label: 'Later today')],
                 value: _when,
                 onChanged: (v) => setState(() => _when = v),
+              ),
+              UiSegmented<bool>(
+                label: 'Location (demo)',
+                size: UiSize.sm,
+                options: const [UiSegmentedOption(value: false, label: 'On'), UiSegmentedOption(value: true, label: 'Off')],
+                value: _off,
+                onChanged: (v) => setState(() => _off = v),
               ),
               UiSegmented<TextDirection>(
                 label: 'Direction (demo)',

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -30,8 +32,13 @@ const double _flick = 450;
 /// has no closed state, so Back (and Escape) only collapse it to that smallest snap, and once it
 /// rests there Back is not consumed and leaves the page as usual (the Material resting-sheet norm).
 /// The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. On a
-/// phone, focusing a text field inside raises it to its tallest snap ([expandOnFocus]), and while
-/// the keyboard is up the sheet rests on top of it.
+/// phone, focusing a text field inside raises it to its tallest snap ([expandOnFocus]), once per
+/// field: typing, the keyboard opening and focus coming straight back to the same field don't raise
+/// it again. While the keyboard is up the sheet rests on top of it.
+///
+/// When [snaps] changes (an app that sizes them to the space the keyboard leaves) and [snap] didn't,
+/// the sheet stays at the snap nearest the height it rested at and reports it with [onSnapChanged];
+/// an index past the end reads as the last snap, never as closed.
 class UiBottomSheet extends StatefulWidget {
   const UiBottomSheet({
     super.key,
@@ -121,11 +128,23 @@ class UiBottomSheetState extends State<UiBottomSheet> {
 
   /// The last thing outside the sheet that had focus: where closing sends focus back.
   FocusNode? _returnTo;
+
+  /// The field that last raised the sheet; while [_refocus] runs, focus coming back to it is the
+  /// platform's churn, not a new focus.
+  FocusNode? _expandedFor;
+  Timer? _refocus;
+  FocusNode? _lastPrimary;
+
+  /// Focus back on the same field within this long of leaving it doesn't raise the sheet again.
+  static const Duration refocusWindow = Duration(milliseconds: 600);
   bool _wasModal = false;
 
   List<double> get _snaps => widget.snaps;
   double get _max => _snaps.reduce(math.max);
-  bool get isOpen => _snaps[_snap.clamp(0, _snaps.length - 1)] > 0;
+
+  /// [_snap] within the snaps: past the end reads as the last one.
+  int get _index => _snap.clamp(0, _snaps.length - 1);
+  bool get isOpen => _snaps[_index] > 0;
   bool get _modal => widget.backdrop && isOpen;
 
   /// Index of the smallest snap.
@@ -142,7 +161,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
 
   /// Back and Escape have something to do: close it, or for a [persistent] sheet, collapse it to
   /// its smallest snap. A persistent sheet resting there lets Back leave the page.
-  bool get _collapsible => persistent ? _snap.clamp(0, _snaps.length - 1) != _lowest : isOpen;
+  bool get _collapsible => persistent ? _index != _lowest : isOpen;
 
   @override
   void initState() {
@@ -154,12 +173,35 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   @override
   void didUpdateWidget(UiBottomSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.snap != oldWidget.snap && widget.snap != _snap) _goTo(widget.snap, notify: false);
+    if (widget.snap != oldWidget.snap && widget.snap != _snap) {
+      _goTo(widget.snap, notify: false);
+    } else if (!listEquals(widget.snaps, oldWidget.snaps)) {
+      // New snaps, same snap: stay at the one nearest the fraction it rested at.
+      final was = oldWidget.snaps[_snap.clamp(0, oldWidget.snaps.length - 1)];
+      var best = 0;
+      for (var i = 1; i < _snaps.length; i++) {
+        if ((_snaps[i] - was).abs() < (_snaps[best] - was).abs()) best = i;
+      }
+      if (best != _snap) {
+        _snap = best;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (best != widget.snap) widget.onSnapChanged?.call(best);
+          if (_sheet.isAttached && (_sheet.size - _snaps[_index]).abs() > 0.001) {
+            _moving++;
+            _sheet.jumpTo(_snaps[_index]);
+            _moving--;
+          }
+          _report();
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocus);
+    _refocus?.cancel();
     _sheet.dispose();
     _scope.dispose();
     _handle.dispose();
@@ -170,13 +212,23 @@ class UiBottomSheetState extends State<UiBottomSheet> {
 
   void _onFocus() {
     final f = FocusManager.instance.primaryFocus;
+    final inside = _inside(f);
+    if (_lastPrimary == _expandedFor && _expandedFor != null && f != _expandedFor) {
+      // Left the field that raised the sheet: for a moment, focus coming back to it is the
+      // platform's churn (a blur and refocus), not a new focus.
+      _refocus?.cancel();
+      _refocus = Timer(refocusWindow, () => _refocus = null);
+    }
+    _lastPrimary = f;
     if (f == null) return;
-    if (!_inside(f)) {
+    if (!inside) {
       _returnTo = f;
       return;
     }
-    // A text field inside, on a touch screen: rise to the tallest snap.
+    // A text field inside, on a touch screen: rise to the tallest snap, once per field.
     if (widget.expandOnFocus && uiTouchPlatform(context) && f.context?.findAncestorWidgetOfExactType<EditableText>() != null) {
+      if (f == _expandedFor && _refocus != null) return;
+      _expandedFor = f;
       final top = _snaps.length - 1;
       if (_snap != top) _goTo(top);
     }
@@ -213,7 +265,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   }
 
   void _report() {
-    final h = _room * _snaps[_snap];
+    final h = _room * _snaps[_index];
     widget.onHeightChanged?.call(h);
     widget.onCoverChanged?.call(h > 0 ? h + _bottom : 0);
   }
@@ -236,7 +288,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   void _stepFromHandle() {
     final last = _snaps.length - 1;
     final firstOpen = _snaps.indexWhere((s) => s > 0);
-    _goTo(_snap >= last ? math.max(0, firstOpen) : _snap + 1);
+    _goTo(_index >= last ? math.max(0, firstOpen) : _index + 1);
   }
 
   void _dragUpdate(DragUpdateDetails d) {
@@ -325,7 +377,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                   if (first) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _report() : null);
                 }
                 final maxH = room * _max;
-                final hidden = maxH - room * _snaps[_snap];
+                final hidden = maxH - room * _snaps[_index];
                 return BlockSemantics(
                   blocking: modal,
                   // Centred and capped at maxWidth; the sides stay open to the page (Align hit-tests
@@ -348,7 +400,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                           snapSizes: _snaps,
                           minChildSize: _snaps.reduce(math.min),
                           maxChildSize: _max,
-                          initialChildSize: _snaps[_snap],
+                          initialChildSize: _snaps[_index],
                           snapAnimationDuration: context.uiAnimate ? t.motionBase : const Duration(milliseconds: 1),
                           shouldCloseOnMinExtent: false,
                           builder: (context, scroll) => ExcludeFocus(
@@ -388,7 +440,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     final handle = UiInteractive(
       focusNode: _handle,
       onTap: _stepFromHandle,
-      semanticLabel: _snap >= last ? 'Make smaller' : 'Make larger',
+      semanticLabel: _index >= last ? 'Make smaller' : 'Make larger',
       excludeChildSemantics: true,
       padTouchTarget: false,
       pressScale: false,
@@ -399,7 +451,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
       },
       actions: {
         _StepIntent: CallbackAction<_StepIntent>(onInvoke: (i) {
-          _goTo((_snap + i.by).clamp(0, last));
+          _goTo((_index + i.by).clamp(0, last));
           return null;
         }),
       },

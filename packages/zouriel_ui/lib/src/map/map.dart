@@ -10,6 +10,9 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../button/button.dart';
 import '../core/icon.dart';
+import '../core/interactive.dart';
+import '../feedback/spinner.dart';
+import '../overlay/tooltip.dart';
 import '../core/types.dart';
 import '../fx/motion.dart';
 import '../theme/theme.dart';
@@ -91,6 +94,37 @@ class UiMapPulse {
   int get hashCode => Object.hash(lat, lng, tone, active);
 }
 
+/// Where the person is, from the app's own geolocation: the "you are here" dot (the web
+/// `UiMapUserLocation`). [accuracy] is in metres, drawn as a soft halo of that radius.
+@immutable
+class UiMapUserLocation {
+  const UiMapUserLocation(this.lat, this.lng, {this.accuracy});
+  final double lat;
+  final double lng;
+  final double? accuracy;
+
+  @override
+  bool operator ==(Object other) => other is UiMapUserLocation && other.lat == lat && other.lng == lng && other.accuracy == accuracy;
+
+  @override
+  int get hashCode => Object.hash(lat, lng, accuracy);
+}
+
+/// The smallest and largest the accuracy halo is drawn, in px across.
+const double uiMapAccuracyMin = 28, uiMapAccuracyMax = 240;
+
+/// How many px across the accuracy halo is (the web `uiMapAccuracyPx`): twice [accuracy] metres at
+/// [zoom] and [lat] (Web Mercator, 256 px per tile at zoom 0), rounded and clamped to 28..240. 0
+/// without an accuracy.
+double uiMapAccuracyPx(double? accuracy, double lat, double zoom) {
+  if (accuracy == null || !(accuracy > 0)) return 0;
+  final metresPerPx = 40075016.686 * math.cos(lat * math.pi / 180) / math.pow(2, zoom + 8);
+  return (2 * accuracy / metresPerPx).roundToDouble().clamp(uiMapAccuracyMin, uiMapAccuracyMax);
+}
+
+/// The tile URL a map shows (the web `uiMapTileUrl`): the dark one on a dark theme when given.
+String uiMapTileUrl(String tileUrl, String? tileUrlDark, bool dark) => dark && tileUrlDark != null && tileUrlDark.isNotEmpty ? tileUrlDark : tileUrl;
+
 /// The shift, in px from the map's middle, of the middle of the part between [insets] (the web
 /// `uiMapInsetShift`).
 Offset uiMapInsetShift(EdgeInsetsDirectional insets, TextDirection direction) {
@@ -120,6 +154,17 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 ///   attribution use the part between the insets. When the insets change, the map pans so the
 ///   point that was in the middle of the visible part stays in the middle of the new one.
 /// - [fill]: square corners, for a full-screen map page.
+/// - [tileUrlDark]: tiles drawn for dark themes, shown undimmed on a dark theme and swapped live
+///   when the theme changes; without it the light tiles are dimmed. `{r}` in a URL is `@2x` on a
+///   high-density screen and empty otherwise; [tileSize] / [zoomOffset] are for 512 px tiles (512,
+///   -1). [tileHeaders] go with both the light and the dark tiles.
+/// - [locateControl]: a round "Show my location" button at the bottom-end corner of the visible
+///   part (it follows [viewInsets], so it floats just above a bottom sheet); it calls [onLocate].
+///   [locating] shows a spinner (presses do nothing), [locateOff] a struck-through icon with the
+///   tooltip "Location is off" (presses still call [onLocate], to ask again).
+/// - [userLocation]: the "you are here" dot with a white ring and an accuracy halo sized in metres;
+///   above the tiles and pulse, below the markers and the pin; read out as "Your location". Move the
+///   map to it with [UiMapState.flyTo].
 ///
 /// [userAgentPackageName] is sent with tile requests (the OSM policy asks for it); [tileProvider]
 /// replaces network tiles (offline tiles, tests).
@@ -146,7 +191,37 @@ class UiMap extends StatefulWidget {
     this.pulse,
     this.viewInsets = EdgeInsetsDirectional.zero,
     this.fill = false,
+    this.tileUrlDark,
+    this.tileSize = 256,
+    this.zoomOffset = 0,
+    this.locateControl = false,
+    this.locating = false,
+    this.locateOff = false,
+    this.onLocate,
+    this.userLocation,
   });
+
+  /// Tiles for dark themes, shown undimmed; null dims the light tiles instead.
+  final String? tileUrlDark;
+
+  /// The tiles' size in px: 512 for 512 px tiles (with [zoomOffset] -1).
+  final int tileSize;
+
+  /// Added to the zoom in tile URLs: -1 for 512 px tiles.
+  final double zoomOffset;
+
+  /// A "Show my location" button at the bottom-end of the visible part; it calls [onLocate].
+  final bool locateControl;
+
+  /// The app is finding the position: a spinner, and presses do nothing.
+  final bool locating;
+
+  /// Location is off or denied: the icon struck through, "Location is off". Still pressable.
+  final bool locateOff;
+  final VoidCallback? onLocate;
+
+  /// The "you are here" dot, with an accuracy halo; null for none.
+  final UiMapUserLocation? userLocation;
 
   /// The "searching" rings around a point; null or `active: false` for none.
   final UiMapPulse? pulse;
@@ -276,6 +351,16 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
     if (_shift != Offset.zero) _controller.move(widget.center._ll, widget.zoom, offset: _shift);
   }
 
+  /// Moves the map so [c] sits in the middle of the visible part (between the insets), at [zoom] or
+  /// the current zoom. For "my location": call it with the position the app found.
+  void flyTo(UiLatLng c, {double? zoom}) {
+    if (!_ready) return;
+    _pan.stop();
+    _controller.move(c._ll, zoom ?? _controller.camera.zoom, offset: _shift);
+    final v = _visibleCenter(_controller.camera);
+    widget.onCenterChanged?.call(UiMapView(v.latitude, v.longitude, _controller.camera.zoom));
+  }
+
   void _placeAtCentre() {
     final c = _visibleCenter(_controller.camera);
     widget.onPinChanged?.call(UiLatLng(c.latitude, c.longitude));
@@ -304,8 +389,13 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
     final motion = uiFxMotion(context);
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final pin = _dragging ?? widget.pin;
+    // One provider for the light and the dark tiles alike, so tileHeaders (a Referer for a key
+    // restricted to a web origin, say) go with both.
     final tileProvider = widget.tileProvider ?? NetworkTileProvider(headers: {...?widget.tileHeaders});
     if (widget.tileHeaders != null) tileProvider.headers.addAll(widget.tileHeaders!);
+    final tileUrl = uiMapTileUrl(widget.tileUrl, widget.tileUrlDark, dark);
+    final darkTiles = dark && tileUrl != widget.tileUrl;
+    final user = widget.userLocation;
 
     final map = FlutterMap(
       key: _box,
@@ -325,10 +415,15 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
       ),
       children: [
         TileLayer(
-          urlTemplate: widget.tileUrl,
+          urlTemplate: tileUrl,
           userAgentPackageName: widget.userAgentPackageName,
           tileProvider: tileProvider,
-          tileBuilder: dark ? _dim : null,
+          tileDimension: widget.tileSize,
+          zoomOffset: widget.zoomOffset,
+          // `{r}`: '@2x' from the server on a high-density screen, '' otherwise.
+          retinaMode: tileUrl.contains('{r}') && RetinaMode.isHighDensity(context),
+          // Dark tiles are drawn for the dark; only the light ones are dimmed.
+          tileBuilder: dark && !darkTiles ? _dim : null,
         ),
         // The pulse: geo-anchored like a marker, under the markers and pin, never hit or read out.
         if (widget.pulse case final p? when p.active)
@@ -340,6 +435,8 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
               child: IgnorePointer(child: ExcludeSemantics(child: UiMapPulseRings(tone: p.tone))),
             ),
           ]),
+        // The "you are here" dot: above the pulse, below the markers and the pin.
+        if (user != null) _UserLayer(location: user),
         MarkerLayer(markers: [
           for (final m in widget.markers)
             Marker(
@@ -432,6 +529,15 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
                 left: rtl ? widget.viewInsets.end : null,
                 child: attribution,
               ),
+              // The "my location" button: bottom-end of the visible part, above the attribution.
+              if (widget.locateControl)
+                AnimatedPositionedDirectional(
+                  duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                  curve: t.easeStandard,
+                  bottom: widget.viewInsets.bottom + t.space8,
+                  end: widget.viewInsets.end + t.space3,
+                  child: UiMapLocateButton(locating: widget.locating, off: widget.locateOff, onPressed: widget.onLocate),
+                ),
             ]),
           ),
         ),
@@ -450,6 +556,99 @@ const List<double> _dimMatrix = [
   0.62 * 0.4 * 0.2126, 0.62 * 0.4 * 0.7152, 0.62 * (0.4 + 0.6 * 0.0722), 0, 0, //
   0, 0, 0, 1, 0,
 ];
+
+/// The "my location" button (exported for tests): round, raised, 38px (44px on touch screens).
+class UiMapLocateButton extends StatelessWidget {
+  const UiMapLocateButton({super.key, this.locating = false, this.off = false, this.onPressed});
+  final bool locating, off;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final strings = context.uiStrings;
+    final dim = uiTouchPlatform(context) ? t.sizeTouch : t.sizeLg;
+    return UiTooltip(
+      message: off ? strings.mapLocationOff : '',
+      position: UiTooltipPosition.left,
+      child: UiInteractive(
+        onTap: () {
+          if (!locating) onPressed?.call();
+        },
+        semanticLabel: strings.mapLocate,
+        excludeChildSemantics: true,
+        padTouchTarget: false,
+        builder: (context, s) => AnimatedContainer(
+          duration: context.uiAnimate ? t.motionFast : Duration.zero,
+          width: dim,
+          height: dim,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: s.hovered || s.pressed ? t.surfaceHover : t.surfaceRaised,
+            border: Border.all(color: t.border),
+            boxShadow: s.focused ? [...t.shadow2, ...t.focusRing] : t.shadow2,
+          ),
+          child: Center(
+            child: locating
+                ? const UiSpinner(size: 18, decorative: true)
+                : UiIcon(off ? HugeIcons.strokeRoundedGpsOff01 : HugeIcons.strokeRoundedGps01, size: 20, color: off ? t.textMuted : t.text),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The "you are here" layer: a geo-anchored marker whose halo follows the zoom.
+class _UserLayer extends StatelessWidget {
+  const _UserLayer({required this.location});
+  final UiMapUserLocation location;
+
+  @override
+  Widget build(BuildContext context) {
+    final halo = uiMapAccuracyPx(location.accuracy, location.lat, MapCamera.of(context).zoom);
+    final box = math.max(halo, 16.0);
+    return MarkerLayer(markers: [
+      Marker(
+        point: LatLng(location.lat, location.lng),
+        width: box,
+        height: box,
+        child: IgnorePointer(
+          child: Semantics(container: true, image: true, label: context.uiStrings.mapYourLocation, child: UiMapUserDot(halo: halo)),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// The "you are here" dot (exported for tests and goldens): 16px in the location blue with a 3px
+/// white ring and a shadow, over a soft halo [halo] px across (none at 0).
+class UiMapUserDot extends StatelessWidget {
+  const UiMapUserDot({super.key, this.halo = 0});
+  final double halo;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
+      if (halo > 0)
+        Container(
+          width: halo,
+          height: halo,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: t.location.withValues(alpha: 0.16),
+            border: Border.all(color: t.location.withValues(alpha: 0.40)),
+          ),
+        ),
+      Container(
+        width: 16,
+        height: 16,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: t.location, border: Border.all(color: t.locationRing, width: 3), boxShadow: t.shadow2),
+      ),
+    ]);
+  }
+}
 
 class _MarkerChip extends StatelessWidget {
   const _MarkerChip({required this.marker, this.onTap});

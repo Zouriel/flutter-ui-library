@@ -1675,8 +1675,9 @@ A message: mine at the inline end in primary, theirs at the start on the raised 
 ### UiMap (component, `ui-map`) (0.35)
 File: `map/src/map.ts`  
 OpenStreetMap map (Leaflet on the web, flutter_map here) with markers, a draggable pin, themed controls and dimmed dark tiles. Flutter: `package:zouriel_ui/map.dart`.  
-- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `pulse` (UiMapPulse, 0.39); `insets` (Flutter `viewInsets`, 0.39); `fill` (0.39); `tileUrl`; `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
-- Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model)
+- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `pulse` (UiMapPulse, 0.39); `insets` (Flutter `viewInsets`, 0.39); `fill` (0.39); `tileUrl`; `tileUrlDark` (0.40); `tileSize` / `zoomOffset` (0.40); `locateControl` / `locating` / `locateOff` (0.40); `userLocation` (UiMapUserLocation, 0.40); `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
+- Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model); `locate` (Flutter `onLocate`, 0.40)
+- Methods: `flyTo(point, zoom?)` (Flutter `UiMapState.flyTo`, 0.40)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiGoogleButton (component, `ui-google-button`) (0.36)
