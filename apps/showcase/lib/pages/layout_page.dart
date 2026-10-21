@@ -75,7 +75,8 @@ class _LayoutPageState extends State<LayoutPage> {
             ApiRow('placement', 'UiFloatingPanelPlacement', 'bottom or top of the Stack.', def: 'bottom'),
             ApiRow('semanticLabel', 'String?', 'Names it for screen readers.'),
             ApiRow('maxWidth', 'double', 'Its widest.', def: '480'),
-            ApiRow('glass / radius', 'bool?', 'Default to UiConfig.'),
+            ApiRow('glass', 'bool?', 'See-through frosted surface, the same as UiBottomSheet.glass (0.41.2): AA over any backdrop in every theme; solid under the high-contrast setting. Defaults to UiConfig.glass.'),
+            ApiRow('radius', 'bool?', 'Rounded corners. Defaults to UiConfig.radius.'),
           ],
         ),
         DocSection(

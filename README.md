@@ -99,6 +99,17 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Glass bottom sheet and floating panel (0.41.2):** `UiBottomSheet(glass: true)` and
+`UiFloatingPanel(glass: true)` are see-through, for a form and a status card over a full-screen map:
+the theme's surface at 60% (`glassSheetBg`) over the content behind, which a `BackdropFilter` blurs
+(`glassSheetBlur`) and squeezes into the theme's `glassSheetFloor`..`glassSheetCeiling` range first
+(`uiGlassSheetFilter`). The range is set per theme so text, muted text, primary and status colours
+keep WCAG AA over anything, pure white and pure black included. Fields and buttons inside keep their
+solid fills, and the shadow is drawn only around the surface (`UiOutsetShadow`), never under it.
+Flutter has no reduce-transparency setting, so under `MediaQuery.highContrast` it is the solid
+surface (`uiGlassSheetSolid`). The sheet's glass is off by default whatever `UiConfig.glass` says;
+the panel's still defaults to `UiConfig.glass`, and now uses this recipe.
+
 **Image and PDF viewers can fill the page (0.41.1):** `UiImageViewer(fill: true)` and
 `UiPdfViewer(fill: true)` take all the height their parent gives (an `Expanded` under a page title, a
 full route) with no frame: the photo or page is fitted (contain, centred; 100% is fitted), pinch,

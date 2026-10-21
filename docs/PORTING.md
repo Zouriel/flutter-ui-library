@@ -170,6 +170,30 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.41.2.** Glass bottom sheet and floating panel (Dhirumi Find a nurse, a full-screen map with the
+form in a bottom sheet: "use a transparent drawer on the map"). Both libraries: `glass` on
+`UiBottomSheet` / `ui-bottom-sheet` (new, default false, not driven by `UiConfig.glass`) and the
+existing `glass` on `UiFloatingPanel` / `ui-floating-panel` now share one recipe, new tokens in
+tokens.css: `--ui-glass-sheet-tint` (0.6) and `--ui-glass-sheet-blur` (20px) on `:root`, and per theme
+`--ui-glass-sheet-floor` / `--ui-glass-sheet-ceiling`, the range every backdrop channel is mapped into
+before the tint (light themes floor 0.70-0.95, ceiling 1; dark themes floor 0, ceiling 0.11-0.43).
+`--ui-glass-sheet-bg` is `color-mix(surface, tint)`; `--ui-glass-sheet-filter` is `blur()
+contrast((c - f) / (c + f)) brightness(c + f)`, which maps v to f + v (c - f) per channel (checked in
+Chromium by pixel readback: sRGB, as modelled). Flutter builds the same with
+`ImageFilter.compose(ColorFilter.matrix(diag c - f, offset f * 255), blur(sigma = blur / 2))`
+(`glass_sheet.dart`); `gen_tokens.mjs` reads tint/floor/ceiling as numbers and skips the filter
+string. The floor and ceiling were chosen so text, text-muted, primary, success, danger (4.5:1) and
+warning, icon (3:1) hold over pure white and pure black with ~0.03 to spare; with these themes'
+primary and status colours only just AA on the solid surface, the colourful light palettes end up
+with a narrow range (lightPurple 0.95-1), so the map shows through faintly there. The floating panel's
+glass used `--ui-glass-panel-bg` (web) and `glassBg` (Flutter), which differed and didn't hold AA over
+black; both now use the sheet recipe, with the surface tint. Fallbacks: web, solid surface without
+`backdrop-filter` (`@supports not`) and under `prefers-reduced-transparency: reduce` or
+`prefers-contrast: more`; Flutter has no reduce-transparency flag, so `MediaQuery.highContrast` (iOS
+Increase Contrast) gives the solid surface. Flutter-only: a `BoxShadow` paints under its whole box,
+which darkened the map under the glass, so glass surfaces draw `shadow3` with `UiOutsetShadow`
+(clipped to outside the rounded box, like CSS `box-shadow`); the pixel test caught it.
+
 **0.41.1.** Image and PDF viewers can fill the page (Dhirumi nurse app: the payment slip "is opening
 in a weird window": a fixed-height framed box with its zoom bar under it and the page empty below).
 Both libraries: `fill` on `UiImageViewer` / `ui-image-viewer` and `UiPdfViewer` / `ui-pdf-viewer`.

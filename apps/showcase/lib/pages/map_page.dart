@@ -224,7 +224,7 @@ UiMap(
         DocSection(
           name: 'Map page',
           widget: 'UiMap fill · pulse · viewInsets',
-          summary: 'A full-screen map with the form in a UiBottomSheet and a UiFloatingPanel status card at the top. fill gives square corners. pulse draws soft rings radiating from a point while the app searches (one still halo under reduced motion); they move with the map, sit under the markers and the pin, and say nothing to screen readers, so put the words in the status card. viewInsets is how much of each edge the sheet and the card cover, straight from their onCoverChanged: the map still draws edge to edge, but its centre, the pin\'s centre, onCenterChanged, the zoom buttons and the attribution use the part between them. When the sheet moves to another snap, the map pans so the point in the middle of the visible part stays in the middle of the new visible part.',
+          summary: 'A full-screen map with the form in a UiBottomSheet and a UiFloatingPanel status card at the top. fill gives square corners. pulse draws soft rings radiating from a point while the app searches (one still halo under reduced motion); they move with the map, sit under the markers and the pin, and say nothing to screen readers, so put the words in the status card. viewInsets is how much of each edge the sheet and the card cover, straight from their onCoverChanged: the map still draws edge to edge, but its centre, the pin\'s centre, onCenterChanged, the zoom buttons and the attribution use the part between them. When the sheet moves to another snap, the map pans so the point in the middle of the visible part stays in the middle of the new visible part. glass on the sheet and the card (0.41.2) makes them see-through: the map shows through, blurred and held to a range that keeps every text colour AA over any tile, in every theme; solid under the platform high-contrast setting.',
           demo: Row(children: [
             Expanded(child: UiText('Opens as its own page, the way an app shows it on a phone.', variant: UiTextVariant.body)),
             SizedBox(width: t.space3),
@@ -245,6 +245,7 @@ UiMap(
   UiFloatingPanel(
     placement: UiFloatingPanelPlacement.top,
     semanticLabel: 'Status',
+    glass: true, // see-through over the map, AA in every theme
     onCoverChanged: (v) => setState(() => cardCover = v),
     child: Text(searching ? 'Looking for a nurse near you' : 'Where should the nurse come?'),
   ),
@@ -254,6 +255,7 @@ UiMap(
     snap: snap,
     closable: false,
     maxWidth: 560, // tablets and desktops: 560 wide, centred
+    glass: true,
     onSnapChanged: (i) => setState(() => snap = i),
     onCoverChanged: (v) => setState(() => sheetCover = v),
     child: form,
@@ -266,6 +268,7 @@ UiMap(
             ApiRow('UiFloatingPanel.onCoverChanged', 'ValueChanged<double>?', 'Px of its edge the card covers (gutter, safe area and height): feed it to viewInsets.top.'),
             ApiRow('UiBottomSheet.onCoverChanged', 'ValueChanged<double>?', 'Px of the screen bottom the sheet covers once settled: feed it to viewInsets.bottom.'),
             ApiRow('UiBottomSheet.maxWidth', 'double?', 'The widest the sheet gets. On a wider screen it is that wide and centred; the backdrop still covers everything and onCoverChanged still reports the covered height. 560 suits tablets and desktops.'),
+            ApiRow('UiBottomSheet.glass · UiFloatingPanel.glass', 'bool', 'See-through frosted surface (0.41.2): the theme surface at 60% over the map, blurred and squeezed into the theme\'s glassSheetFloor..glassSheetCeiling, so text stays AA over white or black tiles. Fields and buttons stay solid. Solid under MediaQuery.highContrast (Flutter has no reduce-transparency setting).', def: 'false · UiConfig.glass'),
             ApiRow('UiBottomSheetState.persistent', 'bool', 'True when the smallest snap is above 0, as here: Back and Escape collapse it to that snap, and from there Back leaves the page.'),
           ],
         ),
@@ -293,6 +296,8 @@ class _MapPageDemoState extends State<MapPageDemo> {
   double _cardCover = 0, _sheetCover = 0;
   String _when = 'now';
   TextDirection _dir = TextDirection.ltr;
+  /// The sheet and status card: see-through glass (the default here) or the solid surface.
+  bool _glass = true;
   final _map = GlobalKey<UiMapState>();
   UiMapUserLocation? _me;
   bool _locating = false, _off = false;
@@ -343,6 +348,7 @@ class _MapPageDemoState extends State<MapPageDemo> {
           UiFloatingPanel(
             placement: UiFloatingPanelPlacement.top,
             semanticLabel: 'Status',
+            glass: _glass,
             onCoverChanged: (v) => setState(() => _cardCover = v),
             child: Row(spacing: t.space3, children: [
               if (_searching) const UiSpinner(label: 'Searching'),
@@ -364,6 +370,7 @@ class _MapPageDemoState extends State<MapPageDemo> {
             snap: _snap,
             closable: false,
             maxWidth: 560,
+            glass: _glass,
             onSnapChanged: (i) => setState(() => _snap = i),
             onCoverChanged: (v) => setState(() => _sheetCover = v),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
@@ -373,6 +380,13 @@ class _MapPageDemoState extends State<MapPageDemo> {
                 options: const [UiSegmentedOption(value: 'now', label: 'Now'), UiSegmentedOption(value: 'later', label: 'Later today')],
                 value: _when,
                 onChanged: (v) => setState(() => _when = v),
+              ),
+              UiSegmented<bool>(
+                label: 'Surface (demo)',
+                size: UiSize.sm,
+                options: const [UiSegmentedOption(value: true, label: 'Glass'), UiSegmentedOption(value: false, label: 'Solid')],
+                value: _glass,
+                onChanged: (v) => setState(() => _glass = v),
               ),
               UiSegmented<bool>(
                 label: 'Location (demo)',

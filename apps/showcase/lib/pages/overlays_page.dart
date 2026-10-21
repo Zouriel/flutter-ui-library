@@ -510,6 +510,7 @@ if (ok == true) delete();''',
             ApiRow('hasHeader', 'bool', 'Show the header row without a title, for the close button and actions.', def: 'false'),
             ApiRow('actions', 'Widget?', 'Header controls.'),
             ApiRow('expandOnFocus', 'bool', 'Rise to the tallest snap when a text field inside gains focus on a touch screen.', def: 'true'),
+            ApiRow('glass', 'bool', 'See-through frosted surface for a sheet over a map (0.41.2): AA over any backdrop in every theme; solid under the high-contrast setting. Not set by UiConfig.glass. See Map › Map page.', def: 'false'),
           ],
           callbacks: const [
             ApiRow('onHeightChanged', 'ValueChanged<double>?', 'Px height once it settles.'),

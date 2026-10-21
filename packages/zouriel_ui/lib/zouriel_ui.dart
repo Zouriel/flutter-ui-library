@@ -17,6 +17,7 @@ export 'src/feedback/spinner.dart';
 export 'src/overlay/anchored.dart';
 export 'src/text/text.dart';
 export 'src/theme/app.dart';
+export 'src/theme/glass_sheet.dart';
 export 'src/theme/theme.dart';
 
 // Areas ported in parallel; each file exports its area's widgets.

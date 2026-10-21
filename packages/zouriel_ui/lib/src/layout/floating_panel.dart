@@ -1,10 +1,10 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import '../theme/glass_sheet.dart';
 import '../theme/theme.dart';
 
 /// Which edge of its Stack a [UiFloatingPanel] floats over.
@@ -21,6 +21,10 @@ enum UiFloatingPanelPlacement { bottom, top }
 /// [onCoverChanged] reports how much of the Stack's edge it covers, in px (its gutter, the safe
 /// area and its height), whenever that changes: feed it to a map's `viewInsets` so the map centres
 /// below a status card at the top.
+///
+/// [glass] (0.41.2) is the same see-through surface as [UiBottomSheet.glass]: the theme's surface at
+/// 60% over a blurred backdrop squeezed into the theme's range, so text stays AA over any map (see
+/// [uiGlassSheetFilter]); solid under the platform's high-contrast setting ([uiGlassSheetSolid]).
 class UiFloatingPanel extends StatelessWidget {
   const UiFloatingPanel({
     super.key,
@@ -40,6 +44,8 @@ class UiFloatingPanel extends StatelessWidget {
   final UiFloatingPanelPlacement placement;
   final String? semanticLabel;
   final double maxWidth;
+
+  /// See-through frosted surface over a map, as [UiBottomSheet.glass]. Defaults to [UiConfig.glass].
   final bool? glass;
   final bool? radius;
 
@@ -49,15 +55,16 @@ class UiFloatingPanel extends StatelessWidget {
     final t = theme.tokens;
     final pad = MediaQuery.paddingOf(context);
     final gutter = t.space4;
-    final isGlass = glass ?? theme.config.glass;
+    final isGlass = (glass ?? theme.config.glass) && !uiGlassSheetSolid(context);
     final r = (radius ?? theme.config.radius) ? t.radiusLg : 0.0;
     final top = placement == UiFloatingPanelPlacement.top;
     Widget surface = DecoratedBox(
       decoration: BoxDecoration(
-        color: isGlass ? t.glassBg : t.surfaceRaised,
+        color: isGlass ? t.glassSheetBg : t.surfaceRaised,
         border: Border.all(color: isGlass ? t.glassBorder : t.border),
         borderRadius: BorderRadius.circular(r),
-        boxShadow: t.shadow3,
+        // Glass: the shadow goes around it (UiOutsetShadow below), not under the see-through fill.
+        boxShadow: isGlass ? null : t.shadow3,
       ),
       child: Padding(
         padding: EdgeInsets.all(t.space4),
@@ -65,9 +72,13 @@ class UiFloatingPanel extends StatelessWidget {
       ),
     );
     if (isGlass) {
-      surface = ClipRRect(
+      surface = UiOutsetShadow(
+        shadows: t.shadow3,
         borderRadius: BorderRadius.circular(r),
-        child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: surface),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(r),
+          child: BackdropFilter(filter: uiGlassSheetFilter(t), child: surface),
+        ),
       );
     }
     Widget panel = Semantics(container: true, explicitChildNodes: true, label: semanticLabel, child: surface);

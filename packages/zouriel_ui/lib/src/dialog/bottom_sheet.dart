@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
 import '../overlay/backdrop.dart';
+import '../theme/glass_sheet.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 
@@ -39,6 +40,12 @@ const double _flick = 450;
 /// When [snaps] changes (an app that sizes them to the space the keyboard leaves) and [snap] didn't,
 /// the sheet stays at the snap nearest the height it rested at and reports it with [onSnapChanged];
 /// an index past the end reads as the last snap, never as closed.
+///
+/// [glass] (0.41.2) makes it see-through, for a sheet over a map: the theme's surface at 60% over a
+/// blurred backdrop squeezed into the theme's range first, so text, muted text, primary and status
+/// colours keep WCAG AA over anything, pure white and black included ([uiGlassSheetFilter]). Fields
+/// and buttons inside keep their own solid fills. Under the platform's high-contrast setting it is
+/// the solid surface ([uiGlassSheetSolid]). Off by default, whatever [UiConfig.glass] says.
 class UiBottomSheet extends StatefulWidget {
   const UiBottomSheet({
     super.key,
@@ -58,6 +65,7 @@ class UiBottomSheet extends StatefulWidget {
     this.onHeightChanged,
     this.onCoverChanged,
     this.maxWidth,
+    this.glass = false,
   }) : assert(child != null || builder != null, 'Give the sheet a child or a builder.');
 
   /// The content, in a scroll view the sheet provides.
@@ -109,6 +117,9 @@ class UiBottomSheet extends StatefulWidget {
   /// body) is that wide and centred; the backdrop still covers the whole screen, and
   /// [onCoverChanged] still reports the covered height. Null (the default) is the full width.
   final double? maxWidth;
+
+  /// See-through frosted surface for a sheet over a map (0.41.2); see the class docs.
+  final bool glass;
 
   @override
   State<UiBottomSheet> createState() => UiBottomSheetState();
@@ -523,26 +534,48 @@ class UiBottomSheetState extends State<UiBottomSheet> {
       child: FocusScope(
         node: _scope,
         onKeyEvent: _onKey,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: t.surface,
-            borderRadius: BorderRadius.only(topLeft: rr, topRight: rr),
-            border: Border.all(color: t.border),
-            boxShadow: isOpen ? t.shadow3 : null,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.only(topLeft: rr, topRight: rr),
-            child: DefaultTextStyle.merge(
-              style: const TextStyle(height: 1.35),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  header,
-                  Container(height: 1, color: t.borderSubtle),
-                  Expanded(child: body),
-                ],
-              ),
+        child: _surface(
+          context,
+          rr,
+          DefaultTextStyle.merge(
+            style: const TextStyle(height: 1.35),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
+                Container(height: 1, color: _glass ? t.glassBorder : t.borderSubtle),
+                Expanded(child: body),
+              ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool get _glass => widget.glass && !uiGlassSheetSolid(context);
+
+  /// The sheet's surface: solid, or see-through glass (the tint over a blurred, range-limited backdrop).
+  Widget _surface(BuildContext context, Radius rr, Widget child) {
+    final t = context.ui;
+    final radius = BorderRadius.only(topLeft: rr, topRight: rr);
+    if (!_glass) {
+      return DecoratedBox(
+        decoration: BoxDecoration(color: t.surface, borderRadius: radius, border: Border.all(color: t.border), boxShadow: isOpen ? t.shadow3 : null),
+        child: ClipRRect(borderRadius: radius, child: child),
+      );
+    }
+    return UiOutsetShadow(
+      key: const ValueKey('ui-bottom-sheet-glass'),
+      shadows: isOpen ? t.shadow3 : const [],
+      borderRadius: radius,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: uiGlassSheetFilter(t),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: t.glassSheetBg, borderRadius: radius, border: Border.all(color: t.glassBorder)),
+            child: child,
           ),
         ),
       ),
