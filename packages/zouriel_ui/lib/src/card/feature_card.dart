@@ -7,6 +7,7 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
+import 'feature_colors.dart';
 
 /// The colour family of a [UiFeatureCard] (the web `tone`).
 enum UiFeatureTone { primary, accent, brand, neutral }
@@ -34,6 +35,14 @@ enum UiFeatureSurface { standard, tinted }
 /// in the vertical layout (the end of the title row when horizontal or without an icon). [surface],
 /// [controlRadius] and [descriptionLines] make the start-screen tile (web `surface="tinted"`,
 /// `radius="control"`, `descriptionLines`).
+///
+/// [badgeTone] gives the badge (its tint and icon) a tone of its own, e.g. an accent card with a
+/// primary badge. [colors] gives the card an app's own surface and accent (derived for dark themes,
+/// contrast-checked; see [UiFeatureCardColors]); it wins over [tone] and [badgeTone] for the wash,
+/// the badge, the arrow and the action words, while the title and description keep the theme's
+/// text colours. [enter] plays a short entrance (fade and an 8px rise) once, when the card first
+/// appears, after [enterDelay], so two cards can stagger. On hover, keyboard focus or press the
+/// badge icon lifts a little and the arrow nudges towards the end. No motion under reduced motion.
 class UiFeatureCard extends StatelessWidget {
   const UiFeatureCard({
     super.key,
@@ -54,7 +63,24 @@ class UiFeatureCard extends StatelessWidget {
     this.trailingArrow = false,
     this.descriptionLines,
     this.semanticLabel,
+    this.badgeTone,
+    this.colors,
+    this.enter = false,
+    this.enterDelay = Duration.zero,
   });
+
+  /// The badge's own tone (its tint and icon colour); [tone] when null.
+  final UiFeatureTone? badgeTone;
+
+  /// The app's own surface and accent; wins over [tone] and [badgeTone]. See [UiFeatureCardColors].
+  final UiFeatureCardColors? colors;
+
+  /// Play a short entrance (fade and an 8px rise, `motionSlow`, decelerate) once, when the card first
+  /// appears. Off under reduced motion.
+  final bool enter;
+
+  /// Wait this long before the entrance, to stagger cards.
+  final Duration enterDelay;
 
   final String title;
   final String? description;
@@ -106,18 +132,23 @@ class UiFeatureCard extends StatelessWidget {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final tinted = surface == UiFeatureSurface.tinted;
-    final isGlass = !tinted && (glass ?? theme.config.glass);
+    // The app's own colours (dark: by the surface's luminance, as on the web).
+    final custom = colors == null
+        ? null
+        : uiResolveFeatureColors(colors!, themeSurface: t.surface, themeText: t.text, themeMuted: t.textMuted, dark: t.surface.computeLuminance() < 0.2);
+    final isGlass = custom == null && !tinted && (glass ?? theme.config.glass);
     final rounded = radius ?? theme.config.radius;
     final r = rounded ? (controlRadius ? t.radius : t.radiusLg) : 0.0;
     final rtl = Directionality.of(context) == TextDirection.rtl;
     final interactive = onPressed != null && enabled;
-    final brand = tone == UiFeatureTone.brand;
+    final brand = tone == UiFeatureTone.brand && custom == null;
+    final bTone = badgeTone ?? tone;
     final toneColor = tone == UiFeatureTone.accent ? t.accent : t.primary;
     final strong = tone == UiFeatureTone.primary || brand; // eyebrow and action in primary
     final ground = isGlass ? t.glassBg : t.surface;
     // The web linear-gradient(160deg, color-mix(tone 3%, surface) 0%, surface 55%): at 6% primary text
     // fell below 4.5:1 in lightOrange / lightPurple.
-    final wash = tone == UiFeatureTone.neutral || isGlass || tinted
+    final wash = tone == UiFeatureTone.neutral || isGlass || tinted || custom != null
         ? null
         : UiGradientSpec(angle: 160, colors: [Color.lerp(ground, toneColor, 0.03)!, ground], stops: const [0, 0.55]).toGradient();
     // Tinted (web surface="tinted"): 8% of the tone over the surface with 4% of the text (so a pale
@@ -128,27 +159,42 @@ class UiFeatureCard extends StatelessWidget {
         : tone == UiFeatureTone.neutral
             ? Color.lerp(t.surface, t.text, 0.05)!
             : Color.lerp(Color.lerp(t.surface, t.text, 0.04)!, toneColor, 0.08)!;
-    final cardFill = tintFill ?? ground;
-    final muted = tinted ? Color.lerp(t.textMuted, t.text, 0.25)! : t.textMuted;
-    final ink = tinted ? Color.lerp(t.primary, t.text, 0.25)! : t.primary;
+    final cardFill = custom?.surface ?? tintFill ?? ground;
+    final muted = custom?.desc ?? (tinted ? Color.lerp(t.textMuted, t.text, 0.25)! : t.textMuted);
+    final ink = custom?.ink ?? (tinted ? Color.lerp(t.primary, t.text, 0.25)! : t.primary);
     final pad = _large ? t.space8 : (_small ? t.space4 : t.space6);
     final gap = _small ? t.space3 : t.space4;
     final anim = context.uiAnimate;
 
-    Widget? badge() {
+    Widget? badge(bool active) {
       if (icon == null) return null;
       final d = _large ? t.sizeXl : (_small ? 40.0 : 48.0);
       // sm badges are rounded less (radiusSm), so a 40px badge stays a rounded square.
       final br = BorderRadius.circular(rounded ? (controlRadius ? t.radius : (_small ? t.radiusSm : t.radiusLg)) : 0.0);
       final tint = Color.lerp(t.surface, t.primary, tinted ? 0.18 : 0.14)!;
-      final (Color bg, Color fg) = switch (tone) {
-        UiFeatureTone.primary => (tint, t.primary),
-        UiFeatureTone.accent => (t.accent, t.accentContrast),
-        UiFeatureTone.brand => (tint, t.primary),
-        UiFeatureTone.neutral => (t.surfaceRaised, t.text),
-      };
-      final glyph = IconTheme.merge(data: IconThemeData(size: _large ? 28 : (_small ? 20 : 24), color: fg), child: icon!);
-      if (brand) {
+      final (Color bg, Color fg) = custom != null
+          ? (custom.badge, custom.accent)
+          : switch (bTone) {
+              UiFeatureTone.primary => (tint, t.primary),
+              UiFeatureTone.accent => (t.accent, t.accentContrast),
+              UiFeatureTone.brand => (tint, t.primary),
+              UiFeatureTone.neutral => (t.surfaceRaised, t.text),
+            };
+      // Hover, focus and press: the icon lifts 2px and grows 8% (the web's translateY(-2px) scale(1.08)).
+      final on = active && anim;
+      final glyph = AnimatedScale(
+        key: const ValueKey('ui-feature-card-icon'),
+        scale: on ? 1.08 : 1,
+        duration: anim ? t.motionBase : Duration.zero,
+        curve: t.easeSpring,
+        child: AnimatedSlide(
+          offset: Offset(0, on ? -2 / (_large ? 28 : (_small ? 20 : 24)) : 0),
+          duration: anim ? t.motionBase : Duration.zero,
+          curve: t.easeSpring,
+          child: IconTheme.merge(data: IconThemeData(size: _large ? 28 : (_small ? 20 : 24), color: fg), child: icon!),
+        ),
+      );
+      if (custom == null && bTone == UiFeatureTone.brand) {
         // A 2px ring of the brand gradient around the tinted square.
         return Container(
           width: d,
@@ -169,30 +215,32 @@ class UiFeatureCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: br,
-          border: tone == UiFeatureTone.neutral ? Border.all(color: t.border) : null,
+          border: custom == null && bTone == UiFeatureTone.neutral ? Border.all(color: t.border) : null,
         ),
         child: glyph,
       );
     }
 
     Widget content(UiStates s, {required bool bounded}) {
-      final lifted = interactive && (s.hovered || s.pressed);
+      // The arrow and the icon also answer keyboard focus.
+      final active = interactive && (s.hovered || s.pressed || s.focused);
       final text = context.uiText;
       final titleStyle = _large
           ? text.h3.copyWith(fontWeight: FontWeight.w700, color: t.text)
           : _small
               ? text.body.copyWith(fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, height: 1.35, color: t.text)
               : text.body.copyWith(fontSize: t.fontSizeLg, fontWeight: FontWeight.w600, height: 1.3, color: t.text);
-      final b = badge();
-      // The card action's arrow: subtle (muted), 3px towards the end on hover / press.
+      final b = badge(active);
+      // The card action's arrow: subtle (muted; the accent with colors), 3px towards the end on hover,
+      // focus and press.
       final arrow = !_cardAction
           ? null
           : AnimatedSlide(
               key: const ValueKey('ui-feature-card-arrow'),
-              offset: Offset(lifted ? (rtl ? -3 : 3) / 16 : 0, 0),
+              offset: Offset(active && anim ? (rtl ? -3 : 3) / 16 : 0, 0),
               duration: anim ? t.motionFast : Duration.zero,
               curve: t.easeStandard,
-              child: UiIcon(rtl ? HugeIcons.strokeRoundedArrowLeft02 : HugeIcons.strokeRoundedArrowRight02, size: 16, color: muted),
+              child: UiIcon(rtl ? HugeIcons.strokeRoundedArrowLeft02 : HugeIcons.strokeRoundedArrowRight02, size: 16, color: custom?.accent ?? muted),
             );
       // Vertical with an icon: the arrow ends the badge row; otherwise it ends the title row.
       final arrowInBadgeRow = arrow != null && b != null && layout == UiFeatureLayout.vertical;
@@ -212,15 +260,15 @@ class UiFeatureCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     actionLabel!,
-                    style: text.body.copyWith(fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, height: 1.35, color: strong ? ink : t.text),
+                    style: text.body.copyWith(fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, height: 1.35, color: strong || custom != null ? ink : t.text),
                   ),
                 ),
                 AnimatedSlide(
                   // 3px towards the end on hover / press.
-                  offset: Offset(lifted ? (rtl ? -3 : 3) / 16 : 0, 0),
+                  offset: Offset(active && anim ? (rtl ? -3 : 3) / 16 : 0, 0),
                   duration: anim ? t.motionFast : Duration.zero,
                   curve: t.easeStandard,
-                  child: UiIcon(rtl ? HugeIcons.strokeRoundedArrowLeft02 : HugeIcons.strokeRoundedArrowRight02, size: 16, color: strong ? ink : t.text),
+                  child: UiIcon(rtl ? HugeIcons.strokeRoundedArrowLeft02 : HugeIcons.strokeRoundedArrowRight02, size: 16, color: strong || custom != null ? ink : t.text),
                 ),
               ]),
             );
@@ -238,7 +286,7 @@ class UiFeatureCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   height: 1.35,
                   letterSpacing: 0.04 * t.fontSizeSm,
-                  color: strong ? ink : muted,
+                  color: strong || custom != null ? ink : muted,
                 ),
               ),
             ),
@@ -279,7 +327,12 @@ class UiFeatureCard extends StatelessWidget {
       final lifted = interactive && (s.hovered || s.pressed);
       final shadows = [...(lifted ? t.shadow2 : (tinted ? const <BoxShadow>[] : t.shadow1)), if (s.focused) ...t.focusRing];
       // Tinted keeps a transparent 1px border, so it is the same size as the standard card.
-      final borderColor = tinted ? const Color(0x00000000) : (isGlass ? t.glassBorder : (lifted ? t.borderStrong : t.border));
+      // With colors: no border at rest, the accent on hover, press and focus.
+      final borderColor = custom != null
+          ? ((lifted || (interactive && s.focused)) ? custom.accent : const Color(0x00000000))
+          : tinted
+              ? const Color(0x00000000)
+              : (isGlass ? t.glassBorder : (lifted ? t.borderStrong : t.border));
       final brandEdge = brand && !tinted;
       // Only an action row needs to know the height (to sit at the bottom of a stretched row). Without
       // one there is no LayoutBuilder, so tiles can be made equal height with IntrinsicHeight.
@@ -327,9 +380,9 @@ class UiFeatureCard extends StatelessWidget {
     // No handler and no action: a static card (dimmed when disabled), like the web's card without
     // actionLabel / href. A disabled card with an action stays a (disabled) button.
     if (onPressed == null && (enabled || actionLabel == null)) {
-      return Semantics(container: true, child: body(const UiStates()));
+      return _FeatureEnter(enabled: enter, delay: enterDelay, child: Semantics(container: true, child: body(const UiStates())));
     }
-    return UiInteractive(
+    return _FeatureEnter(enabled: enter, delay: enterDelay, child: UiInteractive(
       onTap: onPressed,
       enabled: enabled,
       button: true,
@@ -340,6 +393,57 @@ class UiFeatureCard extends StatelessWidget {
       padTouchTarget: false,
       pressScale: true,
       builder: (context, s) => body(s),
+    ));
+  }
+}
+
+/// The card's entrance: a fade and an 8px rise over `motionSlow` (decelerate) after [delay], played
+/// once when it first appears (never again on rebuild or a theme change); the final state at once
+/// under reduced motion. One controller per card, disposed with it.
+class _FeatureEnter extends StatefulWidget {
+  const _FeatureEnter({required this.enabled, required this.delay, required this.child});
+  final bool enabled;
+  final Duration delay;
+  final Widget child;
+
+  @override
+  State<_FeatureEnter> createState() => _FeatureEnterState();
+}
+
+class _FeatureEnterState extends State<_FeatureEnter> with SingleTickerProviderStateMixin {
+  AnimationController? _c;
+  Animation<double>? _v;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (!widget.enabled || !context.uiAnimate) return;
+    final t = context.ui;
+    final total = widget.delay + t.motionSlow;
+    final c = AnimationController(vsync: this, duration: total);
+    _c = c;
+    _v = CurvedAnimation(parent: c, curve: Interval(widget.delay.inMicroseconds / total.inMicroseconds, 1, curve: t.easeDecelerate));
+    c.forward();
+  }
+
+  @override
+  void dispose() {
+    _c?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = _v;
+    if (v == null) return widget.child;
+    return AnimatedBuilder(
+      animation: v,
+      // The same shape before, during and after, so the card's own state (hover, focus) is never rebuilt.
+      builder: (context, child) => Opacity(opacity: v.value, child: Transform.translate(offset: Offset(0, 8 * (1 - v.value)), child: child)),
+      child: widget.child,
     );
   }
 }

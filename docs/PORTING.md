@@ -156,6 +156,36 @@ library font. `auto` follows `UiThemeData.brightness`. The library does not depe
 `google_sign_in`: the app wires `onPressed` to it. The web's `ui-google-sign-in` (a wrapper around
 Google Identity Services' own button) has no Flutter twin: native sign-in comes from the plugin.
 
+**0.39.0 additions.** The map pulse is a `MarkerLayer` between the tiles and the markers holding
+`UiMapPulseRings` (one AnimationController repeating 2.4s and a CustomPainter; ring i starts i/3 of
+a loop late, as the web's animation-delay, using the controller's elapsed time). It exists only
+while `active`, so turning it off or leaving the page disposes its controller; with
+`context.uiAnimate` false (reduced motion, or the library's animations off) the controller never
+starts and the painter draws one 72px halo. The web draws the same rings with CSS animations on a
+Leaflet divIcon in its own pane (z-index 450, between overlays and markers, pointer-events none).
+`viewInsets` uses flutter_map's `move(..., offset:)` for centring and a pixel-space tween (one
+AnimationController, `motionSlow`, `easeStandard`) for the re-centre when the insets change; the
+web uses Leaflet `panBy` over 0.32s. Leaflet pans by whole pixels, so the web's reported centre is
+within a pixel of the requested one. Zoom buttons zoom around the middle of the visible part
+(flutter_map `move` with the offset; Leaflet's zoom control is given `setZoomAround` on the web).
+The web's pin anchor was 7px below its drawn point (a 22px square turned 45deg ends 27px down, not
+34); fixed there so the pin's point sits in the pulse's middle. `UiMapBlankTiles` decoded to
+rgba(0, 0, 255, 0.5) and tinted every blank map; it is a transparent grey-alpha pixel now.
+`UiFloatingPanel.onCoverChanged` measures the panel with a RenderProxyBox after layout (the entry
+slide is a paint transform, so it never counts); the web measures offsetTop/offsetHeight with a
+ResizeObserver for the same reason.
+
+The feature card's `colors` are resolved by one function in each library (`uiResolveFeatureColors`,
+`feature_colors.dart` / `feature-colors.ts`) with whole-channel rounding at every step, so both
+pick identical colours (a test compares the Flutter result with values measured in Chrome).
+Dark is decided by the theme surface's luminance (< 0.2) in both. Flutter takes `Color`s
+(`UiFeatureCardColors`) with `tryParse` for the web's strings; the web warns in dev mode on an
+invalid string, Flutter's `tryParse` prints in debug builds and returns null. `enter` is a
+private `_FeatureEnter` wrapper whose Opacity/Transform shape never changes (so the card's hover and
+focus state survive the end of the entrance); it starts in the first `didChangeDependencies` only,
+so a rebuild or theme change never replays it. The web uses a CSS animation with `backwards` fill,
+so the hover lift still works after it.
+
 **0.35.1 fixes.** UiInteractive sets its pressed/hover/focus state through `_set`, which defers to
 the end of the frame when called while the tree builds: a recognizer cancels its tap when a rebuild
 disables it (a hold button disabled by its own onConfirmed with the finger still down threw

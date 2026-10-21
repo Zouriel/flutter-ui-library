@@ -81,6 +81,23 @@ the reading way) and `descriptionLines` (clamp with an ellipsis). Two of them in
 `IntrinsicHeight` + stretched `Row` under a `UiInput` make a start screen's shortcut tiles, exactly
 the field's width and equal in height.
 
+**Full-screen map pages (0.39):** `UiMap` gains `pulse: UiMapPulse(lat:, lng:, tone:, active:)` (soft
+rings radiating from a point while the app searches: three staggered rings, 2.4s, up to 120px,
+geo-anchored under the markers and pin, a still halo under reduced motion, silent for screen
+readers), `viewInsets: EdgeInsetsDirectional` (how much of each edge a sheet or card covers: the
+map draws edge to edge, but its centre, the pin's centre, `onCenterChanged`, zoom-button zooming,
+the zoom buttons and the attribution use the part between them; when the insets change the map pans
+so the middle of the visible part stays in the middle) and `fill` (square corners).
+`UiFloatingPanel.onCoverChanged` and `UiBottomSheet.onCoverChanged` give the numbers for
+`viewInsets`. `UiMapBlankTiles` is now truly transparent (it used to tint the map blue).
+
+**Feature card colours and motion (0.39):** `UiFeatureCard` gains `badgeTone` (the badge in its own
+tone), `colors: UiFeatureCardColors(surface:, accent:, surfaceDark:, accentDark:)` (or
+`UiFeatureCardColors.tryParse` from hex/rgb strings: an app's own surface and accent, with the dark
+pair derived and every colour contrast-checked by `uiResolveFeatureColors`, the same sums as the
+web), and `enter` / `enterDelay` (a one-time fade and 8px rise, staggered). On hover, focus and press
+the badge icon lifts and the arrow nudges towards the end; no motion when animations are off.
+
 The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
 (the web's `maldives` and `maldives-dark`): a night toggle is
 `controller.set(isNight ? UiThemeName.maldivesDark : UiThemeName.maldives)`. `UiSeaSurface` scopes

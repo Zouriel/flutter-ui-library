@@ -13,6 +13,24 @@ class DataPage extends StatefulWidget {
 }
 
 class _DataPageState extends State<DataPage> {
+  /// A compact tinted tile for the 0.39 demo (colours, entrance, badge tone).
+  Widget _tile(String title, String description, List<List<dynamic>> icon, {UiFeatureCardColors? colors, UiFeatureTone tone = UiFeatureTone.primary, UiFeatureTone? badgeTone, required int delay}) => UiFeatureCard(
+        icon: UiIcon(icon),
+        title: title,
+        description: description,
+        size: UiSize.sm,
+        surface: UiFeatureSurface.tinted,
+        controlRadius: true,
+        trailingArrow: true,
+        descriptionLines: 2,
+        tone: tone,
+        badgeTone: badgeTone,
+        colors: colors,
+        enter: true,
+        enterDelay: Duration(milliseconds: delay),
+        onPressed: () => setState(() => _ftOpened = title),
+      );
+
   List<String> _tags = ['angular', 'flutter', 'design'];
   int _cardTaps = 0;
   UiFeatureTone _ftTone = UiFeatureTone.primary;
@@ -21,6 +39,9 @@ class _DataPageState extends State<DataPage> {
   int _ftTaps = 0;
   bool _ftRtl = false;
   String _ftOpened = '';
+  int _ftRun = 0;
+  static final _mint = UiFeatureCardColors.tryParse(surface: '#E1F4EF', accent: '#4B8791');
+  static final _blue = UiFeatureCardColors.tryParse(surface: '#E5F0FA', accent: '#4B8791');
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +253,7 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Feature card: compact tinted',
           widget: 'UiFeatureCard',
-          summary: 'The start-screen tile: two cards side by side under a text field, together exactly its width and equal in height (IntrinsicHeight + a stretched Row). size sm, surface tinted (a soft wash in the tone instead of a bordered card), controlRadius (the field\'s corners), trailingArrow (the whole card is one button named by its title and description, with an arrow that points the reading way) and descriptionLines: 2. They lift and cast a shadow on hover, scale a little on press, show the focus ring, and keep still when animations are off.',
+          summary: 'The start-screen tile: two cards side by side under a text field, together exactly its width and equal in height (IntrinsicHeight + a stretched Row). size sm, surface tinted (a soft wash in the tone instead of a bordered card), controlRadius (the field\'s corners), trailingArrow (the whole card is one button named by its title and description, with an arrow that points the reading way) and descriptionLines: 2. They lift and cast a shadow on hover, scale a little on press, show the focus ring, and keep still when animations are off. On hover, focus or press the badge icon lifts a little and the arrow nudges towards the end. The second set gives the cards an app\'s own colours (colors: Dhirumi\'s nursing mint and prescription blue with a #4B8791 accent; switch to a dark theme to see the derived pair), a staggered entrance (enter, enterDelay), and badges in another tone than the card (badgeTone).',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             UiSegmented<bool>(
               label: 'Direction',
@@ -282,8 +303,36 @@ class _DataPageState extends State<DataPage> {
               ),
             ),
             UiText(_ftOpened.isEmpty ? 'Tap a tile.' : 'Opened: $_ftOpened', variant: UiTextVariant.caption),
+            UiButton(label: 'Replay the entrance', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _ftRun++)),
+            Directionality(
+              // A new key each replay: the cards are new, so their entrance plays again.
+              key: ValueKey('ft-run-$_ftRun'),
+              textDirection: _ftRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+                  IntrinsicHeight(
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+                      Expanded(child: _tile('Nurse at home', 'A nurse comes to you.', HugeIcons.strokeRoundedAmbulance, colors: _mint, delay: 0)),
+                      Expanded(child: _tile('Prescriptions', 'Order and refill your medicines.', HugeIcons.strokeRoundedMedicine01, colors: _blue, delay: 90)),
+                    ]),
+                  ),
+                  IntrinsicHeight(
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+                      Expanded(child: _tile('Book a clinic', 'An accent card with a primary badge.', HugeIcons.strokeRoundedStethoscope, tone: UiFeatureTone.accent, badgeTone: UiFeatureTone.primary, delay: 180)),
+                      Expanded(child: _tile('Appointments', 'A primary card with an accent badge.', HugeIcons.strokeRoundedCalendar03, badgeTone: UiFeatureTone.accent, delay: 270)),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
           ]),
-          code: "Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [\n  const UiInput(placeholder: 'Describe how you feel', semanticLabel: 'Ask'),\n  IntrinsicHeight(\n    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [\n      Expanded(\n        child: UiFeatureCard(\n          icon: const UiIcon(HugeIcons.strokeRoundedStethoscope),\n          title: 'Find a doctor',\n          description: 'Book a clinic visit near you.',\n          size: UiSize.sm,\n          surface: UiFeatureSurface.tinted,\n          controlRadius: true,\n          trailingArrow: true,\n          descriptionLines: 2,\n          onPressed: openDoctors,\n        ),\n      ),\n      Expanded(child: UiFeatureCard(/* ... */ tone: UiFeatureTone.accent, /* ... */)),\n    ]),\n  ),\n])",
+          api: const [
+            ApiRow('badgeTone', 'UiFeatureTone?', 'The badge\'s own tone (its tint and icon colour), e.g. an accent card with a primary badge. Icon 3:1 on its badge in every theme.', def: 'tone'),
+            ApiRow('colors', 'UiFeatureCardColors?', 'The app\'s own surface and accent (UiFeatureCardColors(surface:, accent:, surfaceDark:, accentDark:), or .tryParse from hex/rgb strings). surface is the card\'s background (no border at rest); accent is the badge tint (14%), icon, arrow and hover/focus border; action words and eyebrow use the accent moved to 4.5:1. Title and description keep the theme\'s text colours. On a dark theme the missing dark colours are derived (the accent 18% into the theme surface; the accent lightened until 4.5:1). Wins over tone and badgeTone.'),
+            ApiRow('enter / enterDelay', 'bool / Duration', 'A short entrance (fade and an 8px rise, motionSlow, decelerate) once, when the card first appears, after enterDelay (stagger cards with it). Off when animations are off.', def: 'false / zero'),
+          ],
+          code: "// Your own colours, a staggered entrance, a badge in another tone:\nUiFeatureCard(\n  colors: UiFeatureCardColors.tryParse(surface: '#E1F4EF', accent: '#4B8791'),\n  enter: true,\n  enterDelay: Duration(milliseconds: 90),\n  /* ... */\n)\nUiFeatureCard(tone: UiFeatureTone.accent, badgeTone: UiFeatureTone.primary, /* ... */)\n\nColumn(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [\n  const UiInput(placeholder: 'Describe how you feel', semanticLabel: 'Ask'),\n  IntrinsicHeight(\n    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [\n      Expanded(\n        child: UiFeatureCard(\n          icon: const UiIcon(HugeIcons.strokeRoundedStethoscope),\n          title: 'Find a doctor',\n          description: 'Book a clinic visit near you.',\n          size: UiSize.sm,\n          surface: UiFeatureSurface.tinted,\n          controlRadius: true,\n          trailingArrow: true,\n          descriptionLines: 2,\n          onPressed: openDoctors,\n        ),\n      ),\n      Expanded(child: UiFeatureCard(/* ... */ tone: UiFeatureTone.accent, /* ... */)),\n    ]),\n  ),\n])",
         ),
         DocSection(
           name: 'Divider',

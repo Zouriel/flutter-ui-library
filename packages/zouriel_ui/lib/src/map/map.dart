@@ -1,4 +1,5 @@
 import 'dart:convert' show base64Decode;
+import 'dart:math' as math;
 
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
@@ -52,7 +53,9 @@ class UiMapMarker {
 class UiMapBlankTiles extends TileProvider {
   UiMapBlankTiles();
 
-  static final MemoryImage _pixel = MemoryImage(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+  // A grey-and-alpha pixel at alpha 0. (Until 0.39 this was a half-transparent blue pixel, which
+  // tinted every "blank" map.)
+  static final MemoryImage _pixel = MemoryImage(base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='));
 
   @override
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) => _pixel;
@@ -65,6 +68,34 @@ class UiMapView {
   final double lat;
   final double lng;
   final double zoom;
+}
+
+/// The "searching" animation (the web `UiMapPulse`): soft rings radiating from a point on the map
+/// while [active]. Under reduced motion, one still halo instead.
+@immutable
+class UiMapPulse {
+  const UiMapPulse({required this.lat, required this.lng, this.tone = UiStatus.primary, this.active = true});
+  final double lat;
+  final double lng;
+
+  /// The rings' colour.
+  final UiStatus tone;
+
+  /// False shows nothing and runs nothing.
+  final bool active;
+
+  @override
+  bool operator ==(Object other) => other is UiMapPulse && other.lat == lat && other.lng == lng && other.tone == tone && other.active == active;
+
+  @override
+  int get hashCode => Object.hash(lat, lng, tone, active);
+}
+
+/// The shift, in px from the map's middle, of the middle of the part between [insets] (the web
+/// `uiMapInsetShift`).
+Offset uiMapInsetShift(EdgeInsetsDirectional insets, TextDirection direction) {
+  final r = insets.resolve(direction);
+  return Offset((r.left - r.right) / 2, (r.top - r.bottom) / 2);
 }
 
 /// OpenStreetMap's standard tiles; use them within the OSM tile usage policy, or pass your own.
@@ -81,6 +112,14 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 /// - Theme-aware: themed zoom buttons, and on a dark theme the tiles are dimmed.
 /// - The zoom buttons sit at the inline start and the attribution at the inline end, so they swap
 ///   in RTL; under reduced motion there is no fling.
+/// - [pulse]: the "searching" rings around a point, geo-anchored (they move with the map), drawn
+///   above the tiles and below markers and the pin. A still halo under reduced motion. Silent: the
+///   page's own status text announces the search.
+/// - [viewInsets]: for a full-screen map with a sheet or card floating over it. The map still draws
+///   edge to edge, but [center], the pin's "centre", [onCenterChanged], the zoom buttons and the
+///   attribution use the part between the insets. When the insets change, the map pans so the
+///   point that was in the middle of the visible part stays in the middle of the new one.
+/// - [fill]: square corners, for a full-screen map page.
 ///
 /// [userAgentPackageName] is sent with tile requests (the OSM policy asks for it); [tileProvider]
 /// replaces network tiles (offline tiles, tests).
@@ -104,7 +143,19 @@ class UiMap extends StatefulWidget {
     this.semanticLabel = 'Map',
     this.userAgentPackageName = 'com.zouriel.ui',
     this.tileProvider,
+    this.pulse,
+    this.viewInsets = EdgeInsetsDirectional.zero,
+    this.fill = false,
   });
+
+  /// The "searching" rings around a point; null or `active: false` for none.
+  final UiMapPulse? pulse;
+
+  /// Px covered by panels over each edge; centring and the controls use the part between them.
+  final EdgeInsetsDirectional viewInsets;
+
+  /// Square corners (the map fills whatever box it is given), for a full-screen map page.
+  final bool fill;
 
   final UiLatLng center;
   final double zoom;
@@ -138,8 +189,16 @@ class UiMap extends StatefulWidget {
   State<UiMap> createState() => UiMapState();
 }
 
-class UiMapState extends State<UiMap> {
+class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
   final MapController _controller = MapController();
+
+  /// Pans the map when the insets change (the sheet moved to another snap).
+  late final AnimationController _pan = AnimationController(vsync: this)..addListener(_onPan);
+  Offset _panFrom = Offset.zero, _panTo = Offset.zero;
+  Curve _panCurve = Curves.linear;
+
+  /// The inset shift the view is laid out for.
+  Offset _shift = Offset.zero;
   final GlobalKey _box = GlobalKey();
 
   /// The pin while a finger drags it.
@@ -150,39 +209,91 @@ class UiMapState extends State<UiMap> {
   MapController get controller => _controller;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The direction decides which side start/end are on.
+    final next = uiMapInsetShift(widget.viewInsets, Directionality.of(context));
+    if (next != _shift) _shiftTo(next, animate: false);
+  }
+
+  @override
   void didUpdateWidget(UiMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final next = uiMapInsetShift(widget.viewInsets, Directionality.of(context));
+    if (next != _shift) _shiftTo(next, animate: uiFxMotion(context) == UiFxMotion.full);
     if (!_ready) return;
     if (oldWidget.center != widget.center || oldWidget.zoom != widget.zoom) {
-      final c = _controller.camera;
-      if (c.center.latitude != widget.center.lat || c.center.longitude != widget.center.lng || c.zoom != widget.zoom) {
-        _controller.move(widget.center._ll, widget.zoom);
+      final c = _visibleCenter(_controller.camera);
+      if ((c.latitude - widget.center.lat).abs() > 1e-9 || (c.longitude - widget.center.lng).abs() > 1e-9 || _controller.camera.zoom != widget.zoom) {
+        _pan.stop();
+        _controller.move(widget.center._ll, widget.zoom, offset: _shift);
       }
     }
   }
 
   @override
   void dispose() {
+    _pan.dispose();
     _controller.dispose();
     super.dispose();
   }
 
+  /// The point in the middle of the part of the map between the insets.
+  LatLng _visibleCenter(MapCamera c) => _shift == Offset.zero ? c.center : c.unprojectAtZoom(c.projectAtZoom(c.center) + _shift);
+
+  /// Lays the view out for a new inset shift: the point in the middle of the old visible part pans
+  /// to the middle of the new one (the map's own centre moves by the difference).
+  void _shiftTo(Offset next, {required bool animate}) {
+    final old = _shift;
+    _shift = next;
+    if (!_ready) return;
+    final c = _controller.camera;
+    final from = c.projectAtZoom(c.center);
+    final to = from + (old - next);
+    if (!animate) {
+      _pan.stop();
+      _controller.move(c.unprojectAtZoom(to), c.zoom);
+      return;
+    }
+    final t = context.ui;
+    _panFrom = from;
+    _panTo = to;
+    _panCurve = t.easeStandard;
+    _pan
+      ..duration = t.motionSlow
+      ..forward(from: 0);
+  }
+
+  void _onPan() {
+    final c = _controller.camera;
+    final p = Offset.lerp(_panFrom, _panTo, _panCurve.transform(_pan.value))!;
+    _controller.move(c.unprojectAtZoom(p), c.zoom);
+  }
+
+  void _onReady() {
+    _ready = true;
+    // Built centred on the middle of the whole map: centre the input in the visible part instead.
+    if (_shift != Offset.zero) _controller.move(widget.center._ll, widget.zoom, offset: _shift);
+  }
+
   void _placeAtCentre() {
-    final c = _controller.camera.center;
+    final c = _visibleCenter(_controller.camera);
     widget.onPinChanged?.call(UiLatLng(c.latitude, c.longitude));
   }
 
   void _zoomBy(double d) {
-    final c = _controller.camera;
-    _controller.move(c.center, (c.zoom + d).clamp(1, 19));
-    widget.onCenterChanged?.call(UiMapView(c.center.latitude, c.center.longitude, _controller.camera.zoom));
+    // Around the middle of the visible part, so what the person looks at stays put.
+    final v = _visibleCenter(_controller.camera);
+    _pan.stop();
+    _controller.move(v, (_controller.camera.zoom + d).clamp(1, 19), offset: _shift);
+    widget.onCenterChanged?.call(UiMapView(v.latitude, v.longitude, _controller.camera.zoom));
   }
 
   void _onEvent(MapEvent e) {
     if (e.source == MapEventSource.mapController) return;
     if (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd || e is MapEventDoubleTapZoomEnd || e is MapEventScrollWheelZoom) {
-      final c = e.camera;
-      widget.onCenterChanged?.call(UiMapView(c.center.latitude, c.center.longitude, c.zoom));
+      final c = _visibleCenter(e.camera);
+      widget.onCenterChanged?.call(UiMapView(c.latitude, c.longitude, e.camera.zoom));
     }
   }
 
@@ -203,7 +314,7 @@ class UiMapState extends State<UiMap> {
         initialCenter: widget.center._ll,
         initialZoom: widget.zoom,
         backgroundColor: t.surfaceSubtle,
-        onMapReady: () => _ready = true,
+        onMapReady: _onReady,
         onMapEvent: _onEvent,
         onTap: (_, ll) {
           if (widget.pinMode) widget.onPinChanged?.call(UiLatLng(ll.latitude, ll.longitude));
@@ -219,6 +330,16 @@ class UiMapState extends State<UiMap> {
           tileProvider: tileProvider,
           tileBuilder: dark ? _dim : null,
         ),
+        // The pulse: geo-anchored like a marker, under the markers and pin, never hit or read out.
+        if (widget.pulse case final p? when p.active)
+          MarkerLayer(markers: [
+            Marker(
+              point: LatLng(p.lat, p.lng),
+              width: uiMapPulseSize,
+              height: uiMapPulseSize,
+              child: IgnorePointer(child: ExcludeSemantics(child: UiMapPulseRings(tone: p.tone))),
+            ),
+          ]),
         MarkerLayer(markers: [
           for (final m in widget.markers)
             Marker(
@@ -289,14 +410,28 @@ class UiMapState extends State<UiMap> {
           return KeyEventResult.ignored;
         },
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(context.uiTheme.radius(t.radius)),
+          borderRadius: BorderRadius.circular(widget.fill ? 0 : context.uiTheme.radius(t.radius)),
           child: ColoredBox(
             color: t.surfaceSubtle,
             child: Stack(children: [
               // Leaflet and flutter_map lay out in screen terms; keep the map itself LTR.
               Positioned.fill(child: Directionality(textDirection: TextDirection.ltr, child: map)),
-              PositionedDirectional(top: t.space2, start: t.space2, child: zoom),
-              Positioned(bottom: 0, right: rtl ? null : 0, left: rtl ? 0 : null, child: attribution),
+              // The controls sit inside the part the insets leave visible.
+              AnimatedPositionedDirectional(
+                duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                curve: t.easeStandard,
+                top: t.space2 + widget.viewInsets.top,
+                start: t.space2 + widget.viewInsets.start,
+                child: zoom,
+              ),
+              AnimatedPositioned(
+                duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                curve: t.easeStandard,
+                bottom: widget.viewInsets.bottom,
+                right: rtl ? null : widget.viewInsets.end,
+                left: rtl ? widget.viewInsets.end : null,
+                child: attribution,
+              ),
             ]),
           ),
         ),
@@ -431,4 +566,100 @@ class _PinPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PinPainter old) => old.fill != fill || old.ring != ring;
+}
+
+/// How wide the pulse is at its widest, in px.
+const double uiMapPulseSize = 120;
+
+/// The pulse rings (exported for tests and goldens): three staggered rings, 2.4s, growing from 15%
+/// to 100% of [uiMapPulseSize] on an ease-out while fading in over the first 12% and out after; one
+/// still 72px halo when animations are off ([BuildContext.uiAnimate] false, e.g. reduced motion).
+class UiMapPulseRings extends StatefulWidget {
+  const UiMapPulseRings({super.key, this.tone = UiStatus.primary});
+  final UiStatus tone;
+
+  /// One loop.
+  static const Duration period = Duration(milliseconds: 2400);
+
+  @override
+  State<UiMapPulseRings> createState() => _UiMapPulseRingsState();
+}
+
+class _UiMapPulseRingsState extends State<UiMapPulseRings> with SingleTickerProviderStateMixin {
+  late final AnimationController _loop = AnimationController(vsync: this, duration: UiMapPulseRings.period);
+
+  /// Whether the loop is running (for tests: stopped under reduced motion).
+  bool get running => _loop.isAnimating;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Runs only while it animates: under reduced motion the controller stays stopped.
+    if (context.uiAnimate) {
+      if (!_loop.isAnimating) _loop.repeat();
+    } else {
+      _loop.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _loop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final color = widget.tone.color(t);
+    final still = !context.uiAnimate;
+    return SizedBox.square(
+      dimension: uiMapPulseSize,
+      child: CustomPaint(painter: _PulsePainter(color: color, loop: still ? null : _loop, elapsed: () => _loop.lastElapsedDuration ?? Duration.zero)),
+    );
+  }
+}
+
+class _PulsePainter extends CustomPainter {
+  _PulsePainter({required this.color, this.loop, this.elapsed}) : super(repaint: loop);
+  final Color color;
+
+  /// Time since the loop started: ring i starts i/3 of a loop late, as the web's animation-delay.
+  final Duration Function()? elapsed;
+
+  /// Null: the still halo.
+  final Animation<double>? loop;
+
+  static const Cubic _grow = Cubic(0.2, 0.6, 0.35, 1);
+
+  void _ring(Canvas canvas, Offset c, double diameter, double opacity) {
+    if (opacity <= 0) return;
+    final r = diameter / 2;
+    canvas.drawCircle(c, r, Paint()..color = color.withValues(alpha: 0.20 * opacity));
+    // The web's 2px border sits inside the ring's box: its centre line is 1px in.
+    canvas.drawCircle(c, math.max(0, r - 1), Paint()
+      ..color = color.withValues(alpha: 0.75 * opacity)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final l = loop;
+    if (l == null) {
+      _ring(canvas, c, 72, 1);
+      return;
+    }
+    final since = elapsed?.call().inMicroseconds ?? UiMapPulseRings.period.inMicroseconds;
+    for (var i = 0; i < 3; i++) {
+      if (since < UiMapPulseRings.period.inMicroseconds * i / 3) continue;
+      final p = (l.value - i / 3) % 1.0;
+      final opacity = p < 0.12 ? p / 0.12 : (1 - p) / 0.88;
+      _ring(canvas, c, uiMapPulseSize * (0.15 + 0.85 * _grow.transform(p)), opacity);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PulsePainter old) => old.color != color || old.loop != loop;
 }

@@ -7,6 +7,7 @@ export 'src/button/google_sign_in_button.dart';
 export 'src/button/hold_button.dart';
 export 'src/card/card.dart';
 export 'src/card/feature_card.dart';
+export 'src/card/feature_colors.dart';
 export 'src/core/fonts.dart';
 export 'src/core/icon.dart';
 export 'src/core/interactive.dart';

@@ -289,7 +289,7 @@ File: `card/src/stat-card.ts`
 ### UiFeatureCard (component, `ui-feature-card`) (0.37)
 File: `card/src/feature-card.ts`  
 Product or service card for a landing page: icon in a tinted badge, eyebrow, title, description and an action; the whole card is one target.  
-- Inputs: `title`; `description`; `eyebrow`; `actionLabel`; `href` (web only); `tone` (primary | accent | brand | neutral); `layout` (vertical | horizontal); `size` (sm | md | lg; sm since 0.38); `surface` (default | tinted, Flutter `UiFeatureSurface.standard | tinted`, 0.38); `trailingArrow` (0.38); `descriptionLines` (0.38); `disabled` (Flutter `enabled: false`); `glass`; `radius` (boolean | 'control', Flutter `radius` + `controlRadius`, 0.38); `[icon]` slot (Flutter `icon`)
+- Inputs: `title`; `description`; `eyebrow`; `actionLabel`; `href` (web only); `tone` (primary | accent | brand | neutral); `layout` (vertical | horizontal); `size` (sm | md | lg; sm since 0.38); `surface` (default | tinted, Flutter `UiFeatureSurface.standard | tinted`, 0.38); `trailingArrow` (0.38); `descriptionLines` (0.38); `badgeTone` (0.39); `colors` (UiFeatureCardColors, 0.39); `enter` / `enterDelay` (Flutter `Duration`, 0.39); `disabled` (Flutter `enabled: false`); `glass`; `radius` (boolean | 'control', Flutter `radius` + `controlRadius`, 0.38); `[icon]` slot (Flutter `icon`)
 - Outputs: `action` (Flutter `onPressed`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1645,6 +1645,7 @@ Pan/zoom surface with fit, minimap and zoom controls.
 File: `layout/src/floating-panel.ts`  
 `ui-floating-panel` — a non-modal raised card over the bottom or top of its positioned parent (over a map); safe-area aware, 16px gutter, up to 480px.  
 - Inputs: `placement`: 'bottom' | 'top' = 'bottom'; `ariaLabel`; `glass`; `radius`
+- Outputs: `coverChange` (Flutter `onCoverChanged`, 0.39): px of the edge it covers
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiRowActions (component, `ui-row-actions`) (0.34)
@@ -1674,7 +1675,7 @@ A message: mine at the inline end in primary, theirs at the start on the raised 
 ### UiMap (component, `ui-map`) (0.35)
 File: `map/src/map.ts`  
 OpenStreetMap map (Leaflet on the web, flutter_map here) with markers, a draggable pin, themed controls and dimmed dark tiles. Flutter: `package:zouriel_ui/map.dart`.  
-- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `tileUrl`; `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
+- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `pulse` (UiMapPulse, 0.39); `insets` (Flutter `viewInsets`, 0.39); `fill` (0.39); `tileUrl`; `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
 - Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

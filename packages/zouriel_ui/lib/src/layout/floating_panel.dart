@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../theme/theme.dart';
@@ -15,6 +17,10 @@ enum UiFloatingPanelPlacement { bottom, top }
 /// usable and draggable. It sits 16px in from the edges plus the device's safe-area insets (the
 /// MediaQuery padding), up to [maxWidth] wide and centred, so it fits a 390px phone with a 16px
 /// gutter. With [semanticLabel] it is a named container for screen readers.
+///
+/// [onCoverChanged] reports how much of the Stack's edge it covers, in px (its gutter, the safe
+/// area and its height), whenever that changes: feed it to a map's `viewInsets` so the map centres
+/// below a status card at the top.
 class UiFloatingPanel extends StatelessWidget {
   const UiFloatingPanel({
     super.key,
@@ -24,7 +30,11 @@ class UiFloatingPanel extends StatelessWidget {
     this.maxWidth = 480,
     this.glass,
     this.radius,
+    this.onCoverChanged,
   });
+
+  /// Px of the Stack's edge (top or bottom, per [placement]) it covers: gutter, safe area and height.
+  final ValueChanged<double>? onCoverChanged;
 
   final Widget child;
   final UiFloatingPanelPlacement placement;
@@ -82,8 +92,46 @@ class UiFloatingPanel extends StatelessWidget {
         alignment: top ? Alignment.topCenter : Alignment.bottomCenter,
         heightFactor: 1,
         // As wide as there is room for, up to maxWidth.
-        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: math.max(0, maxWidth)), child: SizedBox(width: double.infinity, child: panel)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: math.max(0, maxWidth)),
+          child: SizedBox(
+            width: double.infinity,
+            child: onCoverChanged == null
+                ? panel
+                : _HeightReporter(onHeight: (h) => onCoverChanged!(h + gutter + (top ? pad.top : pad.bottom)), child: panel),
+          ),
+        ),
       ),
     );
+  }
+}
+
+/// Reports its child's laid-out height after the frame, whenever it changes (the entry slide is a
+/// paint transform, so it doesn't count).
+class _HeightReporter extends SingleChildRenderObjectWidget {
+  const _HeightReporter({required this.onHeight, super.child});
+  final ValueChanged<double> onHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderHeightReporter(onHeight);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderHeightReporter renderObject) => renderObject.onHeight = onHeight;
+}
+
+class _RenderHeightReporter extends RenderProxyBox {
+  _RenderHeightReporter(this.onHeight);
+  ValueChanged<double> onHeight;
+  double? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final h = size.height;
+    if (h == _last) return;
+    _last = h;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (attached && _last == h) onHeight(h);
+    });
   }
 }
