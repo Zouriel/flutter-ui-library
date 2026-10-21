@@ -10,7 +10,11 @@ void main() {
   test('no hard-coded colours outside the generated tokens', () {
     final bad = <String>[];
     final allowed = RegExp(r'Color\(0x00000000\)'); // fully transparent
+    // The one exception: Google's brand colours for the sign-in button, fixed by
+    // https://developers.google.com/identity/branding-guidelines whatever the theme.
+    final brand = RegExp(r'google_sign_in_button\.dart$');
     for (final f in files) {
+      if (brand.hasMatch(f.path.replaceAll(r'\', '/'))) continue;
       final lines = f.readAsLinesSync();
       for (var i = 0; i < lines.length; i++) {
         final l = lines[i];

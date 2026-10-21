@@ -101,6 +101,20 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**0.36.0 additions.** `UiGoogleSignInButton` (web `ui-google-button`) draws Google's sign-in
+button to https://developers.google.com/identity/branding-guidelines: the colours are Google's
+(`UiGoogleBrand`), the one file `style_contract_test` lets use literal colours; 40 high, 12 before
+the G, 10 between G and text, 12 after (measured from the outer edge, so the 1px stroke comes out of
+the padding), 4px corners or a pill. The G is Google's four-path mark from the guideline's sample
+SVG, path data kept verbatim and drawn by a tiny parser (no flutter_svg dependency). The newer asset
+bundle draws the G with a Figma conic-gradient `foreignObject`, which only a browser can render, so
+the classic flat four-colour G is used in both libraries. The guideline now names Google Sans
+Medium 14/20; the library doesn't bundle Google's font, so Flutter draws the bundled Roboto Medium
+(then the app font for scripts Roboto lacks), and the web asks for Google Sans, then Roboto, then the
+library font. `auto` follows `UiThemeData.brightness`. The library does not depend on
+`google_sign_in`: the app wires `onPressed` to it. The web's `ui-google-sign-in` (a wrapper around
+Google Identity Services' own button) has no Flutter twin: native sign-in comes from the plugin.
+
 **0.35.1 fixes.** UiInteractive sets its pressed/hover/focus state through `_set`, which defers to
 the end of the frame when called while the tree builds: a recognizer cancels its tap when a rebuild
 disables it (a hold button disabled by its own onConfirmed with the finger still down threw

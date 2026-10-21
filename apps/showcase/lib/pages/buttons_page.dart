@@ -15,6 +15,8 @@ class _ButtonsPageState extends State<ButtonsPage> {
   bool _saving = false;
   int _count = 0;
   int _held = 0;
+  bool _googleBusy = false;
+  int _googleTaps = 0;
   String? _view = 'week';
   String? _align = 'left';
   bool _bold = true, _italic = false;
@@ -124,6 +126,60 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
             ApiRow('holdHint', 'String?', 'Read with the button.', def: "strings.holdHint ('Press and hold to confirm')"),
             ApiRow('confirmTitle / confirmMessage / confirmLabel / destructive', 'String? / String / String? / bool', 'The tap fallback dialog.'),
           ],
+        ),
+        DocSection(
+          name: 'Sign in with Google',
+          widget: 'UiGoogleSignInButton',
+          summary: 'Google\'s sign-in button, drawn to its branding guidelines: the official multicolour G, Google\'s light (white, grey stroke), dark and neutral (light grey, no stroke) colours, 40 high, Roboto Medium 14/20, rectangular or pill. auto picks dark on a dark theme and light otherwise. It only draws the button: pair it with the google_sign_in package (authenticate() gives the idToken; set serverClientId to the web client ID your server checks). loading swaps the G for a spinner at the same width and ignores taps. The words come from UiStrings (googleSignIn, googleSignUp, googleContinue, googleSignInShort), so translate them there; Google only allows its approved wordings. The web twin is ui-google-button; on the web, ui-google-sign-in wraps Google\'s own button instead.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            UiGoogleSignInButton(
+              loading: _googleBusy,
+              onPressed: () async {
+                setState(() => _googleBusy = true);
+                await Future<void>.delayed(const Duration(seconds: 1));
+                if (!mounted) return;
+                setState(() {
+                  _googleBusy = false;
+                  _googleTaps++;
+                });
+              },
+            ),
+            Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+              UiGoogleSignInButton(onPressed: () {}, theme: UiGoogleButtonTheme.light, shape: UiGoogleButtonShape.pill, text: UiGoogleButtonText.continueWith),
+              UiGoogleSignInButton(onPressed: () {}, theme: UiGoogleButtonTheme.dark, text: UiGoogleButtonText.signUp),
+              UiGoogleSignInButton(onPressed: () {}, theme: UiGoogleButtonTheme.neutral, text: UiGoogleButtonText.signInShort),
+              const UiGoogleSignInButton(onPressed: null),
+            ]),
+            UiGoogleSignInButton(onPressed: () {}, expand: true, text: UiGoogleButtonText.continueWith),
+            UiText('Signed in (pretend) $_googleTaps times', variant: UiTextVariant.caption),
+          ]),
+          code: '''// pubspec: google_sign_in (the library doesn't depend on it)
+final google = GoogleSignIn.instance;
+await google.initialize(serverClientId: webClientId);
+
+UiGoogleSignInButton(
+  loading: busy,
+  onPressed: () async {
+    setState(() => busy = true);
+    try {
+      final account = await google.authenticate();
+      final idToken = account.authentication.idToken; // send to your API
+    } finally {
+      setState(() => busy = false);
+    }
+  },
+)''',
+          api: const [
+            ApiRow('onPressed', 'VoidCallback?', 'Start the app\'s sign-in. Null disables the button.'),
+            ApiRow('text', 'UiGoogleButtonText', 'signIn, signUp, continueWith, signInShort ("Sign in").', def: 'signIn'),
+            ApiRow('theme', 'UiGoogleButtonTheme', 'auto (dark on a dark UiApp theme, else light), light, dark, neutral.', def: 'auto'),
+            ApiRow('shape', 'UiGoogleButtonShape', 'rectangular (4px corners) or pill.', def: 'rectangular'),
+            ApiRow('loading', 'bool', 'Spinner in place of the G, same width, taps ignored, announced as busy.', def: 'false'),
+            ApiRow('expand', 'bool', 'Full width; the G stays at the start, the words centre.', def: 'false'),
+            ApiRow('semanticLabel', 'String?', 'Accessible name override.', def: 'the words'),
+            ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
+          ],
+          shapes: 'enum UiGoogleButtonText { signIn, signUp, continueWith, signInShort }\nenum UiGoogleButtonTheme { auto, light, dark, neutral }\nenum UiGoogleButtonShape { rectangular, pill }',
         ),
         DocSection(
           name: 'Icon button',

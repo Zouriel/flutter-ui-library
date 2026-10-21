@@ -1669,3 +1669,17 @@ OpenStreetMap map (Leaflet on the web, flutter_map here) with markers, a draggab
 - Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `tileUrl`; `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
 - Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiGoogleButton (component, `ui-google-button`) (0.36)
+File: `google-sign-in/src/google-button.ts` (entry point `@zouriel/ui/google-sign-in`)  
+"Sign in with Google" drawn to Google's branding guidelines (official G, light/dark/neutral, rectangular/pill, 40 high). Flutter: `UiGoogleSignInButton`, paired with the `google_sign_in` package by the app.  
+- Inputs: `text` (signIn | signUp | continueWith | signInShort); `theme` (auto | light | dark | neutral); `shape` (rectangular | pill); `loading`; `expand`; `disabled` (Flutter: `onPressed` null); `ariaLabel` (Flutter `semanticLabel`)
+- Outputs: `pressed` (Flutter `onPressed`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiGoogleSignIn (component, `ui-google-sign-in`) (0.36, web only)
+File: `google-sign-in/src/google-sign-in.ts`  
+Wraps Google Identity Services' own rendered button and emits the ID token (`credential`). Web only: on the web GIS is the only secret-free way to get an ID token; a Flutter app gets it from `google_sign_in` (`authenticate()` → `idToken`, `serverClientId` = the web client ID) behind `UiGoogleSignInButton`.  
+- Inputs: `clientId`; `text`; `theme`; `shape`; `width`; `locale`; `nonce`
+- Outputs: `credential`; `failed`
+- [ ] Flutter port (not applicable: native sign-in comes from the google_sign_in plugin)  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase

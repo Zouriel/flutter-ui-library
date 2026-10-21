@@ -54,6 +54,14 @@ marker without exposing its id; `pinDraggable: false` shows a read-only pin; `ti
 request headers. Widget tests can pass `UiMapBlankTiles()` to avoid the network without adding
 flutter_map as a direct dependency. Map control words are in `UiStrings`.
 
+**Sign in with Google:** `UiGoogleSignInButton` draws Google's branded button (light, dark,
+neutral or `auto` from the theme; rectangular or pill; `loading`; `expand`). The library doesn't
+sign anyone in: add the `google_sign_in` package to the app, call
+`GoogleSignIn.instance.initialize(serverClientId: <web client ID>)` once, and in `onPressed` call
+`authenticate()` and send `authentication.idToken` to your API. The words (`googleSignIn`,
+`googleSignUp`, `googleContinue`, `googleSignInShort`) are in `UiStrings`. Its text is the bundled
+Roboto Medium (Google's guideline now uses Google Sans, which the library doesn't ship).
+
 The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
 (the web's `maldives` and `maldives-dark`): a night toggle is
 `controller.set(isNight ? UiThemeName.maldivesDark : UiThemeName.maldives)`. `UiSeaSurface` scopes
