@@ -93,12 +93,17 @@ class UiVirtualList<T> extends StatelessWidget {
 /// changes while the content fits. Used by `UiTable` and `UiSegmented`; [axis] vertical for a column
 /// (`UiWorkflowGlobalSettings` above its footer).
 class UiScrollFade extends StatefulWidget {
-  const UiScrollFade({super.key, required this.child, this.size = 24, this.axis = Axis.horizontal});
+  const UiScrollFade({super.key, required this.child, this.size = 24, this.axis = Axis.horizontal, this.onEdgesChanged});
 
   final Widget child;
 
-  /// Width of the fade, in logical px.
+  /// Width of the fade, in logical px. 0 draws no fade: only [onEdgesChanged] reports (the web
+  /// `[uiScrollFadeSize]="0"` with `#x="uiScrollFade"`).
   final double size;
+
+  /// Whether there is hidden content before ([start]) and after ([end]) the visible part, each time
+  /// that changes (the web `more` signal).
+  final void Function(bool start, bool end)? onEdgesChanged;
 
   /// Which way the wrapped view scrolls.
   final Axis axis;
@@ -120,6 +125,7 @@ class _UiScrollFadeState extends State<UiScrollFade> {
         _start = start;
         _end = end;
       });
+      widget.onEdgesChanged?.call(start, end);
     }
     return false;
   }
@@ -134,7 +140,7 @@ class _UiScrollFadeState extends State<UiScrollFade> {
         child: widget.child,
       ),
     );
-    if (!_start && !_end) return child;
+    if ((!_start && !_end) || widget.size <= 0) return child;
     // Any opaque colour works as a mask; only its alpha matters.
     final solid = context.ui.text;
     final clear = solid.withValues(alpha: 0);

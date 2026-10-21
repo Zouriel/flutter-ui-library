@@ -170,6 +170,28 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.41.0.** Fixed header and footer in drawers and sidebars (Dhirumi: "My nurse visits" and the
+profile must stay in the viewport, not sit at the end of the chats list). Web: `ui-drawer` gets
+`[drawer-header]` / `[drawer-footer]` slots (`.dh` / `.df` around `.bd`, kebab names like
+`[modal-footer]`), `ui-sidebar-layout` gets `[sidebar-header]` / `[sidebar-footer]`; the aside is now a
+flex column whose `.sb-bd` scrolls instead of the aside itself, with the edge padding carried in
+`--sb-pt/-pb/-ps` so the safe area lands on the first and last part (`:has()` drops the body's
+bottom inset when a footer follows). Empty slots are `display: none`, so nothing changes without them.
+Flutter: `UiDrawer.header` / `footer` / `bodyBuilder` (`showUiDrawer(headerBuilder:, footerBuilder:,
+bodyBuilder:)`, `UiDrawerPeek(headerBuilder:, footerBuilder:)`) and `UiSidebarLayout.sidebarHeader` /
+`sidebarFooter`, both through an internal `UiPinnedEdges` column (not exported). Each part keeps a
+1px border (no height change) coloured only while the body has content hidden on that side; both
+sides measure it with the scroll fade (`uiScrollFade` exportAs + size 0 on the web,
+`UiScrollFade.onEdgesChanged` + size 0 here), and the hairline's first appearance on open is drawn at
+once in Flutter (later changes fade over motionFast, like the web's border-color transition).
+Differences that have no counterpart: `bodyBuilder(context, ScrollController)` exists only in Flutter,
+because a `ListView` must be the scroll view itself (on the web the body element scrolls and a paging
+list inside it just works, e.g. with `uiIntersect`); the Flutter left/right drawer also keeps its
+footer above the keyboard (`max(padding.bottom, viewInsets.bottom)`; the browser resizes the visual
+viewport itself). Focus order: DOM order on the web; in Flutter each part is a `FocusTraversalGroup`
+with an `OrdinalSortKey` semantics container, because reading order alone tabbed to the footer
+before rows scrolled out of sight below it (a test fails without the groups).
+
 **0.40.2.** Feature-card colours and the theme: on the web the card read the theme tokens with
 `getComputedStyle` once, when `colors` was set, and again only on `data-theme` mutations; a
 critical-CSS build (Angular's default) inlines only the `:root` (Winter Dark) tokens and loads the

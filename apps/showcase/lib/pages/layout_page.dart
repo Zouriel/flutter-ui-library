@@ -241,7 +241,7 @@ class _LayoutPageState extends State<LayoutPage> {
         DocSection(
           name: 'Sidebar layout',
           widget: 'UiSidebarLayout',
-          summary: 'An app shell: a sidebar beside the page under a top bar when there is room; at or below breakpoint the sidebar becomes a drawer opened by a built-in menu button over a dimmed backdrop. The sidebar sits on the start side: on the right, sliding in from the right, in right-to-left text. Tapping the backdrop, Escape and the system back gesture close the drawer; focus moves into it on open and back to the opener on close; while open the page behind is hidden from screen readers, and screen readers get the backdrop as a Close navigation button. Widening past the breakpoint closes it. The slide is instant under reduced motion. For an app with its own top bar (a chat app), bar: false drops the built-in bar and menu button, fill: true gives the body all the space with no padding and no scroll view and keeps clear of the safe area, and UiSidebarLayout.of(context) tells the app whether it is in drawer mode (compact) and opens the drawer. Its words (sidebarToggle, sidebarClose, sidebarLabel) come from UiStrings.',
+          summary: 'An app shell: a sidebar beside the page under a top bar when there is room; at or below breakpoint the sidebar becomes a drawer opened by a built-in menu button over a dimmed backdrop. The sidebar sits on the start side: on the right, sliding in from the right, in right-to-left text. Tapping the backdrop, Escape and the system back gesture close the drawer; focus moves into it on open and back to the opener on close; while open the page behind is hidden from screen readers, and screen readers get the backdrop as a Close navigation button. Widening past the breakpoint closes it. The slide is instant under reduced motion. For an app with its own top bar (a chat app), bar: false drops the built-in bar and menu button, fill: true gives the body all the space with no padding and no scroll view and keeps clear of the safe area, and UiSidebarLayout.of(context) tells the app whether it is in drawer mode (compact) and opens the drawer. sidebarHeader and sidebarFooter are fixed at the top and bottom of the sidebar, docked and in the drawer, with only the sidebar between them scrolling (a hairline shows under the header and over the footer while it is scrolled out of sight on that side); with fill the footer sits at the bottom of the screen. Its words (sidebarToggle, sidebarClose, sidebarLabel) come from UiStrings.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             UiSwitch(value: _shellRtl, onChanged: (v) => setState(() => _shellRtl = v), label: 'Right to left'),
             Directionality(
@@ -275,7 +275,7 @@ class _LayoutPageState extends State<LayoutPage> {
                 ),
               ),
             ),
-            const UiText('App shell: bar: false + fill: true, with the app\'s own top bar and a composer docked at the bottom.', variant: UiTextVariant.caption),
+            const UiText('App shell: bar: false + fill: true, with the app\'s own top bar and a composer docked at the bottom, and a sidebar with a fixed New chat header and account footer around a long chat list.', variant: UiTextVariant.caption),
             Directionality(
               textDirection: _shellRtl ? TextDirection.rtl : TextDirection.ltr,
               child: SizedBox(
@@ -298,8 +298,13 @@ class _LayoutPageState extends State<LayoutPage> {
                         sidebarWidth: 200,
                         open: _chatDrawer,
                         onOpenChanged: (v) => setState(() => _chatDrawer = v),
+                        sidebarHeader: UiButton(label: 'New chat', block: true, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: () => setState(() => _chatDrawer = false)),
+                        sidebarFooter: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          UiButton(label: 'My nurse visits', variant: UiButtonVariant.ghost, block: true, icon: const UiIcon(HugeIcons.strokeRoundedCalendar03), onPressed: () {}),
+                          UiButton(label: 'Profile', variant: UiButtonVariant.ghost, block: true, icon: const UiIcon(HugeIcons.strokeRoundedUser), onPressed: () {}),
+                        ]),
                         sidebar: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                          for (final n in ['Dr Aminath', 'Dr Hassan', 'Clinic desk'])
+                          for (final n in ['Dr Aminath', 'Dr Hassan', 'Clinic desk', for (var i = 1; i <= 20; i++) 'Conversation $i'])
                             UiButton(
                               label: n,
                               block: true,
@@ -343,9 +348,10 @@ class _LayoutPageState extends State<LayoutPage> {
               ),
             ),
           ]),
-          code: 'UiSidebarLayout(\n  bar: false,\n  fill: true,\n  sidebar: chats,\n  body: Builder(builder: (context) {\n    final shell = UiSidebarLayout.of(context);\n    return Column(children: [\n      MyTopBar(menu: shell.compact ? shell.toggle : null),\n      Expanded(child: messages),\n      composer,\n    ]);\n  }),\n)',
+          code: 'UiSidebarLayout(\n  bar: false,\n  fill: true,\n  sidebarHeader: UiButton(label: \'New chat\', block: true, onPressed: startNew),\n  sidebar: chats,                 // only this scrolls\n  sidebarFooter: accountAndVisits, // stays at the bottom\n  body: Builder(builder: (context) {\n    final shell = UiSidebarLayout.of(context);\n    return Column(children: [\n      MyTopBar(menu: shell.compact ? shell.toggle : null),\n      Expanded(child: messages),\n      composer,\n    ]);\n  }),\n)',
           api: const [
             ApiRow('sidebar / header / body', 'Widget', 'The navigation, the top-bar content and the page.'),
+            ApiRow('sidebarHeader / sidebarFooter', 'Widget?', 'Fixed at the top / bottom of the sidebar, docked and in the drawer (the web [sidebar-header] / [sidebar-footer]); only sidebar scrolls between them; the safe area goes on these outer parts. (0.41)'),
             ApiRow('breakpoint', 'double', 'Widest layout that still uses the drawer.', def: '860'),
             ApiRow('sidebarWidth', 'double', 'Sidebar width (drawer: at most 84%).', def: '248'),
             ApiRow('open / onOpenChanged', 'bool? / ValueChanged<bool>?', 'Drive the drawer (close it on navigation).'),

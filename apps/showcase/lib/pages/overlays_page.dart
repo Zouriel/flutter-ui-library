@@ -291,8 +291,27 @@ class _OverlaysPageState extends State<OverlaysPage> {
         DocSection(
           name: 'Drawer',
           widget: 'showUiDrawer · UiDrawer',
-          summary: 'An edge-anchored panel that slides in from side. Like the modal it is its own route: it traps and returns focus, blocks the page, and closes on the back button, Escape or a backdrop tap. On a touch screen it follows a swipe toward its edge and closes when flung or let go past half way. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to 320px tall.',
+          summary: 'An edge-anchored panel that slides in from side. Like the modal it is its own route: it traps and returns focus, blocks the page, and closes on the back button, Escape or a backdrop tap. On a touch screen it follows a swipe toward its edge and closes when flung or let go past half way. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to 320px tall. headerBuilder and footerBuilder add fixed parts above and below the body: only the body scrolls, the footer stays at the bottom (clear of the home indicator and, full height, the keyboard), and a hairline shows under the header and over the footer while the body is scrolled out of sight on that side. A body that scrolls itself (a paging ListView) goes in bodyBuilder, which gets the drawer\'s ScrollController.',
           demo: row([
+            UiButton(
+              label: 'Chats (fixed header and footer)',
+              onPressed: () => showUiDrawer<void>(
+                context: context,
+                side: Directionality.of(context) == TextDirection.rtl ? UiDrawerSide.right : UiDrawerSide.left,
+                title: 'Chats',
+                headerBuilder: (context) => UiButton(label: 'New chat', block: true, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: () => Navigator.pop(context)),
+                bodyBuilder: (context, controller) => ListView.builder(
+                  controller: controller,
+                  padding: UiDrawer.bodyPadding(context),
+                  itemCount: 40,
+                  itemBuilder: (context, i) => UiListItem(onTap: () => Navigator.pop(context), child: UiText('Conversation ${i + 1}')),
+                ),
+                footerBuilder: (context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  UiButton(label: 'My nurse visits', variant: UiButtonVariant.ghost, block: true, icon: const UiIcon(HugeIcons.strokeRoundedCalendar03), onPressed: () => Navigator.pop(context)),
+                  UiButton(label: 'Profile', variant: UiButtonVariant.ghost, block: true, icon: const UiIcon(HugeIcons.strokeRoundedUser), onPressed: () => Navigator.pop(context)),
+                ]),
+              ),
+            ),
             for (final side in UiDrawerSide.values)
               UiButton(
                 label: side.name[0].toUpperCase() + side.name.substring(1),
@@ -310,9 +329,27 @@ class _OverlaysPageState extends State<OverlaysPage> {
   side: UiDrawerSide.right,
   title: 'Filters',
   builder: (context) => FiltersForm(),
+);
+
+// Fixed header and footer; only the paging list scrolls.
+showUiDrawer<void>(
+  context: context,
+  side: UiDrawerSide.left,
+  title: 'Chats',
+  headerBuilder: (context) => UiButton(label: 'New chat', block: true, onPressed: startNew),
+  bodyBuilder: (context, controller) => ListView.builder(
+    controller: controller,
+    padding: UiDrawer.bodyPadding(context),
+    itemCount: chats.length,
+    itemBuilder: (context, i) => ChatRow(chats[i]),
+  ),
+  footerBuilder: (context) => AccountRow(),
 );''',
           api: const [
-            ApiRow('builder', 'WidgetBuilder', 'The body; scrolls when it is taller than the drawer.'),
+            ApiRow('builder', 'WidgetBuilder?', 'The body, in a scroll view; scrolls when it is taller than the drawer. Give this or bodyBuilder.'),
+            ApiRow('bodyBuilder', 'UiScrollBodyBuilder?', '(context, ScrollController) → a body that scrolls itself, such as a paging ListView; pad it with UiDrawer.bodyPadding(context). (0.41)'),
+            ApiRow('headerBuilder / footerBuilder', 'WidgetBuilder?', 'Fixed above / below the body (the web [drawer-header] / [drawer-footer]); only the body scrolls. Hairline under the header / over the footer while the body is scrolled out of sight on that side. (0.41)'),
+            ApiRow('UiDrawer.header / footer / bodyBuilder', 'Widget? / UiScrollBodyBuilder?', 'The same on the widget; UiDrawerPeek has headerBuilder / footerBuilder.'),
             ApiRow('side', 'UiDrawerSide', 'left, right, top, bottom.', def: 'right'),
             ApiRow('title', 'String?', 'Header title, also the accessible name. Without it there is no header or close button.'),
             ApiRow('closeOnBackdrop / closeOnEscape', 'bool', 'As for the modal.', def: 'true'),

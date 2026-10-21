@@ -99,6 +99,18 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Fixed header and footer in drawers and sidebars (0.41.0):** `showUiDrawer` takes `headerBuilder`
+and `footerBuilder` (`UiDrawer.header` / `footer`), placed outside the body's scroll view: title bar,
+fixed header, the scrolling body, fixed footer (above the home indicator and, on a left or right
+drawer, the keyboard). The body is `builder` (wrapped in a scroll view) or `bodyBuilder:
+(context, controller) => ListView.builder(controller: controller, padding:
+UiDrawer.bodyPadding(context), ...)` for a paging list. `UiSidebarLayout` takes `sidebarHeader` and
+`sidebarFooter`, fixed around `sidebar` docked and in the drawer (with `scrollSidebar: false` the
+sidebar can be the app's own `ListView`); the safe area goes on the outer parts. A hairline shows
+under the header and over the footer while the body is scrolled out of sight on that side; Tab and
+screen readers go header, body, footer. Without them nothing changes. `UiScrollFade` gains
+`onEdgesChanged`, and `size: 0` draws no fade.
+
 **Feature card colours follow the active theme (0.40.2):** a web fix (a card created while the
 app's stylesheet was still loading kept the dark pair on a light theme). `UiFeatureCard` already takes
 dark or light from the `UiApp` theme (its surface), never the platform brightness, on the very first

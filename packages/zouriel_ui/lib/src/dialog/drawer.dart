@@ -3,9 +3,12 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 
+import '../layout/pinned_edges.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 import 'route.dart';
+
+export '../layout/pinned_edges.dart' show UiScrollBodyBuilder;
 
 /// The edge a drawer slides in from, the web `UiDrawerSide`. Left and right are physical sides.
 enum UiDrawerSide { left, right, top, bottom }
@@ -14,9 +17,16 @@ enum UiDrawerSide { left, right, top, bottom }
 ///
 /// It slides in from [side]. The barrier closes it when [closeOnBackdrop], Escape when
 /// [closeOnEscape], and the Android back button and a swipe toward its edge always do.
+///
+/// The body is [builder] (wrapped in a scroll view) or [bodyBuilder] (a scroll view of your own,
+/// such as a paging `ListView`, given the drawer's controller). [headerBuilder] and [footerBuilder]
+/// build the fixed parts above and below it (the web `[drawer-header]` / `[drawer-footer]`).
 Future<T?> showUiDrawer<T>({
   required BuildContext context,
-  required WidgetBuilder builder,
+  WidgetBuilder? builder,
+  UiScrollBodyBuilder? bodyBuilder,
+  WidgetBuilder? headerBuilder,
+  WidgetBuilder? footerBuilder,
   UiDrawerSide side = UiDrawerSide.right,
   String? title,
   bool closeOnBackdrop = true,
@@ -26,6 +36,7 @@ Future<T?> showUiDrawer<T>({
   bool useRootNavigator = true,
   RouteSettings? settings,
 }) {
+  assert((builder == null) != (bodyBuilder == null), 'Give showUiDrawer either builder or bodyBuilder');
   final t = context.ui;
   return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
     UiDialogRoute<T>.themed(
@@ -41,7 +52,10 @@ Future<T?> showUiDrawer<T>({
         closeOnEscape: closeOnEscape,
         glass: glass,
         radius: radius,
-        child: Builder(builder: builder),
+        header: headerBuilder == null ? null : Builder(builder: headerBuilder),
+        footer: footerBuilder == null ? null : Builder(builder: footerBuilder),
+        bodyBuilder: bodyBuilder,
+        child: builder == null ? null : Builder(builder: builder),
       ),
     ),
   );
@@ -82,15 +96,23 @@ class _DragAwareCurve extends Animation<double> with AnimationWithParentMixin<do
   }
 }
 
-/// `ui-drawer`: an edge-anchored panel with a header (title and close button) and a scrolling
-/// body. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to
+/// `ui-drawer`: an edge-anchored panel with a title bar (title and close button), an optional fixed
+/// [header], the body (the only part that scrolls) and an optional fixed [footer], which stays at
+/// the bottom of the panel clear of the system's safe area (and, on a full-height drawer, the
+/// keyboard). A hairline shows under [header] while the body is scrolled away from its top, and over
+/// [footer] while more of the body is below it. The body is [child] in a scroll view, or
+/// [bodyBuilder]'s own scroll view (a paging `ListView`) given the drawer's controller; pad it with
+/// [UiDrawer.bodyPadding]. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to
 /// 320px tall (80%). Open it with [showUiDrawer]: the route gives it the backdrop, focus trap and
 /// focus return, and back-button closing. On touch it follows a swipe toward its edge and closes
 /// when flung or let go past half way. Escape closes it unless [closeOnEscape] is false.
 class UiDrawer extends StatelessWidget {
   const UiDrawer({
     super.key,
-    required this.child,
+    this.child,
+    this.bodyBuilder,
+    this.header,
+    this.footer,
     this.side = UiDrawerSide.right,
     this.title,
     this.closeOnEscape = true,
@@ -100,9 +122,28 @@ class UiDrawer extends StatelessWidget {
     this.autofocus = true,
     this.onPointerEnter,
     this.onPointerExit,
-  });
+  }) : assert((child == null) != (bodyBuilder == null), 'Give UiDrawer either child or bodyBuilder');
 
-  final Widget child;
+  /// The body, in a scroll view. Give this or [bodyBuilder].
+  final Widget? child;
+
+  /// A body that scrolls itself (a `ListView.builder` that loads more at the end), built around the
+  /// drawer's [ScrollController]. Give this or [child].
+  final UiScrollBodyBuilder? bodyBuilder;
+
+  /// Fixed above the body, under the title bar (the web `[drawer-header]`): a New chat button.
+  final Widget? header;
+
+  /// Fixed at the bottom, under the body (the web `[drawer-footer]`): account, settings.
+  final Widget? footer;
+
+  /// The body's padding (the web `.bd`): space4 at the sides, space3 above and below. A
+  /// [bodyBuilder]'s list uses it as its own padding so its rows scroll to the panel's edges.
+  static EdgeInsets bodyPadding(BuildContext context) {
+    final t = context.ui;
+    return EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3);
+  }
+
   final UiDrawerSide side;
   final String? title;
   final bool closeOnEscape;
@@ -134,10 +175,12 @@ class UiDrawer extends StatelessWidget {
       UiDrawerSide.top => BorderRadius.only(bottomLeft: rr, bottomRight: rr),
       UiDrawerSide.bottom => BorderRadius.only(topLeft: rr, topRight: rr),
     };
-    // Keep content clear of the notch and the gesture bar on the edges the panel touches.
+    // Keep content clear of the notch and the gesture bar on the edges the panel touches; a
+    // full-height drawer also keeps its bottom (the footer) above the keyboard.
+    final bottomInset = _horizontal ? math.max(mq.padding.bottom, mq.viewInsets.bottom) : mq.padding.bottom;
     final inset = EdgeInsets.only(
       top: side != UiDrawerSide.bottom ? mq.padding.top : 0,
-      bottom: side != UiDrawerSide.top ? mq.padding.bottom : 0,
+      bottom: side != UiDrawerSide.top ? bottomInset : 0,
       left: side == UiDrawerSide.left || !_horizontal ? mq.padding.left : 0,
       right: side == UiDrawerSide.right || !_horizontal ? mq.padding.right : 0,
     );
@@ -160,9 +203,17 @@ class UiDrawer extends StatelessWidget {
               children: [
                 if (title != null) UiDialogHeader(title: title!, onClose: close),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
-                    child: child,
+                  child: UiPinnedEdges(
+                    header: header,
+                    footer: footer,
+                    headerPadding: UiDrawer.bodyPadding(context),
+                    footerPadding: UiDrawer.bodyPadding(context),
+                    body: bodyBuilder ??
+                        (context, controller) => SingleChildScrollView(
+                              controller: controller,
+                              padding: UiDrawer.bodyPadding(context),
+                              child: child,
+                            ),
                   ),
                 ),
               ],
@@ -239,13 +290,17 @@ class _SwipeToClose extends StatelessWidget {
 /// [child] is laid out in place (the thing that opens it, e.g. a rail of dots); the drawer itself is
 /// shown in the nearest [Overlay].
 class UiDrawerPeek extends StatefulWidget {
-  const UiDrawerPeek({super.key, required this.open, required this.child, required this.drawer, this.side = UiDrawerSide.right, this.title, this.onClose, this.onPointerEnter, this.onPointerExit});
+  const UiDrawerPeek({super.key, required this.open, required this.child, required this.drawer, this.side = UiDrawerSide.right, this.title, this.onClose, this.onPointerEnter, this.onPointerExit, this.headerBuilder, this.footerBuilder});
 
   final bool open;
   final Widget child;
 
   /// The drawer's content.
   final WidgetBuilder drawer;
+
+  /// The drawer's fixed [UiDrawer.header] and [UiDrawer.footer].
+  final WidgetBuilder? headerBuilder;
+  final WidgetBuilder? footerBuilder;
   final UiDrawerSide side;
   final String? title;
   final VoidCallback? onClose;
@@ -310,6 +365,8 @@ class _UiDrawerPeekState extends State<UiDrawerPeek> with SingleTickerProviderSt
             onClose: widget.onClose ?? () {},
             onPointerEnter: widget.onPointerEnter,
             onPointerExit: widget.onPointerExit,
+            header: widget.headerBuilder == null ? null : Builder(builder: widget.headerBuilder!),
+            footer: widget.footerBuilder == null ? null : Builder(builder: widget.footerBuilder!),
             child: Builder(builder: widget.drawer),
           ),
         ),

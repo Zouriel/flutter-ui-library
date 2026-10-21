@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
 import '../theme/theme.dart';
+import 'pinned_edges.dart';
 
 /// `ui-sidebar-layout`: an app shell. A fixed [sidebar] beside a scrolling [body] under a top bar
 /// ([header]) when there is room; at or below [breakpoint] wide the sidebar becomes a drawer that
@@ -25,6 +26,12 @@ import '../theme/theme.dart';
 /// scroll view (it scrolls itself, with a composer docked at the bottom) and keeps clear of the
 /// system's safe area. Read [UiSidebarLayout.of] inside to show your own menu button only in
 /// drawer mode (`compact`) and to open the drawer.
+///
+/// The sidebar can have a fixed top and bottom, docked and in the drawer: [sidebarHeader] (a New
+/// chat button) and [sidebarFooter] (account, settings) stay put and only [sidebar] between them
+/// scrolls (or scrolls itself, with [scrollSidebar] false: a paging `ListView`). The safe area goes
+/// on the outer parts, and a hairline shows under the header and over the footer while the list is
+/// scrolled out of sight on that side (the web `[sidebar-header]` / `[sidebar-footer]`).
 class UiSidebarLayout extends StatefulWidget {
   const UiSidebarLayout({
     super.key,
@@ -40,10 +47,19 @@ class UiSidebarLayout extends StatefulWidget {
     this.bar = true,
     this.fill = false,
     this.scrollSidebar,
+    this.sidebarHeader,
+    this.sidebarFooter,
   });
 
   final Widget sidebar;
   final Widget body;
+
+  /// Fixed at the top of the sidebar, above [sidebar] (the web `[sidebar-header]`).
+  final Widget? sidebarHeader;
+
+  /// Fixed at the bottom of the sidebar, below [sidebar] (the web `[sidebar-footer]`). With [fill]
+  /// it sits at the bottom of the screen, clear of the home indicator.
+  final Widget? sidebarFooter;
 
   /// Top-bar content, after the menu button.
   final Widget? header;
@@ -229,20 +245,31 @@ class UiSidebarLayoutState extends State<UiSidebarLayout> {
         );
       }
 
-      // The sidebar's own content, padded (and, in fill, clear of the safe area on its side).
+      // The sidebar's own content, padded (and, in fill, clear of the safe area on its side). With a
+      // fixed header or footer, the top inset goes on the first part and the bottom one on the last.
       Widget sideContent() {
-        Widget c = widget.sidebar;
-        if (fill) c = MediaQuery.removePadding(context: context, removeTop: true, removeBottom: true, removeLeft: true, removeRight: true, child: c);
+        Widget clean(Widget c) => fill ? MediaQuery.removePadding(context: context, removeTop: true, removeBottom: true, removeLeft: true, removeRight: true, child: c) : c;
+        final head = widget.sidebarHeader, foot = widget.sidebarFooter;
         final insets = EdgeInsetsDirectional.only(
-          top: t.space3 + safe.top,
-          bottom: t.space3 + safe.bottom,
+          top: t.space3 + (head == null ? safe.top : 0),
+          bottom: t.space3 + (foot == null ? safe.bottom : 0),
           start: t.space3 + startInset,
           end: t.space3,
         );
-        if (scrollSidebar) {
-          return SingleChildScrollView(padding: insets, child: c);
+        Widget body(BuildContext context, ScrollController? controller) {
+          final c = clean(widget.sidebar);
+          if (scrollSidebar) return SingleChildScrollView(controller: controller, padding: insets, child: c);
+          return Padding(padding: insets, child: c);
         }
-        return Padding(padding: insets, child: c);
+
+        if (head == null && foot == null) return body(context, null);
+        return UiPinnedEdges(
+          header: head == null ? null : clean(head),
+          footer: foot == null ? null : clean(foot),
+          headerPadding: EdgeInsetsDirectional.only(top: t.space3 + safe.top, bottom: t.space3, start: t.space3 + startInset, end: t.space3),
+          footerPadding: EdgeInsetsDirectional.only(top: t.space3, bottom: t.space3 + safe.bottom, start: t.space3 + startInset, end: t.space3),
+          body: body,
+        );
       }
 
       final scopeData = UiSidebarLayoutScope(compact: compact, open: open, toggle: toggle, close: close);

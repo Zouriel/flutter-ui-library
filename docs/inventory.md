@@ -414,6 +414,7 @@ File: `dialog/src/drawer.ts`
 `ui-drawer` — edge-anchored sheet. Slides in from `side`, traps focus, locks scroll, and dismisses on Escape / backdrop click.  
 - Inputs: `side`: UiDrawerSide = 'right'; `title`: string; `closeOnBackdrop` = true; `closeOnEscape` = true; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
 - Two-way: `open` = false
+- Slots (0.41): default (the only part that scrolls), `[drawer-header]`, `[drawer-footer]` (Flutter `header` / `footer`, `showUiDrawer(headerBuilder:, footerBuilder:)`; Flutter-only `bodyBuilder(context, ScrollController)` for a paging list)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `UiDrawerSide` (drawer.ts)
@@ -1174,6 +1175,7 @@ File: `layout/src/sidebar-layout.ts`
 - Two-way: `open` = false
 - Methods: `toggle()`, `close()`; readonly `compact` (Flutter `UiSidebarLayout.of(context).compact`)
 - Strings: `sidebarToggle`, `sidebarClose`, `sidebarLabel`; RTL: sidebar on the start side
+- Slots (0.41): `[sidebar-header]`, `[sidebar-footer]` fixed around the scrolling `[sidebar]` (Flutter `sidebarHeader` / `sidebarFooter`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSpacer (component, `ui-spacer`)
