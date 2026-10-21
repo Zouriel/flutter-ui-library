@@ -291,7 +291,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
         DocSection(
           name: 'Drawer',
           widget: 'showUiDrawer · UiDrawer',
-          summary: 'An edge-anchored panel that slides in from side. Like the modal it is its own route: it traps and returns focus, blocks the page, and closes on the back button, Escape or a backdrop tap. On a touch screen it follows a swipe toward its edge and closes when flung or let go past half way. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to 320px tall. headerBuilder and footerBuilder add fixed parts above and below the body: only the body scrolls, the footer stays at the bottom (clear of the home indicator and, full height, the keyboard), and a hairline shows under the header and over the footer while the body is scrolled out of sight on that side. A body that scrolls itself (a paging ListView) goes in bodyBuilder, which gets the drawer\'s ScrollController.',
+          summary: 'An edge-anchored panel that slides in from side. Like the modal it is its own route: it traps and returns focus, blocks the page, and closes on the back button, Escape or a backdrop tap. On a touch screen it follows a swipe toward its edge and closes when flung or let go past half way. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to 320px tall. A bottom drawer rests on the on-screen keyboard while it is up (0.41.3), sized to the space left, so its fields and footer stay in view. headerBuilder and footerBuilder add fixed parts above and below the body: only the body scrolls, the footer stays at the bottom (clear of the home indicator and, full height, the keyboard), and a hairline shows under the header and over the footer while the body is scrolled out of sight on that side. A body that scrolls itself (a paging ListView) goes in bodyBuilder, which gets the drawer\'s ScrollController.',
           demo: row([
             UiButton(
               label: 'Chats (fixed header and footer)',
@@ -510,7 +510,8 @@ if (ok == true) delete();''',
             ApiRow('hasHeader', 'bool', 'Show the header row without a title, for the close button and actions.', def: 'false'),
             ApiRow('actions', 'Widget?', 'Header controls.'),
             ApiRow('expandOnFocus', 'bool', 'Rise to the tallest snap when a text field inside gains focus on a touch screen.', def: 'true'),
-            ApiRow('glass', 'bool', 'See-through frosted surface for a sheet over a map (0.41.2): AA over any backdrop in every theme; solid under the high-contrast setting. Not set by UiConfig.glass. See Map › Map page.', def: 'false'),
+            ApiRow('glass', 'bool', 'See-through surface for a sheet over a map (0.41.2); solid under the high-contrast setting. Not set by UiConfig.glass. See Map › Map page.', def: 'false'),
+            ApiRow('glassStrength', 'UiGlassStrength', 'How see-through glass is (0.41.3): clear lets a map in the theme\'s brightness plainly show through, text AA over such a map; frosted is near-opaque, AA over any backdrop.', def: 'clear'),
           ],
           callbacks: const [
             ApiRow('onHeightChanged', 'ValueChanged<double>?', 'Px height once it settles.'),

@@ -99,6 +99,19 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Clear glass, drawers on the keyboard, sheet cover (0.41.3):** `glassStrength` on
+`UiBottomSheet` and `UiFloatingPanel`, `UiGlassStrength.clear` by default: over a map in the theme's
+own brightness the map plainly shows through (`glassClearBg`, a 12% tint, over a light blur,
+`glassClearBlur`, squeezed into the theme's `glassClearFloor`..`glassClearCeiling` and saturated by
+`glassClearSaturate` so water and parks stay apart). The range is set per theme only as far as text,
+muted text, primary and status colours (4.5:1) and icons and warning (3:1) need over the colours
+MapTiler's dataviz / dataviz-dark draw Male in, so 43-75% of the map's contrast comes through.
+`UiGlassStrength.frosted` is the 0.41.2 recipe below (AA over anything): use it over photos or a map
+in the other brightness. A bottom `UiDrawer` now rests on the on-screen keyboard (before, the
+keyboard covered it and its footer). `UiBottomSheet.onCoverChanged` / `onHeightChanged` now follow
+every change of the resting top (new snaps at the same index, the keyboard, the room), once per
+change, after the frame.
+
 **Glass bottom sheet and floating panel (0.41.2):** `UiBottomSheet(glass: true)` and
 `UiFloatingPanel(glass: true)` are see-through, for a form and a status card over a full-screen map:
 the theme's surface at 60% (`glassSheetBg`) over the content behind, which a `BackdropFilter` blurs

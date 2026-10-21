@@ -25,15 +25,16 @@ const enumName = (t) => t.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
 const names = [...new Set([...css.matchAll(/(--ui-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))]
   .filter((n) => !n.startsWith('--ui-winter-') && !n.startsWith('--ui-z-'))
-  // A CSS filter list; UiTokens carries its inputs (glassSheetFloor/Ceiling/Blur) and the widgets build it.
-  .filter((n) => n !== '--ui-glass-sheet-filter');
+  // CSS filter lists; UiTokens carries their inputs (glassSheet*/glassClear* floor, ceiling, blur,
+  // saturate) and the widgets build them.
+  .filter((n) => n !== '--ui-glass-sheet-filter' && n !== '--ui-glass-clear-filter');
 
 function kind(n) {
   if (n.startsWith('--ui-gradient-')) return 'gradient';
   if (/^--ui-(shadow-\d|glow-|focus-ring)/.test(n)) return 'shadow';
-  if (/^--ui-(size|space|font-size|radius)/.test(n) || n === '--ui-glass-blur' || n === '--ui-glass-sheet-blur') return 'length';
+  if (/^--ui-(size|space|font-size|radius)/.test(n) || n === '--ui-glass-blur' || n === '--ui-glass-sheet-blur' || n === '--ui-glass-clear-blur') return 'length';
   if (n.startsWith('--ui-tracking-')) return 'em';
-  if (n === '--ui-scale-press' || n === '--ui-grain-opacity' || /^--ui-glass-sheet-(tint|floor|ceiling)$/.test(n)) return 'number';
+  if (n === '--ui-scale-press' || n === '--ui-grain-opacity' || /^--ui-glass-sheet-(tint|floor|ceiling)$/.test(n) || /^--ui-glass-clear-(tint|floor|ceiling|saturate)$/.test(n)) return 'number';
   if (n.startsWith('--ui-motion-')) return 'duration';
   if (n.startsWith('--ui-ease-')) return 'curve';
   if (n.startsWith('--ui-font-') ) return 'font';

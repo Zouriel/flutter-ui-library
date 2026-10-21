@@ -170,6 +170,41 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.41.3.** From the owner's phone test of Dhirumi: "filling out fields in the bottom drawer in the
+mobile app is weird cause the keyboard hides the drawer and doesnt push it up. the over the map drawer
+isnt transparent in neither versions", and the nurse app's stale map insets.
+
+- Keyboard. Root cause: `UiDrawer(side: bottom)` (showUiDrawer: the nurse app's cancel reason,
+  coming form, work summary, SOS, profile forms; the customer app's medicine search) read
+  `viewInsets` only for left/right drawers, so a bottom drawer stayed at the screen edge and the
+  keyboard covered its fields and footer (reproduced on an API 35 emulator with Gboard, and in a
+  widget test). Now it is padded by `viewInsets.bottom` and its height is 80% of the space left
+  (max 320). `UiBottomSheet` in Find a nurse was checked on the same emulator with the real app (fake
+  backend): it already rose onto the keyboard (the app's PageFrame lifts the body and removes the
+  insets, the sheet rests on its offset footer). Web twin: `ui-drawer side="bottom"` was
+  `position: fixed; bottom: 0`, behind the keyboard wherever the browser shrinks only the visual
+  viewport (Chrome's default `interactive-widget=resizes-visual`, iOS Safari); it now reads the visual
+  viewport as `ui-bottom-sheet` does (`--ui-drawer-keyboard`, `--ui-drawer-room`, `.on-keyboard`).
+- Clear glass. 0.41.2's glass holds AA over pure white and black, which on a light theme leaves the
+  backdrop range 0.87-1 under a 60% tint: over real dataviz tiles nothing showed through. New
+  `glassStrength` (`UiGlassStrength.clear` default, `.frosted` = 0.41.2) and tokens
+  `--ui-glass-clear-tint` 0.12, `--ui-glass-clear-blur` 3px, `--ui-glass-clear-saturate` 1.8 (root),
+  per theme `--ui-glass-clear-floor` / `-ceiling`, derived `--ui-glass-clear-bg` and
+  `--ui-glass-clear-filter` (the same contrast+brightness squeeze, then `saturate()`). Flutter builds
+  saturate after the squeeze in one colour matrix (its rows sum to 1, so the grey offset passes).
+  The ranges were solved per theme as the widest that keeps text, muted, primary, success, danger
+  (4.5:1) and warning, icon (3:1) over every colour covering more than 0.2% of real dataviz /
+  dataviz-dark Male tiles at zoom 15-16 (light: water d1e6e9, buildings dedede ...; dark up to
+  323232). The binding colours are the status colours and maldives' Lagoon icon, tuned to just pass
+  on a white surface, so light themes keep 43-57% of the map's contrast and dark ones 44-75% (frosted:
+  5-17%). A strong blur would erase roads, so clear uses a light one; the contrast comes from the
+  squeeze, not the tint. Light maps stay pale under any recipe that keeps those colours AA.
+- Sheet cover. `UiBottomSheet` reported its cover only on snap changes (and once on first layout):
+  new snaps at the same index (the nurse app's content-sized peek growing for SOS), the keyboard
+  and the room changing left `onCoverChanged` stale. It now reports after every layout when the
+  resting height or cover changed, once per frame and per change. The web `coverChange` was already a
+  signal effect over the same inputs; a spec now covers it.
+
 **0.41.2.** Glass bottom sheet and floating panel (Dhirumi Find a nurse, a full-screen map with the
 form in a bottom sheet: "use a transparent drawer on the map"). Both libraries: `glass` on
 `UiBottomSheet` / `ui-bottom-sheet` (new, default false, not driven by `UiConfig.glass`) and the

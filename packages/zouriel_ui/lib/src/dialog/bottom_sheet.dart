@@ -41,11 +41,14 @@ const double _flick = 450;
 /// the sheet stays at the snap nearest the height it rested at and reports it with [onSnapChanged];
 /// an index past the end reads as the last snap, never as closed.
 ///
-/// [glass] (0.41.2) makes it see-through, for a sheet over a map: the theme's surface at 60% over a
-/// blurred backdrop squeezed into the theme's range first, so text, muted text, primary and status
-/// colours keep WCAG AA over anything, pure white and black included ([uiGlassSheetFilter]). Fields
-/// and buttons inside keep their own solid fills. Under the platform's high-contrast setting it is
-/// the solid surface ([uiGlassSheetSolid]). Off by default, whatever [UiConfig.glass] says.
+/// [glass] (0.41.2) makes it see-through, for a sheet over a map, and [glassStrength] (0.41.3) says
+/// how much: [UiGlassStrength.clear] (the default) lets a map in the theme's own brightness plainly
+/// show through (a light tint over a lightly blurred backdrop squeezed into the theme's clear range),
+/// with text, muted text, primary and status colours AA over such a map; [UiGlassStrength.frosted] is
+/// 0.41.2's near-opaque glass (60% tint, heavy blur), AA over anything, pure white and black included,
+/// for photos or a map in the other brightness ([uiGlassSheetFilter]). Fields and buttons inside keep
+/// their own solid fills. Under the platform's high-contrast setting it is the solid surface
+/// ([uiGlassSheetSolid]). Off by default, whatever [UiConfig.glass] says.
 class UiBottomSheet extends StatefulWidget {
   const UiBottomSheet({
     super.key,
@@ -66,6 +69,7 @@ class UiBottomSheet extends StatefulWidget {
     this.onCoverChanged,
     this.maxWidth,
     this.glass = false,
+    this.glassStrength = UiGlassStrength.clear,
   }) : assert(child != null || builder != null, 'Give the sheet a child or a builder.');
 
   /// The content, in a scroll view the sheet provides.
@@ -118,8 +122,12 @@ class UiBottomSheet extends StatefulWidget {
   /// [onCoverChanged] still reports the covered height. Null (the default) is the full width.
   final double? maxWidth;
 
-  /// See-through frosted surface for a sheet over a map (0.41.2); see the class docs.
+  /// See-through surface for a sheet over a map (0.41.2); see the class docs.
   final bool glass;
+
+  /// How see-through [glass] is (0.41.3): clear (default) for a map in the theme's brightness,
+  /// frosted for anything else.
+  final UiGlassStrength glassStrength;
 
   @override
   State<UiBottomSheet> createState() => UiBottomSheetState();
@@ -275,10 +283,32 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     }
   }
 
+  /// What was last reported, so each change is reported once.
+  double? _reportedHeight, _reportedCover;
+  bool _reportQueued = false;
+
+  /// Reports the resting height and cover when they differ from the last report. Called on every
+  /// change of snap and after every layout (0.41.3): new snaps at the same index (an app that sizes
+  /// its peek to content that grew), the keyboard, the offset, a top inset or the safe area all move
+  /// the sheet's resting top without a snap change, and the cover must follow them.
   void _report() {
     final h = _room * _snaps[_index];
+    final cover = h > 0 ? h + _bottom : 0.0;
+    if (h == _reportedHeight && cover == _reportedCover) return;
+    _reportedHeight = h;
+    _reportedCover = cover;
     widget.onHeightChanged?.call(h);
-    widget.onCoverChanged?.call(h > 0 ? h + _bottom : 0);
+    widget.onCoverChanged?.call(cover);
+  }
+
+  /// [_report] once after this frame, however many layouts it has.
+  void _queueReport() {
+    if (_reportQueued) return;
+    _reportQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reportQueued = false;
+      if (mounted) _report();
+    });
   }
 
   /// Body drags and flings are snapped by the sheet itself; note where it comes to rest.
@@ -343,6 +373,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
     _bottom = keyboard > 0 ? keyboard : widget.offset;
+    _queueReport();
     final modal = _modal;
     _scope.traversalEdgeBehavior = modal ? TraversalEdgeBehavior.closedLoop : TraversalEdgeBehavior.parentScope;
     if (modal && !_wasModal) {
@@ -381,12 +412,8 @@ class UiBottomSheetState extends State<UiBottomSheet> {
             child: Padding(
               padding: EdgeInsets.only(top: widget.topInset, bottom: _bottom),
               child: LayoutBuilder(builder: (context, box) {
-                final room = box.maxHeight;
-                if (room != _room) {
-                  final first = _room == 0;
-                  _room = room;
-                  if (first) WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _report() : null);
-                }
+                final room = _room = box.maxHeight;
+                _queueReport();
                 final maxH = room * _max;
                 final hidden = maxH - room * _snaps[_index];
                 return BlockSemantics(
@@ -572,9 +599,9 @@ class UiBottomSheetState extends State<UiBottomSheet> {
       child: ClipRRect(
         borderRadius: radius,
         child: BackdropFilter(
-          filter: uiGlassSheetFilter(t),
+          filter: uiGlassSheetFilter(t, strength: widget.glassStrength),
           child: DecoratedBox(
-            decoration: BoxDecoration(color: t.glassSheetBg, borderRadius: radius, border: Border.all(color: t.glassBorder)),
+            decoration: BoxDecoration(color: uiGlassSheetTint(t, strength: widget.glassStrength), borderRadius: radius, border: Border.all(color: t.glassBorder)),
             child: child,
           ),
         ),

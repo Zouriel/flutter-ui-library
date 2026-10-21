@@ -395,7 +395,7 @@ File: `datepicker/src/date-range-picker.ts`
 ### UiBottomSheet (component, `ui-bottom-sheet`)
 File: `dialog/src/bottom-sheet.ts`  
 `ui-bottom-sheet` — a panel anchored to the bottom of the screen that the user drags between resting heights, the mobile answer to a sidebar. <p>Heights are `snaps`: fractions of the room it has (the viewport, less `offset` below it for a toolbar and `topInset` above it for a header). `snap` is the index it rests at, two-way; a first snap of 0 is closed. Drag the header anywhere, or flick it — a fast release moves one snap in that direction. Dragging the body moves the sheet too when that's the only sensible reading: pulling down with the content already at its top, or pushing up while there's a taller snap to reach. Otherwise the content scrolls as usual. Anything marked `data-sheet-nodrag` keeps its drags.</p> <h4>Touch events for the finger</h4> <p>A drag that the browser could read as a scroll never becomes a pointer event, so the finger is followed with touch events, which arrive complete. Pointer events serve the mouse and pen only, and are ignored once a touch has been seen so one finger isn't read as two drags.</p> <p>It's non-modal by default: what's above stays usable, which is the point on an editor, so opening it does not move focus and Tab can leave it. Set `backdrop` to make it modal while open: the page dims and a backdrop tap closes it, it is marked `aria-modal`, focus moves into it (to an element marked `cdkFocusInitial`, else the first focusable one, the handle), and Tab is trapped inside (CDK `FocusTrap`). Escape closes it while focus is inside; closing either way sends focus back to where it came from. The handle is a button that steps through the snaps, and ↑/↓ on it do the same. When a field inside gains focus on a touch screen, the sheet rises to its tallest snap (turn that off with `expandOnFocus`), and while an on-screen keyboard is up the sheet rests on top of it rather than behind it.</p> <p>Positioned `fixed`; keep it out of transformed ancestors.</p>  
-- Inputs: `snaps`: readonly number[] = [0; `title` = ''; `offset` = 0; `topInset` = 0; `backdrop` = false; `closable` = true; `hasHeader` = false; `expandOnFocus` = true; `glass` = false (0.41.2, see-through over a map; Flutter `glass`)
+- Inputs: `snaps`: readonly number[] = [0; `title` = ''; `offset` = 0; `topInset` = 0; `backdrop` = false; `closable` = true; `hasHeader` = false; `expandOnFocus` = true; `glass` = false (0.41.2, see-through over a map; Flutter `glass`); `glassStrength`: 'clear' | 'frosted' = 'clear' (0.41.3; Flutter `UiGlassStrength`)
 - Two-way: `snap` = 0
 - Outputs: `heightChange`: number; `coverChange`: number
 - Methods: `close()`
@@ -1647,7 +1647,7 @@ Pan/zoom surface with fit, minimap and zoom controls.
 ### UiFloatingPanel (component, `ui-floating-panel`) (0.34)
 File: `layout/src/floating-panel.ts`  
 `ui-floating-panel` — a non-modal raised card over the bottom or top of its positioned parent (over a map); safe-area aware, 16px gutter, up to 480px.  
-- Inputs: `placement`: 'bottom' | 'top' = 'bottom'; `ariaLabel`; `glass` (0.41.2: the bottom sheet's see-through glass); `radius`
+- Inputs: `placement`: 'bottom' | 'top' = 'bottom'; `ariaLabel`; `glass` (0.41.2: the bottom sheet's see-through glass); `glassStrength` (0.41.3, as the sheet's); `radius`
 - Outputs: `coverChange` (Flutter `onCoverChanged`, 0.39): px of the edge it covers
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

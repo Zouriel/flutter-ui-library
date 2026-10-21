@@ -6,31 +6,66 @@ import 'package:flutter/widgets.dart';
 import 'theme.dart';
 
 /// The see-through glass of [UiBottomSheet.glass] and [UiFloatingPanel.glass] (0.41.2), the twin
-/// of the web `--ui-glass-sheet-*` tokens: the theme's surface at [UiTokens.glassSheetTint] over a
-/// blurred backdrop whose every channel is first squeezed into
-/// [UiTokens.glassSheetFloor]..[UiTokens.glassSheetCeiling]. Those two are set per theme so text,
-/// muted text, primary and status colours keep WCAG AA over any backdrop, pure white and pure black
-/// included.
+/// of the web `--ui-glass-clear-*` and `--ui-glass-sheet-*` tokens: the theme's surface, a little of
+/// it, over a blurred backdrop whose every channel is first squeezed into a per-theme floor..ceiling
+/// range. How much of each is [UiGlassStrength]:
+///
+/// - [UiGlassStrength.clear] (the default, 0.41.3): for a map in the theme's own brightness (light
+///   tiles under a light theme, dark under a dark one). [UiTokens.glassClearTint] (12%) over a light
+///   blur, squeezed into [UiTokens.glassClearFloor]..[UiTokens.glassClearCeiling] only as far as
+///   text, muted text, primary and status colours (4.5:1) and icons and warning (3:1) need over the
+///   colours such a map is drawn in, then [UiTokens.glassClearSaturate] so water and parks stay
+///   apart. Roads and the coastline plainly show through.
+/// - [UiGlassStrength.frosted] (0.41.2's glass): [UiTokens.glassSheetTint] (60%) over a heavy blur
+///   squeezed into [UiTokens.glassSheetFloor]..[UiTokens.glassSheetCeiling], which keeps those colours
+///   AA over any backdrop, pure white and pure black included. For photos, or a map in the other
+///   brightness.
 
-/// The colour matrix that maps each backdrop channel v (0-1) to floor + v * (ceiling - floor): the
-/// web's `contrast()` + `brightness()` pair. Offsets are in 0-255, as [ColorFilter.matrix] takes them.
-List<double> uiGlassSheetMatrix(UiTokens t) {
-  final k = t.glassSheetCeiling - t.glassSheetFloor;
-  final o = t.glassSheetFloor * 255;
+/// How see-through a glass [UiBottomSheet] or [UiFloatingPanel] is (0.41.3); see above.
+enum UiGlassStrength {
+  /// A map in the theme's brightness plainly shows through; text AA over such a map.
+  clear,
+
+  /// Near-opaque; text AA over anything.
+  frosted,
+}
+
+/// The colour matrix that maps each backdrop channel v (0-1) to floor + v * (ceiling - floor) (the
+/// web's `contrast()` + `brightness()` pair) and, for [UiGlassStrength.clear], then saturates it as
+/// CSS `saturate()` does. Offsets are in 0-255, as [ColorFilter.matrix] takes them. [strength]
+/// defaults to frosted, as before 0.41.3; the widgets default to clear.
+List<double> uiGlassSheetMatrix(UiTokens t, {UiGlassStrength strength = UiGlassStrength.frosted}) {
+  final clear = strength == UiGlassStrength.clear;
+  final floor = clear ? t.glassClearFloor : t.glassSheetFloor;
+  final k = (clear ? t.glassClearCeiling : t.glassSheetCeiling) - floor;
+  final o = floor * 255;
+  final s = clear ? t.glassClearSaturate : 1.0;
+  // CSS saturate(s), Filter Effects spec. Its rows sum to 1, so a grey offset passes through it unchanged.
+  final m = <List<double>>[
+    [0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s],
+    [0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s],
+    [0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s],
+  ];
   return <double>[
-    k, 0, 0, 0, o, //
-    0, k, 0, 0, o, //
-    0, 0, k, 0, o, //
+    for (final row in m) ...[k * row[0], k * row[1], k * row[2], 0, o],
     0, 0, 0, 1, 0, //
   ];
 }
 
 /// Blur, then squeeze into the theme's backdrop range ([uiGlassSheetMatrix]), for a [BackdropFilter].
 /// The web blur radius is a CSS length; Flutter's sigma is half of it, as for the other glass.
-ImageFilter uiGlassSheetFilter(UiTokens t) => ImageFilter.compose(
-      outer: ColorFilter.matrix(uiGlassSheetMatrix(t)),
-      inner: ImageFilter.blur(sigmaX: t.glassSheetBlur / 2, sigmaY: t.glassSheetBlur / 2, tileMode: TileMode.clamp),
-    );
+ImageFilter uiGlassSheetFilter(UiTokens t, {UiGlassStrength strength = UiGlassStrength.frosted}) {
+  final blur = (strength == UiGlassStrength.clear ? t.glassClearBlur : t.glassSheetBlur) / 2;
+  return ImageFilter.compose(
+    outer: ColorFilter.matrix(uiGlassSheetMatrix(t, strength: strength)),
+    inner: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.clamp),
+  );
+}
+
+/// The translucent surface tint drawn over the filtered backdrop ([UiTokens.glassClearBg] or
+/// [UiTokens.glassSheetBg]).
+Color uiGlassSheetTint(UiTokens t, {UiGlassStrength strength = UiGlassStrength.frosted}) =>
+    strength == UiGlassStrength.clear ? t.glassClearBg : t.glassSheetBg;
 
 /// Whether see-through glass should be drawn solid here. Flutter has no "reduce transparency"
 /// setting (the web's `prefers-reduced-transparency`), so this follows the platform's high-contrast

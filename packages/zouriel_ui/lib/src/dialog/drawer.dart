@@ -103,7 +103,8 @@ class _DragAwareCurve extends Animation<double> with AnimationWithParentMixin<do
 /// [footer] while more of the body is below it. The body is [child] in a scroll view, or
 /// [bodyBuilder]'s own scroll view (a paging `ListView`) given the drawer's controller; pad it with
 /// [UiDrawer.bodyPadding]. Left and right drawers are up to 360px wide (90% of a phone); top and bottom ones up to
-/// 320px tall (80%). Open it with [showUiDrawer]: the route gives it the backdrop, focus trap and
+/// 320px tall (80%). A bottom drawer rests on the on-screen keyboard while it is up (0.41.3), its
+/// height taken from the space above it, so its fields and footer stay in view. Open it with [showUiDrawer]: the route gives it the backdrop, focus trap and
 /// focus return, and back-button closing. On touch it follows a swipe toward its edge and closes
 /// when flung or let go past half way. Escape closes it unless [closeOnEscape] is false.
 class UiDrawer extends StatelessWidget {
@@ -237,18 +238,24 @@ class UiDrawer extends StatelessWidget {
     }
 
     final size = mq.size;
-    final extent = _horizontal ? math.min(360.0, size.width * 0.9) : math.min(320.0, size.height * 0.8);
+    // A bottom drawer rests on the on-screen keyboard (0.41.3): until then it stayed at the screen
+    // edge and the keyboard covered its fields and footer. Its height comes from the space left.
+    final keyboard = side == UiDrawerSide.bottom ? mq.viewInsets.bottom : 0.0;
+    final extent = _horizontal ? math.min(360.0, size.width * 0.9) : math.min(320.0, math.max(0.0, size.height - keyboard - mq.padding.top) * 0.8);
     panel = SizedBox(width: _horizontal ? extent : double.infinity, height: _horizontal ? double.infinity : extent, child: panel);
     // The route slides the whole screen-sized layer, so a finger maps onto the screen's extent.
     panel = _SwipeToClose(side: side, extent: _horizontal ? size.width : size.height, child: panel);
-    return Align(
-      alignment: switch (side) {
-        UiDrawerSide.left => Alignment.centerLeft,
-        UiDrawerSide.right => Alignment.centerRight,
-        UiDrawerSide.top => Alignment.topCenter,
-        UiDrawerSide.bottom => Alignment.bottomCenter,
-      },
-      child: panel,
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: Align(
+        alignment: switch (side) {
+          UiDrawerSide.left => Alignment.centerLeft,
+          UiDrawerSide.right => Alignment.centerRight,
+          UiDrawerSide.top => Alignment.topCenter,
+          UiDrawerSide.bottom => Alignment.bottomCenter,
+        },
+        child: panel,
+      ),
     );
   }
 }

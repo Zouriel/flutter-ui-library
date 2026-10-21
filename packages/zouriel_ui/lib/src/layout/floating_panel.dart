@@ -22,9 +22,10 @@ enum UiFloatingPanelPlacement { bottom, top }
 /// area and its height), whenever that changes: feed it to a map's `viewInsets` so the map centres
 /// below a status card at the top.
 ///
-/// [glass] (0.41.2) is the same see-through surface as [UiBottomSheet.glass]: the theme's surface at
-/// 60% over a blurred backdrop squeezed into the theme's range, so text stays AA over any map (see
-/// [uiGlassSheetFilter]); solid under the platform's high-contrast setting ([uiGlassSheetSolid]).
+/// [glass] (0.41.2) is the same see-through surface as [UiBottomSheet.glass], with the same
+/// [glassStrength] (0.41.3): clear (the default) lets a map in the theme's brightness plainly show
+/// through, frosted stays AA over anything (see [uiGlassSheetFilter]); solid under the platform's
+/// high-contrast setting ([uiGlassSheetSolid]).
 class UiFloatingPanel extends StatelessWidget {
   const UiFloatingPanel({
     super.key,
@@ -33,6 +34,7 @@ class UiFloatingPanel extends StatelessWidget {
     this.semanticLabel,
     this.maxWidth = 480,
     this.glass,
+    this.glassStrength = UiGlassStrength.clear,
     this.radius,
     this.onCoverChanged,
   });
@@ -45,8 +47,11 @@ class UiFloatingPanel extends StatelessWidget {
   final String? semanticLabel;
   final double maxWidth;
 
-  /// See-through frosted surface over a map, as [UiBottomSheet.glass]. Defaults to [UiConfig.glass].
+  /// See-through surface over a map, as [UiBottomSheet.glass]. Defaults to [UiConfig.glass].
   final bool? glass;
+
+  /// How see-through [glass] is (0.41.3), as [UiBottomSheet.glassStrength].
+  final UiGlassStrength glassStrength;
   final bool? radius;
 
   @override
@@ -60,7 +65,7 @@ class UiFloatingPanel extends StatelessWidget {
     final top = placement == UiFloatingPanelPlacement.top;
     Widget surface = DecoratedBox(
       decoration: BoxDecoration(
-        color: isGlass ? t.glassSheetBg : t.surfaceRaised,
+        color: isGlass ? uiGlassSheetTint(t, strength: glassStrength) : t.surfaceRaised,
         border: Border.all(color: isGlass ? t.glassBorder : t.border),
         borderRadius: BorderRadius.circular(r),
         // Glass: the shadow goes around it (UiOutsetShadow below), not under the see-through fill.
@@ -77,7 +82,7 @@ class UiFloatingPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(r),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(r),
-          child: BackdropFilter(filter: uiGlassSheetFilter(t), child: surface),
+          child: BackdropFilter(filter: uiGlassSheetFilter(t, strength: glassStrength), child: surface),
         ),
       );
     }
