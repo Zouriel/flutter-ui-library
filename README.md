@@ -91,6 +91,14 @@ so the middle of the visible part stays in the middle) and `fill` (square corner
 `UiFloatingPanel.onCoverChanged` and `UiBottomSheet.onCoverChanged` give the numbers for
 `viewInsets`. `UiMapBlankTiles` is now truly transparent (it used to tint the map blue).
 
+**Persistent bottom sheets (0.39.1):** a `UiBottomSheet` whose smallest snap is above 0 (e.g.
+`snaps: [0.3, 0.55, 1]`, peek/half/full with no closed state) is `persistent`. Back (Android back,
+or `Navigator.maybePop` from a header Back button) and Escape collapse it to its smallest snap
+first; once it rests there Back is not consumed and the route pops as usual, as Material resting
+sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `maxWidth: 560`
+caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
+the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
+
 **Feature card colours and motion (0.39):** `UiFeatureCard` gains `badgeTone` (the badge in its own
 tone), `colors: UiFeatureCardColors(surface:, accent:, surfaceDark:, accentDark:)` (or
 `UiFeatureCardColors.tryParse` from hex/rgb strings: an app's own surface and accent, with the dark

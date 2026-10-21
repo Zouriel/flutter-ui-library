@@ -26,9 +26,12 @@ const double _flick = 450;
 /// leave it. With [backdrop] it is modal while open: the page dims and a tap on it closes the
 /// sheet, focus moves to the handle and Tab stays inside, and screen readers can't reach the page.
 /// Escape (with focus inside) and the Android back button close it either way; closing sends
-/// focus back to where it came from. The handle is a button that steps through the snaps, and
-/// ArrowUp/Down on it do the same. On a phone, focusing a text field inside raises it to its
-/// tallest snap ([expandOnFocus]), and while the keyboard is up the sheet rests on top of it.
+/// focus back to where it came from. A sheet whose smallest snap is above 0 is [persistent]: it
+/// has no closed state, so Back (and Escape) only collapse it to that smallest snap, and once it
+/// rests there Back is not consumed and leaves the page as usual (the Material resting-sheet norm).
+/// The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. On a
+/// phone, focusing a text field inside raises it to its tallest snap ([expandOnFocus]), and while
+/// the keyboard is up the sheet rests on top of it.
 class UiBottomSheet extends StatefulWidget {
   const UiBottomSheet({
     super.key,
@@ -47,6 +50,7 @@ class UiBottomSheet extends StatefulWidget {
     this.expandOnFocus = true,
     this.onHeightChanged,
     this.onCoverChanged,
+    this.maxWidth,
   }) : assert(child != null || builder != null, 'Give the sheet a child or a builder.');
 
   /// The content, in a scroll view the sheet provides.
@@ -94,6 +98,11 @@ class UiBottomSheet extends StatefulWidget {
   /// rests on ([offset] or the keyboard). 0 when closed. For keeping content above it.
   final ValueChanged<double>? onCoverChanged;
 
+  /// The widest the sheet gets, in px. On a wider screen the sheet (surface, handle, title row and
+  /// body) is that wide and centred; the backdrop still covers the whole screen, and
+  /// [onCoverChanged] still reports the covered height. Null (the default) is the full width.
+  final double? maxWidth;
+
   @override
   State<UiBottomSheet> createState() => UiBottomSheetState();
 }
@@ -118,6 +127,22 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   double get _max => _snaps.reduce(math.max);
   bool get isOpen => _snaps[_snap.clamp(0, _snaps.length - 1)] > 0;
   bool get _modal => widget.backdrop && isOpen;
+
+  /// Index of the smallest snap.
+  int get _lowest {
+    var lo = 0;
+    for (var i = 1; i < _snaps.length; i++) {
+      if (_snaps[i] < _snaps[lo]) lo = i;
+    }
+    return lo;
+  }
+
+  /// Has no closed state: its smallest snap is above 0, so it is always on screen.
+  bool get persistent => _snaps[_lowest] > 0;
+
+  /// Back and Escape have something to do: close it, or for a [persistent] sheet, collapse it to
+  /// its smallest snap. A persistent sheet resting there lets Back leave the page.
+  bool get _collapsible => persistent ? _snap.clamp(0, _snaps.length - 1) != _lowest : isOpen;
 
   @override
   void initState() {
@@ -157,8 +182,9 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     }
   }
 
-  /// Closes it (snap 0), sending focus back first if it is inside.
-  void close() => _goTo(0);
+  /// Closes it (snap 0), sending focus back first if it is inside. A [persistent] sheet collapses
+  /// to its smallest snap instead and keeps focus, since it stays on screen.
+  void close() => _goTo(persistent ? _lowest : 0);
 
   void _goTo(int i, {bool notify = true}) {
     i = i.clamp(0, _snaps.length - 1);
@@ -240,7 +266,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape && isOpen) {
+    if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape && _collapsible) {
       close();
       return KeyEventResult.handled;
     }
@@ -266,9 +292,9 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     final rr = theme.config.radius ? Radius.circular(t.radiusLg) : Radius.zero;
 
     return PopScope(
-      canPop: !isOpen,
+      canPop: !_collapsible,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && isOpen) close();
+        if (!didPop && _collapsible) close();
       },
       child: Stack(
         children: [
@@ -302,34 +328,42 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                 final hidden = maxH - room * _snaps[_snap];
                 return BlockSemantics(
                   blocking: modal,
-                  child: Listener(
-                    onPointerDown: (_) => _pointers++,
-                    onPointerUp: (_) => WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _pointers = math.max(0, _pointers - 1);
-                      _onSize();
-                    }),
-                    onPointerCancel: (_) => _pointers = math.max(0, _pointers - 1),
-                    child: DraggableScrollableSheet(
-                      controller: _sheet,
-                      expand: true,
-                      snap: true,
-                      snapSizes: _snaps,
-                      minChildSize: _snaps.reduce(math.min),
-                      maxChildSize: _max,
-                      initialChildSize: _snaps[_snap],
-                      snapAnimationDuration: context.uiAnimate ? t.motionBase : const Duration(milliseconds: 1),
-                      shouldCloseOnMinExtent: false,
-                      builder: (context, scroll) => ExcludeFocus(
-                        excluding: !isOpen,
-                        child: ExcludeSemantics(
-                          excluding: !isOpen,
-                          // Always laid out at its tallest and clipped, so content doesn't reflow while dragging.
-                          child: ClipRect(
-                            child: OverflowBox(
-                              alignment: Alignment.topCenter,
-                              minHeight: maxH,
-                              maxHeight: maxH,
-                              child: _panel(context, scroll, rr, hidden + mq.padding.bottom * (_bottom > 0 ? 0 : 1)),
+                  // Centred and capped at maxWidth; the sides stay open to the page (Align hit-tests
+                  // only its child).
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: widget.maxWidth ?? double.infinity),
+                      child: Listener(
+                        onPointerDown: (_) => _pointers++,
+                        onPointerUp: (_) => WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _pointers = math.max(0, _pointers - 1);
+                          _onSize();
+                        }),
+                        onPointerCancel: (_) => _pointers = math.max(0, _pointers - 1),
+                        child: DraggableScrollableSheet(
+                          controller: _sheet,
+                          expand: true,
+                          snap: true,
+                          snapSizes: _snaps,
+                          minChildSize: _snaps.reduce(math.min),
+                          maxChildSize: _max,
+                          initialChildSize: _snaps[_snap],
+                          snapAnimationDuration: context.uiAnimate ? t.motionBase : const Duration(milliseconds: 1),
+                          shouldCloseOnMinExtent: false,
+                          builder: (context, scroll) => ExcludeFocus(
+                            excluding: !isOpen,
+                            child: ExcludeSemantics(
+                              excluding: !isOpen,
+                              // Always laid out at its tallest and clipped, so content doesn't reflow while dragging.
+                              child: ClipRect(
+                                child: OverflowBox(
+                                  alignment: Alignment.topCenter,
+                                  minHeight: maxH,
+                                  maxHeight: maxH,
+                                  child: _panel(context, scroll, rr, hidden + mq.padding.bottom * (_bottom > 0 ? 0 : 1)),
+                                ),
+                              ),
                             ),
                           ),
                         ),

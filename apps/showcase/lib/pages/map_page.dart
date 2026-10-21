@@ -139,6 +139,7 @@ class _MapPageState extends State<MapPage> {
     snaps: const [0.42, 0.75],
     snap: snap,
     closable: false,
+    maxWidth: 560, // tablets and desktops: 560 wide, centred
     onSnapChanged: (i) => setState(() => snap = i),
     onCoverChanged: (v) => setState(() => sheetCover = v),
     child: form,
@@ -150,6 +151,8 @@ class _MapPageState extends State<MapPage> {
             ApiRow('fill', 'bool', 'Square corners, for a full-screen map page.', def: 'false'),
             ApiRow('UiFloatingPanel.onCoverChanged', 'ValueChanged<double>?', 'Px of its edge the card covers (gutter, safe area and height): feed it to viewInsets.top.'),
             ApiRow('UiBottomSheet.onCoverChanged', 'ValueChanged<double>?', 'Px of the screen bottom the sheet covers once settled: feed it to viewInsets.bottom.'),
+            ApiRow('UiBottomSheet.maxWidth', 'double?', 'The widest the sheet gets. On a wider screen it is that wide and centred; the backdrop still covers everything and onCoverChanged still reports the covered height. 560 suits tablets and desktops.'),
+            ApiRow('UiBottomSheetState.persistent', 'bool', 'True when the smallest snap is above 0, as here: Back and Escape collapse it to that snap, and from there Back leaves the page.'),
           ],
         ),
       ],
@@ -224,6 +227,7 @@ class _MapPageDemoState extends State<MapPageDemo> {
             snaps: const [0.42, 0.75],
             snap: _snap,
             closable: false,
+            maxWidth: 560,
             onSnapChanged: (i) => setState(() => _snap = i),
             onCoverChanged: (v) => setState(() => _sheetCover = v),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [

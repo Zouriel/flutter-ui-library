@@ -156,6 +156,20 @@ library font. `auto` follows `UiThemeData.brightness`. The library does not depe
 `google_sign_in`: the app wires `onPressed` to it. The web's `ui-google-sign-in` (a wrapper around
 Google Identity Services' own button) has no Flutter twin: native sign-in comes from the plugin.
 
+**0.39.1 fixes.** UiBottomSheet's `PopScope` used `canPop: !isOpen`, and a sheet with no 0 snap is
+always open, so it swallowed every Back and the page could never be left (found by the Dhirumi
+app). Back now only waits while there is something to undo: for a `persistent` sheet (smallest snap
+above 0) that is being above its smallest snap, where Back collapses it there (`close()` goes to
+the smallest snap and keeps focus); at the smallest snap `canPop` is true. Escape follows the same
+rule and is left unhandled at the smallest snap, so it reaches the page. The web has no Back to
+trap (the sheet never touches `history`); its Escape does the same as here.
+`maxWidth` wraps the DraggableScrollableSheet in `Align(bottomCenter)` + `ConstrainedBox`, inside
+the full-screen LayoutBuilder, so `room` (and the reported cover) is unchanged, the backdrop stays a
+full-screen sibling, and the sides beside a capped sheet hit-test to the page (Align only tests its
+child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with left/right 0, so
+the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
+1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
+
 **0.39.0 additions.** The map pulse is a `MarkerLayer` between the tiles and the markers holding
 `UiMapPulseRings` (one AnimationController repeating 2.4s and a CustomPainter; ring i starts i/3 of
 a loop late, as the web's animation-delay, using the controller's elapsed time). It exists only
