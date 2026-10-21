@@ -99,6 +99,18 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Map controls, a fit that holds, labels off the edge (0.42.1):** a `UiMapState.fitPoints` fit owns
+the camera: when `viewInsets` change while it animates or after it (a sheet growing as the route
+appears) it is worked out again for the new insets (an animating fit is retargeted, keeping its
+progress) instead of panning by the inset difference, until a gesture, `flyTo`, the zoom buttons or a
+new `center` / `zoom` moves the map. `UiMap(controls: [UiMapControl(id:, icon:, semanticLabel:,
+onPressed:, tooltip:)])` adds the app's own round buttons (`UiMapControlButton`: the locate button's
+surface, 38 / 44 on touch with 48dp targets) stacked 8 apart above the locate button at the bottom-end
+of the visible part, following `viewInsets`, at the bottom-left in RTL; `onPressed` null shows one
+disabled. For "Show both": `onPressed: () => mapKey.currentState!.fitPoints([me, patient])`. Marker
+labels sit 12 from the point at the inline end of the dot and flip to the other side near the map's
+edge (`uiMapLabelSide`, mirrored in RTL).
+
 **Map routes and fit to points (0.42.0):** `UiMap(routes: [UiMapRoute(id:, points:, tone:
 UiMapRouteTone.primary, semanticLabel: 'Route, 1.2 km')])` draws lines along the road (from OSRM, say)
 in the theme's `mapRoute*` colour over `mapRouteCasing`, round-capped, 5 over 9px close in and thinner

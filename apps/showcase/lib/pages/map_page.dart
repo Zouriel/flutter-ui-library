@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
@@ -235,7 +236,7 @@ UiMap(
         DocSection(
           name: 'Routes',
           widget: 'UiMap routes · UiMapState.fitPoints',
-          summary: 'routes draws lines along the road, from OSRM say: each one a line in its tone over a casing, round-capped, 5 over 9px close in and thinner zoomed out. They sit above the tiles and below the pulse, the you-are-here dot, the markers and the pin, so the dots stay on top. A new list redraws the lines on the same map, and an empty one removes them. Each tone is a theme token (mapRoutePrimary, Muted, Success, Warning, Danger over mapRouteCasing) checked at 3:1 against MapTiler\'s streets-v2 and dataviz tiles in the theme\'s own brightness. semanticLabel is the route\'s one name for screen readers, such as Route, 1.3 km. fitPoints shows every point you give it (the nurse, the patient, the route) inside the part of the map viewInsets leave visible, with 24 to spare, at a whole zoom no closer than 17; one point is centred there at 17. It animates unless reduced motion. This map uses the tile URLs pasted under Styled tiles. Marker labels size to their text, up to 320 or the map\'s width less 32, and wrap to a second line before the ellipsis; the zoom buttons share the locate button\'s raised surface and shadow.',
+          summary: 'routes draws lines along the road, from OSRM say: each one a line in its tone over a casing, round-capped, 5 over 9px close in and thinner zoomed out. They sit above the tiles and below the pulse, the you-are-here dot, the markers and the pin, so the dots stay on top. A new list redraws the lines on the same map, and an empty one removes them. Each tone is a theme token (mapRoutePrimary, Muted, Success, Warning, Danger over mapRouteCasing) checked at 3:1 against MapTiler\'s streets-v2 and dataviz tiles in the theme\'s own brightness. semanticLabel is the route\'s one name for screen readers, such as Route, 1.3 km. fitPoints shows every point you give it (the nurse, the patient, the route) inside the part of the map viewInsets leave visible, with 24 to spare, at a whole zoom no closer than 17; one point is centred there at 17. It animates unless reduced motion. This map uses the tile URLs pasted under Styled tiles. Marker labels size to their text, up to 320 or the map\'s width less 32, and wrap to a second line before the ellipsis; the zoom buttons share the locate button\'s raised surface and shadow. Near the map\'s edge a label flips to the other side of its dot rather than run off (0.42.1; in RTL it starts on the left). A fit owns the camera (0.42.1): if viewInsets change while it animates or after it, say a sheet grows as the route appears, the fit is worked out again for the new insets, until the person or the app moves the map. controls (0.42.1) adds the app\'s own round buttons in the locate button\'s stack and style, above it at the bottom-end of the visible part; the one here, Show the whole route, calls fitPoints.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             SizedBox(
               height: 360,
@@ -246,6 +247,15 @@ UiMap(
                 userLocation: _routeStart,
                 markers: const [UiMapMarker(id: 'patient', lat: 4.17387, lng: 73.50721, label: 'Lily Magu, Hiyaa Tower 4, Hulhumale', tone: UiStatus.danger)],
                 locateControl: true,
+                controls: [
+                  UiMapControl(
+                    id: 'fit',
+                    icon: HugeIcons.strokeRoundedCenterFocus,
+                    semanticLabel: 'Show the whole route',
+                    tooltip: 'Show the whole route',
+                    onPressed: () => _routeMap.currentState?.fitPoints(_routePoints),
+                  ),
+                ],
                 tileUrl: _tileLight.isEmpty ? uiMapOsmTiles : _tileLight,
                 tileUrlDark: _tileDark.isEmpty ? null : _tileDark,
                 attribution: _tileLight.isEmpty ? '© OpenStreetMap contributors' : 'Tiles from your URL © OpenStreetMap contributors',
@@ -273,6 +283,16 @@ UiMap(
   userLocation: me,
   markers: [patient],
   routes: [UiMapRoute(id: 'to-patient', points: route.points, semanticLabel: 'Route, \${route.km} km')],
+  // Your own buttons, in the locate button's stack (0.42.1).
+  controls: [
+    UiMapControl(
+      id: 'fit',
+      icon: HugeIcons.strokeRoundedCenterFocus,
+      semanticLabel: 'Show both',
+      tooltip: 'Show both',
+      onPressed: () => mapKey.currentState!.fitPoints([me, patient]),
+    ),
+  ],
 )
 
 // The moment she accepts: fetch the road route (OSRM GeoJSON is [lng, lat]: swap it) and show it all.
@@ -285,6 +305,10 @@ mapKey.currentState!.fitPoints([me, patient, ...route.points]); // inside the pa
             ApiRow('uiMapFitView(points, size, area, {maxZoom})', 'UiMapView?', 'The view fitPoints moves to (the map\'s own centre and zoom), for tests or a first view.'),
             ApiRow('uiMapRouteWidth(zoom)', '({double line, double casing})', 'The widths at a zoom: 5 over 9 from zoom 14, down to 60% at zoom 10.'),
             ApiRow('UiMapZoomButton', 'widget', 'The zoom buttons: the locate button\'s surface, border and shadow2, 38 (44 on touch) with a 48dp target.'),
+            ApiRow('controls', 'List<UiMapControl>', 'The app\'s own round buttons (0.42.1), above the locate button at the bottom-end of the visible part (in its place without one), 8 apart, following viewInsets; the bottom-left in RTL.', def: 'const []'),
+            ApiRow('UiMapControl(id, icon, semanticLabel, onPressed, tooltip)', 'class', 'One button: a stable id, a UiIconData, its accessible name, the callback (null shows it disabled) and an optional tooltip.'),
+            ApiRow('UiMapControlButton', 'widget', 'How a control is drawn: the locate button\'s round raised surface, border and shadow2, 38 (44 on touch) with a 48dp target.'),
+            ApiRow('uiMapLabelSide(x, labelWidth, mapWidth, {rtl})', 'UiMapLabelSide', 'Which side of its dot a label goes (0.42.1): the inline end unless it would run off the map there (8 to spare), then the other side, else the roomier one.'),
           ],
         ),
         DocSection(
@@ -400,6 +424,15 @@ class _MapPageDemoState extends State<MapPageDemo> {
               locating: _locating,
               locateOff: _off,
               onLocate: _findMe,
+              controls: [
+                UiMapControl(
+                  id: 'fit',
+                  icon: HugeIcons.strokeRoundedCenterFocus,
+                  semanticLabel: 'Show all the nurses',
+                  tooltip: 'Show all the nurses',
+                  onPressed: () => _map.currentState?.fitPoints([_home, for (final m in _MapPageState._markers) UiLatLng(m.lat, m.lng)]),
+                ),
+              ],
               zoom: 15,
               markers: _MapPageState._markers,
               pin: _home,

@@ -136,6 +136,47 @@ class UiMapRoute {
   final String? semanticLabel;
 }
 
+/// An app's own button on the map (0.42.1, the web `UiMapControl`), drawn in the same stack and
+/// style as the "Show my location" button: a round raised button at the bottom-end of the visible
+/// part, above the locate button, 48dp targets on touch. [onPressed] null shows it disabled.
+/// For "Show both": `UiMapControl(id: 'fit', icon: HugeIcons.strokeRoundedCenterFocus,
+/// semanticLabel: 'Show both', onPressed: () => mapKey.currentState!.fitPoints([me, patient]))`.
+@immutable
+class UiMapControl {
+  const UiMapControl({required this.id, required this.icon, required this.semanticLabel, this.onPressed, this.tooltip});
+
+  /// Identifies the control (its key: keep it stable).
+  final String id;
+  final UiIconData icon;
+
+  /// Its accessible name, read out for the icon.
+  final String semanticLabel;
+  final VoidCallback? onPressed;
+
+  /// Shown beside it on hover and long press; null for none.
+  final String? tooltip;
+}
+
+/// Which side of its dot a marker label sits on (the web `UiMapLabelSide`), on screen.
+enum UiMapLabelSide { left, right }
+
+/// The gap from a marker's point to its label (the dot's 8px radius and 4px), and the room the
+/// label keeps from the map's edge.
+const double uiMapLabelGap = 12, uiMapLabelEdge = 8;
+
+/// Which side of its dot a [labelWidth] px label goes for a marker [x] px from the map's left edge
+/// on a [mapWidth] map (0.42.1, the web `uiMapLabelSide`): the inline end (the right, the left in
+/// RTL) unless it would run past the map's edge there (keeping [uiMapLabelEdge]); then the other
+/// side; when neither fits, the side with more room.
+UiMapLabelSide uiMapLabelSide(double x, double labelWidth, double mapWidth, {bool rtl = false}) {
+  bool fits(UiMapLabelSide s) => s == UiMapLabelSide.right ? x + uiMapLabelGap + labelWidth <= mapWidth - uiMapLabelEdge : x - uiMapLabelGap - labelWidth >= uiMapLabelEdge;
+  final first = rtl ? UiMapLabelSide.left : UiMapLabelSide.right;
+  final other = rtl ? UiMapLabelSide.right : UiMapLabelSide.left;
+  if (fits(first)) return first;
+  if (fits(other)) return other;
+  return mapWidth - x >= x ? UiMapLabelSide.right : UiMapLabelSide.left;
+}
+
 /// The theme colour of a route [tone].
 Color uiMapRouteColor(UiTokens t, UiMapRouteTone tone) => switch (tone) {
       UiMapRouteTone.primary => t.mapRoutePrimary,
@@ -246,7 +287,10 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 ///   [viewInsets]) plus padding, at a whole zoom up to maxZoom (17); one point is centred there at
 ///   maxZoom. Animated unless reduced motion.
 /// - Marker labels size to their text, up to 320px or the map's width less 32, and wrap to a second
-///   line before the ellipsis.
+///   line before the ellipsis. They sit at the inline end of the dot (right; left in RTL) and flip
+///   to the other side when they would run off the map there (0.42.1, [uiMapLabelSide]).
+/// - [controls] (0.42.1): the app's own round buttons ([UiMapControl]) in the locate button's
+///   stack and style, above it at the bottom-end of the visible part, following [viewInsets].
 ///
 /// [userAgentPackageName] is sent with tile requests (the OSM policy asks for it); [tileProvider]
 /// replaces network tiles (offline tiles, tests).
@@ -282,7 +326,11 @@ class UiMap extends StatefulWidget {
     this.onLocate,
     this.userLocation,
     this.routes = const [],
+    this.controls = const [],
   });
+
+  /// The app's own buttons (0.42.1), above the locate button at the bottom-end of the visible part.
+  final List<UiMapControl> controls;
 
   /// Route lines (0.42.0), drawn under the dot, markers and pin; an empty list removes them.
   final List<UiMapRoute> routes;
@@ -353,10 +401,18 @@ class UiMap extends StatefulWidget {
 class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   final MapController _controller = MapController();
 
-  /// Pans the map when the insets change (the sheet moved to another snap).
+  /// Pans the map when the insets change (the sheet moved to another snap): [_panPoint] stays in
+  /// the middle of the visible part while the shift eases from [_panFrom] to [_panTo]. Kept as a
+  /// point, not px, so a zoom change while it runs can't send it to another scale (0.42.1).
   late final AnimationController _pan = AnimationController(vsync: this)..addListener(_onPan);
   Offset _panFrom = Offset.zero, _panTo = Offset.zero;
+  LatLng _panPoint = const LatLng(0, 0);
   Curve _panCurve = Curves.linear;
+
+  /// The last [fitPoints], while it owns the camera (0.42.1): an inset change works it out again
+  /// for the new insets. Let go when anything else moves the map (a gesture, [flyTo], the zoom
+  /// buttons, a new [UiMap.center] or [UiMap.zoom]).
+  ({List<UiLatLng> points, EdgeInsets? padding, double? maxZoom, bool animate})? _fit;
 
   /// The inset shift the view is laid out for.
   Offset _shift = Offset.zero;
@@ -392,7 +448,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     if (oldWidget.center != widget.center || oldWidget.zoom != widget.zoom) {
       final c = _visibleCenter(_controller.camera);
       if ((c.latitude - widget.center.lat).abs() > 1e-9 || (c.longitude - widget.center.lng).abs() > 1e-9 || _controller.camera.zoom != widget.zoom) {
-        _pan.stop();
+        _release();
         _controller.move(widget.center._ll, widget.zoom, offset: _shift);
       }
     }
@@ -410,22 +466,31 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   LatLng _visibleCenter(MapCamera c) => _shift == Offset.zero ? c.center : c.unprojectAtZoom(c.projectAtZoom(c.center) + _shift);
 
   /// Lays the view out for a new inset shift: the point in the middle of the old visible part pans
-  /// to the middle of the new one (the map's own centre moves by the difference).
+  /// to the middle of the new one (the map's own centre moves by the difference). While a fit owns
+  /// the camera, the fit is worked out again for the new insets instead.
   void _shiftTo(Offset next, {required bool animate}) {
     final old = _shift;
     _shift = next;
     if (!_ready) return;
-    final c = _controller.camera;
-    final from = c.projectAtZoom(c.center);
-    final to = from + (old - next);
-    if (!animate) {
+    if (_fit != null) {
       _pan.stop();
-      _controller.move(c.unprojectAtZoom(to), c.zoom);
+      _applyFit();
+      return;
+    }
+    final c = _controller.camera;
+    // A pan already on its way keeps its point, from where it has got to.
+    final running = _pan.isAnimating;
+    final from = running ? Offset.lerp(_panFrom, _panTo, _panCurve.transform(_pan.value))! : old;
+    final point = running ? _panPoint : (old == Offset.zero ? c.center : c.unprojectAtZoom(c.projectAtZoom(c.center) + old));
+    _pan.stop();
+    if (!animate) {
+      _controller.move(point, c.zoom, offset: next);
       return;
     }
     final t = context.ui;
+    _panPoint = point;
     _panFrom = from;
-    _panTo = to;
+    _panTo = next;
     _panCurve = t.easeStandard;
     _pan
       ..duration = t.motionSlow
@@ -433,9 +498,15 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   }
 
   void _onPan() {
-    final c = _controller.camera;
-    final p = Offset.lerp(_panFrom, _panTo, _panCurve.transform(_pan.value))!;
-    _controller.move(c.unprojectAtZoom(p), c.zoom);
+    final s = Offset.lerp(_panFrom, _panTo, _panCurve.transform(_pan.value))!;
+    _controller.move(_panPoint, _controller.camera.zoom, offset: s);
+  }
+
+  /// Something other than a fit moves the map: the fit lets go, and any move in flight stops.
+  void _release() {
+    _fit = null;
+    _fly.stop();
+    _pan.stop();
   }
 
   void _onReady() {
@@ -448,8 +519,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   /// the current zoom. For "my location": call it with the position the app found.
   void flyTo(UiLatLng c, {double? zoom}) {
     if (!_ready) return;
-    _fly.stop();
-    _pan.stop();
+    _release();
     _controller.move(c._ll, zoom ?? _controller.camera.zoom, offset: _shift);
     final v = _visibleCenter(_controller.camera);
     widget.onCenterChanged?.call(UiMapView(v.latitude, v.longitude, _controller.camera.zoom));
@@ -459,21 +529,41 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   /// (24 on each side by default), at a whole zoom up to [maxZoom] (17); a single point is centred
   /// there at [maxZoom]. Animated unless [animate] is false or animations are off (reduced motion).
   /// For "show me and the patient": the nurse's position, the patient's and the route's points.
+  ///
+  /// The fit then owns the camera (0.42.1): when [UiMap.viewInsets] change while it animates or
+  /// after it (a sheet growing as the route appears), it is worked out again for the new insets, so
+  /// the points stay inside the visible part. It lets go when anything else moves the map: a
+  /// gesture, [flyTo], the zoom buttons, a new [UiMap.center] or [UiMap.zoom].
   void fitPoints(List<UiLatLng> points, {EdgeInsets? padding, double? maxZoom, bool animate = true}) {
     if (!_ready || points.isEmpty) return;
+    _fit = (points: List.unmodifiable(points), padding: padding, maxZoom: maxZoom, animate: animate);
+    _pan.stop();
+    _fly.stop();
+    _applyFit();
+  }
+
+  /// Moves to the held fit for the current insets. A fit on its way is retargeted (it keeps its
+  /// progress), so a sheet growing frame by frame doesn't restart it every frame.
+  void _applyFit() {
+    final f = _fit;
+    if (f == null) return;
     final box = _box.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
     final insets = widget.viewInsets.resolve(Directionality.of(context));
-    final pad = padding ?? const EdgeInsets.all(uiMapFitPadding);
-    final v = uiMapFitView(points, box.size, insets + pad, maxZoom: math.min(maxZoom ?? uiMapFitMaxZoom, 19));
+    final pad = f.padding ?? const EdgeInsets.all(uiMapFitPadding);
+    final v = uiMapFitView(f.points, box.size, insets + pad, maxZoom: math.min(f.maxZoom ?? uiMapFitMaxZoom, 19));
     if (v == null) return;
-    _pan.stop();
-    _fly.stop();
     final cam = _controller.camera;
     final to = LatLng(v.lat, v.lng);
-    if (!animate || uiFxMotion(context) != UiFxMotion.full) {
+    if (!f.animate || uiFxMotion(context) != UiFxMotion.full) {
+      _fly.stop();
       _controller.move(to, v.zoom);
       _reportView();
+      return;
+    }
+    if (_fly.isAnimating) {
+      _flyTo = to;
+      _flyZoomTo = v.zoom;
       return;
     }
     final t = context.ui;
@@ -510,13 +600,17 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   void _zoomBy(double d) {
     // Around the middle of the visible part, so what the person looks at stays put.
     final v = _visibleCenter(_controller.camera);
-    _pan.stop();
+    _release();
     _controller.move(v, (_controller.camera.zoom + d).clamp(1, 19), offset: _shift);
     widget.onCenterChanged?.call(UiMapView(v.latitude, v.longitude, _controller.camera.zoom));
   }
 
   void _onEvent(MapEvent e) {
     if (e.source == MapEventSource.mapController) return;
+    // The person moves the map (drag, pinch, fling, double tap, wheel, keys): it is theirs now.
+    if ((e is MapEventWithMove && e is! MapEventNonRotatedSizeChange) || e is MapEventMoveStart || e is MapEventDoubleTapZoomStart || e is MapEventRotateStart) {
+      if (_fit != null || _fly.isAnimating || _pan.isAnimating) _release();
+    }
     if (e is MapEventMoveEnd || e is MapEventFlingAnimationEnd || e is MapEventDoubleTapZoomEnd || e is MapEventScrollWheelZoom) {
       final c = _visibleCenter(e.camera);
       widget.onCenterChanged?.call(UiMapView(c.latitude, c.longitude, e.camera.zoom));
@@ -584,11 +678,10 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
           for (final m in widget.markers)
             Marker(
               point: LatLng(m.lat, m.lng),
-              // The dot's 48dp target (half of it left of the point) and the label beside it.
+              // Centred on the point, room for the label on either side of the dot's 48dp target.
               width: _MarkerChip.boxWidth(labelMax),
               height: 48,
-              alignment: Alignment.centerRight,
-              child: _MarkerChip(marker: m, labelMax: labelMax, onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m)),
+              child: _MarkerChip(marker: m, labelMax: labelMax, rtl: rtl, onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m)),
             ),
         ]),
         if (pin != null)
@@ -696,6 +789,18 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
                   end: widget.viewInsets.end + t.space3 - locateSlop,
                   child: UiMapLocateButton(locating: widget.locating, off: widget.locateOff, onPressed: widget.onLocate),
                 ),
+              // The app's own buttons: the same stack, above the locate button (where it would be
+              // without one), 8px apart.
+              if (widget.controls.isNotEmpty)
+                AnimatedPositionedDirectional(
+                  duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                  curve: t.easeStandard,
+                  bottom: widget.viewInsets.bottom + t.space8 - locateSlop + (widget.locateControl ? (uiTouchPlatform(context) ? t.sizeTouch : t.sizeLg) + t.space2 : 0),
+                  end: widget.viewInsets.end + t.space3 - locateSlop,
+                  child: Column(mainAxisSize: MainAxisSize.min, spacing: math.max(0, t.space2 - 2 * locateSlop), children: [
+                    for (final c in widget.controls) UiMapControlButton(key: ValueKey('ui-map-control-${c.id}'), control: c),
+                  ]),
+                ),
             ]),
           ),
         ),
@@ -749,6 +854,38 @@ class UiMapLocateButton extends StatelessWidget {
                 ? const UiSpinner(size: 18, decorative: true)
                 : UiIcon(off ? HugeIcons.strokeRoundedGpsOff01 : HugeIcons.strokeRoundedGps01, size: 20, color: off ? t.textMuted : t.text),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// An app's own map button (0.42.1, exported for tests): the locate button's round raised
+/// surface, border and shadow, 38px (44px on touch, its hit area padded to 48dp), its tooltip
+/// towards the middle of the map.
+class UiMapControlButton extends StatelessWidget {
+  const UiMapControlButton({super.key, required this.control});
+  final UiMapControl control;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final dim = uiTouchPlatform(context) ? t.sizeTouch : t.sizeLg;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final enabled = control.onPressed != null;
+    return UiTooltip(
+      message: control.tooltip ?? '',
+      position: rtl ? UiTooltipPosition.right : UiTooltipPosition.left,
+      child: UiInteractive(
+        onTap: control.onPressed,
+        semanticLabel: control.semanticLabel,
+        excludeChildSemantics: true,
+        builder: (context, s) => AnimatedContainer(
+          duration: context.uiAnimate ? t.motionFast : Duration.zero,
+          width: dim,
+          height: dim,
+          decoration: uiMapControlDecoration(context, s),
+          child: Center(child: UiIcon(control.icon, size: 20, color: enabled ? t.text : t.textMuted)),
         ),
       ),
     );
@@ -879,26 +1016,83 @@ class UiMapUserDot extends StatelessWidget {
 }
 
 class _MarkerChip extends StatelessWidget {
-  const _MarkerChip({required this.marker, required this.labelMax, this.onTap});
+  const _MarkerChip({required this.marker, required this.labelMax, required this.rtl, this.onTap});
   final UiMapMarker marker;
   final VoidCallback? onTap;
 
   /// The widest the label gets.
   final double labelMax;
 
-  /// The marker box for a label up to [labelMax]: the 48dp dot target and the label side by side
-  /// (laid out before the paint-time shifts that put the dot on the point).
-  static double boxWidth(double labelMax) => labelMax + 48;
+  /// The page reads right to left: the label's first choice is the dot's left.
+  final bool rtl;
+
+  /// The marker box for a label up to [labelMax]: centred on the point, the 48dp dot target in
+  /// the middle and room for the label on either side.
+  static double boxWidth(double labelMax) => 2 * (labelMax + 24);
+
+  /// The label chip's width: its text (two lines at most) with the padding and border.
+  static double chipWidth(BuildContext context, String label, double labelMax) {
+    final t = context.ui;
+    final chrome = 2 * t.space2 + 2;
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: context.uiText.label.copyWith(fontSize: 12, height: 16 / 12)),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 2,
+      ellipsis: '\u2026',
+    )..layout(maxWidth: math.max(0, labelMax - chrome));
+    final w = painter.width + chrome;
+    painter.dispose();
+    return w;
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
     final color = marker.tone == UiStatus.neutral ? t.textMuted : marker.tone.color(t);
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Transform.translate(
+    final label = marker.label;
+    // The side follows where the marker is on screen: rebuilt as the map moves.
+    var side = UiMapLabelSide.right;
+    if (label != null) {
+      final cam = MapCamera.of(context);
+      final x = cam.latLngToScreenOffset(LatLng(marker.lat, marker.lng)).dx;
+      side = uiMapLabelSide(x, chipWidth(context, label, labelMax), cam.nonRotatedSize.width, rtl: rtl);
+    }
+    final left = side == UiMapLabelSide.left;
+    final dot = SizedBox(
+      width: 48,
+      child: Center(
+        child: Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.surfaceRaised, width: 3), boxShadow: t.shadow2),
+        ),
+      ),
+    );
+    final chip = label == null
+        ? null
+        : Transform.translate(
+            // Pulled in toward the dot: 12px from the point, on either side.
+            offset: Offset(left ? t.space3 : -t.space3, 0),
+            // Sized to its text up to labelMax, two lines before the ellipsis. One line is a
+            // pill (radiusLg clamps to half its height), two a soft rectangle, as on the web.
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: labelMax),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 2),
+                decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radiusLg), border: Border.all(color: t.border), boxShadow: t.shadow1),
+                child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, height: 16 / 12)),
+              ),
+            ),
+          );
+    final half = labelMax + 24;
+    return Stack(clipBehavior: Clip.none, children: [
+      Positioned(
+        top: 0,
+        bottom: 0,
         // A 48dp square around the dot is the tap target; its centre (the dot) on the point.
-        offset: const Offset(-24, 0),
+        left: left ? null : half - 24,
+        right: left ? half - 24 : null,
         child: Semantics(
           container: true,
           button: onTap != null,
@@ -911,36 +1105,15 @@ class _MarkerChip extends StatelessWidget {
             child: SizedBox(
               height: 48,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                SizedBox(
-                  width: 48,
-                  child: Center(
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.surfaceRaised, width: 3), boxShadow: t.shadow2),
-                    ),
-                  ),
-                ),
-                if (marker.label != null)
-                  Transform.translate(
-                    offset: Offset(-t.space3, 0),
-                    // Sized to its text up to labelMax, two lines before the ellipsis. One line is a
-                    // pill (radiusLg clamps to half its height), two a soft rectangle, as on the web.
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: labelMax),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 2),
-                        decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radiusLg), border: Border.all(color: t.border), boxShadow: t.shadow1),
-                        child: Text(marker.label!, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, height: 16 / 12)),
-                      ),
-                    ),
-                  ),
+                if (left && chip != null) chip,
+                dot,
+                if (!left && chip != null) chip,
               ]),
             ),
           ),
         ),
       ),
-    );
+    ]);
   }
 }
 

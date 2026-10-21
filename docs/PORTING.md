@@ -170,6 +170,52 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.42.1.** From the Dhirumi nurse app, which carries workarounds for all three until this ships.
+
+- fitPoints vs changing insets. Flutter: the route made the sheet's peek taller just as the fit
+  started; `didUpdateWidget` then ran the inset pan, which stored the map's centre in px at the zoom
+  of that moment while the fit's own animation went on changing the zoom, and `_onPan` unprojected
+  those px at the new zoom (a short route at zoom 17 ended ~900 px off; the tests saw far worse). Now
+  the last fit is held (`_fit`) and owns the camera: an inset change (or a direction change) works it
+  out again for the new insets; a fit in flight is retargeted (`_flyTo` / `_flyZoomTo` swapped, its
+  progress kept, so a sheet growing frame by frame doesn't restart it), one that has landed moves
+  again, animated unless reduced motion. It is let go by any camera move that isn't the map's own
+  (`MapEventWithMove` and the start events from a gesture, not `nonRotatedSizeChange`), `flyTo`, the
+  zoom buttons and a new `center` / `zoom`. The inset pan itself no longer works in px: it keeps a
+  point (`_panPoint`) and eases the shift, `move(point, zoom, offset: shift)`, so a zoom change while
+  it runs can't send it to another scale; a pan already running is continued from where it got to.
+  Web: the same hold (`fit`), with `applyInsets` calling `applyFit` instead of `panBy`. Leaflet's
+  `_tryAnimatedZoom` silently drops a `setView` made during a zoom animation (`_animatingZoom`), so a
+  refit asked for then is queued (`refitPending`) and run on `zoomend` / `moveend`. Released by
+  `dragstart`, `boxzoomend`, `wheel`, `dblclick`, a two-finger `touchstart`, the arrow and +/- keys on
+  the map, the zoom buttons, `flyTo` and a moving `center` / `zoom`. jsdom has no CSS transitions, so
+  the web suite holds `_animatingZoom` by hand to test the queue.
+- Controls. `controls` / `UiMapControl` in both: Flutter `{id, icon, semanticLabel, onPressed,
+  tooltip}` (onPressed null is disabled, like every Flutter control here), web `{ id, icon, label,
+  tooltip?, disabled? }` with `(controlPress)` (the library's outputs pattern; per-item callbacks in a
+  bound array would be odd in Angular templates). Drawn as a column above the locate button: Flutter
+  an `AnimatedPositionedDirectional` pulled out by the touch slop like the locate button, its bottom
+  one button plus space2 higher when `locateControl` is on, `spacing: space2 - 2 * slop` so the
+  visible gap stays 8 on touch; web `.ui-map-controls` with the same `bottom` calc plus
+  `var(--ui-size-lg | --ui-size-touch) + space2` under `[data-locate]`, `inset-inline-end` (RTL-safe)
+  and `gap: space2`. `UiMapControlButton` / `.ui-map-control` reuse the locate surface
+  (`uiMapControlDecoration`; the same CSS values, compared by the spec). Their tooltips face into the
+  map (left; right in RTL; the locate button's stays as it was). No built-in `fitControl`: the handler
+  is one `fitPoints` call, and only the app knows which points and words ("Show both", "Show the
+  route") it means, so a generic control is the smaller API.
+- Labels near the edge. One rule in both, `uiMapLabelSide(x, labelWidth, mapWidth, rtl)`: the inline
+  end (right; left in RTL, so RTL now starts on the left, mirrored) if `x + 12 + w <= width - 8` (or
+  `x - 12 - w >= 8` on the left), else the other side if it fits, else the roomier side. Flutter
+  measures the chip with a `TextPainter` (the label style, two lines, labelMax less the padding and
+  border; `TextWidthBasis.parent` gives the same width the `Text` lays out to) and reads the marker's
+  screen x from `MapCamera.of(context)`, so the chip rebuilds and re-picks as the map moves. Its
+  `Marker` box is now centred on the point, `2 * (labelMax + 24)` wide, with the dot's 48dp target in
+  the middle and the label on either side (it was `labelMax + 48` aligned centerRight). Web: the label
+  is absolutely positioned beside the dot (`left: calc(100% + 4px)`, or `right:` under
+  `[data-side="left"]`), so flipping needs no margin sums; the map sets `data-side` from the label's
+  `offsetWidth` on `move`, `zoomend`, `resize` and after drawing markers. The `map_pulse` golden
+  changed: its "Aminath Hassan, RN" label used to run off the right edge and now sits left of its dot.
+
 **0.42.0.** Map routes, fit to points and map polish (Dhirumi nurse map: "detailed and easy to
 navigate", the route to the patient shown from the moment she accepts).
 

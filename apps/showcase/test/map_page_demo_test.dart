@@ -59,4 +59,34 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(UiMapUserDot), findsOneWidget);
   });
+  testWidgets('map page demo (0.42.1): the Show all control sits above the locate button and fits every nurse between card and sheet', (tester) async {
+    tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(theme: UiThemeName.maldives, home: MapPageDemo(tileProvider: UiMapBlankTiles())));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final control = tester.getRect(find.byType(UiMapControlButton));
+    final locate = tester.getRect(find.byType(UiMapLocateButton));
+    expect(control.bottom, lessThanOrEqualTo(locate.top + 0.01));
+    expect(control.center.dx, closeTo(locate.center.dx, 0.01));
+    final dots = find.descendant(of: find.byType(UiMap), matching: find.byWidgetPredicate((w) => w is Container && w.constraints == const BoxConstraints.tightFor(width: 16, height: 16)));
+    // Look somewhere else first: no nurse in view.
+    tester.state<UiMapState>(find.byType(UiMap)).flyTo(const UiLatLng(4.30, 73.60), zoom: 17);
+    await tester.pump();
+    expect(dots, findsNothing);
+    await tester.tap(find.byType(UiMapControlButton));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 5)).catchError((_) => 0);
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final map = tester.widget<UiMap>(find.byType(UiMap));
+    // The markers' dots (16px discs) are all between the status card and the sheet.
+    expect(dots, findsNWidgets(map.markers.length));
+    for (final e in dots.evaluate()) {
+      final p = tester.getCenter(find.byWidget(e.widget));
+      expect(p.dy, inInclusiveRange(map.viewInsets.top, 844 - map.viewInsets.bottom));
+      expect(p.dx, inInclusiveRange(0, 390));
+    }
+  });
 }
