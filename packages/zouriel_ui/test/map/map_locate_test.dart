@@ -1,6 +1,8 @@
 import 'dart:convert' show base64Decode;
 
+import 'package:flutter/foundation.dart' show debugDefaultTargetPlatformOverride;
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -91,6 +93,7 @@ Future<_Host> _pump(WidgetTester tester, {void Function(_Host h)? init}) async {
 
 TileLayer _layer(WidgetTester tester) => tester.widget<TileLayer>(find.byType(TileLayer));
 Finder get _button => find.byType(UiMapLocateButton);
+Finder get _circle => find.descendant(of: _button, matching: find.byType(AnimatedContainer));
 
 Future<void> _theme(WidgetTester tester, _Host h, UiThemeName name) async {
   h.controller.set(name);
@@ -209,7 +212,8 @@ void main() {
       final h = await _pump(tester, init: (h) => h.insets = const EdgeInsetsDirectional.only(bottom: 300, end: 10));
       await tester.pumpAndSettle();
       final t = UiTheme.of(tester.element(_button)).tokens;
-      var r = tester.getRect(_button);
+      // The drawn circle (the hit area around it is padded on touch screens).
+      var r = tester.getRect(_circle);
       expect(r.bottom, _h - 300 - t.space8);
       expect(r.right, _w - 10 - t.space3);
       expect(r.width, r.height);
@@ -218,9 +222,57 @@ void main() {
         h.dir = TextDirection.rtl;
       });
       await tester.pumpAndSettle();
-      r = tester.getRect(_button);
+      r = tester.getRect(_circle);
       expect(r.bottom, _h - 420 - t.space8);
       expect(r.left, 10 + t.space3);
+    });
+
+    // 0.40.1: the Dhirumi apps' tap-target check found the 44dp circle was also its whole hit area.
+    testWidgets('on touch: a 48dp hit area around the 44dp circle, which stays in place; the zoom buttons meet 48dp too', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final handle = tester.ensureSemantics();
+      final h = await _pump(tester, init: (h) => h.insets = const EdgeInsetsDirectional.only(bottom: 300));
+      await tester.pumpAndSettle();
+      final t = UiTheme.of(tester.element(_button)).tokens;
+      final circle = tester.getRect(_circle);
+      expect(circle.width, t.sizeTouch);
+      expect(circle.bottom, _h - 300 - t.space8);
+      expect(circle.right, _w - t.space3);
+      final hit = tester.getRect(_button);
+      expect(hit.size, const Size(48, 48));
+      expect(hit.center, circle.center);
+      // A tap just outside the circle, inside the padded area, still counts.
+      await tester.tapAt(Offset(hit.right - 1, hit.center.dy));
+      expect(h.locates, 1);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      handle.dispose();
+      debugDefaultTargetPlatformOverride = null;
+    });
+
+    testWidgets('with a mouse: the 38px circle is the whole button', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      await _pump(tester);
+      final t = UiTheme.of(tester.element(_button)).tokens;
+      expect(tester.getRect(_circle).width, t.sizeLg);
+      expect(tester.getRect(_button), tester.getRect(_circle));
+      expect(tester.getRect(_circle).right, _w - t.space3);
+      debugDefaultTargetPlatformOverride = null;
+    });
+  });
+
+  // 0.40.1: in Dhivehi the English credits came out right to left, with the © signs misplaced.
+  group('attribution', () {
+    testWidgets('is laid out LTR in an RTL map, in the mirrored (bottom-left) corner', (tester) async {
+      final h = await _pump(tester, init: (h) => h.dir = TextDirection.rtl);
+      await tester.pumpAndSettle();
+      final text = find.text('© OpenStreetMap contributors');
+      final para = tester.renderObject<RenderParagraph>(text);
+      expect(para.textDirection, TextDirection.ltr);
+      expect(tester.getRect(text).left, lessThan(_w / 2));
+      h.set(() => h.dir = TextDirection.ltr);
+      await tester.pumpAndSettle();
+      expect(tester.renderObject<RenderParagraph>(text).textDirection, TextDirection.ltr);
+      expect(tester.getRect(text).right, greaterThan(_w / 2));
     });
   });
 

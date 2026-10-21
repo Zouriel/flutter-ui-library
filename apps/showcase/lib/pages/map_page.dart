@@ -54,7 +54,7 @@ class _MapPageState extends State<MapPage> {
         DocSection(
           name: 'Map',
           widget: 'UiMap',
-          summary: 'Markers are dots in their tone with a label pill; tapping one calls onMarkerSelected. center and zoom move the map; onCenterChanged reports where the person moved it. The zoom buttons sit at the inline start and the attribution at the inline end, so they swap in RTL. The controls use the theme, and on a dark theme the tiles are dimmed; under reduced motion there is no fling. Pass userAgentPackageName (your app id) for the OSM tile policy.',
+          summary: 'Markers are dots in their tone with a label pill; tapping one calls onMarkerSelected. center and zoom move the map; onCenterChanged reports where the person moved it. The zoom buttons sit at the inline start and the attribution at the inline end, so they swap in RTL; the attribution itself is always set left to right, so English credits keep their © signs in place. On touch screens every control has a 48dp hit area. The controls use the theme, and on a dark theme the tiles are dimmed; under reduced motion there is no fling. Pass userAgentPackageName (your app id) for the OSM tile policy.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             SizedBox(
               height: 360,
@@ -173,7 +173,7 @@ UiMap(
         DocSection(
           name: 'My location',
           widget: 'UiMap locateControl · userLocation',
-          summary: 'locateControl adds a round Show my location button at the bottom-end corner of the visible part: it follows viewInsets, so on a map page it floats just above the bottom sheet and moves with it. It calls onLocate; the app finds the position itself, sets userLocation and moves the map with UiMapState.flyTo, which centres in the visible part. locating shows a spinner and ignores taps; locateOff shows the icon struck through with the tooltip Location is off, and a tap still calls onLocate so the app can ask again. userLocation draws the you-are-here dot, blue with a white ring, over a soft halo as wide as the accuracy in metres (28 to 240 px across), above the tiles and below markers and the pin, read out as Your location.',
+          summary: 'locateControl adds a round Show my location button at the bottom-end corner of the visible part: it follows viewInsets, so on a map page it floats just above the bottom sheet and moves with it. It is 38px, and on touch screens 44dp with a 48dp hit area around the circle. It calls onLocate; the app finds the position itself, sets userLocation and moves the map with UiMapState.flyTo, which centres in the visible part. locating shows a spinner and ignores taps; locateOff shows the icon struck through with the tooltip Location is off, and a tap still calls onLocate so the app can ask again. userLocation draws the you-are-here dot, blue with a white ring, over a soft halo as wide as the accuracy in metres (28 to 240 px across), above the tiles and below markers and the pin, read out as Your location.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             SizedBox(
               height: 320,

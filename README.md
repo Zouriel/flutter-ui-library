@@ -99,6 +99,11 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**48dp map controls on touch, LTR attribution (0.40.1):** on touch platforms `UiMapLocateButton`
+keeps its 44dp circle in the same place with a 48dp hit area around it (it meets
+`androidTapTargetGuideline`, like the zoom buttons), and the `UiMap` attribution is laid out LTR, so
+English credits keep their © signs in place in RTL while its corner still flips.
+
 **Map tiles, my location, a sheet that holds still (0.40):** `UiMap` gains `tileUrlDark` (tiles drawn
 for dark themes, shown undimmed and swapped live with the theme; `tileHeaders` go with both),
 `tileSize` / `zoomOffset` (512 px tiles: 512, -1) and `{r}` retina URLs (`@2x` on a high-density

@@ -170,6 +170,18 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.40.1.** Touch targets: `UiMapLocateButton` no longer opts out of `UiInteractive`'s touch
+padding, so on touch platforms its 44dp circle gets a 48dp `UiTouchTarget` around it; the map pulls
+its `AnimatedPositionedDirectional` out by `UiMapLocateButton.touchSlop` (2dp) so the circle stays at
+`space8` / `space3` from the visible corner. The zoom buttons were already padded (UiIconButton). The
+web gives `.ui-map-locate` and the zoom links a centred 48px `::before` under `(pointer: coarse)`
+(and its coarse zoom rule now matches the base rule's `:first-child` / `:last-child` specificity,
+which had kept the zoom links at 30px on touch). Attribution: the `Text` has
+`textDirection: TextDirection.ltr` while its `AnimatedPositioned` corner still flips with
+`Directionality`; the web sets `dir="ltr"` on Leaflet's attribution container and
+`direction: ltr; unicode-bidi: isolate` in map.css (the canvas was already `direction: ltr`, so the
+web was mostly unaffected; the attribute guards against app CSS).
+
 **0.40.0 additions.** Dark tiles: one `TileLayer` whose `urlTemplate` is `uiMapTileUrl(tileUrl,
 tileUrlDark, dark)` (dark = the theme's brightness), so a theme change swaps the URL on the same
 layer state; the web does the same with Leaflet `setUrl` on the same layer (a new layer only when

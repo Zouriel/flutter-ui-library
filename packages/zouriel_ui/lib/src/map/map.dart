@@ -479,14 +479,19 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
       UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: context.uiStrings.zoomIn, variant: UiButtonVariant.outline, onPressed: () => _zoomBy(1)),
       UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMinusSign), label: context.uiStrings.zoomOut, variant: UiButtonVariant.outline, onPressed: () => _zoomBy(-1)),
     ]);
+    // The credits are English ("© MapTiler © OpenStreetMap contributors"): set them LTR in their own
+    // run so an RTL layout doesn't move the © signs; only the corner they sit in is mirrored.
     final attribution = GestureDetector(
       onTap: widget.onAttributionTap,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: t.space1, vertical: 2),
         color: t.surfaceRaised.withValues(alpha: 0.85),
-        child: Text(widget.attribution, style: context.uiText.caption.copyWith(fontSize: 11, color: t.textMuted)),
+        child: Text(widget.attribution, textDirection: TextDirection.ltr, style: context.uiText.caption.copyWith(fontSize: 11, color: t.textMuted)),
       ),
     );
+    // On touch the locate button's hit area is padded to 48dp around its circle; pull the box out
+    // by that padding so the circle stays where it was.
+    final locateSlop = UiMapLocateButton.touchSlop(context);
 
     return Semantics(
       container: true,
@@ -534,8 +539,8 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
                 AnimatedPositionedDirectional(
                   duration: context.uiAnimate ? t.motionBase : Duration.zero,
                   curve: t.easeStandard,
-                  bottom: widget.viewInsets.bottom + t.space8,
-                  end: widget.viewInsets.end + t.space3,
+                  bottom: widget.viewInsets.bottom + t.space8 - locateSlop,
+                  end: widget.viewInsets.end + t.space3 - locateSlop,
                   child: UiMapLocateButton(locating: widget.locating, off: widget.locateOff, onPressed: widget.onLocate),
                 ),
             ]),
@@ -557,11 +562,15 @@ const List<double> _dimMatrix = [
   0, 0, 0, 1, 0,
 ];
 
-/// The "my location" button (exported for tests): round, raised, 38px (44px on touch screens).
+/// The "my location" button (exported for tests): round, raised, 38px (44px on touch screens,
+/// where its hit area is padded to [uiMinTouchTarget], 48dp, around the circle).
 class UiMapLocateButton extends StatelessWidget {
   const UiMapLocateButton({super.key, this.locating = false, this.off = false, this.onPressed});
   final bool locating, off;
   final VoidCallback? onPressed;
+
+  /// How far the padded hit area reaches past the circle on each side (0 off touch screens).
+  static double touchSlop(BuildContext context) => uiTouchPlatform(context) ? math.max(0, (uiMinTouchTarget - context.ui.sizeTouch) / 2) : 0;
 
   @override
   Widget build(BuildContext context) {
@@ -577,7 +586,6 @@ class UiMapLocateButton extends StatelessWidget {
         },
         semanticLabel: strings.mapLocate,
         excludeChildSemantics: true,
-        padTouchTarget: false,
         builder: (context, s) => AnimatedContainer(
           duration: context.uiAnimate ? t.motionFast : Duration.zero,
           width: dim,
