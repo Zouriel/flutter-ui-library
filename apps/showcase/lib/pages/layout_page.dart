@@ -34,6 +34,9 @@ class _LayoutPageState extends State<LayoutPage> {
   double _panel = 120;
   bool _drawer = false;
   String _nav = 'Home';
+  bool _shellRtl = false;
+  bool _chatDrawer = false;
+  String _chat = 'Dr Aminath';
 
   @override
   Widget build(BuildContext context) {
@@ -238,45 +241,124 @@ class _LayoutPageState extends State<LayoutPage> {
         DocSection(
           name: 'Sidebar layout',
           widget: 'UiSidebarLayout',
-          summary: 'An app shell: a sidebar beside the page under a top bar when there is room; at or below breakpoint the sidebar becomes a drawer opened by a built-in menu button over a dimmed backdrop. Tapping the backdrop, Escape and the system back gesture close it; while open the page behind is hidden from screen readers. Widening past the breakpoint closes it. The slide is instant under reduced motion.',
-          demo: SizedBox(
-            height: 300,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(t.radius),
-              child: DecoratedBox(
-                decoration: BoxDecoration(border: Border.all(color: t.border)),
-                child: UiSidebarLayout(
-                  open: _drawer,
-                  onOpenChanged: (v) => setState(() => _drawer = v),
-                  sidebarWidth: 200,
-                  header: UiText(_nav, variant: UiTextVariant.h5),
-                  sidebar: ListView(padding: EdgeInsets.all(t.space2), children: [
-                    for (final n in ['Home', 'Projects', 'Settings'])
-                      UiButton(
-                        label: n,
-                        block: true,
-                        variant: n == _nav ? UiButtonVariant.secondary : UiButtonVariant.ghost,
-                        onPressed: () => setState(() {
-                          _nav = n;
-                          _drawer = false;
-                        }),
-                      ),
-                  ]),
-                  body: UiText('The $_nav page. Below 860px wide (this demo) the sidebar is a drawer.'),
+          summary: 'An app shell: a sidebar beside the page under a top bar when there is room; at or below breakpoint the sidebar becomes a drawer opened by a built-in menu button over a dimmed backdrop. The sidebar sits on the start side: on the right, sliding in from the right, in right-to-left text. Tapping the backdrop, Escape and the system back gesture close the drawer; focus moves into it on open and back to the opener on close; while open the page behind is hidden from screen readers, and screen readers get the backdrop as a Close navigation button. Widening past the breakpoint closes it. The slide is instant under reduced motion. For an app with its own top bar (a chat app), bar: false drops the built-in bar and menu button, fill: true gives the body all the space with no padding and no scroll view and keeps clear of the safe area, and UiSidebarLayout.of(context) tells the app whether it is in drawer mode (compact) and opens the drawer. Its words (sidebarToggle, sidebarClose, sidebarLabel) come from UiStrings.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            UiSwitch(value: _shellRtl, onChanged: (v) => setState(() => _shellRtl = v), label: 'Right to left'),
+            Directionality(
+              textDirection: _shellRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: SizedBox(
+                height: 300,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radius),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(border: Border.all(color: t.border)),
+                    child: UiSidebarLayout(
+                      open: _drawer,
+                      onOpenChanged: (v) => setState(() => _drawer = v),
+                      sidebarWidth: 200,
+                      header: UiText(_nav, variant: UiTextVariant.h5),
+                      sidebar: ListView(padding: EdgeInsets.all(t.space2), children: [
+                        for (final n in ['Home', 'Projects', 'Settings'])
+                          UiButton(
+                            label: n,
+                            block: true,
+                            variant: n == _nav ? UiButtonVariant.secondary : UiButtonVariant.ghost,
+                            onPressed: () => setState(() {
+                              _nav = n;
+                              _drawer = false;
+                            }),
+                          ),
+                      ]),
+                      body: UiText('The $_nav page. Below 860px wide (this demo) the sidebar is a drawer.'),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          code: "UiSidebarLayout(\n  breakpoint: 860,\n  sidebar: nav,\n  header: const UiText('Title'),\n  body: page,\n)",
+            const UiText('App shell: bar: false + fill: true, with the app\'s own top bar and a composer docked at the bottom.', variant: UiTextVariant.caption),
+            Directionality(
+              textDirection: _shellRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: SizedBox(
+                height: 340,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radius),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(border: Border.all(color: t.border)),
+                    // The demo sits mid-page: no safe-area insets here.
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      removeBottom: true,
+                      removeLeft: true,
+                      removeRight: true,
+                      child: UiSidebarLayout(
+                        bar: false,
+                        fill: true,
+                        breakpoint: 600,
+                        sidebarWidth: 200,
+                        open: _chatDrawer,
+                        onOpenChanged: (v) => setState(() => _chatDrawer = v),
+                        sidebar: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                          for (final n in ['Dr Aminath', 'Dr Hassan', 'Clinic desk'])
+                            UiButton(
+                              label: n,
+                              block: true,
+                              variant: n == _chat ? UiButtonVariant.secondary : UiButtonVariant.ghost,
+                              onPressed: () => setState(() {
+                                _chat = n;
+                                _chatDrawer = false;
+                              }),
+                            ),
+                        ]),
+                        body: Builder(builder: (context) {
+                          final shell = UiSidebarLayout.of(context);
+                          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+                              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
+                              child: Row(spacing: t.space2, children: [
+                                if (shell.compact) UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMenu01), label: 'Chats', onPressed: shell.toggle),
+                                Expanded(child: UiText(_chat, variant: UiTextVariant.h5)),
+                              ]),
+                            ),
+                            Expanded(
+                              child: ListView(padding: EdgeInsets.all(t.space3), children: [
+                                for (var i = 1; i <= 12; i++) Padding(padding: EdgeInsets.only(bottom: t.space2), child: UiText('Message $i')),
+                              ]),
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(t.space2),
+                              decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
+                              child: Row(spacing: t.space2, children: [
+                                const Expanded(child: UiInput(placeholder: 'Write a message', semanticLabel: 'Message')),
+                                UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSent), label: 'Send', variant: UiButtonVariant.primary, onPressed: () {}),
+                              ]),
+                            ),
+                          ]);
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+          code: 'UiSidebarLayout(\n  bar: false,\n  fill: true,\n  sidebar: chats,\n  body: Builder(builder: (context) {\n    final shell = UiSidebarLayout.of(context);\n    return Column(children: [\n      MyTopBar(menu: shell.compact ? shell.toggle : null),\n      Expanded(child: messages),\n      composer,\n    ]);\n  }),\n)',
           api: const [
             ApiRow('sidebar / header / body', 'Widget', 'The navigation, the top-bar content and the page.'),
             ApiRow('breakpoint', 'double', 'Widest layout that still uses the drawer.', def: '860'),
             ApiRow('sidebarWidth', 'double', 'Sidebar width (drawer: at most 84%).', def: '248'),
             ApiRow('open / onOpenChanged', 'bool? / ValueChanged<bool>?', 'Drive the drawer (close it on navigation).'),
-            ApiRow('padding', 'EdgeInsetsGeometry?', 'Around the page: 24, or 16 in drawer mode.'),
-            ApiRow('scrollBody', 'bool', 'Wrap the body in a scroll view.', def: 'true'),
+            ApiRow('bar', 'bool', 'The built-in top bar and menu button. false: none; the app opens the drawer.', def: 'true'),
+            ApiRow('fill', 'bool', 'App shell: the body gets all the space, no padding, no scroll view; the sidebar scrolls itself; both keep clear of the safe area.', def: 'false'),
+            ApiRow('padding', 'EdgeInsetsGeometry?', 'Around the page: 24, or 16 in drawer mode; none with fill.'),
+            ApiRow('scrollBody', 'bool', 'Wrap the body in a scroll view (ignored with fill).', def: 'true'),
+            ApiRow('scrollSidebar', 'bool?', 'Wrap the sidebar in a scroll view; turn off for a ListView sidebar.', def: 'fill'),
           ],
-          callbacks: const [ApiRow('toggle() / close()', 'UiSidebarLayoutState', 'Through a GlobalKey.')],
+          callbacks: const [
+            ApiRow('UiSidebarLayout.of(context)', 'UiSidebarLayoutScope', 'Inside the layout: compact (drawer mode), open, toggle(), close(). maybeOf is null outside.'),
+            ApiRow('toggle() / close() / compact', 'UiSidebarLayoutState', 'Through a GlobalKey.'),
+          ],
         ),
       ],
     );

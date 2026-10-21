@@ -75,6 +75,9 @@ class UiStrings {
     this.googleSignUp = 'Sign up with Google',
     this.googleContinue = 'Continue with Google',
     this.googleSignInShort = 'Sign in',
+    this.sidebarToggle = 'Toggle navigation',
+    this.sidebarClose = 'Close navigation',
+    this.sidebarLabel = 'Navigation',
   });
 
   /// Close buttons of modal, drawer, bottom sheet, lightbox.
@@ -101,6 +104,10 @@ class UiStrings {
   /// Google sign-in button: Google's approved wordings (translations must keep the meaning:
   /// signing in to this app with a Google account, not creating one).
   final String googleSignIn, googleSignUp, googleContinue, googleSignInShort;
+
+  /// Sidebar layout: the menu button, the drawer's close control (the backdrop, for screen
+  /// readers) and the drawer's name.
+  final String sidebarToggle, sidebarClose, sidebarLabel;
 }
 
 /// The type scale from the web `ui-text` variants, built from a theme's tokens.

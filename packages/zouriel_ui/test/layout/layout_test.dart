@@ -203,6 +203,144 @@ void main() {
       handle.dispose();
       debugDefaultTargetPlatformOverride = null;
     });
+
+    testWidgets('RTL: the sidebar sits on the right and its drawer slides in from the right', (tester) async {
+      Widget rtl(double w) => SizedBox(width: w, height: 600, child: Directionality(textDirection: TextDirection.rtl, child: shell()));
+      await pumpUi(tester, rtl(1000), size: const Size(1000, 600));
+      expect(tester.getTopRight(find.text('NAV')).dx, 1000 - 12, reason: 'wide: at the right edge, padded by space3');
+      expect(tester.getTopRight(find.text('Page')).dx, lessThan(1000 - 248));
+      await pumpUi(tester, rtl(390), size: const Size(390, 700));
+      expect(tester.getTopLeft(find.text('NAV')).dx, greaterThan(390), reason: 'closed: off the right edge');
+      await tester.tap(find.bySemanticsLabel('Toggle navigation'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopRight(find.text('NAV')).dx, closeTo(390 - 12, 0.01), reason: 'open: at the right edge');
+      // Half-way through the slide it comes from the right, not the left.
+      await tester.tapAt(const Offset(20, 400));
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(tester.getTopLeft(find.text('NAV')).dx, greaterThan(390 - 248));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('NAV')).dx, greaterThan(390));
+    });
+
+    testWidgets('bar: false renders no bar or menu button; compact is readable inside', (tester) async {
+      final seen = <bool>[];
+      Widget noBar(double w) => SizedBox(
+            width: w,
+            height: 600,
+            child: UiSidebarLayout(
+              bar: false,
+              header: const Text('Title'),
+              sidebar: const Text('NAV'),
+              body: Builder(builder: (context) {
+                final s = UiSidebarLayout.of(context);
+                seen.add(s.compact);
+                return Column(children: [
+                  const Text('Page'),
+                  if (s.compact) GestureDetector(onTap: s.toggle, child: const Text('MENU')),
+                ]);
+              }),
+            ),
+          );
+      await pumpUi(tester, noBar(1000), size: const Size(1000, 600));
+      expect(seen.last, isFalse);
+      expect(find.text('Title'), findsNothing);
+      expect(find.bySemanticsLabel('Toggle navigation'), findsNothing);
+      expect(find.text('MENU'), findsNothing);
+      expect(tester.getTopLeft(find.text('Page')).dy, 24, reason: 'no bar above the page, only its padding');
+      await pumpUi(tester, noBar(390), size: const Size(390, 700));
+      expect(seen.last, isTrue);
+      expect(find.bySemanticsLabel('Toggle navigation'), findsNothing);
+      expect(tester.getTopLeft(find.text('Page')).dy, 16);
+      // The app's own button opens the drawer.
+      await tester.tap(find.text('MENU'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('NAV')).dx, greaterThanOrEqualTo(0));
+      final state = tester.state<UiSidebarLayoutState>(find.byType(UiSidebarLayout));
+      expect(state.compact, isTrue);
+      expect(state.isOpen, isTrue);
+    });
+
+    testWidgets('fill: the body takes all the space unpadded and scrolls itself; safe area kept', (tester) async {
+      Widget filled(double w, {EdgeInsets safe = EdgeInsets.zero}) => MediaQuery(
+            key: ValueKey(safe),
+            data: MediaQueryData(size: Size(w, 600), padding: safe),
+            child: SizedBox(
+              width: w,
+              height: 600,
+              child: UiSidebarLayout(
+                bar: false,
+                fill: true,
+                sidebar: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [for (var i = 0; i < 40; i++) SizedBox(height: 40, child: Text('N$i'))]),
+                body: Column(key: const ValueKey('body'), children: [
+                  const SizedBox(key: ValueKey('top'), height: 40),
+                  Expanded(child: ListView(children: [for (var i = 0; i < 50; i++) SizedBox(height: 40, child: Text('M$i'))])),
+                  const SizedBox(key: ValueKey('composer'), height: 56),
+                ]),
+              ),
+            ),
+          );
+      await pumpUi(tester, filled(1000), size: const Size(1000, 600));
+      expect(tester.takeException(), isNull);
+      final body = tester.getRect(find.byKey(const ValueKey('body')));
+      expect(body, Rect.fromLTWH(248, 0, 752, 600), reason: 'no padding, exactly the box');
+      expect(tester.getBottomLeft(find.byKey(const ValueKey('composer'))).dy, 600, reason: 'composer docked at the bottom');
+      expect(find.ancestor(of: find.byKey(const ValueKey('body')), matching: find.byType(SingleChildScrollView)), findsNothing);
+      // The sidebar is taller than the box and scrolls inside itself.
+      expect(find.ancestor(of: find.text('N0'), matching: find.byType(SingleChildScrollView)), findsOneWidget);
+      await tester.drag(find.text('N3'), const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.text('N3')).dy, lessThan(0));
+
+      await pumpUi(tester, filled(1000, safe: const EdgeInsets.only(top: 30, bottom: 20, left: 10, right: 5)), size: const Size(1000, 600));
+      expect(tester.getRect(find.byKey(const ValueKey('body'))), Rect.fromLTRB(248, 30, 995, 580));
+      expect(tester.getTopLeft(find.text('N0')), const Offset(10 + 12, 30 + 12));
+    });
+
+    testWidgets('closing the drawer gives focus back to the button that opened it', (tester) async {
+      await pumpUi(tester, SizedBox(width: 390, height: 700, child: UiSidebarLayout(
+        sidebar: UiButton(label: 'Home', onPressed: () {}),
+        header: const Text('Title'),
+        body: const Text('Page'),
+      )));
+      FocusManager.instance.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final opener = FocusManager.instance.primaryFocus;
+      expect(opener, isNotNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      final state = tester.state<UiSidebarLayoutState>(find.byType(UiSidebarLayout));
+      expect(state.isOpen, isTrue);
+      expect(FocusManager.instance.primaryFocus, isNot(opener), reason: 'focus moved into the drawer');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(state.isOpen, isFalse);
+      expect(FocusManager.instance.primaryFocus, opener);
+      FocusManager.instance.highlightStrategy = FocusHighlightStrategy.automatic;
+    });
+
+    testWidgets('words come from UiStrings; the backdrop is a labelled close button', (tester) async {
+      final handle = tester.ensureSemantics();
+      tester.view.physicalSize = const Size(390, 700) * tester.view.devicePixelRatio;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(UiApp(
+        theme: UiThemeName.dark,
+        config: const UiConfig(strings: UiStrings(sidebarToggle: 'MenuDV', sidebarClose: 'CloseDV', sidebarLabel: 'NavDV')),
+        home: shell(),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Toggle navigation'), findsNothing);
+      expect(find.bySemanticsLabel('CloseDV'), findsNothing, reason: 'no close control while closed');
+      await tester.tap(find.bySemanticsLabel('MenuDV'));
+      await tester.pumpAndSettle();
+      expect(find.semantics.byLabel('NavDV'), findsOneWidget);
+      final close = find.bySemanticsLabel('CloseDV');
+      expect(close, findsOneWidget);
+      tester.semantics.tap(find.semantics.byLabel('CloseDV'));
+      await tester.pumpAndSettle();
+      expect(tester.state<UiSidebarLayoutState>(find.byType(UiSidebarLayout)).isOpen, isFalse);
+      handle.dispose();
+    });
   });
 
   group('UiSplitter', () {

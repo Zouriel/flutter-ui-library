@@ -73,7 +73,7 @@ class FoundationPage extends StatelessWidget {
             ApiRow('radius', 'bool', 'Rounded corners.', def: 'true'),
             ApiRow('animations', 'bool', 'Library motion.', def: 'true'),
             ApiRow('fontFamily', 'String?', 'Overrides the theme font.'),
-            ApiRow('strings', 'UiStrings', 'The library\'s own words (the web provideUiStrings), English by default: close, dismiss, clear, clearAll, clearSearch, previousPage, nextPage, previousMonth, nextMonth, chooseDate, moreActions, uploadLabel, uploadHint. Read with context.uiStrings.', def: 'UiStrings()'),
+            ApiRow('strings', 'UiStrings', 'The library\'s own words (the web provideUiStrings), English by default: close, dismiss, clear, clearAll, clearSearch, previousPage, nextPage, previousMonth, nextMonth, chooseDate, moreActions, uploadLabel, uploadHint, holdHint, confirmTitle, confirm, cancel, zoomIn, zoomOut, placePinAtCentre, googleSignIn, googleSignUp, googleContinue, googleSignInShort, sidebarToggle, sidebarClose, sidebarLabel. Read with context.uiStrings.', def: 'UiStrings()'),
           ],
         ),
       ],

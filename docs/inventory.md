@@ -286,6 +286,13 @@ File: `card/src/stat-card.ts`
 - Inputs: `label` = ''; `value`: string | number = ''; `delta`: string | number; `trend`: 'up' | 'down' = 'up'; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiFeatureCard (component, `ui-feature-card`) (0.37)
+File: `card/src/feature-card.ts`  
+Product or service card for a landing page: icon in a tinted badge, eyebrow, title, description and an action; the whole card is one target.  
+- Inputs: `title`; `description`; `eyebrow`; `actionLabel`; `href` (web only); `tone` (primary | accent | brand | neutral); `layout` (vertical | horizontal); `size` (md | lg); `disabled` (Flutter `enabled: false`); `glass`; `radius`; `[icon]` slot (Flutter `icon`)
+- Outputs: `action` (Flutter `onPressed`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 
 ## combobox
 
@@ -1163,9 +1170,10 @@ File: `layout/src/scroll-area.ts`
 ### UiSidebarLayout (component, `ui-sidebar-layout`)
 File: `layout/src/sidebar-layout.ts`  
 `ui-sidebar-layout` — responsive application shell. A fixed sidebar beside a scrolling main column on desktop; below `breakpoint` the sidebar becomes an off-canvas drawer toggled by a built-in hamburger, over a dimmed backdrop. Project the nav into `[sidebar]`, the top-bar content into `[header]`, and the page into the default slot: <ui-sidebar-layout [breakpoint]="860"> <my-nav sidebar></my-nav> <h1 header>Page title</h1> <router-outlet></router-outlet> </ui-sidebar-layout> Bind `[(open)]` to drive the mobile drawer yourself (e.g. close it on navigation), or call `close()`. The breakpoint is driven by `matchMedia`, not a hardcoded CSS `@media`, so it stays configurable per app.  
-- Inputs: `breakpoint` = 860; `sidebarWidth` = '248px'; `mainLandmark` = true
+- Inputs: `breakpoint` = 860; `sidebarWidth` = '248px'; `mainLandmark` = true; `bar` = true (0.37); `fill` = false (0.37)
 - Two-way: `open` = false
-- Methods: `toggle()`, `close()`
+- Methods: `toggle()`, `close()`; readonly `compact` (Flutter `UiSidebarLayout.of(context).compact`)
+- Strings: `sidebarToggle`, `sidebarClose`, `sidebarLabel`; RTL: sidebar on the start side
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSpacer (component, `ui-spacer`)
@@ -1683,3 +1691,9 @@ Wraps Google Identity Services' own rendered button and emits the ID token (`cre
 - Inputs: `clientId`; `text`; `theme`; `shape`; `width`; `locale`; `nonce`
 - Outputs: `credential`; `failed`
 - [ ] Flutter port (not applicable: native sign-in comes from the google_sign_in plugin)  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+
+### UiGoogleAuthorization (service, `@zouriel/ui/google-sign-in`) (0.37, web only)
+File: `google-sign-in/src/google-authorization.ts`  
+Asks the signed-in user for more Google scopes through Google Identity Services' token client (`google.accounts.oauth2.initTokenClient`, popup) and returns `{ accessToken, grantedScopes, expiresIn }`; rejects with `UiGoogleAuthorizationError` (`cancelled` | `popup_blocked` | `unavailable` | `failed`). Web only: a Flutter app asks for scopes with the `google_sign_in` package's `authorizationClient` (`authorizeScopes` / `authorizationForScopes`), which needs no library widget.  
+- Methods: `requestAccessToken({ clientId, scopes, hint?, prompt? })`; `preload()`
+- [ ] Flutter port (not applicable: scopes come from the google_sign_in plugin's authorizationClient)  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase

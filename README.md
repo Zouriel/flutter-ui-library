@@ -62,6 +62,17 @@ sign anyone in: add the `google_sign_in` package to the app, call
 `googleSignUp`, `googleContinue`, `googleSignInShort`) are in `UiStrings`. Its text is the bundled
 Roboto Medium (Google's guideline now uses Google Sans, which the library doesn't ship).
 
+**App shell and feature card (0.37):** `UiSidebarLayout` puts the sidebar on the start side (the
+right in right-to-left text, sliding in from the right) and takes its words from `UiStrings`
+(`sidebarToggle`, `sidebarClose`, `sidebarLabel`). For an app with its own top bar, `bar: false`
+drops the built-in bar and menu button, `fill: true` gives the body all the space (no padding, no
+scroll view: put a list and a docked composer in it) and keeps clear of the safe area, and
+`UiSidebarLayout.of(context)` gives `compact` (drawer mode), `open`, `toggle()` and `close()` so the
+app shows its own menu button only in drawer mode. `UiFeatureCard` is a product card for a landing
+page: an icon in a tinted badge, eyebrow, title, description and an action, with `tone` (primary,
+accent, brand, neutral), `layout` (vertical, horizontal) and `size` (md, lg); with `onPressed` the
+whole card is one button.
+
 The sea theme comes as a day/night pair, `UiThemeName.maldives` and `UiThemeName.maldivesDark`
 (the web's `maldives` and `maldives-dark`): a night toggle is
 `controller.set(isNight ? UiThemeName.maldivesDark : UiThemeName.maldives)`. `UiSeaSurface` scopes

@@ -1,6 +1,6 @@
 name: zouriel_ui
 description: The @zouriel/ui design system for Flutter. Token-driven components with 15 themes, built on the widgets layer (no Material).
-version: 0.36.0
+version: 0.37.0
 publish_to: none
 resolution: workspace
 

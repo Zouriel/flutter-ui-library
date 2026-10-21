@@ -101,6 +101,28 @@ filtering brightness). The other palettes' sheen/breathe/aurora motion is still 
 `[uiTide]` becomes `UiTide(index:, delay:, step:)`; its wait is the front of one controller run, so
 tests never leave a timer pending.
 
+**0.37.0 additions.** `UiSidebarLayout`: `bar`, `fill`, `scrollSidebar`, RTL (the sidebar is on the
+start side through `Directionality`, `BorderDirectional` and `AnimatedPositionedDirectional`),
+`UiSidebarLayout.of(context)` (an InheritedWidget with `compact`, `open`, `toggle`, `close`; the web
+exposes `compact` as a readonly signal), focus back to the opener on close, and the words in
+`UiStrings`. The web drawer has a "Close navigation" button that shows when focused; Flutter gives
+screen readers the same control as the backdrop (a labelled button, like Material's ModalBarrier)
+plus `onDismiss` on the drawer. `fill` handles the safe area itself: the page column pads top,
+bottom and the far side with `MediaQuery.paddingOf`, the sidebar pads top, bottom and its own side
+inside its background, and both remove those insets for their children so a nested SafeArea doesn't
+pad twice. `scrollSidebar` (default: `fill`) exists only in Flutter: CSS `overflow-y: auto` never
+breaks a flex child, but a `SingleChildScrollView` breaks a `ListView` sidebar, so it can be
+turned off. `UiFeatureCard` (web `ui-feature-card`): Flutter has no `href`; the card is one
+`UiInteractive` button named "title, action label" with the description as its hint, and the action
+is only drawn. The title is a header only on a static card (an interactive card is one button
+node). The surface wash is 3% of the tone (6% failed AA for primary text on lightOrange and
+lightPurple); textContrastGuideline samples the card's one merged node as a whole, so a dedicated test
+checks every drawn text colour against the washed surface in every theme. The action keeps to the
+bottom only under a tight height (a stretched row); a loose height (Align, Center) hugs the content.
+The web's `UiGoogleAuthorization` (an OAuth access token for extra scopes through Google Identity
+Services' token client) has no Flutter twin: a Flutter app asks for scopes with the `google_sign_in`
+package's `authorizationClient` (`authorizeScopes`), and there is no widget for the library to add.
+
 **0.36.0 additions.** `UiGoogleSignInButton` (web `ui-google-button`) draws Google's sign-in
 button to https://developers.google.com/identity/branding-guidelines: the colours are Google's
 (`UiGoogleBrand`), the one file `style_contract_test` lets use literal colours; 40 high, 12 before

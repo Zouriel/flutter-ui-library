@@ -15,6 +15,10 @@ class DataPage extends StatefulWidget {
 class _DataPageState extends State<DataPage> {
   List<String> _tags = ['angular', 'flutter', 'design'];
   int _cardTaps = 0;
+  UiFeatureTone _ftTone = UiFeatureTone.primary;
+  UiFeatureLayout _ftLayout = UiFeatureLayout.vertical;
+  UiSize _ftSize = UiSize.md;
+  int _ftTaps = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +152,72 @@ class _DataPageState extends State<DataPage> {
             ApiRow('onTap', 'VoidCallback?', 'Makes the whole card a button.'),
             ApiRow('glass', 'bool?', 'Frosted surface; defaults to UiConfig.glass.'),
           ],
+        ),
+        DocSection(
+          name: 'Feature card',
+          widget: 'UiFeatureCard',
+          summary: 'A product or service card for a landing page: an icon in a tinted badge, an optional eyebrow, a title, a description and an action with an arrow. With onPressed the whole card is one button, named "title, action label" and described by the description; the action is drawn inside it, not a second target. tone tints the badge and washes the surface (brand also draws the theme\'s brand gradient around the card and badge); layout is vertical or horizontal; size md or lg. enabled: false dims it. In a stretched row the actions line up at the bottom. The arrow flips in right-to-left text.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            Wrap(spacing: t.space3, runSpacing: t.space2, children: [
+              UiSegmented<UiFeatureTone>(
+                label: 'Tone',
+                size: UiSize.sm,
+                value: _ftTone,
+                onChanged: (v) => setState(() => _ftTone = v),
+                options: [for (final v in UiFeatureTone.values) UiSegmentedOption(value: v, label: v.name)],
+              ),
+              UiSegmented<UiFeatureLayout>(
+                label: 'Layout',
+                size: UiSize.sm,
+                value: _ftLayout,
+                onChanged: (v) => setState(() => _ftLayout = v),
+                options: [for (final v in UiFeatureLayout.values) UiSegmentedOption(value: v, label: v.name)],
+              ),
+              UiSegmented<UiSize>(
+                label: 'Size',
+                size: UiSize.sm,
+                value: _ftSize,
+                onChanged: (v) => setState(() => _ftSize = v),
+                options: const [UiSegmentedOption(value: UiSize.md, label: 'md'), UiSegmentedOption(value: UiSize.lg, label: 'lg')],
+              ),
+            ]),
+            UiFeatureCard(
+              icon: const UiIcon(HugeIcons.strokeRoundedStethoscope),
+              eyebrow: 'Find Doctor',
+              title: 'Book a doctor today',
+              description: 'See who is free at clinics near you and book in a minute.',
+              actionLabel: 'Find a doctor',
+              tone: _ftTone,
+              layout: _ftLayout,
+              size: _ftSize,
+              onPressed: () => setState(() => _ftTaps++),
+            ),
+            UiText('Pressed $_ftTaps times', variant: UiTextVariant.caption),
+            UiFeatureCard(
+              icon: const UiIcon(HugeIcons.strokeRoundedAmbulance),
+              title: 'Home nursing',
+              description: 'Coming soon to your island.',
+              actionLabel: 'Notify me',
+              tone: _ftTone,
+              layout: UiFeatureLayout.horizontal,
+              enabled: false,
+              onPressed: () {},
+            ),
+          ]),
+          code: "UiFeatureCard(\n  icon: const UiIcon(HugeIcons.strokeRoundedStethoscope),\n  eyebrow: 'Find Doctor',\n  title: 'Book a doctor today',\n  description: 'See who is free near you.',\n  actionLabel: 'Find a doctor',\n  tone: UiFeatureTone.brand,\n  onPressed: openFinder,\n)",
+          api: const [
+            ApiRow('title', 'String', 'The heading (a header when the card is static).'),
+            ApiRow('description / eyebrow', 'String?', 'The text under the title; a short tag above it, in capitals.'),
+            ApiRow('icon', 'Widget?', 'Shown in the badge, sized 24 (lg 28) and coloured by the tone.'),
+            ApiRow('actionLabel', 'String?', 'The action drawn at the bottom with an arrow.'),
+            ApiRow('tone', 'UiFeatureTone', 'primary, accent (solid badge), brand (gradient border and ring), neutral.', def: 'primary'),
+            ApiRow('layout', 'UiFeatureLayout', 'vertical, or horizontal with the badge at the start.', def: 'vertical'),
+            ApiRow('size', 'UiSize', 'md (24 padding, 48 badge) or lg (32, 56).', def: 'md'),
+            ApiRow('enabled', 'bool', 'false: dimmed and not tappable.', def: 'true'),
+            ApiRow('glass / radius', 'bool?', 'Frosted surface, rounded corners; default from UiConfig.'),
+            ApiRow('semanticLabel', 'String?', 'Replaces the spoken "title, action label".'),
+          ],
+          callbacks: const [ApiRow('onPressed', 'VoidCallback?', 'Makes the whole card one button. Null: a static card.')],
         ),
         DocSection(
           name: 'Divider',
