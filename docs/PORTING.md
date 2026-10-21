@@ -170,6 +170,58 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.42.0.** Map routes, fit to points and map polish (Dhirumi nurse map: "detailed and easy to
+navigate", the route to the patient shown from the moment she accepts).
+
+- Routes. Flutter: a `PolylineLayer` (flutter_map 8.3.2) between the tiles and the pulse, wrapped in
+  `IgnorePointer`; each `Polyline` has the tone colour, `borderColor` `mapRouteCasing` and round caps
+  and joins. flutter_map paints the border as one stroke `strokeWidth + borderStrokeWidth` wide, so
+  `borderStrokeWidth` is casing - line (4 = 2 each side). Widths follow the zoom through
+  `MapCamera.of(context)` (`uiMapRouteWidth`: 5 over 9 from zoom 14, 60% at zoom 10 and out). Web:
+  two Leaflet polylines per route (casing then line) in their own pane, z-index 420 (above overlays
+  400, below the pulse 450, the dot 500 and markers 600), `interactive: false`, the colours from CSS
+  (`.ui-map-route-line[data-tone]`, which beats Leaflet's `stroke` attribute) and widths set with
+  `setStyle` on `zoomend`. Updates move the same layers (`setLatLngs`) on the web and rebuild the layer
+  widget on the same map in Flutter. Names: one per route; the web puts `role="img"` + `aria-label`
+  on the line path (the casing is `aria-hidden`), Flutter one image `Semantics` node for the layer
+  with the labels joined (flutter_map has no per-line semantics). The web takes `[lat, lng]` tuples as
+  well as `{ lat, lng }` (`UiMapPoint`); Flutter takes `UiLatLng`, the library's point type
+  everywhere (latlong2's `LatLng` is not part of the public API).
+- Route colours: new tokens `--ui-map-route-casing` (surface-raised) and `--ui-map-route-primary /
+  -muted / -success / -warning / -danger`, defaulting to the theme's primary, text-muted and status
+  colours. Each must hold 3:1 over the casing and over every colour covering more than 0.2% of real
+  MapTiler streets-v2 / streets-v2-dark and dataviz / dataviz-dark tiles of Male and Hulhumale (zoom
+  15-16) in the theme's brightness; where the theme colour didn't (lightOrange primary 2.91, maldives
+  success / danger 2.96 / 2.92, the dark palettes' shared success / danger and translucent muted,
+  darkPink / darkPurple primary, Winter Dark muted 2.91) the theme sets its own, the nearest lightness
+  of the same hue that passes. The worst ground is streets-v2's water (84caf9) in light themes and
+  its roads (365485) and grey (545454) in dark ones.
+- fitPoints. One sum in both (`uiMapFitView`): Web Mercator unit coordinates, the bounds' span at zoom
+  0 x 256, zoom = floor(log2(min(free width / span x, free height / span y))) clamped to 1..maxZoom
+  (a whole zoom: Leaflet snaps to whole zooms anyway, and both stay identical), and the map's own
+  centre = the bounds' middle less half the (left - right, top - bottom) difference of the free area
+  (the insets, resolved for the direction, plus the padding). A test in each pins the same numbers.
+  Flutter animates centre and zoom with one AnimationController (motionSlow, easeStandard; hence
+  TickerProviderStateMixin), the web `setView` with `animate`; both jump under reduced motion or
+  `animate: false`. Unlike flyTo, fitPoints animates in Flutter too.
+- Marker labels: the web drops the marker's `white-space: nowrap` and gives `.ui-map-label`
+  `width: max-content; max-width: var(--ui-map-label-max)` with a two-line clamp; the map sets
+  `--ui-map-label-max` = min(320, canvas width - 32) from its ResizeObserver. Flutter reads the same
+  from a LayoutBuilder around the FlutterMap (not around the whole widget: that hid the map's
+  semantics node from `getSemantics(find.byType(UiMap))`) and sizes each `Marker` box to
+  labelMax + 48. Both use `radiusLg`, which clamps to a pill on one line.
+- Zoom buttons: Flutter used `UiIconButton(variant: outline)`, see-through over the tiles (the washed
+  out +/- in the Dhirumi screenshot). New `UiMapZoomButton` with the locate button's decoration
+  (`uiMapControlDecoration`: opaque surfaceRaised, border, shadow2), 38px / 44px on touch with the
+  48dp padded target, pulled out by the touch slop so the squares stay put and 4px apart. Web: the
+  Leaflet buttons go from size-md with shadow-1 to size-lg with shadow-2, as the locate button.
+- The "solid darker band" under the floating panel in the Dhirumi screenshot is not in the library:
+  those shots come from widget tests, where `debugDisableShadows` is true by default and every
+  shadow is drawn as a hard, unblurred shape (UiOutsetShadow draws only the part outside the glass,
+  so a 16px-offset hard band shows under it). Rendered with `debugDisableShadows = false` (as
+  `expectThemedGolden` does) the shadow is the soft one devices draw; screenshot harnesses should set
+  it false too.
+
 **0.41.3.** From the owner's phone test of Dhirumi: "filling out fields in the bottom drawer in the
 mobile app is weird cause the keyboard hides the drawer and doesnt push it up. the over the map drawer
 isnt transparent in neither versions", and the nurse app's stale map insets.

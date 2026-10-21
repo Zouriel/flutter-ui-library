@@ -8,7 +8,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
-import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../feedback/spinner.dart';
@@ -122,6 +121,80 @@ double uiMapAccuracyPx(double? accuracy, double lat, double zoom) {
   return (2 * accuracy / metresPerPx).roundToDouble().clamp(uiMapAccuracyMin, uiMapAccuracyMax);
 }
 
+/// A route line's colour (the web `UiMapRouteTone`): the theme's `mapRoute*` token.
+enum UiMapRouteTone { primary, muted, success, warning, danger }
+
+/// A route drawn on the map (the web `UiMapRoute`): a line in its [tone] over a casing, under the
+/// dots, markers and the pin. [semanticLabel] is its one accessible name ("Route, 1.2 km"), from
+/// the app; without it the route is not read out.
+@immutable
+class UiMapRoute {
+  const UiMapRoute({required this.id, required this.points, this.tone = UiMapRouteTone.primary, this.semanticLabel});
+  final String id;
+  final List<UiLatLng> points;
+  final UiMapRouteTone tone;
+  final String? semanticLabel;
+}
+
+/// The theme colour of a route [tone].
+Color uiMapRouteColor(UiTokens t, UiMapRouteTone tone) => switch (tone) {
+      UiMapRouteTone.primary => t.mapRoutePrimary,
+      UiMapRouteTone.muted => t.mapRouteMuted,
+      UiMapRouteTone.success => t.mapRouteSuccess,
+      UiMapRouteTone.warning => t.mapRouteWarning,
+      UiMapRouteTone.danger => t.mapRouteDanger,
+    };
+
+/// The route line's width and its casing's, in px, at [zoom] (the web `uiMapRouteWidth`): 5 over a
+/// 9px casing (2px each side) from zoom 14 in, thinning to 60% at zoom 10 and out.
+({double line, double casing}) uiMapRouteWidth(double zoom) {
+  final k = (0.6 + 0.1 * (zoom - 10)).clamp(0.6, 1.0);
+  return (line: 5 * k, casing: 9 * k);
+}
+
+/// The closest [UiMapState.fitPoints] zooms by default, and the zoom it shows a single point at.
+const double uiMapFitMaxZoom = 17;
+
+/// The room [UiMapState.fitPoints] leaves around the points by default, px per side.
+const double uiMapFitPadding = 24;
+
+const double _maxLat = 85.0511287798;
+double _unitX(double lng) => (lng + 180) / 360;
+double _unitY(double lat) {
+  final s = math.sin(lat.clamp(-_maxLat, _maxLat) * math.pi / 180);
+  return 0.5 - math.log((1 + s) / (1 - s)) / (4 * math.pi);
+}
+
+double _unitLat(double y) {
+  final n = math.pi * (1 - 2 * y);
+  return math.atan((math.exp(n) - math.exp(-n)) / 2) * 180 / math.pi;
+}
+
+/// Where a map of [size] looks so every point fits inside the part left free by [area] (the insets
+/// plus padding, px per physical side; the web `uiMapFitView`): the map's own centre and a whole
+/// zoom level (Web Mercator, 256 px tiles at zoom 0), at most [maxZoom]. All the points in one place
+/// (or one point): [maxZoom], the point in the middle of that part. Null without points.
+UiMapView? uiMapFitView(List<UiLatLng> points, Size size, EdgeInsets area, {double maxZoom = uiMapFitMaxZoom, double minZoom = 1}) {
+  if (points.isEmpty) return null;
+  final xs = points.map((p) => _unitX(p.lng)).toList();
+  final ys = points.map((p) => _unitY(p.lat)).toList();
+  final x0 = xs.reduce(math.min), x1 = xs.reduce(math.max), y0 = ys.reduce(math.min), y1 = ys.reduce(math.max);
+  final w = math.max(1.0, size.width - area.left - area.right);
+  final h = math.max(1.0, size.height - area.top - area.bottom);
+  final dx = (x1 - x0) * 256, dy = (y1 - y0) * 256;
+  var zoom = maxZoom;
+  if (dx > 1e-12 || dy > 1e-12) {
+    final fit = math.log(math.min(dx > 1e-12 ? w / dx : double.infinity, dy > 1e-12 ? h / dy : double.infinity)) / math.ln2;
+    zoom = math.min(maxZoom, (fit + 1e-9).floorToDouble());
+  }
+  zoom = math.max(minZoom, zoom);
+  final scale = 256 * math.pow(2, zoom);
+  // The middle of the points goes to the middle of the free part: the map's centre is that far off it.
+  final cx = (x0 + x1) / 2 - (area.left - area.right) / 2 / scale;
+  final cy = (y0 + y1) / 2 - (area.top - area.bottom) / 2 / scale;
+  return UiMapView(_unitLat(cy), cx * 360 - 180, zoom);
+}
+
 /// The tile URL a map shows (the web `uiMapTileUrl`): the dark one on a dark theme when given.
 String uiMapTileUrl(String tileUrl, String? tileUrlDark, bool dark) => dark && tileUrlDark != null && tileUrlDark.isNotEmpty ? tileUrlDark : tileUrl;
 
@@ -165,6 +238,15 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 /// - [userLocation]: the "you are here" dot with a white ring and an accuracy halo sized in metres;
 ///   above the tiles and pulse, below the markers and the pin; read out as "Your location". Move the
 ///   map to it with [UiMapState.flyTo].
+/// - [routes] (0.42.0): lines along the road (from OSRM, say) in a tone over a casing, round caps and
+///   joins, 5 over 9px (thinner when zoomed out), above the tiles and below the pulse, dot, markers
+///   and pin. A new list redraws the lines on the same map; an empty one removes them. Each route's
+///   [UiMapRoute.semanticLabel] is its one name for screen readers ("Route, 1.2 km").
+/// - [UiMapState.fitPoints] (0.42.0): shows every point inside the visible part (between
+///   [viewInsets]) plus padding, at a whole zoom up to maxZoom (17); one point is centred there at
+///   maxZoom. Animated unless reduced motion.
+/// - Marker labels size to their text, up to 320px or the map's width less 32, and wrap to a second
+///   line before the ellipsis.
 ///
 /// [userAgentPackageName] is sent with tile requests (the OSM policy asks for it); [tileProvider]
 /// replaces network tiles (offline tiles, tests).
@@ -199,7 +281,11 @@ class UiMap extends StatefulWidget {
     this.locateOff = false,
     this.onLocate,
     this.userLocation,
+    this.routes = const [],
   });
+
+  /// Route lines (0.42.0), drawn under the dot, markers and pin; an empty list removes them.
+  final List<UiMapRoute> routes;
 
   /// Tiles for dark themes, shown undimmed; null dims the light tiles instead.
   final String? tileUrlDark;
@@ -264,7 +350,7 @@ class UiMap extends StatefulWidget {
   State<UiMap> createState() => UiMapState();
 }
 
-class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
+class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   final MapController _controller = MapController();
 
   /// Pans the map when the insets change (the sheet moved to another snap).
@@ -275,6 +361,12 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
   /// The inset shift the view is laid out for.
   Offset _shift = Offset.zero;
   final GlobalKey _box = GlobalKey();
+
+  /// fitPoints' move: from one camera to another.
+  late final AnimationController _fly = AnimationController(vsync: this)..addListener(_onFly);
+  LatLng _flyFrom = const LatLng(0, 0), _flyTo = const LatLng(0, 0);
+  double _flyZoomFrom = 0, _flyZoomTo = 0;
+  Curve _flyCurve = Curves.linear;
 
   /// The pin while a finger drags it.
   UiLatLng? _dragging;
@@ -308,6 +400,7 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    _fly.dispose();
     _pan.dispose();
     _controller.dispose();
     super.dispose();
@@ -355,8 +448,56 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
   /// the current zoom. For "my location": call it with the position the app found.
   void flyTo(UiLatLng c, {double? zoom}) {
     if (!_ready) return;
+    _fly.stop();
     _pan.stop();
     _controller.move(c._ll, zoom ?? _controller.camera.zoom, offset: _shift);
+    final v = _visibleCenter(_controller.camera);
+    widget.onCenterChanged?.call(UiMapView(v.latitude, v.longitude, _controller.camera.zoom));
+  }
+
+  /// Shows every point inside the visible part (between [UiMap.viewInsets]) with [padding] to spare
+  /// (24 on each side by default), at a whole zoom up to [maxZoom] (17); a single point is centred
+  /// there at [maxZoom]. Animated unless [animate] is false or animations are off (reduced motion).
+  /// For "show me and the patient": the nurse's position, the patient's and the route's points.
+  void fitPoints(List<UiLatLng> points, {EdgeInsets? padding, double? maxZoom, bool animate = true}) {
+    if (!_ready || points.isEmpty) return;
+    final box = _box.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final insets = widget.viewInsets.resolve(Directionality.of(context));
+    final pad = padding ?? const EdgeInsets.all(uiMapFitPadding);
+    final v = uiMapFitView(points, box.size, insets + pad, maxZoom: math.min(maxZoom ?? uiMapFitMaxZoom, 19));
+    if (v == null) return;
+    _pan.stop();
+    _fly.stop();
+    final cam = _controller.camera;
+    final to = LatLng(v.lat, v.lng);
+    if (!animate || uiFxMotion(context) != UiFxMotion.full) {
+      _controller.move(to, v.zoom);
+      _reportView();
+      return;
+    }
+    final t = context.ui;
+    _flyFrom = cam.center;
+    _flyTo = to;
+    _flyZoomFrom = cam.zoom;
+    _flyZoomTo = v.zoom;
+    _flyCurve = t.easeStandard;
+    _fly
+      ..duration = t.motionSlow
+      ..forward(from: 0).whenCompleteOrCancel(() {
+        if (mounted && _fly.isCompleted) _reportView();
+      });
+  }
+
+  void _onFly() {
+    final k = _flyCurve.transform(_fly.value);
+    _controller.move(
+      LatLng(_flyFrom.latitude + (_flyTo.latitude - _flyFrom.latitude) * k, _flyFrom.longitude + (_flyTo.longitude - _flyFrom.longitude) * k),
+      _flyZoomFrom + (_flyZoomTo - _flyZoomFrom) * k,
+    );
+  }
+
+  void _reportView() {
     final v = _visibleCenter(_controller.camera);
     widget.onCenterChanged?.call(UiMapView(v.latitude, v.longitude, _controller.camera.zoom));
   }
@@ -397,7 +538,7 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
     final darkTiles = dark && tileUrl != widget.tileUrl;
     final user = widget.userLocation;
 
-    final map = FlutterMap(
+    Widget mapFor(double labelMax) => FlutterMap(
       key: _box,
       mapController: _controller,
       options: MapOptions(
@@ -425,6 +566,8 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
           // Dark tiles are drawn for the dark; only the light ones are dimmed.
           tileBuilder: dark && !darkTiles ? _dim : null,
         ),
+        // Routes: over the tiles, under the pulse, the dot, the markers and the pin.
+        if (widget.routes.isNotEmpty) _RouteLayer(routes: widget.routes),
         // The pulse: geo-anchored like a marker, under the markers and pin, never hit or read out.
         if (widget.pulse case final p? when p.active)
           MarkerLayer(markers: [
@@ -441,10 +584,11 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
           for (final m in widget.markers)
             Marker(
               point: LatLng(m.lat, m.lng),
-              width: 248,
+              // The dot's 48dp target (half of it left of the point) and the label beside it.
+              width: _MarkerChip.boxWidth(labelMax),
               height: 48,
               alignment: Alignment.centerRight,
-              child: _MarkerChip(marker: m, onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m)),
+              child: _MarkerChip(marker: m, labelMax: labelMax, onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m)),
             ),
         ]),
         if (pin != null)
@@ -475,9 +619,13 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
       ],
     );
 
-    final zoom = Column(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
-      UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: context.uiStrings.zoomIn, variant: UiButtonVariant.outline, onPressed: () => _zoomBy(1)),
-      UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMinusSign), label: context.uiStrings.zoomOut, variant: UiButtonVariant.outline, onPressed: () => _zoomBy(-1)),
+    // The zoom buttons: the locate button's raised surface (0.42.0; outline buttons were see-through
+    // and washed out over a light street map). On touch their 48dp targets touch, so the visible
+    // squares keep the web's 4px gap.
+    final slop = UiMapLocateButton.touchSlop(context);
+    final zoom = Column(mainAxisSize: MainAxisSize.min, spacing: math.max(0, t.space1 - 2 * slop), children: [
+      UiMapZoomButton(icon: HugeIcons.strokeRoundedAdd01, label: context.uiStrings.zoomIn, onPressed: () => _zoomBy(1)),
+      UiMapZoomButton(icon: HugeIcons.strokeRoundedMinusSign, label: context.uiStrings.zoomOut, onPressed: () => _zoomBy(-1)),
     ]);
     // The credits are English ("© MapTiler © OpenStreetMap contributors"): set them LTR in their own
     // run so an RTL layout doesn't move the © signs; only the corner they sit in is mirrored.
@@ -516,14 +664,19 @@ class UiMapState extends State<UiMap> with SingleTickerProviderStateMixin {
           child: ColoredBox(
             color: t.surfaceSubtle,
             child: Stack(children: [
-              // Leaflet and flutter_map lay out in screen terms; keep the map itself LTR.
-              Positioned.fill(child: Directionality(textDirection: TextDirection.ltr, child: map)),
+              // Leaflet and flutter_map lay out in screen terms; keep the map itself LTR. The marker
+              // labels' widest: 320, or the map's width less 32 when that is narrower.
+              Positioned.fill(
+                child: LayoutBuilder(
+                  builder: (context, box) => Directionality(textDirection: TextDirection.ltr, child: mapFor(math.max(80.0, math.min(320.0, box.maxWidth - 32)))),
+                ),
+              ),
               // The controls sit inside the part the insets leave visible.
               AnimatedPositionedDirectional(
                 duration: context.uiAnimate ? t.motionBase : Duration.zero,
                 curve: t.easeStandard,
-                top: t.space2 + widget.viewInsets.top,
-                start: t.space2 + widget.viewInsets.start,
+                top: t.space2 + widget.viewInsets.top - slop,
+                start: t.space2 + widget.viewInsets.start - slop,
                 child: zoom,
               ),
               AnimatedPositioned(
@@ -590,12 +743,7 @@ class UiMapLocateButton extends StatelessWidget {
           duration: context.uiAnimate ? t.motionFast : Duration.zero,
           width: dim,
           height: dim,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: s.hovered || s.pressed ? t.surfaceHover : t.surfaceRaised,
-            border: Border.all(color: t.border),
-            boxShadow: s.focused ? [...t.shadow2, ...t.focusRing] : t.shadow2,
-          ),
+          decoration: uiMapControlDecoration(context, s),
           child: Center(
             child: locating
                 ? const UiSpinner(size: 18, decorative: true)
@@ -604,6 +752,78 @@ class UiMapLocateButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// A map zoom button (exported for tests): the locate button's raised surface, border and shadow
+/// in a rounded square, 38px (44px on touch screens, where its hit area is padded to 48dp).
+class UiMapZoomButton extends StatelessWidget {
+  const UiMapZoomButton({super.key, required this.icon, required this.label, this.onPressed});
+  final UiIconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final dim = uiTouchPlatform(context) ? t.sizeTouch : t.sizeLg;
+    return UiInteractive(
+      onTap: onPressed,
+      semanticLabel: label,
+      excludeChildSemantics: true,
+      builder: (context, s) => AnimatedContainer(
+        duration: context.uiAnimate ? t.motionFast : Duration.zero,
+        width: dim,
+        height: dim,
+        decoration: uiMapControlDecoration(context, s, shape: BoxShape.rectangle),
+        child: Center(child: UiIcon(icon, size: 20, color: t.text)),
+      ),
+    );
+  }
+}
+
+/// The surface every map control is drawn on (the locate and zoom buttons): opaque raised surface
+/// (the hover colour while hovered or pressed), the border and shadow2, plus the focus ring.
+BoxDecoration uiMapControlDecoration(BuildContext context, UiStates s, {BoxShape shape = BoxShape.circle}) {
+  final t = context.ui;
+  return BoxDecoration(
+    shape: shape,
+    borderRadius: shape == BoxShape.rectangle ? BorderRadius.circular(context.uiTheme.radius(t.radius)) : null,
+    color: s.hovered || s.pressed ? t.surfaceHover : t.surfaceRaised,
+    border: Border.all(color: t.border),
+    boxShadow: s.focused ? [...t.shadow2, ...t.focusRing] : t.shadow2,
+  );
+}
+
+/// The route lines: each a casing with the tone's line over it, widths following the zoom. Never
+/// hit; named once per route when the app gives a name.
+class _RouteLayer extends StatelessWidget {
+  const _RouteLayer({required this.routes});
+  final List<UiMapRoute> routes;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final w = uiMapRouteWidth(MapCamera.of(context).zoom);
+    final lines = [
+      for (final r in routes)
+        if (r.points.length >= 2)
+          Polyline<String>(
+            points: [for (final p in r.points) p._ll],
+            color: uiMapRouteColor(t, r.tone),
+            strokeWidth: w.line,
+            // flutter_map draws the border as a stroke strokeWidth + borderStrokeWidth wide.
+            borderStrokeWidth: w.casing - w.line,
+            borderColor: t.mapRouteCasing,
+            strokeCap: StrokeCap.round,
+            strokeJoin: StrokeJoin.round,
+            hitValue: r.id,
+          ),
+    ];
+    final names = [for (final r in routes) if (r.points.length >= 2 && r.semanticLabel != null) r.semanticLabel!];
+    final layer = IgnorePointer(child: PolylineLayer<String>(polylines: lines, simplificationTolerance: 0));
+    if (names.isEmpty) return ExcludeSemantics(child: layer);
+    return Semantics(container: true, image: true, label: names.join(', '), child: ExcludeSemantics(child: layer));
   }
 }
 
@@ -659,9 +879,16 @@ class UiMapUserDot extends StatelessWidget {
 }
 
 class _MarkerChip extends StatelessWidget {
-  const _MarkerChip({required this.marker, this.onTap});
+  const _MarkerChip({required this.marker, required this.labelMax, this.onTap});
   final UiMapMarker marker;
   final VoidCallback? onTap;
+
+  /// The widest the label gets.
+  final double labelMax;
+
+  /// The marker box for a label up to [labelMax]: the 48dp dot target and the label side by side
+  /// (laid out before the paint-time shifts that put the dot on the point).
+  static double boxWidth(double labelMax) => labelMax + 48;
 
   @override
   Widget build(BuildContext context) {
@@ -697,12 +924,14 @@ class _MarkerChip extends StatelessWidget {
                 if (marker.label != null)
                   Transform.translate(
                     offset: Offset(-t.space3, 0),
+                    // Sized to its text up to labelMax, two lines before the ellipsis. One line is a
+                    // pill (radiusLg clamps to half its height), two a soft rectangle, as on the web.
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 196),
+                      constraints: BoxConstraints(maxWidth: labelMax),
                       child: Container(
                         padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: 2),
-                        decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radiusPill), border: Border.all(color: t.border), boxShadow: t.shadow1),
-                        child: Text(marker.label!, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12)),
+                        decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radiusLg), border: Border.all(color: t.border), boxShadow: t.shadow1),
+                        child: Text(marker.label!, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 12, height: 16 / 12)),
                       ),
                     ),
                   ),

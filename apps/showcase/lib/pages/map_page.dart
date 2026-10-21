@@ -37,6 +37,17 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  // Routes: a real road route across Male (OSRM, 1.3 km), from the nurse to the patient.
+  final _routeMap = GlobalKey<UiMapState>();
+  UiMapRouteTone _tone = UiMapRouteTone.primary;
+  bool _showRoute = true;
+  static const _routeStart = UiMapUserLocation(4.17682, 73.5121, accuracy: 20);
+  static const _routePoints = [
+    UiLatLng(4.17682, 73.5121), UiLatLng(4.17678, 73.51237), UiLatLng(4.17708, 73.51244), UiLatLng(4.17709, 73.51223), UiLatLng(4.17716, 73.51216),
+    UiLatLng(4.17773, 73.51224), UiLatLng(4.17785, 73.51146), UiLatLng(4.1769, 73.51136), UiLatLng(4.1771, 73.50974), UiLatLng(4.17284, 73.50825),
+    UiLatLng(4.17311, 73.50751), UiLatLng(4.1732, 73.50755), UiLatLng(4.17344, 73.50696), UiLatLng(4.17388, 73.50715), UiLatLng(4.17387, 73.50721),
+  ];
+
   static const _markers = [
     UiMapMarker(id: 'n1', lat: 4.1762, lng: 73.5105, label: 'Aminath Hassan, RN', tone: UiStatus.success),
     UiMapMarker(id: 'n2', lat: 4.1738, lng: 73.5072, label: 'Ibrahim Rasheed, RN'),
@@ -219,6 +230,61 @@ UiMap(
             ApiRow('userLocation', 'UiMapUserLocation?', 'The you-are-here dot (tokens location / locationRing) over an accuracy halo sized in metres.'),
             ApiRow('UiMapState.flyTo(point, {zoom})', 'void', 'Moves the map so the point is in the middle of the visible part.'),
             ApiRow('UiStrings mapLocate / mapLocationOff / mapYourLocation', 'String', 'The words.', def: "'Show my location' / 'Location is off' / 'Your location'"),
+          ],
+        ),
+        DocSection(
+          name: 'Routes',
+          widget: 'UiMap routes · UiMapState.fitPoints',
+          summary: 'routes draws lines along the road, from OSRM say: each one a line in its tone over a casing, round-capped, 5 over 9px close in and thinner zoomed out. They sit above the tiles and below the pulse, the you-are-here dot, the markers and the pin, so the dots stay on top. A new list redraws the lines on the same map, and an empty one removes them. Each tone is a theme token (mapRoutePrimary, Muted, Success, Warning, Danger over mapRouteCasing) checked at 3:1 against MapTiler\'s streets-v2 and dataviz tiles in the theme\'s own brightness. semanticLabel is the route\'s one name for screen readers, such as Route, 1.3 km. fitPoints shows every point you give it (the nurse, the patient, the route) inside the part of the map viewInsets leave visible, with 24 to spare, at a whole zoom no closer than 17; one point is centred there at 17. It animates unless reduced motion. This map uses the tile URLs pasted under Styled tiles. Marker labels size to their text, up to 320 or the map\'s width less 32, and wrap to a second line before the ellipsis; the zoom buttons share the locate button\'s raised surface and shadow.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            SizedBox(
+              height: 360,
+              child: UiMap(
+                key: _routeMap,
+                zoom: 15,
+                routes: _showRoute ? [UiMapRoute(id: 'to-patient', points: _routePoints, tone: _tone, semanticLabel: 'Route, 1.3 km')] : const [],
+                userLocation: _routeStart,
+                markers: const [UiMapMarker(id: 'patient', lat: 4.17387, lng: 73.50721, label: 'Lily Magu, Hiyaa Tower 4, Hulhumale', tone: UiStatus.danger)],
+                locateControl: true,
+                tileUrl: _tileLight.isEmpty ? uiMapOsmTiles : _tileLight,
+                tileUrlDark: _tileDark.isEmpty ? null : _tileDark,
+                attribution: _tileLight.isEmpty ? '© OpenStreetMap contributors' : 'Tiles from your URL © OpenStreetMap contributors',
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'The way to the patient',
+              ),
+            ),
+            Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiSegmented<UiMapRouteTone>(
+                label: 'Tone (demo)',
+                size: UiSize.sm,
+                options: [for (final v in UiMapRouteTone.values) UiSegmentedOption(value: v, label: v.name[0].toUpperCase() + v.name.substring(1))],
+                value: _tone,
+                onChanged: (v) => setState(() => _tone = v),
+              ),
+              UiButton(label: 'Fit the route', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _routeMap.currentState?.fitPoints(_routePoints)),
+              UiButton(label: 'Fit one point', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _routeMap.currentState?.fitPoints(const [UiLatLng(4.17682, 73.5121)])),
+              UiButton(label: _showRoute ? 'Remove the route' : 'Show the route', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _showRoute = !_showRoute)),
+            ]),
+          ]),
+          code: '''UiMap(
+  key: mapKey,
+  fill: true,
+  viewInsets: EdgeInsetsDirectional.only(top: cardCover, bottom: sheetCover),
+  userLocation: me,
+  markers: [patient],
+  routes: [UiMapRoute(id: 'to-patient', points: route.points, semanticLabel: 'Route, \${route.km} km')],
+)
+
+// The moment she accepts: fetch the road route (OSRM GeoJSON is [lng, lat]: swap it) and show it all.
+mapKey.currentState!.fitPoints([me, patient, ...route.points]); // inside the part between the insets''',
+          api: const [
+            ApiRow('routes', 'List<UiMapRoute>', 'Lines along the road: id, points (UiLatLng), tone, semanticLabel. Under the pulse, dot, markers and pin; redrawn on the same map; empty removes them.', def: 'const []'),
+            ApiRow('UiMapRoute.tone', 'UiMapRouteTone', 'primary, muted, success, warning, danger: the theme\'s mapRoute* colour over mapRouteCasing (uiMapRouteColor).', def: 'primary'),
+            ApiRow('UiMapRoute.semanticLabel', 'String?', 'The route\'s one accessible name ("Route, 1.3 km"); without it the line is not read out.'),
+            ApiRow('UiMapState.fitPoints(points, {padding, maxZoom, animate})', 'void', 'Every point inside the visible part (between viewInsets) plus padding (24), at a whole zoom up to maxZoom (17); one point is centred at maxZoom. Animated unless animate is false or reduced motion.'),
+            ApiRow('uiMapFitView(points, size, area, {maxZoom})', 'UiMapView?', 'The view fitPoints moves to (the map\'s own centre and zoom), for tests or a first view.'),
+            ApiRow('uiMapRouteWidth(zoom)', '({double line, double casing})', 'The widths at a zoom: 5 over 9 from zoom 14, down to 60% at zoom 10.'),
+            ApiRow('UiMapZoomButton', 'widget', 'The zoom buttons: the locate button\'s surface, border and shadow2, 38 (44 on touch) with a 48dp target.'),
           ],
         ),
         DocSection(

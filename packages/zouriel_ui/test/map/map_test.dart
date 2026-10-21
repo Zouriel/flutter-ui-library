@@ -88,13 +88,13 @@ void main() {
 
   testWidgets('zoom buttons at the inline start (swapped in RTL) and they report the new view', (tester) async {
     var h = await _pump(tester);
-    expect(tester.getCenter(find.byType(UiIconButton).first).dx, lessThan(100));
-    await tester.tap(find.byType(UiIconButton).first);
+    expect(tester.getCenter(find.byType(UiMapZoomButton).first).dx, lessThan(100));
+    await tester.tap(find.byType(UiMapZoomButton).first);
     await tester.pump();
     expect(h.views.last.zoom, 16);
     await tester.pumpWidget(const SizedBox());
     h = await _pump(tester, dir: TextDirection.rtl);
-    expect(tester.getCenter(find.byType(UiIconButton).first).dx, greaterThan(290));
+    expect(tester.getCenter(find.byType(UiMapZoomButton).first).dx, greaterThan(290));
     expect(tester.getCenter(find.text('© OpenStreetMap contributors')).dx, lessThan(195), reason: 'attribution at the inline end: the left in RTL');
   });
 

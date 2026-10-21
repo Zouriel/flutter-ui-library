@@ -229,9 +229,9 @@ void main() {
         h.pulse = null;
       });
       await tester.pumpAndSettle();
-      final zoomIn = find.byType(UiIconButton).first;
+      final zoomIn = find.byType(UiMapZoomButton).first;
       expect(tester.getTopLeft(zoomIn).dx, closeTo(12 + 8, 4.5)); // the 48dp target may extend past the visible button
-      expect(tester.getTopLeft(find.byType(UiIconButton).first).dy, greaterThanOrEqualTo(80));
+      expect(tester.getTopLeft(find.byType(UiMapZoomButton).first).dy, greaterThanOrEqualTo(80));
       final attribution = tester.getBottomRight(find.text('© OpenStreetMap contributors'));
       expect(attribution.dy, lessThanOrEqualTo(_h - 240));
       expect(attribution.dx, closeTo(_w - 4 - 4, 4.5)); // its own 4px padding

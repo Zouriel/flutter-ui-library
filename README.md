@@ -99,6 +99,16 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Map routes and fit to points (0.42.0):** `UiMap(routes: [UiMapRoute(id:, points:, tone:
+UiMapRouteTone.primary, semanticLabel: 'Route, 1.2 km')])` draws lines along the road (from OSRM, say)
+in the theme's `mapRoute*` colour over `mapRouteCasing`, round-capped, 5 over 9px close in and thinner
+zoomed out, above the tiles and below the pulse, the dot, the markers and the pin; a new list redraws
+on the same map and an empty one removes them. `UiMapState.fitPoints(points, padding:, maxZoom:,
+animate:)` shows every point inside the part `viewInsets` leave visible (24 to spare, a whole zoom up
+to 17; one point is centred at 17), animated unless reduced motion. Marker labels size to their text
+up to 320 (or the map less 32) and wrap to two lines; the zoom buttons (`UiMapZoomButton`) share the
+locate button's raised surface and shadow2.
+
 **Clear glass, drawers on the keyboard, sheet cover (0.41.3):** `glassStrength` on
 `UiBottomSheet` and `UiFloatingPanel`, `UiGlassStrength.clear` by default: over a map in the theme's
 own brightness the map plainly shows through (`glassClearBg`, a 12% tint, over a light blur,
