@@ -99,6 +99,11 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Map background taps (0.43.1):** `UiMap.onMapTap` receives the tapped `UiLatLng` only for the map
+background (the user dot counts as background)—not for a marker, pin, zoom/locate/app control, attribution, preview, drag or
+double-tap zoom. In `pinMode`, a background tap keeps calling `onPinChanged` and then also calls
+`onMapTap`, so a results map can clear its selected card without breaking location picking.
+
 **Map preview, selected marker, label modes (0.43.0):** `UiMap(preview: true, onPreviewPressed:,
 previewLabel:)` is a still picture of the map that is one button (`UiMapPreviewButton`), named
 `previewLabel` or `UiStrings.mapOpen` ("Open map"): no gestures, keys or controls, markers drawn but

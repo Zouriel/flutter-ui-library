@@ -90,7 +90,7 @@ void main() {
     }
   });
 
-  testWidgets('results map (0.43.0, opened from the preview): tapping a pin selects it, shows only its label and its card', (tester) async {
+  testWidgets('results map (0.43.1): a pin selects it and an empty-map tap clears its card', (tester) async {
     tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(UiApp(theme: UiThemeName.maldives, home: MapResultsDemo(tileProvider: UiMapBlankTiles())));
@@ -111,6 +111,11 @@ void main() {
     // Its label on the map and its name in the card; the others' labels stay hidden.
     expect(find.text('Ibrahim Rasheed, RN'), findsNWidgets(2));
     expect(find.text('Busy'), findsNothing);
+    await tester.tapAt(const Offset(40, 700));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(dots(uiMapSelectedDot), findsNothing);
+    expect(dots(16), findsNWidgets(3));
+    expect(find.text('Tap a pin to see the nurse.'), findsOneWidget);
     handle.dispose();
   });
 }

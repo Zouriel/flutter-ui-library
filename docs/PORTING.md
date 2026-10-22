@@ -170,6 +170,15 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.43.1. Map background tap.** The web `(mapTap)` and Flutter `onMapTap` report a background tap as
+`UiLatLng`. Leaflet's map `click` already excludes a drag and foreground Marker clicks; flutter_map's
+`MapOptions.onTap` excludes a drag and double-tap, while marker/control tap recognizers win its
+gesture arena. Fixed pins, non-selectable markers and attribution explicitly consume their own tap without
+gaining a semantic action. The user dot does not: its accuracy halo can be 240 px across, and a tap
+there must still place the pin, so it counts as background. Preview's whole-map button stays above the engine.
+In pin mode the existing pin update runs first and the background event also fires; keyboard Enter
+moves the pin but is not a tap. The selected-marker and full results demos clear their card from it.
+
 **0.43.0. Map preview, selected marker, label modes.** For Dhirumi's chat result cards (a Cards |
 Map switch whose Map tab is a small still map that opens the full one).
 

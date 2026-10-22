@@ -261,6 +261,9 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 /// Import it from `package:zouriel_ui/map.dart`; it isn't part of the main library export.
 ///
 /// - [markers]: dots in their tone with a label; tapping one calls [onMarkerSelected].
+/// - [onMapTap] (0.43.1): the point tapped on the map background (the user dot counts as
+///   background). Markers, the pin, controls and attribution do not call it; neither do a drag, double-tap zoom or [preview]. In
+///   [pinMode], a background tap calls [onPinChanged] and then [onMapTap].
 /// - [pin] / [onPinChanged] with [pinMode]: a draggable pin, and a tap on the map moves it there.
 ///   For screen readers the map has a "Place the pin at the centre" action, and with a keyboard
 ///   Enter on the focused map does the same.
@@ -320,6 +323,7 @@ class UiMap extends StatefulWidget {
     this.zoom = 13,
     this.markers = const [],
     this.onMarkerSelected,
+    this.onMapTap,
     this.onCenterChanged,
     this.pin,
     this.onPinChanged,
@@ -408,6 +412,10 @@ class UiMap extends StatefulWidget {
   final double zoom;
   final List<UiMapMarker> markers;
   final ValueChanged<UiMapMarker>? onMarkerSelected;
+
+  /// A map-background tap (0.43.1); in [pinMode], called after [onPinChanged].
+  final ValueChanged<UiLatLng>? onMapTap;
+
   final ValueChanged<UiMapView>? onCenterChanged;
 
   /// The chosen point; shown as a draggable pin when set.
@@ -682,7 +690,10 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
         onMapReady: _onReady,
         onMapEvent: _onEvent,
         onTap: (_, ll) {
-          if (widget.pinMode) widget.onPinChanged?.call(UiLatLng(ll.latitude, ll.longitude));
+          if (widget.preview) return;
+          final point = UiLatLng(ll.latitude, ll.longitude);
+          if (widget.pinMode) widget.onPinChanged?.call(point);
+          widget.onMapTap?.call(point);
         },
         // A preview takes no gestures or keys at all: it is a picture under one button.
         interactionOptions: widget.preview
@@ -779,7 +790,10 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     // The credits are English ("© MapTiler © OpenStreetMap contributors"): set them LTR in their own
     // run so an RTL layout doesn't move the © signs; only the corner they sit in is mirrored.
     final attribution = GestureDetector(
-      onTap: widget.onAttributionTap,
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: widget.onAttributionTap == null,
+      // Even plain credit text is foreground, not the map background.
+      onTap: widget.onAttributionTap ?? () {},
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: t.space1, vertical: 2),
         color: t.surfaceRaised.withValues(alpha: 0.85),
@@ -1113,6 +1127,7 @@ class _UserLayer extends StatelessWidget {
         point: LatLng(location.lat, location.lng),
         width: box,
         height: box,
+        // Not a target: its halo can be 240 px across, and a tap there still places the pin / is a map tap.
         child: IgnorePointer(
           child: Semantics(container: true, image: true, label: context.uiStrings.mapYourLocation, child: UiMapUserDot(halo: halo)),
         ),
@@ -1248,7 +1263,9 @@ class _MarkerChip extends StatelessWidget {
           excludeSemantics: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: onTap,
+            excludeFromSemantics: true,
+            // A marker without a selection callback is still not map background.
+            onTap: onTap ?? () {},
             child: SizedBox(
               height: 48,
               child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1283,11 +1300,22 @@ class _Pin extends StatelessWidget {
           ),
         );
     // A fixed pin is an image with a name; a draggable one also takes the drag.
-    if (!draggable) return Semantics(container: true, label: label, image: true, child: IgnorePointer(child: pin));
+    if (!draggable) {
+      return Semantics(
+        container: true,
+        label: label,
+        image: true,
+        child: GestureDetector(behavior: HitTestBehavior.opaque, excludeFromSemantics: true, onTap: () {}, child: pin),
+      );
+    }
     return Semantics(
+      // Its own node: the gesture is hidden from screen readers (the map's "place at centre" action moves it).
+      container: true,
       label: label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: () {},
         onPanUpdate: (d) => onDrag(d.globalPosition + const Offset(0, 24)),
         onPanEnd: (_) => onDragEnd(),
         onPanCancel: onDragEnd,

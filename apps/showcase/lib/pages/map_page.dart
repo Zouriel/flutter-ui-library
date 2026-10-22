@@ -84,6 +84,7 @@ class _MapPageState extends State<MapPage> {
                     markers: _markers,
                     userAgentPackageName: 'com.zouriel.ui.showcase',
                     onMarkerSelected: (m) => setState(() => _picked = m),
+                    onMapTap: (_) => setState(() => _picked = null),
                     onCenterChanged: (v) => setState(() => _view = v),
                     semanticLabel: 'Nurses near you',
                   ),
@@ -106,12 +107,14 @@ class _MapPageState extends State<MapPage> {
   zoom: 15,
   markers: nurses,
   onMarkerSelected: show,
+  onMapTap: (_) => hideCard(),
   userAgentPackageName: 'mv.dhirumi.nurse',
 )''',
           api: const [
             ApiRow('center / zoom', 'UiLatLng / double', 'Where it looks; changing them moves the map.', def: 'Malé / 13'),
             ApiRow('markers', 'List<UiMapMarker>', 'id, lat, lng, tone, label, semanticLabel (the id is never read out).'),
             ApiRow('onMarkerSelected / onCenterChanged', 'ValueChanged<UiMapMarker / UiMapView>?', 'A marker was tapped; the person moved the map.'),
+            ApiRow('onMapTap', 'ValueChanged<UiLatLng>?', 'A background tap (0.43.1; the user dot counts as background), not a marker, pin, control, attribution, preview, drag or double-tap. Also called in pinMode.'),
             ApiRow('tileUrl / attribution / onAttributionTap', 'String / String / VoidCallback?', 'Tiles (OSM by default) and their credit.'),
             ApiRow('userAgentPackageName', 'String', 'Sent with tile requests.', def: "'com.zouriel.ui'"),
             ApiRow('tileProvider', 'TileProvider?', 'Offline or test tiles; UiMapBlankTiles() (from map.dart) draws none, for widget tests.'),
@@ -141,7 +144,7 @@ class _MapPageState extends State<MapPage> {
           code: "UiMap(pinMode: true, pin: home, onPinChanged: setHome, pinLabel: 'Your home')",
           api: const [
             ApiRow('pin / onPinChanged', 'UiLatLng? / ValueChanged<UiLatLng>?', 'The chosen point, shown as a draggable pin.'),
-            ApiRow('pinMode', 'bool', 'A tap on the map moves the pin.', def: 'false'),
+            ApiRow('pinMode', 'bool', 'A background tap moves the pin and also calls onMapTap; Enter moves only the pin.', def: 'false'),
             ApiRow('pinLabel', 'String', 'The pin\'s accessible name.', def: "'Chosen location'"),
             ApiRow('pinDraggable', 'bool', 'false shows a fixed location with the pin\'s look.', def: 'true'),
           ],
@@ -372,7 +375,7 @@ SizedBox(
         DocSection(
           name: 'Selected marker',
           widget: 'UiMap selectedMarkerId · markerLabels',
-          summary: 'selectedMarkerId (0.43.0) marks one marker as the chosen one: its dot is drawn bigger (22px instead of 16) with a white ring and a soft halo in its tone, above the other markers, with its label shown, and screen readers hear it as selected. The others stay as they are. Changing it moves the selection on the same map, without rebuilding or moving it. markerLabels says which labels show: all (the default), selected (only the selected marker\'s, for a busy map where a tapped pin shows its card) or none. A hidden label still names its marker for screen readers. Tap a marker here to select it.',
+          summary: 'selectedMarkerId (0.43.0) marks one marker as the chosen one: its dot is drawn bigger (22px instead of 16) with a white ring and a soft halo in its tone, above the other markers, with its label shown, and screen readers hear it as selected. The others stay as they are. Changing it moves the selection on the same map, without rebuilding or moving it. markerLabels says which labels show: all (the default), selected (only the selected marker\'s, for a busy map where a tapped pin shows its card) or none. A hidden label still names its marker for screen readers. Tap a marker here to select it; tap empty map to clear it through onMapTap (0.43.1).',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             SizedBox(
               height: 320,
@@ -382,6 +385,7 @@ SizedBox(
                 selectedMarkerId: _selected,
                 markerLabels: _labels,
                 onMarkerSelected: (m) => setState(() => _selected = m.id),
+                onMapTap: (_) => setState(() => _selected = null),
                 userAgentPackageName: 'com.zouriel.ui.showcase',
                 semanticLabel: 'Nurses near you',
               ),
@@ -406,10 +410,12 @@ SizedBox(
   selectedMarkerId: selected?.id,
   markerLabels: UiMapMarkerLabels.selected,
   onMarkerSelected: (m) => setState(() => selected = m),
+  onMapTap: (_) => setState(() => selected = null),
 )''',
           api: const [
             ApiRow('selectedMarkerId', 'String?', 'The selected marker (0.43.0): a 22px dot (uiMapSelectedDot) with a white ring and a halo in its tone, on top, its label shown, read out as selected.'),
             ApiRow('markerLabels', 'UiMapMarkerLabels', 'all, selected (only the selected marker\'s label) or none. Hidden labels still name their markers.', def: 'all'),
+            ApiRow('onMapTap', 'ValueChanged<UiLatLng>?', 'A background tap (0.43.1), used here to clear the selection; foreground objects, preview, drags and double-taps do not call it.'),
           ],
         ),
         DocSection(
@@ -502,6 +508,7 @@ class _MapResultsDemoState extends State<MapResultsDemo> {
             markerLabels: UiMapMarkerLabels.selected,
             viewInsets: EdgeInsetsDirectional.only(top: _cardCover),
             onMarkerSelected: (m) => setState(() => _selected = m),
+            onMapTap: (_) => setState(() => _selected = null),
             userAgentPackageName: 'com.zouriel.ui.showcase',
             tileProvider: widget.tileProvider,
             semanticLabel: 'Nurses near you',
