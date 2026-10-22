@@ -55,6 +55,12 @@ class _MapPageState extends State<MapPage> {
   // Selected marker (0.43.0).
   String? _selected = 'n2';
   UiMapMarkerLabels _labels = UiMapMarkerLabels.all;
+  // Search area (0.44.0).
+  final _areaMap = GlobalKey<UiMapState>();
+  double _radius = 2000;
+  double? _dragging;
+  bool _areaEditable = true;
+  static const _areaCenter = UiLatLng(4.1755, 73.5093);
 
   static const _markers = [
     UiMapMarker(id: 'n1', lat: 4.1762, lng: 73.5105, label: 'Aminath Hassan, RN', tone: UiStatus.success),
@@ -416,6 +422,51 @@ SizedBox(
             ApiRow('selectedMarkerId', 'String?', 'The selected marker (0.43.0): a 22px dot (uiMapSelectedDot) with a white ring and a halo in its tone, on top, its label shown, read out as selected.'),
             ApiRow('markerLabels', 'UiMapMarkerLabels', 'all, selected (only the selected marker\'s label) or none. Hidden labels still name their markers.', def: 'all'),
             ApiRow('onMapTap', 'ValueChanged<UiLatLng>?', 'A background tap (0.43.1), used here to clear the selection; foreground objects, preview, drags and double-taps do not call it.'),
+          ],
+        ),
+        DocSection(
+          name: 'Search area',
+          widget: 'UiMap area · onAreaChanging · onAreaChanged · fitArea',
+          summary: 'area (0.44.0) draws a search area: a soft circle in its tone with a clear outline, in true metres, so it grows and shrinks with the zoom. It sits over the tiles and under routes, markers and the pin, and drags anywhere on it still pan the map. editable adds a round handle on its inline-end edge (the left in right-to-left text) with a chip showing the radius ("2 km", "800 m": uiMapFormatRadius, worded by UiStrings). Dragging the handle changes the radius, rounded and kept between minMeters and maxMeters; the map does not pan while you drag it. onAreaChanging reports each new radius during the drag and onAreaChanged once on release (pass the new radius back in area). For keyboards and screen readers the handle is a slider named areaLabel (UiStrings.mapSearchArea, "Search area"): Up and the outward arrow widen it 10%, Down and the inward arrow narrow it, Home and End go to the smallest and largest. fitArea() shows the whole circle in the visible part, between viewInsets. A preview, or editable: false, draws the circle without a handle.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            SizedBox(
+              height: 360,
+              child: UiMap(
+                key: _areaMap,
+                center: _areaCenter,
+                zoom: 13,
+                markers: _markers,
+                area: UiMapArea(center: _areaCenter, radiusMeters: _radius, editable: _areaEditable, minMeters: 500, maxMeters: 50000),
+                onAreaChanging: (r) => setState(() => _dragging = r),
+                onAreaChanged: (r) => setState(() {
+                  _radius = r;
+                  _dragging = null;
+                }),
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'Search area map',
+              ),
+            ),
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiText('Radius: ${uiMapFormatRadius(_dragging ?? _radius, context.uiStrings)}${_dragging != null ? ' (dragging)' : ''}', variant: UiTextVariant.caption),
+              UiButton(label: 'Show the whole area', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _areaMap.currentState?.fitArea()),
+              UiSwitch(value: _areaEditable, onChanged: (v) => setState(() => _areaEditable = v), label: 'Editable'),
+            ]),
+          ]),
+          code: '''UiMap(
+  key: mapKey,
+  area: UiMapArea(center: me, radiusMeters: radius, editable: true, minMeters: 500, maxMeters: 50000),
+  onAreaChanged: (r) => setState(() => radius = r),
+)
+// Show it all:
+mapKey.currentState!.fitArea();''',
+          api: const [
+            ApiRow('area', 'UiMapArea?', 'center, radiusMeters, tone (primary), editable (false), minMeters (200), maxMeters (50000).'),
+            ApiRow('onAreaChanging', 'ValueChanged<double>?', 'The radius in metres each time it changes during a handle drag (and on each key step).'),
+            ApiRow('onAreaChanged', 'ValueChanged<double>?', 'The radius when the handle is let go (every release), and on each key step. The chosen radius stays drawn until the app passes a new area.'),
+            ApiRow('areaLabel', 'String?', 'The handle\'s accessible name; null: UiStrings.mapSearchArea.', def: "'Search area'"),
+            ApiRow('UiMapState.fitArea({padding, maxZoom, animate})', 'void', 'Shows the whole circle in the visible part, like fitPoints.'),
+            ApiRow('uiMapFormatRadius(m, strings)', 'String', '"800 m", "1.5 km", "20 km" (UiStrings.mapRadiusMeters / mapRadiusKilometers, {n} is the number).'),
+            ApiRow('uiMapNiceRadius · uiMapAreaStep · uiMapMetersPerPx · uiMapAreaBounds', 'functions', 'The rounding (10 m / 100 m / 1 km), a 10% key step, metres per px at a latitude and zoom, the circle\'s N/S/E/W points.'),
           ],
         ),
         DocSection(

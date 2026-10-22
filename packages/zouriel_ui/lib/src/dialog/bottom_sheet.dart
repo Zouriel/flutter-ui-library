@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -49,6 +50,15 @@ const double _flick = 450;
 /// for photos or a map in the other brightness ([uiGlassSheetFilter]). Fields and buttons inside keep
 /// their own solid fills. Under the platform's high-contrast setting it is the solid surface
 /// ([uiGlassSheetSolid]). Off by default, whatever [UiConfig.glass] says.
+///
+/// [footer] (0.44.0, the web `[sheet-footer]` slot) is a sticky bar pinned to the bottom of the
+/// visible sheet at every open snap, the peek included, and while it is dragged: the body scrolls
+/// above it (a [child] gets the room automatically; a [builder]'s scroll view should add
+/// [UiBottomSheetState.footerHeight] to its bottom padding). It has a hairline above it and the
+/// body padding, plus the safe area when the sheet rests on the screen's bottom edge; with the
+/// keyboard up it rests on the keyboard with the sheet. It is part of the sheet, so it counts in
+/// [onCoverChanged]. Snaps stay fractions of the room, but an open snap too short for the header and
+/// the footer is raised to fit them, so the footer is never cut off.
 class UiBottomSheet extends StatefulWidget {
   const UiBottomSheet({
     super.key,
@@ -70,7 +80,11 @@ class UiBottomSheet extends StatefulWidget {
     this.maxWidth,
     this.glass = false,
     this.glassStrength = UiGlassStrength.clear,
+    this.footer,
   }) : assert(child != null || builder != null, 'Give the sheet a child or a builder.');
+
+  /// A sticky bar at the bottom of the visible sheet (0.44.0): the primary action.
+  final Widget? footer;
 
   /// The content, in a scroll view the sheet provides.
   final Widget? child;
@@ -158,7 +172,42 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   static const Duration refocusWindow = Duration(milliseconds: 600);
   bool _wasModal = false;
 
-  List<double> get _snaps => widget.snaps;
+  /// The header's and the footer's laid-out heights, measured after layout (0 until then).
+  double _headerH = 0, _footerH = 0;
+
+  /// How tall the footer is, safe area included (0 without one): a [UiBottomSheet.builder]'s scroll
+  /// view adds it to its bottom padding.
+  double get footerHeight => widget.footer == null ? 0 : _footerH;
+
+  /// The snaps in use: the given ones, with an open snap too short for the header and the footer
+  /// raised to fit them (kept ascending).
+  List<double> get _snaps {
+    final given = widget.snaps;
+    if (widget.footer == null || _room <= 0 || _footerH <= 0) return given;
+    final least = math.min(1.0, (_headerH + _footerH + 1) / _room);
+    final out = <double>[];
+    for (final s in given) {
+      var v = s > 0 && s < least ? least : s;
+      if (out.isNotEmpty && v <= out.last) v = math.min(1.0, out.last + 0.0001);
+      out.add(v);
+    }
+    return out;
+  }
+
+  /// A measured height changed: rebuild, and move a resting sheet to its (possibly raised) snap.
+  void _measured(void Function() set) {
+    if (!mounted) return;
+    setState(set);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_sheet.isAttached || _pointers > 0 || _headerDrag) return;
+      if ((_sheet.size - _snaps[_index]).abs() > 0.001) {
+        _moving++;
+        _sheet.jumpTo(_snaps[_index]);
+        _moving--;
+      }
+      _report();
+    });
+  }
   double get _max => _snaps.reduce(math.max);
 
   /// [_snap] within the snaps: past the end reads as the last one.
@@ -446,12 +495,16 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                             child: ExcludeSemantics(
                               excluding: !isOpen,
                               // Always laid out at its tallest and clipped, so content doesn't reflow while dragging.
-                              child: ClipRect(
-                                child: OverflowBox(
-                                  alignment: Alignment.topCenter,
-                                  minHeight: maxH,
-                                  maxHeight: maxH,
-                                  child: _panel(context, scroll, rr, hidden + mq.padding.bottom * (_bottom > 0 ? 0 : 1)),
+                              child: _withFooter(
+                                context,
+                                rr,
+                                ClipRect(
+                                  child: OverflowBox(
+                                    alignment: Alignment.topCenter,
+                                    minHeight: maxH,
+                                    maxHeight: maxH,
+                                    child: _panel(context, scroll, rr, hidden + (widget.footer != null ? _footerH : mq.padding.bottom * (_bottom > 0 ? 0 : 1))),
+                                  ),
                                 ),
                               ),
                             ),
@@ -508,7 +561,9 @@ class UiBottomSheetState extends State<UiBottomSheet> {
         ),
       ),
     );
-    final header = GestureDetector(
+    final header = _SizeReporter(onSize: (sz) {
+      if (sz.height != _headerH) _measured(() => _headerH = sz.height);
+    }, child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       excludeFromSemantics: true,
       onVerticalDragUpdate: _dragUpdate,
@@ -543,7 +598,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
             ),
         ],
       ),
-    );
+    ));
     final body = widget.builder != null
         ? widget.builder!(context, scroll)
         : SingleChildScrollView(
@@ -582,6 +637,40 @@ class UiBottomSheetState extends State<UiBottomSheet> {
 
   bool get _glass => widget.glass && !uiGlassSheetSolid(context);
 
+  /// The sheet's box at its current (live) height with the footer pinned to its bottom, over the
+  /// clipped panel. Without a footer, just the panel.
+  Widget _withFooter(BuildContext context, Radius rr, Widget panel) {
+    final footer = widget.footer;
+    if (footer == null) return panel;
+    final t = context.ui;
+    final mq = MediaQuery.of(context);
+    final safe = _bottom > 0 ? 0.0 : mq.padding.bottom;
+    Widget bar = Container(
+      decoration: BoxDecoration(
+        color: _glass ? uiGlassSheetTint(t, strength: widget.glassStrength) : t.surface,
+        border: Border(top: BorderSide(color: _glass ? t.glassBorder : t.borderSubtle)),
+      ),
+      padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, t.space3 + safe),
+      child: footer,
+    );
+    if (_glass) bar = ClipRect(child: BackdropFilter(filter: uiGlassSheetFilter(t, strength: widget.glassStrength), child: bar));
+    return Stack(fit: StackFit.expand, children: [
+      panel,
+      Positioned(
+        left: 1,
+        right: 1,
+        bottom: 0,
+        child: _SizeReporter(
+          key: const ValueKey('ui-bottom-sheet-footer'),
+          onSize: (sz) {
+            if (sz.height != _footerH) _measured(() => _footerH = sz.height);
+          },
+          child: bar,
+        ),
+      ),
+    ]);
+  }
+
   /// The sheet's surface: solid, or see-through glass (the tint over a blurred, range-limited backdrop).
   Widget _surface(BuildContext context, Radius rr, Widget child) {
     final t = context.ui;
@@ -613,4 +702,32 @@ class UiBottomSheetState extends State<UiBottomSheet> {
 class _StepIntent extends Intent {
   const _StepIntent(this.by);
   final int by;
+}
+
+/// Calls [onSize] after the frame whenever its child's laid-out size changes.
+class _SizeReporter extends SingleChildRenderObjectWidget {
+  const _SizeReporter({super.key, required this.onSize, super.child});
+  final ValueChanged<Size> onSize;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSizeReporter(onSize);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderSizeReporter renderObject) => renderObject.onSize = onSize;
+}
+
+class _RenderSizeReporter extends RenderProxyBox {
+  _RenderSizeReporter(this.onSize);
+  ValueChanged<Size> onSize;
+  Size? _last;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (size == _last) return;
+    final s = _last = size;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (attached && _last == s) onSize(s);
+    });
+  }
 }

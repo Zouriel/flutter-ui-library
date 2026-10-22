@@ -99,6 +99,25 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Map search area, swipe screens, SOS button (0.44.0):** `UiMap(area: UiMapArea(center:,
+radiusMeters:, tone:, editable: true, minMeters:, maxMeters:), onAreaChanging:, onAreaChanged:,
+areaLabel:)` draws a search area in true metres (it scales with the zoom) under the routes and
+markers; when editable a round handle on its inline-end edge, with a radius chip ("20 km",
+`uiMapFormatRadius`), drags the radius (the map doesn't pan under it; it still pans everywhere
+else) and is a slider for keyboards and screen readers. `UiMapState.fitArea()` shows the whole
+circle in the visible part. `UiSwipeScreens(screens: [UiSwipeScreen(label: 'Chat', child: chat),
+UiSwipeScreen(label: 'Map', edgeSwipeOnly: true, child: map)], index:, onIndexChanged:)` puts
+full-size screens side by side: a clearly horizontal drag moves between them (vertical scrolling
+inside still works), the first screen's leading 24px are left to the app's own drawer, and a map
+screen only swipes back from its leading edge. `UiFabHost(position: UiFabPosition.topCenter, fab:
+UiFab(tone: UiFabTone.danger, text: 'SOS', ...))` floats a high-visibility button at the top,
+below the status bar (`topOffset:` for an app bar); the host draws it above its child, so in-page
+sheets and drawers stay under it. `UiFab(hold: Duration(seconds: 2), confirmTitle:, ...)` is
+press-and-hold like `UiHoldButton` (a tap or a screen reader opens a confirm dialog instead).
+`UiButton` / `UiIconButton(badge: uiBadgeCount(n), badgeLabel: '2 unread')` show a count bubble at
+the top-end corner, read after the name. `UiBottomSheet(footer:)` is a sticky bar at the bottom of
+the visible sheet at every snap, and `UiFloatingPanel(insetEnd:)` keeps room at its inline end.
+
 **Map background taps (0.43.1):** `UiMap.onMapTap` receives the tapped `UiLatLng` only for the map
 background (the user dot counts as background)—not for a marker, pin, zoom/locate/app control, attribution, preview, drag or
 double-tap zoom. In `pinMode`, a background tap keeps calling `onPinChanged` and then also calls

@@ -75,6 +75,9 @@ class UiStrings {
     this.mapLocationOff = 'Location is off',
     this.mapYourLocation = 'Your location',
     this.mapOpen = 'Open map',
+    this.mapSearchArea = 'Search area',
+    this.mapRadiusMeters = '{n} m',
+    this.mapRadiusKilometers = '{n} km',
     this.googleSignIn = 'Sign in with Google',
     this.googleSignUp = 'Sign up with Google',
     this.googleContinue = 'Continue with Google',
@@ -110,6 +113,10 @@ class UiStrings {
 
   /// Map preview (0.43.0): the still map's one button, which opens the full map.
   final String mapOpen;
+
+  /// Map search area (0.44.0): the radius handle's name, and the radius in metres and kilometres
+  /// (`{n}` is the number, see `uiMapFormatRadius`).
+  final String mapSearchArea, mapRadiusMeters, mapRadiusKilometers;
 
   /// Google sign-in button: Google's approved wordings (translations must keep the meaning:
   /// signing in to this app with a Google account, not creating one).

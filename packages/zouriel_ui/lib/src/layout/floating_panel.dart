@@ -22,6 +22,9 @@ enum UiFloatingPanelPlacement { bottom, top }
 /// area and its height), whenever that changes: feed it to a map's `viewInsets` so the map centres
 /// below a status card at the top.
 ///
+/// [insetEnd] (0.44.0) keeps that many px free at its inline end (the right; the left in RTL), on
+/// top of the gutter, so a top-end button such as an SOS [UiFab] never overlaps the card.
+///
 /// [glass] (0.41.2) is the same see-through surface as [UiBottomSheet.glass], with the same
 /// [glassStrength] (0.41.3): clear (the default) lets a map in the theme's brightness plainly show
 /// through, frosted stays AA over anything (see [uiGlassSheetFilter]); solid under the platform's
@@ -37,7 +40,11 @@ class UiFloatingPanel extends StatelessWidget {
     this.glassStrength = UiGlassStrength.clear,
     this.radius,
     this.onCoverChanged,
+    this.insetEnd = 0,
   });
+
+  /// Px kept free at the inline end, beside the gutter (0.44.0); mirrored in RTL.
+  final double insetEnd;
 
   /// Px of the Stack's edge (top or bottom, per [placement]) it covers: gutter, safe area and height.
   final ValueChanged<double>? onCoverChanged;
@@ -63,6 +70,8 @@ class UiFloatingPanel extends StatelessWidget {
     final isGlass = (glass ?? theme.config.glass) && !uiGlassSheetSolid(context);
     final r = (radius ?? theme.config.radius) ? t.radiusLg : 0.0;
     final top = placement == UiFloatingPanelPlacement.top;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final end = math.max(0.0, insetEnd);
     Widget surface = DecoratedBox(
       decoration: BoxDecoration(
         color: isGlass ? uiGlassSheetTint(t, strength: glassStrength) : t.surfaceRaised,
@@ -100,8 +109,8 @@ class UiFloatingPanel extends StatelessWidget {
       );
     }
     return Positioned(
-      left: gutter + pad.left,
-      right: gutter + pad.right,
+      left: gutter + pad.left + (rtl ? end : 0),
+      right: gutter + pad.right + (rtl ? 0 : end),
       top: top ? gutter + pad.top : null,
       bottom: top ? null : gutter + pad.bottom,
       child: Align(

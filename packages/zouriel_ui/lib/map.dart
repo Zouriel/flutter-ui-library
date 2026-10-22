@@ -3,4 +3,5 @@
 library;
 
 export 'package:flutter_map/flutter_map.dart' show MapController, NetworkTileProvider, TileCoordinates, TileLayer, TileProvider;
+export 'src/map/area.dart';
 export 'src/map/map.dart';

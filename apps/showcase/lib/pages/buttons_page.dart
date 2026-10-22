@@ -21,6 +21,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
   String? _align = 'left';
   bool _bold = true, _italic = false;
   String _log = 'Nothing yet';
+  UiFabPosition _sosAt = UiFabPosition.topCenter;
 
   static const _menu = [
     UiDropdownItem(label: 'Edit', value: 'edit', icon: UiIcon(HugeIcons.strokeRoundedEdit02)),
@@ -184,13 +185,16 @@ UiGoogleSignInButton(
         DocSection(
           name: 'Icon button',
           widget: 'UiIconButton',
-          summary: 'A square, icon-only action. label is required: it is what screen readers announce. Defaults to the ghost variant; round makes it a circle.',
+          summary: 'A square, icon-only action. label is required: it is what screen readers announce. Defaults to the ghost variant; round makes it a circle. badge (0.44.0, on UiButton too) shows a small count bubble at the top-end corner (the top-left in right-to-left text), danger by default or primary; uiBadgeCount(n) gives "9+" past 9. The badge is read after the name: badgeLabel when given ("Chat, 2 unread"), else its text.',
           demo: Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
             for (final v in [UiButtonVariant.ghost, UiButtonVariant.outline, UiButtonVariant.primary, UiButtonVariant.secondary, UiButtonVariant.destructive])
               UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedSettings01), label: 'Settings (${v.name})', variant: v, onPressed: () {}),
             UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedFavourite), label: 'Like', round: true, variant: UiButtonVariant.outline, onPressed: () {}),
             UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedDelete02), label: 'Delete', size: UiSize.lg, onPressed: () {}),
             const UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedLockKeyhole), label: 'Locked', onPressed: null),
+            UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMessage01), label: 'Chat', badge: uiBadgeCount(2), badgeLabel: '2 unread', variant: UiButtonVariant.outline, onPressed: () {}),
+            UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedNotification01), label: 'Alerts', badge: uiBadgeCount(14), onPressed: () {}),
+            UiButton(label: 'Chat with the nurse', icon: const UiIcon(HugeIcons.strokeRoundedMessage01), badge: '1', badgeLabel: '1 unread', variant: UiButtonVariant.secondary, onPressed: () {}),
           ]),
           code: "UiIconButton(\n  icon: UiIcon(HugeIcons.strokeRoundedSettings01),\n  label: 'Settings',\n  onPressed: openSettings,\n)",
           api: const [
@@ -200,6 +204,8 @@ UiGoogleSignInButton(
             ApiRow('variant', 'UiButtonVariant', 'As UiButton; link behaves like ghost.', def: 'ghost'),
             ApiRow('size', 'UiSize', 'Square size: 26 / 30 / 38.', def: 'md'),
             ApiRow('round', 'bool', 'Circle instead of rounded square.', def: 'false'),
+            ApiRow('badge / badgeTone / badgeLabel', 'String? / UiBadgeTone / String?', 'A count bubble at the top-end corner (0.44.0, UiButton too): danger or primary, read after the name as badgeLabel or its text.', def: 'null / danger / null'),
+            ApiRow('uiBadgeCount(n, {max: 9})', 'String?', 'null for 0 or less, "9+" past max, else the number.'),
           ],
         ),
         DocSection(
@@ -324,28 +330,76 @@ UiGoogleSignInButton(
         DocSection(
           name: 'FAB',
           widget: 'UiFab · UiFabHost',
-          summary: 'The floating action button: round, primary, with a shadow; it grows a little on hover and shrinks when pressed. label is required and is its accessible name. UiFabHost pins it to a corner over your content, offset by the safe area. The sm size grows to 48dp on phones. The demo frame below is its own host, so the button sits in the frame\'s corner.',
-          demo: SizedBox(
-            height: 180,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(t.radius),
-              child: UiFabHost(
-                fab: UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New note', onPressed: () => _did('New note')),
-                child: Container(
-                  color: t.surface,
-                  padding: EdgeInsets.all(t.space4),
-                  child: UiText('Last action: $_log', color: t.textMuted),
+          summary: 'The floating action button: round, primary, with a shadow; it grows a little on hover and shrinks when pressed. label is required and is its accessible name. UiFabHost pins it to a corner, or the middle of the top or bottom edge (topCenter, bottomCenter: 0.44.0), offset by the safe area, so a top button never covers the status bar. The sm size grows to 48dp on phones. tone: UiFabTone.danger (0.44.0) is for an emergency action such as SOS: the danger colour with a ring and a soft halo that stand out on any page or map; text makes it an extended pill with the word after the icon. UiFabHost draws the button above its child, so a bottom sheet or the sidebar drawer inside the page stays under it; to keep it above routes too, put the host in UiApp.builder. The demo frames are their own hosts.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            SizedBox(
+              height: 180,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(t.radius),
+                child: UiFabHost(
+                  fab: UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New note', onPressed: () => _did('New note')),
+                  child: Container(
+                    color: t.surface,
+                    padding: EdgeInsets.all(t.space4),
+                    child: UiText('Last action: $_log', color: t.textMuted),
+                  ),
                 ),
               ),
             ),
-          ),
+            UiSegmented<UiFabPosition>(
+              label: 'SOS position',
+              size: UiSize.sm,
+              options: const [
+                UiSegmentedOption(value: UiFabPosition.topStart, label: 'Top start'),
+                UiSegmentedOption(value: UiFabPosition.topCenter, label: 'Top centre'),
+                UiSegmentedOption(value: UiFabPosition.topEnd, label: 'Top end'),
+                UiSegmentedOption(value: UiFabPosition.bottomCenter, label: 'Bottom centre'),
+              ],
+              value: _sosAt,
+              onChanged: (v) => setState(() => _sosAt = v),
+            ),
+            SizedBox(
+              height: 260,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(t.radius),
+                child: UiFabHost(
+                  position: _sosAt,
+                  topOffset: _sosAt == UiFabPosition.bottomCenter ? 0 : 40,
+                  fab: UiFab(
+                    icon: const UiIcon(HugeIcons.strokeRoundedAlert02),
+                    label: 'Emergency SOS',
+                    text: 'SOS',
+                    tone: UiFabTone.danger,
+                    hold: const Duration(seconds: 2),
+                    holdHint: 'Press and hold to call for help',
+                    confirmTitle: 'Send an SOS?',
+                    confirmMessage: 'Your location goes to the emergency team.',
+                    confirmLabel: 'Send SOS',
+                    destructive: true,
+                    onPressed: () => _did('SOS'),
+                  ),
+                  child: Stack(children: [
+                    Positioned.fill(child: Container(color: t.surface, padding: EdgeInsets.fromLTRB(t.space4, 40 + t.space4, t.space4, t.space4), child: UiText('A page with a sheet over it. Hold SOS for 2 seconds, or tap it to confirm. Last action: $_log', color: t.textMuted))),
+                    // The app bar the top SOS sits under (topOffset: 40).
+                    Positioned(top: 0, left: 0, right: 0, height: 40, child: Container(color: t.surfaceRaised, padding: EdgeInsets.symmetric(horizontal: t.space4), alignment: AlignmentDirectional.centerStart, child: const UiText('Visit', variant: UiTextVariant.label))),
+                    const UiBottomSheet(snaps: [0.2, 0.5], snap: 1, title: 'Nearby', child: UiText('The SOS button stays above the sheet.')),
+                  ]),
+                ),
+              ),
+            ),
+          ]),
           code: "UiFabHost(\n  fab: UiFab(icon: UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New note', onPressed: create),\n  child: notesList,\n)",
           api: const [
             ApiRow('icon', 'Widget', 'The icon.'),
             ApiRow('label', 'String', 'Required accessible name.'),
             ApiRow('onPressed', 'VoidCallback?', 'Null disables it.'),
             ApiRow('size', 'UiFabSize', 'sm (40, 48 on phones) or md (52).', def: 'md'),
-            ApiRow('UiFabHost.position', 'UiFabPosition', 'bottomEnd, bottomStart, topEnd, topStart.', def: 'bottomEnd'),
+            ApiRow('tone', 'UiFabTone', 'primary, or danger (0.44.0) for SOS: the danger fill with a raised-surface ring and a danger halo.', def: 'primary'),
+            ApiRow('text', 'String?', 'An extended pill with the text after the icon (0.44.0); the name is still label.'),
+            ApiRow('hold', 'Duration?', 'Press and hold that long to activate (0.44.0), as UiHoldButton: a tap, quick Enter / Space or a screen reader opens the confirm dialog instead.'),
+            ApiRow('holdHint / confirmTitle / confirmMessage / confirmLabel / destructive', 'String? / String? / String / String? / bool', 'Read with a held button (UiStrings.holdHint), and the tap fallback dialog.'),
+            ApiRow('UiFabHost.topOffset', 'double', 'Px added above a top button, for the app bar (0.44.0).', def: '0'),
+            ApiRow('UiFabHost.position', 'UiFabPosition', 'bottomEnd, bottomStart, topEnd, topStart, topCenter, bottomCenter (0.44.0). Offset by the safe area, so top ones sit below the status bar.', def: 'bottomEnd'),
           ],
         ),
       ],

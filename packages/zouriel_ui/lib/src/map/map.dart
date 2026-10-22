@@ -15,6 +15,7 @@ import '../overlay/tooltip.dart';
 import '../core/types.dart';
 import '../fx/motion.dart';
 import '../theme/theme.dart';
+import 'area.dart';
 
 /// A point on the map (the web `UiLatLng`).
 @immutable
@@ -313,6 +314,16 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 /// - [markerLabels] (0.43.0): [UiMapMarkerLabels.all] (the default), [UiMapMarkerLabels.selected]
 ///   (only the selected marker's label) or [UiMapMarkerLabels.none]. Hidden labels still name the
 ///   markers for screen readers.
+/// - [area] (0.44.0): a search area ([UiMapArea]), a circle drawn in true metres (it scales with the
+///   zoom) over the tiles and under the routes, pulse, dot, markers and pin; drags pan the map
+///   through it. When editable (and not a [preview]) a round handle on its inline-end edge (east;
+///   west in RTL), a 48dp target with the radius chip ("20 km", [uiMapFormatRadius]) above it,
+///   changes the radius between its min and max: [onAreaChanging] each time the (rounded) radius
+///   changes while dragging, [onAreaChanged] on every release. The chosen radius stays drawn until
+///   the app passes a new [area]. The map doesn't pan while the handle is dragged. For keyboards and screen readers
+///   the handle is a slider named [areaLabel] ([UiStrings.mapSearchArea]): Up and the outward arrow
+///   step 10% out, Down and the inward arrow 10% in, Home / End the min / max, each step that
+///   changes the radius calling both callbacks. [UiMapState.fitArea] shows the whole circle in the visible part.
 ///
 /// [userAgentPackageName] is sent with tile requests (the OSM policy asks for it); [tileProvider]
 /// replaces network tiles (offline tiles, tests).
@@ -355,7 +366,23 @@ class UiMap extends StatefulWidget {
     this.previewLabel,
     this.selectedMarkerId,
     this.markerLabels = UiMapMarkerLabels.all,
+    this.area,
+    this.onAreaChanging,
+    this.onAreaChanged,
+    this.areaLabel,
   });
+
+  /// A search area (0.44.0): a circle in metres, with a radius handle when editable.
+  final UiMapArea? area;
+
+  /// The radius in metres while the handle is dragged (and on each keyboard step).
+  final ValueChanged<double>? onAreaChanging;
+
+  /// The radius in metres when the handle is let go (and on each keyboard step).
+  final ValueChanged<double>? onAreaChanged;
+
+  /// The radius handle's accessible name; null: [UiStrings.mapSearchArea] ("Search area").
+  final String? areaLabel;
 
   /// A still picture of the map that is one button (0.43.0): no gestures, keys or controls, and
   /// page scrolling passes through it. A tap, Enter or Space calls [onPreviewPressed].
@@ -472,6 +499,12 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
 
   /// The pin while a finger drags it.
   UiLatLng? _dragging;
+
+  /// The area's radius while its handle is dragged.
+  double? _areaDrag;
+
+  /// The radius last chosen with the handle or keys, kept until the app passes a new [UiMap.area].
+  double? _areaKept;
   bool _ready = false;
 
   /// The map controller, to move the map from code.
@@ -491,6 +524,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     final next = uiMapInsetShift(widget.viewInsets, Directionality.of(context));
     if (next != _shift) _shiftTo(next, animate: uiFxMotion(context) == UiFxMotion.full);
     if (!_ready) return;
+    if (oldWidget.area != widget.area) _areaKept = null;
     if (oldWidget.center != widget.center || oldWidget.zoom != widget.zoom) {
       final c = _visibleCenter(_controller.camera);
       if ((c.latitude - widget.center.lat).abs() > 1e-9 || (c.longitude - widget.center.lng).abs() > 1e-9 || _controller.camera.zoom != widget.zoom) {
@@ -625,6 +659,50 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
       });
   }
 
+  /// Shows the whole search area's circle inside the visible part (between [UiMap.viewInsets]) with
+  /// [padding] to spare (0.44.0), as [fitPoints] does for its north, south, east and west points.
+  void fitArea({EdgeInsets? padding, double? maxZoom, bool animate = true}) {
+    final a = widget.area;
+    if (a == null) return;
+    final r = _areaKept ?? a.radiusMeters;
+    fitPoints(uiMapAreaBounds(UiMapArea(center: a.center, radiusMeters: r)), padding: padding, maxZoom: maxZoom ?? 19, animate: animate);
+  }
+
+  /// The area handle follows the finger: the radius is its distance from the centre, rounded and
+  /// kept to the area's min and max.
+  void _onAreaDrag(Offset global) {
+    final a = widget.area;
+    final box = _box.currentContext?.findRenderObject() as RenderBox?;
+    if (a == null || box == null) return;
+    final cam = _controller.camera;
+    final c = cam.latLngToScreenOffset(a.center._ll);
+    final px = (box.globalToLocal(global) - c).distance;
+    final r = uiMapNiceRadius(px * uiMapMetersPerPx(a.center.lat, cam.zoom)).clamp(a.minMeters, a.maxMeters).toDouble();
+    if (r == (_areaDrag ?? _areaKept ?? a.radiusMeters)) return;
+    setState(() => _areaDrag = r);
+    widget.onAreaChanging?.call(r);
+  }
+
+  /// Let go: the radius is kept and reported, changed or not.
+  void _onAreaDragEnd() {
+    final a = widget.area;
+    if (a == null) return;
+    final r = _areaDrag ?? _areaKept ?? a.radiusMeters;
+    if (mounted) {
+      setState(() {
+        _areaDrag = null;
+        _areaKept = r;
+      });
+    }
+    widget.onAreaChanged?.call(r);
+  }
+
+  void _onAreaStep(double r) {
+    setState(() => _areaKept = r);
+    widget.onAreaChanging?.call(r);
+    widget.onAreaChanged?.call(r);
+  }
+
   void _onFly() {
     final k = _flyCurve.transform(_fly.value);
     _controller.move(
@@ -679,6 +757,8 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     final user = widget.userLocation;
     final selected = widget.selectedMarkerId;
     final preview = widget.preview;
+    final area = widget.area;
+    final areaRadius = _areaDrag ?? _areaKept ?? area?.radiusMeters;
 
     Widget mapFor(double labelMax) => FlutterMap(
       key: _box,
@@ -714,6 +794,8 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
           // Dark tiles are drawn for the dark; only the light ones are dimmed.
           tileBuilder: dark && !darkTiles ? _dim : null,
         ),
+        // The search area: over the tiles, under everything else, never hit.
+        if (area != null) UiMapAreaLayer(area: area, radius: areaRadius!),
         // Routes: over the tiles, under the pulse, the dot, the markers and the pin.
         if (widget.routes.isNotEmpty) _RouteLayer(routes: widget.routes),
         // The pulse: geo-anchored like a marker, under the markers and pin, never hit or read out.
@@ -776,6 +858,18 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
               ),
             ),
           ]),
+        // The radius handle: on top of everything, so it can always be grabbed.
+        if (area != null && area.editable && !preview)
+          UiMapAreaHandleLayer(
+            area: area,
+            radius: areaRadius!,
+            rtl: rtl,
+            label: widget.areaLabel ?? context.uiStrings.mapSearchArea,
+            onDragStart: _release,
+            onDrag: _onAreaDrag,
+            onDragEnd: _onAreaDragEnd,
+            onStep: _onAreaStep,
+          ),
       ],
     );
 

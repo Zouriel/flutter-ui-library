@@ -170,6 +170,49 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.44.0. Map search area, swipe screens, top and SOS FAB.** For Dhirumi: the map is a second
+screen to the right of the chat, the person widens or narrows the search area on it, the nurse app
+sets her job radius the same way, and SOS floats at the top.
+
+- Area. Both libraries draw the circle themselves rather than with the engine's metre circle
+  (Leaflet `L.circle`, flutter_map `CircleLayer(useRadiusInMeter)`): the radius in px is
+  `radiusMeters / uiMapMetersPerPx(center.lat, zoom)` (the accuracy halo's formula), and the handle
+  sits exactly `r` px east of the centre (west in RTL), so the knob is always on the drawn edge and a
+  drag's px distance from the centre maps straight back to metres. Drag radii and key steps are
+  rounded (`uiMapNiceRadius`: 10 m under 1 km, 100 m under 10 km, else 1 km) so apps never get
+  20437.2. Flutter's handle uses an eager recognizer (accepted on pointer down) so flutter_map's
+  scale recognizer never pans under it; Leaflet's dragging is disabled for the duration of the
+  handle drag. `onAreaChanged` fires on every release (unchanged included); the chosen radius stays
+  drawn until the app passes a new area (as the web keeps it locally until the input changes).
+- Swipe screens. Flutter: one `HorizontalDragGestureRecognizer` subclass around all screens that
+  gives up once the pointer has moved more vertically than sideways (half the touch slop) and only
+  starts past the slop even when it wins the arena by default (`onlyAcceptDragOnThreshold`). An
+  `edgeSwipeOnly` screen takes no drags from that recognizer; an opaque 24px strip over its leading
+  edge carries its own back-only one, so the map under the rest never competes. Hidden screens are
+  `Offstage` (state kept, not painted, hit or read), `ExcludeFocus`, `TickerMode` off; the shape of
+  each screen's wrapper never changes. The web uses `touch-action: pan-y` and pointer events (mouse
+  drags swipe too), `inert` + `aria-hidden` on hidden screens and a polite live region.
+- FAB. New placements top-start/center/end and bottom-start/center/end (the web keeps its physical
+  values), `tone: danger` (danger fill, a 3px raised-surface ring and a 6px danger halo at 30%,
+  outside the button so its size doesn't change) and an extended `text` pill. The web's
+  `aboveOverlays` lifts it over sheets and drawers by z-index; Flutter has no z-index, so the docs
+  say where to put `UiFabHost` (around the page, or in `UiApp.builder` to sit above routes).
+- Visit UX additions (L1-L4). FAB `hold`: `UiHoldButton`'s gesture, keys and dialog moved into
+  `UiHoldActivator`, which both use (the hold button's tests and golden are unchanged). `topOffset`
+  is on `UiFabHost` here (the web puts it on `ui-fab`, which positions itself). Button badges reuse
+  the bottom nav's badge look; the badge's own text is excluded from semantics and the name is
+  "label, badgeLabel". The sheet footer is laid over the panel inside the DraggableScrollableSheet's
+  builder, whose box is the live visible height, so it stays pinned while dragging; the footer's and
+  header's heights are measured after layout and an open snap shorter than both is raised (indices
+  are unchanged, so `snap` / `onSnapChanged` mean the same). The body (a `child`) gets the footer's
+  height as bottom padding; a `builder` reads `UiBottomSheetState.footerHeight`. `insetEnd` widens
+  the panel's end gutter (physical right in LTR, left in RTL).
+- Web differences: hold on the web is the `UiFabHold` directive (`ui-fab[hold]`, from
+  `@zouriel/ui/hold-button`, emitting `(confirmed)`), because the button entry can't import the
+  dialog entry; the template API matches `UiFab.hold` here. The web also exports `uiSwipeTarget`
+  and a fixed 8px swipe slop (`UI_SWIPE_SLOP`); Flutter uses the platform's touch slop from
+  MediaQuery gesture settings.
+
 **0.43.1. Map background tap.** The web `(mapTap)` and Flutter `onMapTap` report a background tap as
 `UiLatLng`. Leaflet's map `click` already excludes a drag and foreground Marker clicks; flutter_map's
 `MapOptions.onTap` excludes a drag and double-tap, while marker/control tap recognizers win its

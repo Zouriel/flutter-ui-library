@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
@@ -37,6 +38,8 @@ class _LayoutPageState extends State<LayoutPage> {
   bool _shellRtl = false;
   bool _chatDrawer = false;
   String _chat = 'Dr Aminath';
+  int _screen = 0;
+  bool _screensRtl = false;
 
   @override
   Widget build(BuildContext context) {
@@ -49,15 +52,19 @@ class _LayoutPageState extends State<LayoutPage> {
         DocSection(
           name: 'Floating panel',
           widget: 'UiFloatingPanel',
-          summary: 'A raised surface floating over the bottom (or top) of a Stack: the details card over a map. Put it in the Stack directly. Non-modal: it takes no focus and only its own box takes touches, so what is around it stays usable and draggable. It sits 16px in from the edges plus the safe-area insets, up to 480 wide and centred, so it fits a 390px phone with a 16px gutter. With semanticLabel it is a named container.',
+          summary: 'A raised surface floating over the bottom (or top) of a Stack: the details card over a map. Put it in the Stack directly. Non-modal: it takes no focus and only its own box takes touches, so what is around it stays usable and draggable. It sits 16px in from the edges plus the safe-area insets, up to 480 wide and centred, so it fits a 390px phone with a 16px gutter. With semanticLabel it is a named container. insetEnd (0.44.0) keeps that many px free at its inline end (the left in right-to-left text), so a top-end button such as an SOS FAB never overlaps the card.',
           demo: SizedBox(
             height: 260,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(t.radius),
               child: Stack(children: [
                 Positioned.fill(child: ColoredBox(color: t.surfaceSubtle, child: Center(child: UiText('The map', variant: UiTextVariant.caption)))),
+                // A top-end round button the card keeps clear of (insetEnd: 64).
+                PositionedDirectional(top: t.space4, end: t.space4, child: UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAlert02), label: 'Emergency SOS', tone: UiFabTone.danger, size: UiFabSize.sm, onPressed: () {})),
                 UiFloatingPanel(
                   semanticLabel: 'Nurse',
+                  placement: UiFloatingPanelPlacement.top,
+                  insetEnd: 64,
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: const [
                     UiText('Aminath Hassan, RN', variant: UiTextVariant.label),
                     UiText('12 min away · Home visits', variant: UiTextVariant.caption),
@@ -78,6 +85,7 @@ class _LayoutPageState extends State<LayoutPage> {
             ApiRow('glass', 'bool?', 'See-through surface, the same as UiBottomSheet.glass (0.41.2); solid under the high-contrast setting. Defaults to UiConfig.glass.'),
             ApiRow('glassStrength', 'UiGlassStrength', 'How see-through glass is (0.41.3), as on UiBottomSheet: clear for a map in the theme\'s brightness, frosted for anything else.', def: 'clear'),
             ApiRow('radius', 'bool?', 'Rounded corners. Defaults to UiConfig.radius.'),
+            ApiRow('insetEnd', 'double', 'Px kept free at the inline end, beside the gutter (0.44.0); mirrored in RTL.', def: '0'),
           ],
         ),
         DocSection(
@@ -366,6 +374,84 @@ class _LayoutPageState extends State<LayoutPage> {
           callbacks: const [
             ApiRow('UiSidebarLayout.of(context)', 'UiSidebarLayoutScope', 'Inside the layout: compact (drawer mode), open, toggle(), close(). maybeOf is null outside.'),
             ApiRow('toggle() / close() / compact', 'UiSidebarLayoutState', 'Through a GlobalKey.'),
+          ],
+        ),
+        DocSection(
+          name: 'Swipe screens',
+          widget: 'UiSwipeScreens · UiSwipeScreen',
+          summary: 'Full-size screens side by side that a horizontal drag moves between (0.44.0): a chat with its map to the right. Screen i+1 sits at the inline end of screen i (to the left in right-to-left text). The screens follow the finger and snap on release: a quick flick moves one screen, otherwise past half the width moves and less springs back; under reduced motion the snap is instant. Only clearly horizontal drags are taken, so lists inside keep scrolling. On the first screen a drag that starts within leadingEdgeExclusion (24) of the leading edge is left to the app, so a drawer can open from there. An edgeSwipeOnly screen (a map that pans) gives every drag to its content, except one that starts in the 24px strip at its leading edge, which swipes back. Changing index animates there; a swipe calls onIndexChanged. Every screen keeps its state off screen, where it is not painted, focusable or read out; the new screen\'s label is announced. Apps add their own buttons or indicator (here, the segmented control).',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiSegmented<int>(
+                label: 'Screen',
+                size: UiSize.sm,
+                options: const [UiSegmentedOption(value: 0, label: 'Chat'), UiSegmentedOption(value: 1, label: 'Map')],
+                value: _screen,
+                onChanged: (v) => setState(() => _screen = v),
+              ),
+              UiSwitch(value: _screensRtl, onChanged: (v) => setState(() => _screensRtl = v), label: 'Right to left'),
+            ]),
+            Directionality(
+              textDirection: _screensRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: SizedBox(
+                height: 420,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radius),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(border: Border.all(color: t.border)),
+                    child: UiSwipeScreens(
+                      index: _screen,
+                      onIndexChanged: (i) => setState(() => _screen = i),
+                      screens: [
+                        UiSwipeScreen(
+                          label: 'Chat',
+                          child: ColoredBox(
+                            color: t.bg,
+                            child: ListView(padding: EdgeInsets.all(t.space3), children: [
+                              for (var i = 0; i < 14; i++)
+                                Padding(
+                                  padding: EdgeInsets.only(bottom: t.space2),
+                                  child: UiChatBubble(mine: i.isOdd, child: Text(i.isOdd ? 'Any nurses near Henveiru?' : 'Three nurses are within 2 km. Swipe to the map to see them.')),
+                                ),
+                            ]),
+                          ),
+                        ),
+                        UiSwipeScreen(
+                          label: 'Map',
+                          edgeSwipeOnly: true,
+                          child: UiMap(
+                            fill: true,
+                            zoom: 14,
+                            markers: const [
+                              UiMapMarker(id: 'n1', lat: 4.1762, lng: 73.5105, label: 'Aminath Hassan, RN', tone: UiStatus.success),
+                              UiMapMarker(id: 'n2', lat: 4.1738, lng: 73.5072, label: 'Ibrahim Rasheed, RN'),
+                            ],
+                            area: const UiMapArea(center: UiLatLng(4.1755, 73.5093), radiusMeters: 2000),
+                            userAgentPackageName: 'com.zouriel.ui.showcase',
+                            semanticLabel: 'Nurses near you',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ]),
+          code: '''UiSwipeScreens(
+  index: screen,
+  onIndexChanged: (i) => setState(() => screen = i),
+  screens: [
+    UiSwipeScreen(label: 'Chat', child: chat),
+    UiSwipeScreen(label: 'Map', edgeSwipeOnly: true, child: UiMap(fill: true, ...)),
+  ],
+)''',
+          api: const [
+            ApiRow('screens', 'List<UiSwipeScreen>', 'child, label (announced when shown), edgeSwipeOnly (only a leading-edge drag swipes back).'),
+            ApiRow('index / onIndexChanged', 'int / ValueChanged<int>?', 'The shown screen; a new value animates there. A swipe calls onIndexChanged (the widget keeps the new screen even if you don\'t pass it back).', def: '0'),
+            ApiRow('leadingEdgeExclusion', 'double', 'On the first screen, how far from the leading edge drags are left to the app (a drawer).', def: '24'),
+            ApiRow('edgeWidth', 'double', 'The back-swipe strip of an edgeSwipeOnly screen.', def: '24'),
+            ApiRow('uiSwipeScreensFlingVelocity', 'double', 'A release faster than this (px/s) moves one screen that way.', def: '400'),
           ],
         ),
       ],

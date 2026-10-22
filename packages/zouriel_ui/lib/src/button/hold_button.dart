@@ -64,7 +64,79 @@ class UiHoldButton extends StatefulWidget {
   State<UiHoldButton> createState() => UiHoldButtonState();
 }
 
-class UiHoldButtonState extends State<UiHoldButton> with SingleTickerProviderStateMixin {
+class UiHoldButtonState extends State<UiHoldButton> {
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.uiTheme;
+    final t = theme.tokens;
+    final rounded = theme.config.radius;
+    final r = !rounded ? 0.0 : widget.variant == UiButtonVariant.brand ? t.radiusPill : widget.size == UiSize.xl ? t.radiusLg : t.radius;
+    final fg = switch (widget.variant) {
+      UiButtonVariant.primary || UiButtonVariant.brand => t.primaryContrast,
+      UiButtonVariant.secondary => t.secondaryContrast,
+      UiButtonVariant.destructive => t.dangerContrast,
+      UiButtonVariant.accent => t.accentContrast,
+      _ => t.text,
+    };
+    return UiHoldActivator(
+      onConfirmed: widget.onConfirmed,
+      hold: widget.hold,
+      confirmTitle: widget.confirmTitle,
+      confirmMessage: widget.confirmMessage,
+      confirmLabel: widget.confirmLabel,
+      destructive: widget.destructive,
+      fillColor: fg.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(r),
+      builder: (context, focusNode, onActivate) => UiButton(
+        label: widget.label,
+        icon: widget.icon,
+        variant: widget.variant,
+        size: widget.size,
+        block: widget.block,
+        focusNode: focusNode,
+        semanticLabel: widget.semanticLabel,
+        semanticHint: widget.holdHint ?? context.uiStrings.holdHint,
+        onPressed: onActivate,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Press-and-hold for any button (0.44.0; what [UiHoldButton] and a [UiFab] with `hold` are built
+/// on). [builder] gets the focus node and the activation callback to give the button (null when
+/// disabled); a fill of [fillColor] grows across it from the inline start while it is held, clipped
+/// to [borderRadius]. Held [hold] long (pointer, or Space / Enter), it calls [onConfirmed]; a tap, a
+/// quick key press or a screen reader's activation opens the confirm dialog instead.
+class UiHoldActivator extends StatefulWidget {
+  const UiHoldActivator({
+    super.key,
+    required this.builder,
+    required this.onConfirmed,
+    this.hold = const Duration(seconds: 2),
+    this.confirmTitle,
+    this.confirmMessage = '',
+    this.confirmLabel,
+    this.destructive = false,
+    required this.fillColor,
+    this.borderRadius = BorderRadius.zero,
+  });
+
+  final Widget Function(BuildContext context, FocusNode focusNode, VoidCallback? onActivate) builder;
+  final VoidCallback? onConfirmed;
+  final Duration hold;
+  final String? confirmTitle;
+  final String confirmMessage;
+  final String? confirmLabel;
+  final bool destructive;
+  final Color fillColor;
+  final BorderRadiusGeometry borderRadius;
+
+  @override
+  State<UiHoldActivator> createState() => UiHoldActivatorState();
+}
+
+class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProviderStateMixin {
   late final AnimationController _fill = AnimationController(vsync: this, duration: widget.hold)..addStatusListener(_status);
   late final FocusNode _focus = FocusNode(onKeyEvent: _onKey);
   bool _holding = false;
@@ -72,10 +144,13 @@ class UiHoldButtonState extends State<UiHoldButton> with SingleTickerProviderSta
   bool _pressed = false;
   Duration _pressLength = Duration.zero;
 
+  /// How far the hold has got, 0 to 1 (for tests).
+  double get progress => _fill.value;
+
   bool get _enabled => widget.onConfirmed != null;
 
   @override
-  void didUpdateWidget(UiHoldButton oldWidget) {
+  void didUpdateWidget(UiHoldActivator oldWidget) {
     super.didUpdateWidget(oldWidget);
     _fill.duration = widget.hold;
   }
@@ -165,52 +240,29 @@ class UiHoldButtonState extends State<UiHoldButton> with SingleTickerProviderSta
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.uiTheme;
-    final t = theme.tokens;
-    final rounded = theme.config.radius;
-    final r = !rounded ? 0.0 : widget.variant == UiButtonVariant.brand ? t.radiusPill : widget.size == UiSize.xl ? t.radiusLg : t.radius;
-    final fg = switch (widget.variant) {
-      UiButtonVariant.primary || UiButtonVariant.brand => t.primaryContrast,
-      UiButtonVariant.secondary => t.secondaryContrast,
-      UiButtonVariant.destructive => t.dangerContrast,
-      UiButtonVariant.accent => t.accentContrast,
-      _ => t.text,
-    };
-    final button = UiButton(
-      label: widget.label,
-      icon: widget.icon,
-      variant: widget.variant,
-      size: widget.size,
-      block: widget.block,
-      focusNode: _focus,
-      semanticLabel: widget.semanticLabel,
-      semanticHint: widget.holdHint ?? context.uiStrings.holdHint,
-      onPressed: _enabled ? _activated : null,
-      child: widget.child,
-    );
     return Listener(
-        onPointerDown: (e) {
-          if (e.buttons == kPrimaryButton) _start();
-        },
-        onPointerUp: (_) => _end(),
-        onPointerCancel: (_) => _end(),
-        child: Stack(children: [
-          button,
-          Positioned.fill(
-            child: IgnorePointer(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(r),
-                child: AnimatedBuilder(
-                  animation: _fill,
-                  builder: (context, _) => Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: FractionallySizedBox(widthFactor: _fill.value, heightFactor: 1, child: ColoredBox(color: fg.withValues(alpha: 0.22))),
-                  ),
+      onPointerDown: (e) {
+        if (e.buttons == kPrimaryButton) _start();
+      },
+      onPointerUp: (_) => _end(),
+      onPointerCancel: (_) => _end(),
+      child: Stack(children: [
+        widget.builder(context, _focus, _enabled ? _activated : null),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipRRect(
+              borderRadius: widget.borderRadius,
+              child: AnimatedBuilder(
+                animation: _fill,
+                builder: (context, _) => Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FractionallySizedBox(widthFactor: _fill.value, heightFactor: 1, child: ColoredBox(color: widget.fillColor)),
                 ),
               ),
             ),
           ),
-        ]),
+        ),
+      ]),
     );
   }
 }

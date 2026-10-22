@@ -132,7 +132,7 @@ File: `button/src/button-group.ts`
 ### UiButton (component, `ui-button`)
 File: `button/src/button.ts`  
 `ui-button` — the action primitive. Wires `glass`/`radius` to the global UiConfig defaults (overridable per instance) and uses only design tokens.  
-- Inputs: `variant`: UiButtonVariant = 'primary'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `loading` = false; `block` = false; `glass` = false; `radius`: boolean = this.config.radius
+- Inputs: `variant`: UiButtonVariant = 'primary'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `loading` = false; `block` = false; `glass` = false; `radius`: boolean = this.config.radius; `badge` / `badgeTone` / `badgeLabel` (0.44; helper `uiBadgeCount`)
 - [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
 - type `UiButtonVariant` (button.ts)
@@ -147,13 +147,13 @@ File: `button/src/dropdown-button.ts`
 ### UiFab (component, `ui-fab`)
 File: `button/src/fab.ts`  
 `ui-fab` — floating action button, fixed to a screen corner. `label` is required (a11y).  
-- Inputs: `label`: string; `position`: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = 'bottom-right'; `size`: 'sm' | 'md' = 'md'; `disabled` = false
+- Inputs: `label`: string; `position`: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = 'bottom-right', plus (0.44) 'top-start' | 'top-center' | 'top-end' | 'bottom-start' | 'bottom-center' | 'bottom-end' (Flutter `UiFabPosition` on `UiFabHost`, with topCenter / bottomCenter); `size`: 'sm' | 'md' = 'md'; `disabled` = false; `tone`: 'primary' | 'danger' (0.44, Flutter `UiFabTone`); `text` (0.44, extended pill); `topOffset` (0.44; Flutter on `UiFabHost`); `hold` / `holdHint` / `confirmTitle` / `confirmMessage` / `confirmLabel` / `destructive` (0.44, hold to activate; web output `confirmed`, Flutter `onPressed`); `aboveOverlays` (0.44, web only: in Flutter z-order is where the `UiFabHost` sits in the tree)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiIconButton (component, `ui-icon-button`)
 File: `button/src/icon-button.ts`  
 `ui-icon-button` — square, icon-only action. `label` is REQUIRED and applied as `aria-label` so the control is named for assistive tech (WCAG).  
-- Inputs: `label`: string; `variant`: UiButtonVariant = 'ghost'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `round` = false; `glass` = false; `radius`: boolean = this.config.radius
+- Inputs: `label`: string; `variant`: UiButtonVariant = 'ghost'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `round` = false; `glass` = false; `radius`: boolean = this.config.radius; `badge` / `badgeTone` / `badgeLabel` (0.44)
 - [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
 ### UiSegmented (component, `ui-segmented`)
@@ -395,7 +395,7 @@ File: `datepicker/src/date-range-picker.ts`
 ### UiBottomSheet (component, `ui-bottom-sheet`)
 File: `dialog/src/bottom-sheet.ts`  
 `ui-bottom-sheet` — a panel anchored to the bottom of the screen that the user drags between resting heights, the mobile answer to a sidebar. <p>Heights are `snaps`: fractions of the room it has (the viewport, less `offset` below it for a toolbar and `topInset` above it for a header). `snap` is the index it rests at, two-way; a first snap of 0 is closed. Drag the header anywhere, or flick it — a fast release moves one snap in that direction. Dragging the body moves the sheet too when that's the only sensible reading: pulling down with the content already at its top, or pushing up while there's a taller snap to reach. Otherwise the content scrolls as usual. Anything marked `data-sheet-nodrag` keeps its drags.</p> <h4>Touch events for the finger</h4> <p>A drag that the browser could read as a scroll never becomes a pointer event, so the finger is followed with touch events, which arrive complete. Pointer events serve the mouse and pen only, and are ignored once a touch has been seen so one finger isn't read as two drags.</p> <p>It's non-modal by default: what's above stays usable, which is the point on an editor, so opening it does not move focus and Tab can leave it. Set `backdrop` to make it modal while open: the page dims and a backdrop tap closes it, it is marked `aria-modal`, focus moves into it (to an element marked `cdkFocusInitial`, else the first focusable one, the handle), and Tab is trapped inside (CDK `FocusTrap`). Escape closes it while focus is inside; closing either way sends focus back to where it came from. The handle is a button that steps through the snaps, and ↑/↓ on it do the same. When a field inside gains focus on a touch screen, the sheet rises to its tallest snap (turn that off with `expandOnFocus`), and while an on-screen keyboard is up the sheet rests on top of it rather than behind it.</p> <p>Positioned `fixed`; keep it out of transformed ancestors.</p>  
-- Inputs: `snaps`: readonly number[] = [0; `title` = ''; `offset` = 0; `topInset` = 0; `backdrop` = false; `closable` = true; `hasHeader` = false; `expandOnFocus` = true; `glass` = false (0.41.2, see-through over a map; Flutter `glass`); `glassStrength`: 'clear' | 'frosted' = 'clear' (0.41.3; Flutter `UiGlassStrength`)
+- Inputs: `snaps`: readonly number[] = [0; `title` = ''; `offset` = 0; `topInset` = 0; `backdrop` = false; `closable` = true; `hasHeader` = false; `expandOnFocus` = true; `glass` = false (0.41.2, see-through over a map; Flutter `glass`); `glassStrength`: 'clear' | 'frosted' = 'clear' (0.41.3; Flutter `UiGlassStrength`); `[sheet-footer]` slot (0.44; Flutter `footer`)
 - Two-way: `snap` = 0
 - Outputs: `heightChange`: number; `coverChange`: number
 - Methods: `close()`
@@ -1647,8 +1647,14 @@ Pan/zoom surface with fit, minimap and zoom controls.
 ### UiFloatingPanel (component, `ui-floating-panel`) (0.34)
 File: `layout/src/floating-panel.ts`  
 `ui-floating-panel` — a non-modal raised card over the bottom or top of its positioned parent (over a map); safe-area aware, 16px gutter, up to 480px.  
-- Inputs: `placement`: 'bottom' | 'top' = 'bottom'; `ariaLabel`; `glass` (0.41.2: the bottom sheet's see-through glass); `glassStrength` (0.41.3, as the sheet's); `radius`
+- Inputs: `placement`: 'bottom' | 'top' = 'bottom'; `ariaLabel`; `glass` (0.41.2: the bottom sheet's see-through glass); `glassStrength` (0.41.3, as the sheet's); `radius`; `insetEnd` (0.44)
 - Outputs: `coverChange` (Flutter `onCoverChanged`, 0.39): px of the edge it covers
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSwipeScreens (component, `ui-swipe-screens` / `ui-swipe-screen`) (0.44)
+File: `layout/src/swipe-screens.ts`  
+Full-size screens side by side that a horizontal drag moves between (a chat with a map to its right). Flutter: `UiSwipeScreens` + `UiSwipeScreen`.  
+- Inputs: `index` (model; Flutter `index` + `onIndexChanged`); `leadingEdgeExclusion` = 24; `edgeWidth` = 24; per screen `label`, `edgeSwipeOnly`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiRowActions (component, `ui-row-actions`) (0.34)
@@ -1678,9 +1684,10 @@ A message: mine at the inline end in primary, theirs at the start on the raised 
 ### UiMap (component, `ui-map`) (0.35)
 File: `map/src/map.ts`  
 OpenStreetMap map (Leaflet on the web, flutter_map here) with markers, a draggable pin, themed controls and dimmed dark tiles. Flutter: `package:zouriel_ui/map.dart`.  
-- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `pulse` (UiMapPulse, 0.39); `insets` (Flutter `viewInsets`, 0.39); `fill` (0.39); `tileUrl`; `tileUrlDark` (0.40); `tileSize` / `zoomOffset` (0.40); `locateControl` / `locating` / `locateOff` (0.40); `userLocation` (UiMapUserLocation, 0.40); `routes` (UiMapRoute, 0.42); `controls` (UiMapControl, 0.42.1); `preview` / `previewLabel` (0.43); `selectedMarkerId` / `markerLabels` (UiMapMarkerLabels, 0.43); `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
-- Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model); `locate` (Flutter `onLocate`, 0.40); `controlPress` (Flutter `UiMapControl.onPressed`, 0.42.1); `previewPress` (Flutter `onPreviewPressed`, 0.43)
-- Methods: `flyTo(point, zoom?)` (Flutter `UiMapState.flyTo`, 0.40); `fitPoints(points, { padding, maxZoom, animate })` (Flutter `UiMapState.fitPoints`, 0.42)
+- Inputs: `center`; `zoom`; `markers` (`semanticLabel` / web `ariaLabel`); `pin` (model); `pinMode`; `pinLabel`; `pinDraggable`; `pulse` (UiMapPulse, 0.39); `insets` (Flutter `viewInsets`, 0.39); `fill` (0.39); `tileUrl`; `tileUrlDark` (0.40); `tileSize` / `zoomOffset` (0.40); `locateControl` / `locating` / `locateOff` (0.40); `userLocation` (UiMapUserLocation, 0.40); `routes` (UiMapRoute, 0.42); `controls` (UiMapControl, 0.42.1); `preview` / `previewLabel` (0.43); `selectedMarkerId` / `markerLabels` (UiMapMarkerLabels, 0.43); `area` (UiMapArea, 0.44) / `areaLabel` (0.44); `tileHeaders` (Flutter) / `tileReferrerPolicy` (web); `attribution`; `semanticLabel` (web `ariaLabel`); `tileProvider` (Flutter, including `UiMapBlankTiles` for tests)
+- Outputs: `markerSelected`; `centerChanged`; `onPinChanged` (Flutter / web `pin` model); `locate` (Flutter `onLocate`, 0.40); `controlPress` (Flutter `UiMapControl.onPressed`, 0.42.1); `previewPress` (Flutter `onPreviewPressed`, 0.43); `areaChanging` / `areaChange` (Flutter `onAreaChanging` / `onAreaChanged`, 0.44)
+- Methods: `flyTo(point, zoom?)` (Flutter `UiMapState.flyTo`, 0.40); `fitPoints(points, { padding, maxZoom, animate })` (Flutter `UiMapState.fitPoints`, 0.42); `fitArea({ padding, maxZoom, animate })` (Flutter `UiMapState.fitArea`, 0.44)
+- Helpers (0.44): `uiMapFormatRadius`, `uiMapNiceRadius`, `uiMapAreaStep`, `uiMapMetersPerPx`, `uiMapAreaBounds`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiGoogleButton (component, `ui-google-button`) (0.36)

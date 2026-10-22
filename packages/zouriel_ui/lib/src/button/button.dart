@@ -72,10 +72,61 @@ _Look _look(UiButtonVariant v, UiTokens t, UiStates s) {
   }
 }
 
+/// A count for a button or nav badge (0.44.0, the web `uiBadgeCount`): null for none (0 or less),
+/// "9+" past [max], else the number.
+String? uiBadgeCount(int n, {int max = 9}) => n <= 0 ? null : (n > max ? '$max+' : '$n');
+
+/// A badge's colour (0.44.0): danger (the default, unread counts) or primary.
+enum UiBadgeTone { danger, primary }
+
+/// The count bubble at a button's top-end corner (0.44.0, exported for tests): the bottom nav's
+/// badge look, a 16px pill with 11px tabular figures. Not read out itself: the button's name says it.
+class UiButtonBadge extends StatelessWidget {
+  const UiButtonBadge({super.key, required this.text, this.tone = UiBadgeTone.danger});
+  final String text;
+  final UiBadgeTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final bg = tone == UiBadgeTone.danger ? t.danger : t.primary;
+    final fg = tone == UiBadgeTone.danger ? t.dangerContrast : t.primaryContrast;
+    return ExcludeSemantics(
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 16),
+        height: 16,
+        padding: EdgeInsets.symmetric(horizontal: t.space1),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(t.radiusPill)),
+        alignment: Alignment.center,
+        child: Text(
+          text,
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+          style: context.uiText.body.copyWith(fontSize: 11, fontWeight: FontWeight.w600, height: 16 / 11, color: fg, fontFeatures: const [FontFeature.tabularFigures()]),
+        ),
+      ),
+    );
+  }
+}
+
+/// [box] with [badge] at its top-end corner, 6px out, unclipped.
+Widget _withBadge(Widget box, String? badge, UiBadgeTone tone) => badge == null
+    ? box
+    : Stack(clipBehavior: Clip.none, children: [
+        box,
+        PositionedDirectional(top: -6, end: -6, child: UiButtonBadge(text: badge, tone: tone)),
+      ]);
+
+/// The accessible name with the badge read after it ("Chat, 2 unread").
+String? _badgedName(String? name, String? badge, String? badgeLabel) => badge == null ? name : (name == null ? badgeLabel ?? badge : '$name, ${badgeLabel ?? badge}');
+
 /// `ui-button`: the action primitive.
 ///
 /// Pass a [label] (or any [child]) and optional [icon] / [trailingIcon]. While [loading] it shows a
 /// spinner, is announced as busy, and ignores taps. Leave [onPressed] null to disable it.
+///
+/// [badge] (0.44.0) shows a count bubble at the top-end corner ([uiBadgeCount] gives "9+") in
+/// [badgeTone], read after the name: [badgeLabel] when given ("2 unread"), else the badge text.
 class UiButton extends StatelessWidget {
   const UiButton({
     super.key,
@@ -96,7 +147,17 @@ class UiButton extends StatelessWidget {
     this.semanticHint,
     this.minWidth,
     this.padding,
+    this.badge,
+    this.badgeTone = UiBadgeTone.danger,
+    this.badgeLabel,
   }) : assert(label != null || child != null || (icon != null && semanticLabel != null), 'Give the button a label, a child, or an icon and a semanticLabel.');
+
+  /// A count bubble at the top-end corner (0.44.0); null for none.
+  final String? badge;
+  final UiBadgeTone badgeTone;
+
+  /// What screen readers hear for the badge ("2 unread"); null: the badge text.
+  final String? badgeLabel;
 
   final String? label;
   final Widget? child;
@@ -145,8 +206,10 @@ class UiButton extends StatelessWidget {
       enabled: onPressed != null && !loading,
       focusNode: focusNode,
       autofocus: autofocus,
-      semanticLabel: semanticLabel ?? (loading ? '${label ?? ''} (busy)'.trim() : null),
+      semanticLabel: _badgedName(semanticLabel ?? (loading ? '${label ?? ''} (busy)'.trim() : (badge != null ? label : null)), badge, badgeLabel),
       semanticHint: semanticHint,
+      // With a badge the name is built here, so the label isn't read twice.
+      excludeChildSemantics: badge != null && (semanticLabel != null || label != null || loading),
       builder: (context, s) {
         final look = _look(variant, t, s);
         final style = theme.typography.body.copyWith(
@@ -211,7 +274,7 @@ class UiButton extends StatelessWidget {
         return AnimatedOpacity(
           opacity: s.disabled && !loading ? 0.5 : 1,
           duration: t.motionBase,
-          child: block ? SizedBox(width: double.infinity, child: box) : box,
+          child: block ? SizedBox(width: double.infinity, child: _withBadge(box, badge, badgeTone)) : _withBadge(box, badge, badgeTone),
         );
       },
     );
@@ -219,7 +282,8 @@ class UiButton extends StatelessWidget {
 }
 
 /// `ui-icon-button`: a square, icon-only action. [label] is required: it is the accessible name
-/// (and the tooltip on platforms with hover).
+/// (and the tooltip on platforms with hover). [badge] (0.44.0) as on [UiButton]: a count bubble at
+/// the top-end corner, read after the label ("Chat, 2 unread").
 class UiIconButton extends StatelessWidget {
   const UiIconButton({
     super.key,
@@ -233,7 +297,17 @@ class UiIconButton extends StatelessWidget {
     this.radius,
     this.focusNode,
     this.iconColor,
+    this.badge,
+    this.badgeTone = UiBadgeTone.danger,
+    this.badgeLabel,
   });
+
+  /// A count bubble at the top-end corner (0.44.0); null for none.
+  final String? badge;
+  final UiBadgeTone badgeTone;
+
+  /// What screen readers hear for the badge ("2 unread"); null: the badge text.
+  final String? badgeLabel;
 
   final Widget icon;
 
@@ -261,14 +335,14 @@ class UiIconButton extends StatelessWidget {
       onTap: onPressed,
       enabled: onPressed != null,
       focusNode: focusNode,
-      semanticLabel: label,
+      semanticLabel: _badgedName(label, badge, badgeLabel),
       excludeChildSemantics: true,
       builder: (context, s) {
         // Link has no fill of its own as an icon button; it behaves like ghost.
         final v = variant == UiButtonVariant.link ? UiButtonVariant.ghost : variant;
         final look = _look(v, t, s);
         final transparentBorder = v == UiButtonVariant.ghost || look.fill != null && v != UiButtonVariant.outline;
-        return AnimatedOpacity(
+        return _withBadge(AnimatedOpacity(
           opacity: s.disabled ? 0.5 : 1,
           duration: t.motionBase,
           child: AnimatedContainer(
@@ -288,7 +362,7 @@ class UiIconButton extends StatelessWidget {
                 : null,
             child: Center(child: IconTheme.merge(data: IconThemeData(color: iconColor != null ? (s.hovered || s.pressed ? look.fg : iconColor!) : _neutral(v) ? (t.icon ?? look.fg) : look.fg, size: iconSize), child: icon)),
           ),
-        );
+        ), badge, badgeTone);
       },
     );
   }

@@ -437,7 +437,7 @@ if (ok == true) delete();''',
         DocSection(
           name: 'Bottom sheet',
           widget: 'UiBottomSheet',
-          summary: 'A panel resting at the bottom of the screen that is dragged between heights: the mobile stand-in for a sidebar. Put it last in a Stack over the page. Drag or flick the header; dragging the body moves the sheet when the content can\'t use the drag (pulling down at its top, or pushing up while there\'s a taller snap). The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. Non-modal by default: opening it does not move focus and Tab can leave it. With backdrop it is modal while open: the page dims and a tap on it closes the sheet, focus moves to the handle and stays inside, and screen readers can\'t reach the page. Escape (focus inside) and the back button close it; closing sends focus back where it came from. Focusing a text field inside raises it to its tallest snap on a phone, and while the keyboard is up it rests on top of it.',
+          summary: 'A panel resting at the bottom of the screen that is dragged between heights: the mobile stand-in for a sidebar. Put it last in a Stack over the page. Drag or flick the header; dragging the body moves the sheet when the content can\'t use the drag (pulling down at its top, or pushing up while there\'s a taller snap). The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. Non-modal by default: opening it does not move focus and Tab can leave it. With backdrop it is modal while open: the page dims and a tap on it closes the sheet, focus moves to the handle and stays inside, and screen readers can\'t reach the page. Escape (focus inside) and the back button close it; closing sends focus back where it came from. Focusing a text field inside raises it to its tallest snap on a phone, and while the keyboard is up it rests on top of it. footer (0.44.0) is a sticky bar at the bottom of the visible sheet at every snap, the peek included and while dragging, with the body scrolling above it; it counts in onCoverChanged, rests on the keyboard with the sheet, and an open snap too short for the header and the footer is raised to fit them. A builder\'s scroll view adds UiBottomSheetState.footerHeight to its bottom padding.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             row([
               UiButton(label: 'Open half', variant: UiButtonVariant.outline, onPressed: () => setState(() => _sheetSnap = 1)),
@@ -468,6 +468,7 @@ if (ok == true) delete();''',
                     snap: _sheetSnap,
                     title: 'Layers',
                     backdrop: _sheetModal,
+                    footer: UiButton(label: 'Apply', block: true, onPressed: () => _toasts.info('Applied')),
                     actions: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'Add layer', size: UiSize.sm, onPressed: () => _toasts.info('Layer added')),
                     onSnapChanged: (i) => setState(() {
                       _sheetSnap = i;
@@ -475,7 +476,8 @@ if (ok == true) delete();''',
                     }),
                     builder: (context, scroll) => ListView.builder(
                       controller: scroll,
-                      padding: EdgeInsets.symmetric(vertical: t.space2),
+                      // Room for the footer under the last layer.
+                      padding: EdgeInsets.only(top: t.space2, bottom: t.space2 + 72),
                       itemCount: 30,
                       itemBuilder: (context, i) => Padding(
                         padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space2),
@@ -512,6 +514,7 @@ if (ok == true) delete();''',
             ApiRow('expandOnFocus', 'bool', 'Rise to the tallest snap when a text field inside gains focus on a touch screen.', def: 'true'),
             ApiRow('glass', 'bool', 'See-through surface for a sheet over a map (0.41.2); solid under the high-contrast setting. Not set by UiConfig.glass. See Map › Map page.', def: 'false'),
             ApiRow('glassStrength', 'UiGlassStrength', 'How see-through glass is (0.41.3): clear lets a map in the theme\'s brightness plainly show through, text AA over such a map; frosted is near-opaque, AA over any backdrop.', def: 'clear'),
+            ApiRow('footer', 'Widget?', 'A sticky bar at the bottom of the visible sheet at every snap (0.44.0): the primary action. Counted in the cover; a too-short peek is raised to fit it.'),
           ],
           callbacks: const [
             ApiRow('onHeightChanged', 'ValueChanged<double>?', 'Px height once it settles.'),
