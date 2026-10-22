@@ -109,6 +109,9 @@ font, as `textStyle` does on the text fields (`TextStyle(fontFamilyFallback: ['F
 The web twin's map markers were drawn further down one after another; Flutter places each `Marker` on its
 own and never had it (a test now checks 60 dots against their points).
 
+**0.44.3:** no Flutter change. The web sheet's body now ends at its footer's top; here the frosted footer
+already hides what scrolls under it (nested backdrop blur is weak on the web, strong in Flutter).
+
 **Dialogs from above the navigator (0.44.1):** widgets placed by `UiApp.builder` (an SOS `UiFab` in a
 `UiFabHost` that floats over dialogs and drawers) sit above the app's Navigator; the library's dialogs opened
 from there (a hold button's tap confirm, `showUiConfirm`, `showUiModal`, `showUiDrawer`, the command

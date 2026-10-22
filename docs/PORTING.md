@@ -187,6 +187,11 @@ each was ~16px lower than the last; now `absolute`, lifted 12px (half the 24px b
 the point, hit area recentred. flutter_map positions each `Marker` independently (centred), so Flutter only
 gained a test.
 
+**0.44.3. Sheet body ends at the footer (web only).** On the web a nested `backdrop-filter` inside the glass
+sheet barely blurs in light themes, so text scrolling under the footer stayed readable; the web body's scroll box
+now ends at the footer's top. Flutter's footer BackdropFilter blurs fully, so the Flutter sheet keeps scrolling
+under its frosted footer (re-laying out the body on every drag frame would cost more than it buys).
+
 **0.44.1. Dialogs from above the navigator (Flutter only).** `UiApp.builder` content sits above the
 Navigator, so `Navigator.of` failed for a held FAB's tap confirm there. `UiApp` now keeps a navigator key (the
 app's or its own) in `UiNavigatorScope`, and `uiNavigatorOf` falls back to it; confirm, modal, drawer and the
