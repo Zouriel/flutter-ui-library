@@ -74,6 +74,7 @@ class UiStrings {
     this.mapLocate = 'Show my location',
     this.mapLocationOff = 'Location is off',
     this.mapYourLocation = 'Your location',
+    this.mapOpen = 'Open map',
     this.googleSignIn = 'Sign in with Google',
     this.googleSignUp = 'Sign up with Google',
     this.googleContinue = 'Continue with Google',
@@ -106,6 +107,9 @@ class UiStrings {
 
   /// Map: the "my location" button, its off state (location off or denied), and the "you are here" dot.
   final String mapLocate, mapLocationOff, mapYourLocation;
+
+  /// Map preview (0.43.0): the still map's one button, which opens the full map.
+  final String mapOpen;
 
   /// Google sign-in button: Google's approved wordings (translations must keep the meaning:
   /// signing in to this app with a Google account, not creating one).

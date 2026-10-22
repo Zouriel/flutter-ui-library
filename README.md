@@ -99,6 +99,18 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Map preview, selected marker, label modes (0.43.0):** `UiMap(preview: true, onPreviewPressed:,
+previewLabel:)` is a still picture of the map that is one button (`UiMapPreviewButton`), named
+`previewLabel` or `UiStrings.mapOpen` ("Open map"): no gestures, keys or controls, markers drawn but
+not tappable, the attribution visible but not a link, and only taps are claimed, so a drag or the
+wheel over it scrolls the list around it. Enter or Space press it; a subtle press tint, the focus ring
+inside the edge and a 30px round expand badge (`UiMapPreviewBadge`) at the top-end corner. `center`,
+`zoom` and `fitPoints` still place it, without animating; `preview: false` gives the full map back.
+`selectedMarkerId` draws that marker with a 22px dot (`uiMapSelectedDot`), a white ring and a halo in
+its tone, on top, its label shown, `Semantics(selected: true)` (the others `false`).
+`markerLabels: UiMapMarkerLabels.all / selected / none` says which labels show; hidden labels still
+name their markers.
+
 **Chat bubbles in any parent (0.42.2):** `UiChatBubble` keeps a short word on one line and wraps long
 text at 80% of the row whatever its parent: a Column with any `crossAxisAlignment` (as before), an
 `IntrinsicWidth` (it threw before: it now reports a width that fits its text) or a Row (unbounded

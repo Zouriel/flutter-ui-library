@@ -89,4 +89,28 @@ void main() {
       expect(p.dx, inInclusiveRange(0, 390));
     }
   });
+
+  testWidgets('results map (0.43.0, opened from the preview): tapping a pin selects it, shows only its label and its card', (tester) async {
+    tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UiApp(theme: UiThemeName.maldives, home: MapResultsDemo(tileProvider: UiMapBlankTiles())));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    Finder dots(double size) => find.descendant(of: find.byType(UiMap), matching: find.byWidgetPredicate((w) => w is Container && w.constraints == BoxConstraints.tightFor(width: size, height: size)));
+    expect(dots(16), findsNWidgets(3));
+    expect(dots(uiMapSelectedDot), findsNothing);
+    // markerLabels: selected, and nothing selected yet: no labels.
+    expect(find.text('Busy'), findsNothing);
+    expect(find.text('Tap a pin to see the nurse.'), findsOneWidget);
+    final handle = tester.ensureSemantics();
+    await tester.tap(find.bySemanticsLabel('Ibrahim Rasheed, RN'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(dots(uiMapSelectedDot), findsOneWidget);
+    expect(dots(16), findsNWidgets(2));
+    // Its label on the map and its name in the card; the others' labels stay hidden.
+    expect(find.text('Ibrahim Rasheed, RN'), findsNWidgets(2));
+    expect(find.text('Busy'), findsNothing);
+    handle.dispose();
+  });
 }

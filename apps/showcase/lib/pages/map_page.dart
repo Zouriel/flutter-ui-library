@@ -49,6 +49,13 @@ class _MapPageState extends State<MapPage> {
     UiLatLng(4.17311, 73.50751), UiLatLng(4.1732, 73.50755), UiLatLng(4.17344, 73.50696), UiLatLng(4.17388, 73.50715), UiLatLng(4.17387, 73.50721),
   ];
 
+  // Preview (0.43.0): the still map in a list, and whether it is one (the runtime switch).
+  bool _preview = true;
+  int _opened = 0;
+  // Selected marker (0.43.0).
+  String? _selected = 'n2';
+  UiMapMarkerLabels _labels = UiMapMarkerLabels.all;
+
   static const _markers = [
     UiMapMarker(id: 'n1', lat: 4.1762, lng: 73.5105, label: 'Aminath Hassan, RN', tone: UiStatus.success),
     UiMapMarker(id: 'n2', lat: 4.1738, lng: 73.5072, label: 'Ibrahim Rasheed, RN'),
@@ -312,6 +319,100 @@ mapKey.currentState!.fitPoints([me, patient, ...route.points]); // inside the pa
           ],
         ),
         DocSection(
+          name: 'Preview',
+          widget: 'UiMap preview · onPreviewPressed · previewLabel',
+          summary: 'preview (0.43.0) makes the map a still picture that is one button, for a map inside a list or a chat: tapping it, or Enter or Space when it has focus, calls onPreviewPressed, and the app opens the full map. Nothing on it moves: no pan, pinch, double-tap or wheel zoom, no arrow keys, no zoom, locate or app buttons. The markers are drawn but take no taps of their own, and the attribution stays visible (the tile licence asks for it) without being a link. A vertical drag or the mouse wheel over it scrolls the page around it, as over a photo. It is read out as one button named previewLabel, Open map by default (UiStrings.mapOpen, so an app can translate it), shows a ring inside its edge for keyboard focus and darkens a little while pressed. A small round expand badge in the map controls\' raised style sits in the top-end corner (top-left in RTL). center, zoom and fitPoints still place it, without animating. Turn preview off and the full map is back on the same map. Try it: scroll the page over the map, then tap it.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            SizedBox(
+              height: 200,
+              child: UiMap(
+                preview: _preview,
+                onPreviewPressed: () {
+                  setState(() => _opened++);
+                  Navigator.of(context).push(UiPageRoute<void>(builder: (_) => const MapResultsDemo()));
+                },
+                center: const UiLatLng(4.1760, 73.5087),
+                zoom: 15,
+                markers: _markers,
+                markerLabels: _preview ? UiMapMarkerLabels.none : UiMapMarkerLabels.all,
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'Nurses near you',
+              ),
+            ),
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiSegmented<bool>(
+                label: 'Preview (demo)',
+                size: UiSize.sm,
+                options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
+                value: _preview,
+                onChanged: (v) => setState(() => _preview = v),
+              ),
+              UiText('Opened $_opened ${_opened == 1 ? 'time' : 'times'}', variant: UiTextVariant.caption),
+            ]),
+          ]),
+          code: '''// A result card's Map tab: a still map of the results; tapping it opens the full map.
+SizedBox(
+  height: 200,
+  child: UiMap(
+    preview: true,
+    onPreviewPressed: () => Navigator.of(context).push(UiPageRoute(builder: (_) => ResultsMap(results))),
+    markers: [for (final r in results) UiMapMarker(id: r.id, lat: r.lat, lng: r.lng, semanticLabel: r.name)],
+    markerLabels: UiMapMarkerLabels.none,
+  ),
+)
+// Or place it on the results once laid out: mapKey.currentState!.fitPoints(points) (no animation on a preview).''',
+          api: const [
+            ApiRow('preview', 'bool', 'A still picture that is one button (0.43.0): no gestures, keys or controls; markers drawn but not selectable; drags and the wheel scroll the page around it. Off at runtime gives the full map back.', def: 'false'),
+            ApiRow('onPreviewPressed', 'VoidCallback?', 'The preview was tapped, or Enter or Space pressed on it: open the full map.'),
+            ApiRow('previewLabel', 'String?', 'Its accessible name. null: UiStrings.mapOpen.', def: "'Open map'"),
+            ApiRow('UiStrings.mapOpen', 'String', 'The default preview name, for translation.', def: "'Open map'"),
+            ApiRow('UiMapPreviewButton · UiMapPreviewBadge', 'widget', 'How a preview is drawn: the whole-map button (a subtle press tint, the focus ring inside the edge) and the 30px round expand badge at the top-end corner.'),
+          ],
+        ),
+        DocSection(
+          name: 'Selected marker',
+          widget: 'UiMap selectedMarkerId · markerLabels',
+          summary: 'selectedMarkerId (0.43.0) marks one marker as the chosen one: its dot is drawn bigger (22px instead of 16) with a white ring and a soft halo in its tone, above the other markers, with its label shown, and screen readers hear it as selected. The others stay as they are. Changing it moves the selection on the same map, without rebuilding or moving it. markerLabels says which labels show: all (the default), selected (only the selected marker\'s, for a busy map where a tapped pin shows its card) or none. A hidden label still names its marker for screen readers. Tap a marker here to select it.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            SizedBox(
+              height: 320,
+              child: UiMap(
+                zoom: 15,
+                markers: _markers,
+                selectedMarkerId: _selected,
+                markerLabels: _labels,
+                onMarkerSelected: (m) => setState(() => _selected = m.id),
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'Nurses near you',
+              ),
+            ),
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiSegmented<UiMapMarkerLabels>(
+                label: 'Labels (demo)',
+                size: UiSize.sm,
+                options: const [
+                  UiSegmentedOption(value: UiMapMarkerLabels.all, label: 'All'),
+                  UiSegmentedOption(value: UiMapMarkerLabels.selected, label: 'Selected'),
+                  UiSegmentedOption(value: UiMapMarkerLabels.none, label: 'None'),
+                ],
+                value: _labels,
+                onChanged: (v) => setState(() => _labels = v),
+              ),
+              UiButton(label: 'Clear the selection', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: _selected == null ? null : () => setState(() => _selected = null)),
+            ]),
+          ]),
+          code: '''UiMap(
+  markers: results,
+  selectedMarkerId: selected?.id,
+  markerLabels: UiMapMarkerLabels.selected,
+  onMarkerSelected: (m) => setState(() => selected = m),
+)''',
+          api: const [
+            ApiRow('selectedMarkerId', 'String?', 'The selected marker (0.43.0): a 22px dot (uiMapSelectedDot) with a white ring and a halo in its tone, on top, its label shown, read out as selected.'),
+            ApiRow('markerLabels', 'UiMapMarkerLabels', 'all, selected (only the selected marker\'s label) or none. Hidden labels still name their markers.', def: 'all'),
+          ],
+        ),
+        DocSection(
           name: 'Map page',
           widget: 'UiMap fill · pulse · viewInsets',
           summary: 'A full-screen map with the form in a UiBottomSheet and a UiFloatingPanel status card at the top. fill gives square corners. pulse draws soft rings radiating from a point while the app searches (one still halo under reduced motion); they move with the map, sit under the markers and the pin, and say nothing to screen readers, so put the words in the status card. viewInsets is how much of each edge the sheet and the card cover, straight from their onCoverChanged: the map still draws edge to edge, but its centre, the pin\'s centre, onCenterChanged, the zoom buttons and the attribution use the part between them. When the sheet moves to another snap, the map pans so the point in the middle of the visible part stays in the middle of the new visible part. glass on the sheet and the card (0.41.2) makes them see-through, and glassStrength (0.41.3) says how much: clear, the default, lets a map in the theme\'s brightness plainly show through (roads, coastline, parks), lightly blurred and squeezed just enough to keep every text colour AA over such a map; frosted is the near-opaque surface that stays AA over any backdrop, for photos or a map in the other brightness. Solid under the platform high-contrast setting.',
@@ -364,6 +465,66 @@ mapKey.currentState!.fitPoints([me, patient, ...route.points]); // inside the pa
           ],
         ),
       ],
+    );
+  }
+}
+
+/// The full map a preview opens (0.43.0): the results, the tapped one selected with its card at
+/// the top, only its label shown.
+class MapResultsDemo extends StatefulWidget {
+  const MapResultsDemo({super.key, this.tileProvider});
+
+  /// Tests pass UiMapBlankTiles.
+  final TileProvider? tileProvider;
+
+  @override
+  State<MapResultsDemo> createState() => _MapResultsDemoState();
+}
+
+class _MapResultsDemoState extends State<MapResultsDemo> {
+  UiMapMarker? _selected;
+  double _cardCover = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final s = _selected;
+    return ColoredBox(
+      color: t.bg,
+      child: Stack(children: [
+        Positioned.fill(
+          child: UiMap(
+            fill: true,
+            center: const UiLatLng(4.1760, 73.5087),
+            zoom: 16,
+            markers: _MapPageState._markers,
+            selectedMarkerId: s?.id,
+            markerLabels: UiMapMarkerLabels.selected,
+            viewInsets: EdgeInsetsDirectional.only(top: _cardCover),
+            onMarkerSelected: (m) => setState(() => _selected = m),
+            userAgentPackageName: 'com.zouriel.ui.showcase',
+            tileProvider: widget.tileProvider,
+            semanticLabel: 'Nurses near you',
+          ),
+        ),
+        UiFloatingPanel(
+          placement: UiFloatingPanelPlacement.top,
+          semanticLabel: 'Nurse',
+          onCoverChanged: (v) => setState(() => _cardCover = v),
+          child: Row(spacing: t.space3, children: [
+            Expanded(
+              child: Semantics(
+                liveRegion: true,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
+                  UiText(s?.label ?? 'Nurses near you', variant: UiTextVariant.label),
+                  UiText(s == null ? 'Tap a pin to see the nurse.' : '${s.lat.toStringAsFixed(4)}, ${s.lng.toStringAsFixed(4)}', variant: UiTextVariant.caption),
+                ]),
+              ),
+            ),
+            UiButton(label: 'Close', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(context).pop()),
+          ]),
+        ),
+      ]),
     );
   }
 }

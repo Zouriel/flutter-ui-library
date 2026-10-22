@@ -160,6 +160,14 @@ class UiMapControl {
 /// Which side of its dot a marker label sits on (the web `UiMapLabelSide`), on screen.
 enum UiMapLabelSide { left, right }
 
+/// Which marker labels a map shows (0.43.0, the web `markerLabels`): every one ([all], the default),
+/// only the selected marker's ([selected]) or none ([none]). Hidden labels still name their markers
+/// for screen readers.
+enum UiMapMarkerLabels { all, selected, none }
+
+/// How much bigger the selected marker's dot is than the others' 16px (0.43.0): 22px.
+const double uiMapSelectedDot = 22;
+
 /// The gap from a marker's point to its label (the dot's 8px radius and 4px), and the room the
 /// label keeps from the map's edge.
 const double uiMapLabelGap = 12, uiMapLabelEdge = 8;
@@ -291,6 +299,17 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 ///   to the other side when they would run off the map there (0.42.1, [uiMapLabelSide]).
 /// - [controls] (0.42.1): the app's own round buttons ([UiMapControl]) in the locate button's
 ///   stack and style, above it at the bottom-end of the visible part, following [viewInsets].
+/// - [preview] (0.43.0): a still picture of the map that is one button. No pan, zoom, keys or
+///   controls; markers drawn but not focusable; a vertical drag or the wheel over it scrolls the page
+///   around it. A tap, Enter or Space calls [onPreviewPressed]; it is read out as [previewLabel]
+///   ("Open map", from [UiStrings.mapOpen]) and shows a round expand badge at the top-end corner.
+///   [center], [zoom] and [UiMapState.fitPoints] still place it (without animating). Turning it off
+///   gives the full map back.
+/// - [selectedMarkerId] (0.43.0): that marker is drawn bigger (a 22px dot) with a white ring and a
+///   halo in its tone, above the others, its label shown, and read out as selected.
+/// - [markerLabels] (0.43.0): [UiMapMarkerLabels.all] (the default), [UiMapMarkerLabels.selected]
+///   (only the selected marker's label) or [UiMapMarkerLabels.none]. Hidden labels still name the
+///   markers for screen readers.
 ///
 /// [userAgentPackageName] is sent with tile requests (the OSM policy asks for it); [tileProvider]
 /// replaces network tiles (offline tiles, tests).
@@ -327,7 +346,26 @@ class UiMap extends StatefulWidget {
     this.userLocation,
     this.routes = const [],
     this.controls = const [],
+    this.preview = false,
+    this.onPreviewPressed,
+    this.previewLabel,
+    this.selectedMarkerId,
+    this.markerLabels = UiMapMarkerLabels.all,
   });
+
+  /// A still picture of the map that is one button (0.43.0): no gestures, keys or controls, and
+  /// page scrolling passes through it. A tap, Enter or Space calls [onPreviewPressed].
+  final bool preview;
+  final VoidCallback? onPreviewPressed;
+
+  /// The preview button's accessible name; null: [UiStrings.mapOpen] ("Open map").
+  final String? previewLabel;
+
+  /// The selected marker (0.43.0): drawn bigger, ringed and haloed, on top, its label shown.
+  final String? selectedMarkerId;
+
+  /// Which marker labels show (0.43.0); hidden ones still name their markers.
+  final UiMapMarkerLabels markerLabels;
 
   /// The app's own buttons (0.42.1), above the locate button at the bottom-end of the visible part.
   final List<UiMapControl> controls;
@@ -555,7 +593,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     if (v == null) return;
     final cam = _controller.camera;
     final to = LatLng(v.lat, v.lng);
-    if (!f.animate || uiFxMotion(context) != UiFxMotion.full) {
+    if (!f.animate || widget.preview || uiFxMotion(context) != UiFxMotion.full) {
       _fly.stop();
       _controller.move(to, v.zoom);
       _reportView();
@@ -631,6 +669,8 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     final tileUrl = uiMapTileUrl(widget.tileUrl, widget.tileUrlDark, dark);
     final darkTiles = dark && tileUrl != widget.tileUrl;
     final user = widget.userLocation;
+    final selected = widget.selectedMarkerId;
+    final preview = widget.preview;
 
     Widget mapFor(double labelMax) => FlutterMap(
       key: _box,
@@ -644,9 +684,12 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
         onTap: (_, ll) {
           if (widget.pinMode) widget.onPinChanged?.call(UiLatLng(ll.latitude, ll.longitude));
         },
-        interactionOptions: InteractionOptions(
-          flags: motion == UiFxMotion.full ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.all & ~InteractiveFlag.rotate & ~InteractiveFlag.flingAnimation,
-        ),
+        // A preview takes no gestures or keys at all: it is a picture under one button.
+        interactionOptions: widget.preview
+            ? const InteractionOptions(flags: InteractiveFlag.none, keyboardOptions: KeyboardOptions.disabled())
+            : InteractionOptions(
+                flags: motion == UiFxMotion.full ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.all & ~InteractiveFlag.rotate & ~InteractiveFlag.flingAnimation,
+              ),
       ),
       children: [
         TileLayer(
@@ -675,13 +718,26 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
         // The "you are here" dot: above the pulse, below the markers and the pin.
         if (user != null) _UserLayer(location: user),
         MarkerLayer(markers: [
-          for (final m in widget.markers)
+          // The selected marker last, so it is drawn on top of the others.
+          for (final m in [...widget.markers.where((m) => m.id != selected), ...widget.markers.where((m) => m.id == selected)])
             Marker(
+              key: ValueKey('ui-map-marker-${m.id}'),
               point: LatLng(m.lat, m.lng),
               // Centred on the point, room for the label on either side of the dot's 48dp target.
               width: _MarkerChip.boxWidth(labelMax),
               height: 48,
-              child: _MarkerChip(marker: m, labelMax: labelMax, rtl: rtl, onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m)),
+              child: _MarkerChip(
+                marker: m,
+                labelMax: labelMax,
+                rtl: rtl,
+                selected: selected == null ? null : m.id == selected,
+                showLabel: switch (widget.markerLabels) {
+                  UiMapMarkerLabels.all => true,
+                  UiMapMarkerLabels.selected => m.id == selected,
+                  UiMapMarkerLabels.none => false,
+                },
+                onTap: widget.onMarkerSelected == null ? null : () => widget.onMarkerSelected!(m),
+              ),
             ),
         ]),
         if (pin != null)
@@ -761,17 +817,24 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
               // labels' widest: 320, or the map's width less 32 when that is narrower.
               Positioned.fill(
                 child: LayoutBuilder(
-                  builder: (context, box) => Directionality(textDirection: TextDirection.ltr, child: mapFor(math.max(80.0, math.min(320.0, box.maxWidth - 32)))),
+                  builder: (context, box) {
+                    final map = Directionality(textDirection: TextDirection.ltr, child: mapFor(math.max(80.0, math.min(320.0, box.maxWidth - 32))));
+                    // A preview: the map takes no focus or semantics (the button over it does, and
+                    // takes every pointer before the map could: only taps, so a drag or the wheel
+                    // reaches the scrollable around it).
+                    return ExcludeFocus(excluding: preview, child: ExcludeSemantics(excluding: preview, child: map));
+                  },
                 ),
               ),
-              // The controls sit inside the part the insets leave visible.
-              AnimatedPositionedDirectional(
-                duration: context.uiAnimate ? t.motionBase : Duration.zero,
-                curve: t.easeStandard,
-                top: t.space2 + widget.viewInsets.top - slop,
-                start: t.space2 + widget.viewInsets.start - slop,
-                child: zoom,
-              ),
+              // The controls sit inside the part the insets leave visible (none on a preview).
+              if (!preview)
+                AnimatedPositionedDirectional(
+                  duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                  curve: t.easeStandard,
+                  top: t.space2 + widget.viewInsets.top - slop,
+                  start: t.space2 + widget.viewInsets.start - slop,
+                  child: zoom,
+                ),
               AnimatedPositioned(
                 duration: context.uiAnimate ? t.motionBase : Duration.zero,
                 curve: t.easeStandard,
@@ -781,7 +844,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
                 child: attribution,
               ),
               // The "my location" button: bottom-end of the visible part, above the attribution.
-              if (widget.locateControl)
+              if (widget.locateControl && !preview)
                 AnimatedPositionedDirectional(
                   duration: context.uiAnimate ? t.motionBase : Duration.zero,
                   curve: t.easeStandard,
@@ -791,7 +854,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
                 ),
               // The app's own buttons: the same stack, above the locate button (where it would be
               // without one), 8px apart.
-              if (widget.controls.isNotEmpty)
+              if (widget.controls.isNotEmpty && !preview)
                 AnimatedPositionedDirectional(
                   duration: context.uiAnimate ? t.motionBase : Duration.zero,
                   curve: t.easeStandard,
@@ -800,6 +863,16 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
                   child: Column(mainAxisSize: MainAxisSize.min, spacing: math.max(0, t.space2 - 2 * locateSlop), children: [
                     for (final c in widget.controls) UiMapControlButton(key: ValueKey('ui-map-control-${c.id}'), control: c),
                   ]),
+                ),
+              // A preview: the whole map is one button, over everything: the credits show through
+              // (the licence) but, like the markers, take no taps of their own.
+              if (preview)
+                Positioned.fill(
+                  child: UiMapPreviewButton(
+                    label: widget.previewLabel ?? context.uiStrings.mapOpen,
+                    onPressed: widget.onPreviewPressed,
+                    radius: widget.fill ? 0 : context.uiTheme.radius(t.radius),
+                  ),
                 ),
             ]),
           ),
@@ -888,6 +961,68 @@ class UiMapControlButton extends StatelessWidget {
           child: Center(child: UiIcon(control.icon, size: 20, color: enabled ? t.text : t.textMuted)),
         ),
       ),
+    );
+  }
+}
+
+/// The button a preview map is (0.43.0, exported for tests): the whole map, read out as [label],
+/// a tap, Enter or Space calls [onPressed]. A subtle tint while pressed, the focus ring inside its
+/// edge for keyboard focus, a click cursor, and the round expand badge at the top-end corner. Only
+/// a tap is claimed: a drag over it goes to the scrollable around the map.
+class UiMapPreviewButton extends StatelessWidget {
+  const UiMapPreviewButton({super.key, required this.label, this.onPressed, this.radius = 0});
+  final String label;
+  final VoidCallback? onPressed;
+
+  /// The map's corner radius, for the focus ring.
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return UiInteractive(
+      onTap: onPressed ?? () {},
+      semanticLabel: label,
+      excludeChildSemantics: true,
+      padTouchTarget: false,
+      pressScale: false,
+      builder: (context, s) => Stack(fit: StackFit.expand, children: [
+        // Pressed: the map darkens a little (the web's 8% text-colour wash).
+        AnimatedContainer(
+          duration: context.uiAnimate ? t.motionFast : Duration.zero,
+          color: s.pressed ? t.text.withValues(alpha: 0.08) : t.text.withValues(alpha: 0),
+        ),
+        // Keyboard focus: the ring inside the edge (2px of the page colour, then 2px of the ring).
+        if (s.focused)
+          IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(border: Border.all(color: t.bg, width: 2), borderRadius: BorderRadius.circular(radius)),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: DecoratedBox(decoration: BoxDecoration(border: Border.all(color: t.borderFocus, width: 2), borderRadius: BorderRadius.circular(math.max(0, radius - 2)))),
+              ),
+            ),
+          ),
+        PositionedDirectional(top: t.space2, end: t.space2, child: const UiMapPreviewBadge()),
+      ]),
+    );
+  }
+}
+
+/// The preview's expand badge (0.43.0, exported for tests): a small round button-look (30px, the
+/// map controls' raised surface, border and shadow) with the expand icon, at the top-end corner.
+/// Not a control of its own: the whole preview is the button.
+class UiMapPreviewBadge extends StatelessWidget {
+  const UiMapPreviewBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Container(
+      width: t.sizeMd,
+      height: t.sizeMd,
+      decoration: uiMapControlDecoration(context, const UiStates()),
+      child: Center(child: UiIcon(HugeIcons.strokeRoundedArrowExpand01, size: 16, color: t.text)),
     );
   }
 }
@@ -1016,9 +1151,15 @@ class UiMapUserDot extends StatelessWidget {
 }
 
 class _MarkerChip extends StatelessWidget {
-  const _MarkerChip({required this.marker, required this.labelMax, required this.rtl, this.onTap});
+  const _MarkerChip({required this.marker, required this.labelMax, required this.rtl, this.onTap, this.selected, this.showLabel = true});
   final UiMapMarker marker;
   final VoidCallback? onTap;
+
+  /// Whether this is the selected marker; null when the map has no selection.
+  final bool? selected;
+
+  /// Whether its label pill is drawn (it names the marker either way).
+  final bool showLabel;
 
   /// The widest the label gets.
   final double labelMax;
@@ -1050,7 +1191,9 @@ class _MarkerChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     final color = marker.tone == UiStatus.neutral ? t.textMuted : marker.tone.color(t);
-    final label = marker.label;
+    final label = showLabel ? marker.label : null;
+    final isSelected = selected ?? false;
+    final dotSize = isSelected ? uiMapSelectedDot : 16.0;
     // The side follows where the marker is on screen: rebuilt as the map moves.
     var side = UiMapLabelSide.right;
     if (label != null) {
@@ -1063,9 +1206,12 @@ class _MarkerChip extends StatelessWidget {
       width: 48,
       child: Center(
         child: Container(
-          width: 16,
-          height: 16,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.surfaceRaised, width: 3), boxShadow: t.shadow2),
+          width: dotSize,
+          height: dotSize,
+          // Selected: bigger, a white ring and a soft halo in its tone.
+          decoration: isSelected
+              ? BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.locationRing, width: 3), boxShadow: [...t.shadow2, BoxShadow(color: color.withValues(alpha: 0.30), spreadRadius: 6)])
+              : BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: t.surfaceRaised, width: 3), boxShadow: t.shadow2),
         ),
       ),
     );
@@ -1096,6 +1242,7 @@ class _MarkerChip extends StatelessWidget {
         child: Semantics(
           container: true,
           button: onTap != null,
+          selected: selected,
           label: marker.semanticLabel ?? marker.label,
           onTap: onTap,
           excludeSemantics: true,

@@ -170,6 +170,32 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.43.0. Map preview, selected marker, label modes.** For Dhirumi's chat result cards (a Cards |
+Map switch whose Map tab is a small still map that opens the full one).
+
+- Preview. The web lays a native `<button class="ui-map-preview">` over the whole map (z-index above
+  Leaflet's panes and controls), turns every Leaflet handler off, removes the zoom control and makes
+  the canvas `inert` + `aria-hidden`; the button never cancels `wheel` and has `touch-action:
+  manipulation`, so the page scrolls. Enter and Space are the button's own click (no key handler of
+  ours, which would press twice). Flutter lays `UiMapPreviewButton` (a `UiInteractive`, so Enter /
+  Space / focus / cursor come with it) over the map in the Stack; being on top and opaque to hits it
+  takes every pointer before flutter_map could, but its only recognizers are tap (and press), so a
+  drag past the touch slop goes to the scrollable around it and pointer signals (the wheel) are not
+  claimed. The map below is `ExcludeFocus` + `ExcludeSemantics` and gets `InteractiveFlag.none` with
+  `KeyboardOptions.disabled()`. An `IgnorePointer` around the map was tried and removed: with the
+  button on top it changed nothing a test could see. Press look: an 8% text-colour wash on both (not
+  the controls' 0.96 scale, which on a whole map reads as a jolt). Focus ring: the web's
+  `--ui-focus-ring` written as two inset shadows (2px page colour, then 2px border-focus; `inset
+  var(--ui-focus-ring)` only insets the first); Flutter draws the same as two borders.
+- Selected marker. 22px dot (16 x 1.35, rounded), `locationRing` (#fff in every theme) ring, a 6px
+  spread at 30% of the tone. Web: `data-selected` + `zIndexOffset` 500, `aria-pressed` true/false (none
+  without a selection), updated in place by an effect, no marker rebuild. Flutter: the selected
+  marker is moved to the end of the MarkerLayer list (painted last), `Semantics(selected:)` true/false
+  (null without a selection).
+- Label modes: `all | selected | none`; 'none' hides the selected marker's label too (the brief's
+  "label always shown" is read as "in all and selected"). Hidden labels: web `data-label-hidden` +
+  an explicit `aria-label` on every marker; Flutter drops the chip but keeps the Semantics label.
+
 **0.42.2. Chat bubble in any parent.** The Dhirumi nurse web app put `ui-chat-bubble` in a column
 with `align-items: flex-start/flex-end`; the host shrank to its text, the bubble's `max-width: 80%`
 resolved against that shrunk host, and `overflow-wrap: anywhere` let min-content collapse to a
