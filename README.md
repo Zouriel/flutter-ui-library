@@ -99,6 +99,12 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Dialogs from above the navigator (0.44.1):** widgets placed by `UiApp.builder` (an SOS `UiFab` in a
+`UiFabHost` that floats over dialogs and drawers) sit above the app's Navigator; the library's dialogs opened
+from there (a hold button's tap confirm, `showUiConfirm`, `showUiModal`, `showUiDrawer`, the command
+palette) now use the app's navigator through `UiNavigatorScope` (`uiNavigatorOf(context)`), the given
+`navigatorKey` or the app's own. Angular has no navigator, so nothing changed there.
+
 **Map search area, swipe screens, SOS button (0.44.0):** `UiMap(area: UiMapArea(center:,
 radiusMeters:, tone:, editable: true, minMeters:, maxMeters:), onAreaChanging:, onAreaChanged:,
 areaLabel:)` draws a search area in true metres (it scales with the zoom) under the routes and

@@ -170,6 +170,11 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.44.1. Dialogs from above the navigator (Flutter only).** `UiApp.builder` content sits above the
+Navigator, so `Navigator.of` failed for a held FAB's tap confirm there. `UiApp` now keeps a navigator key (the
+app's or its own) in `UiNavigatorScope`, and `uiNavigatorOf` falls back to it; confirm, modal, drawer and the
+command palette use it. The web overlays are not tied to a navigator, so Angular only bumps its version.
+
 **0.44.0. Map search area, swipe screens, top and SOS FAB.** For Dhirumi: the map is a second
 screen to the right of the chat, the person widens or narrows the search area on it, the nurse app
 sets her job radius the same way, and SOS floats at the top.

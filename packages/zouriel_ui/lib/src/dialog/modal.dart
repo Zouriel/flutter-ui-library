@@ -8,6 +8,7 @@ import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
+import '../theme/app.dart';
 import '../theme/theme.dart';
 import 'route.dart';
 
@@ -32,7 +33,7 @@ Future<T?> showUiModal<T>({
   bool useRootNavigator = true,
   RouteSettings? settings,
 }) {
-  return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(UiDialogRoute<T>.themed(
+  return uiNavigatorOf(context, rootNavigator: useRootNavigator).push<T>(UiDialogRoute<T>.themed(
     context,
     dismissible: closeOnBackdrop,
     settings: settings,

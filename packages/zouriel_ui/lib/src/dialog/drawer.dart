@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/widgets.dart';
 
 import '../layout/pinned_edges.dart';
+import '../theme/app.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 import 'route.dart';
@@ -38,7 +39,7 @@ Future<T?> showUiDrawer<T>({
 }) {
   assert((builder == null) != (bodyBuilder == null), 'Give showUiDrawer either builder or bodyBuilder');
   final t = context.ui;
-  return Navigator.of(context, rootNavigator: useRootNavigator).push<T>(
+  return uiNavigatorOf(context, rootNavigator: useRootNavigator).push<T>(
     UiDialogRoute<T>.themed(
       context,
       dismissible: closeOnBackdrop,

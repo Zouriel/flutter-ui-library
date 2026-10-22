@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../button/button.dart';
 import '../core/icon.dart';
+import '../theme/app.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/modal.dart';
@@ -61,7 +62,7 @@ Future<UiCommand?> showUiCommandPalette({
   bool useRootNavigator = true,
 }) {
   final full = MediaQuery.sizeOf(context).width < fullScreenBelow;
-  return Navigator.of(context, rootNavigator: useRootNavigator).push<UiCommand>(UiDialogRoute<UiCommand>.themed(
+  return uiNavigatorOf(context, rootNavigator: useRootNavigator).push<UiCommand>(UiDialogRoute<UiCommand>.themed(
     context,
     transitions: full ? _riseTransition : uiScaleTransition,
     builder: (context) => UiCommandPalette(

@@ -10,7 +10,12 @@ import 'theme.dart';
 ///
 /// It stands in for `MaterialApp`, which the library doesn't use. Pass a [UiThemeController] to
 /// switch themes at runtime (changes animate), or a fixed [theme].
-class UiApp extends StatelessWidget {
+///
+/// Widgets placed by [builder] sit above the app's Navigator (an SOS [UiFab] in a [UiFabHost] that
+/// must float over dialogs and drawers). The library's dialogs opened from there (a hold button's
+/// tap confirm, [showUiConfirm], [showUiModal], [showUiDrawer]) use the app's navigator through
+/// [UiNavigatorScope] (0.44.1); [navigatorKey] is used when given, else the app keeps its own.
+class UiApp extends StatefulWidget {
   const UiApp({
     super.key,
     this.title = '',
@@ -43,9 +48,19 @@ class UiApp extends StatelessWidget {
   final bool debugShowCheckedModeBanner;
 
   @override
+  State<UiApp> createState() => _UiAppState();
+}
+
+class _UiAppState extends State<UiApp> {
+  /// The navigator's key when the app passes none, so dialogs opened above it can still find it.
+  final GlobalKey<NavigatorState> _ownKey = GlobalKey<NavigatorState>(debugLabel: 'UiApp navigator');
+
+  GlobalKey<NavigatorState> get _key => widget.navigatorKey ?? _ownKey;
+
+  @override
   Widget build(BuildContext context) {
-    final c = controller;
-    if (c == null) return _app(UiThemeData(name: theme, config: config));
+    final c = widget.controller;
+    if (c == null) return _app(UiThemeData(name: widget.theme, config: widget.config));
     return UiThemeControllerScope(controller: c, child: ListenableBuilder(listenable: c, builder: (context, _) => _app(c.data)));
   }
 
@@ -55,16 +70,16 @@ class UiApp extends StatelessWidget {
       child: Builder(builder: (context) {
         final t = UiTheme.of(context);
         return WidgetsApp(
-          title: title,
+          title: widget.title,
           color: t.tokens.primary,
-          navigatorKey: navigatorKey,
-          navigatorObservers: navigatorObservers,
-          home: home,
-          routes: routes,
-          initialRoute: initialRoute,
-          onGenerateRoute: onGenerateRoute,
-          locale: locale,
-          debugShowCheckedModeBanner: debugShowCheckedModeBanner,
+          navigatorKey: _key,
+          navigatorObservers: widget.navigatorObservers,
+          home: widget.home,
+          routes: widget.routes,
+          initialRoute: widget.initialRoute,
+          onGenerateRoute: widget.onGenerateRoute,
+          locale: widget.locale,
+          debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
           textStyle: t.typography.body,
           pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
               UiPageRoute<T>(settings: settings, builder: builder),
@@ -78,13 +93,41 @@ class UiApp extends StatelessWidget {
                 child: DefaultTextStyle(style: t.typography.body, child: child ?? const SizedBox.shrink()),
               ),
             );
-            if (builder != null) content = builder!(context, content);
-            return ScrollConfiguration(behavior: const UiScrollBehavior(), child: content);
+            final builder = widget.builder;
+            if (builder != null) content = builder(context, content);
+            return UiNavigatorScope(
+              navigatorKey: _key,
+              child: ScrollConfiguration(behavior: const UiScrollBehavior(), child: content),
+            );
           },
         );
       }),
     );
   }
+}
+
+/// Gives widgets above an app's Navigator (those placed by [UiApp.builder]) the app's navigator, so
+/// the library's dialogs open from there too (0.44.1). [UiApp] puts it in place.
+class UiNavigatorScope extends InheritedWidget {
+  const UiNavigatorScope({super.key, required this.navigatorKey, required super.child});
+
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  static GlobalKey<NavigatorState>? maybeKeyOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<UiNavigatorScope>()?.navigatorKey;
+
+  @override
+  bool updateShouldNotify(UiNavigatorScope oldWidget) => navigatorKey != oldWidget.navigatorKey;
+}
+
+/// The navigator the library's dialogs push onto: the one around [context] (its root when
+/// [rootNavigator]), else, above the app's Navigator, the app's own from [UiNavigatorScope].
+/// Throws as [Navigator.of] does when there is neither.
+NavigatorState uiNavigatorOf(BuildContext context, {bool rootNavigator = false}) {
+  final around = Navigator.maybeOf(context, rootNavigator: rootNavigator);
+  if (around != null) return around;
+  final app = UiNavigatorScope.maybeKeyOf(context)?.currentState;
+  return app ?? Navigator.of(context, rootNavigator: rootNavigator);
 }
 
 /// How a [UiPageRoute] enters and leaves (the web `uiSlideTransition`).

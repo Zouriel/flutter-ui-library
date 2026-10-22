@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../button/button.dart';
 import '../core/types.dart';
+import '../theme/app.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 import 'route.dart';
@@ -18,7 +19,7 @@ Future<bool?> showUiConfirm({
   bool destructive = false,
   bool useRootNavigator = true,
 }) {
-  return Navigator.of(context, rootNavigator: useRootNavigator).push<bool>(UiDialogRoute<bool>.themed(
+  return uiNavigatorOf(context, rootNavigator: useRootNavigator).push<bool>(UiDialogRoute<bool>.themed(
     context,
     transitions: uiScaleTransition,
     builder: (context) => UiConfirmDialog(
