@@ -200,7 +200,7 @@ UiFormField(label: 'Name', error: nameError, child: UiInput(value: name, onChang
         code: 'UiTextarea(value: bio, rows: 2, autosize: true, maxRows: 6, onChanged: setBio)',
         api: const [
           ApiRow('value / onChanged', 'String? / ValueChanged<String>', 'Controlled text.'),
-          ApiRow('rows', 'int', 'Visible lines (the starting height with autosize).', def: '4'),
+          ApiRow('rows', 'int', 'Visible lines (the starting height with autosize). On phones even one row lays out at least 48dp tall, the box centred, at any text size or textStyle.', def: '4'),
           ApiRow('autosize', 'bool', 'Grow with the text.', def: 'false'),
           ApiRow('maxRows', 'int', 'With autosize: most lines before it scrolls.', def: '8'),
           ApiRow('maxLength', 'int?', 'The most characters it takes (the web maxlength): typing and pasting stop there.', def: 'null'),

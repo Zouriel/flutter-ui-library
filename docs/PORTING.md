@@ -170,6 +170,23 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.44.2. Glass sheet footer, early fits, one-row textarea, toast font.** Found by the Dhirumi apps. The glass
+sheet footer is frosted on both sides (web: `--ui-glass-sheet-bg` and `--ui-glass-sheet-filter` on `.ft`, solid
+under the same no-backdrop-filter / reduced-transparency rules as the sheet; Flutter: `uiGlassSheetTint` /
+`uiGlassSheetFilter` at `UiGlassStrength.frosted`). A fit asked before the map exists is stored and applied on
+ready with `animate: false` (web: when Leaflet has loaded; Flutter: `onMapReady`). The one-row textarea is
+Flutter only: the web's target rule (`audit:ui`, WCAG 2.5.8, 24px) passes at 41px and the web has no 48dp
+layout margin, so nothing changed there. Flutter worked its touch margin out from font size x 1.5 x
+`scale(1)`; non-linear scaling, a `textStyle` height and line rounding made that too tall (as low as 40dp), so
+`uiFieldLineHeight` now measures the line with the editor's forced strut and the text scaler. Toast font:
+Flutter `UiToastHost.textStyle` (merged with `uiMergeFieldStyle`, drawn with `inherit: false` so an app family
+isn't package-prefixed, the action label too); web `--ui-toast-font` on `ui-toast-host`, as `--ui-field-font`
+on the fields. Map markers (web only): `.ui-map .ui-map-marker { position: relative }` (0.35.1, for the hit
+area's `::before`) beat Leaflet's `.leaflet-marker-icon { position: absolute }`, so icons stacked in flow and
+each was ~16px lower than the last; now `absolute`, lifted 12px (half the 24px box) so the dot's centre is on
+the point, hit area recentred. flutter_map positions each `Marker` independently (centred), so Flutter only
+gained a test.
+
 **0.44.1. Dialogs from above the navigator (Flutter only).** `UiApp.builder` content sits above the
 Navigator, so `Navigator.of` failed for a held FAB's tap confirm there. `UiApp` now keeps a navigator key (the
 app's or its own) in `UiNavigatorScope`, and `uiNavigatorOf` falls back to it; confirm, modal, drawer and the

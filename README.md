@@ -99,6 +99,16 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Glass sheet footer, early fits, one-row textarea, toast font (0.44.2):** a glass `UiBottomSheet`'s `footer`
+is always frosted, whatever `glassStrength`, so the body scrolling under it never shows through the buttons.
+`fitPoints` / `fitArea` called before the map is ready (straight after it is built) are held and run once it
+is, without animating; they used to do nothing. A one-row `UiTextarea` lays out at least 48dp tall on phones
+at every size, text scaling (Android's non-linear font scaling too) and `textStyle` height: its margin now
+comes from the editor's measured line height, not an estimate. `UiToastHost(textStyle:)` gives toasts an app
+font, as `textStyle` does on the text fields (`TextStyle(fontFamilyFallback: ['Faruma'])` for Thaana).
+The web twin's map markers were drawn further down one after another; Flutter places each `Marker` on its
+own and never had it (a test now checks 60 dots against their points).
+
 **Dialogs from above the navigator (0.44.1):** widgets placed by `UiApp.builder` (an SOS `UiFab` in a
 `UiFabHost` that floats over dialogs and drawers) sit above the app's Navigator; the library's dialogs opened
 from there (a hold button's tap confirm, `showUiConfirm`, `showUiModal`, `showUiDrawer`, the command

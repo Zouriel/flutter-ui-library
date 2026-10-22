@@ -514,7 +514,7 @@ if (ok == true) delete();''',
             ApiRow('expandOnFocus', 'bool', 'Rise to the tallest snap when a text field inside gains focus on a touch screen.', def: 'true'),
             ApiRow('glass', 'bool', 'See-through surface for a sheet over a map (0.41.2); solid under the high-contrast setting. Not set by UiConfig.glass. See Map › Map page.', def: 'false'),
             ApiRow('glassStrength', 'UiGlassStrength', 'How see-through glass is (0.41.3): clear lets a map in the theme\'s brightness plainly show through, text AA over such a map; frosted is near-opaque, AA over any backdrop.', def: 'clear'),
-            ApiRow('footer', 'Widget?', 'A sticky bar at the bottom of the visible sheet at every snap (0.44.0): the primary action. Counted in the cover; a too-short peek is raised to fit it.'),
+            ApiRow('footer', 'Widget?', 'A sticky bar at the bottom of the visible sheet at every snap (0.44.0): the primary action. Counted in the cover; a too-short peek is raised to fit it. On a glass sheet it is always frosted, whatever glassStrength, so the body scrolling under it never shows through (0.44.2).'),
           ],
           callbacks: const [
             ApiRow('onHeightChanged', 'ValueChanged<double>?', 'Px height once it settles.'),
@@ -560,6 +560,7 @@ toasts.show('Layer deleted', action: UiToastAction(label: 'Undo', run: undo));''
             ApiRow('host: controller', 'UiToastController', 'The queue it shows.'),
             ApiRow('host: position', 'UiToastPosition', 'topRight, topLeft, topCenter, bottomRight, bottomLeft, bottomCenter. Toasts slide in from that side.', def: 'bottomRight'),
             ApiRow('host: child', 'Widget?', 'What the toasts float over. Without it the host is just the toast layer.'),
+            ApiRow('host: textStyle', 'TextStyle?', "Merged over every toast's title, message and action label, kept as given: an app font, e.g. TextStyle(fontFamilyFallback: ['Faruma']) so a Dhivehi name never shows as boxes (0.44.2).", def: 'null'),
           ],
           callbacks: const [
             ApiRow('show(message, {title, tone, duration, action})', 'int', 'Enqueue; returns the id.'),

@@ -15,7 +15,7 @@ class _Host {
   late StateSetter set;
 }
 
-Future<_Host> _pump(WidgetTester tester, {bool footer = true, double safeBottom = 20}) async {
+Future<_Host> _pump(WidgetTester tester, {bool footer = true, double safeBottom = 20, bool glass = false, UiGlassStrength strength = UiGlassStrength.clear}) async {
   final h = _Host();
   tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
   addTearDown(tester.view.reset);
@@ -38,6 +38,8 @@ Future<_Host> _pump(WidgetTester tester, {bool footer = true, double safeBottom 
               snap: h.snap,
               onSnapChanged: (i) => set(() => h.snap = i),
               onCoverChanged: h.covers.add,
+              glass: glass,
+              glassStrength: strength,
               footer: footer ? UiButton(label: 'Start the visit', block: true, onPressed: () {}) : null,
               child: Column(children: [for (var i = 0; i < 40; i++) SizedBox(height: 40, child: Text('Line $i'))]),
             ),
@@ -101,6 +103,28 @@ void main() {
     final f = _footer(tester);
     expect(f.bottom, 844 - 300);
     expect(tester.getRect(find.widgetWithText(UiButton, 'Start the visit')).bottom, closeTo(844 - 300 - 12, 0.5));
+  });
+
+  testWidgets('on a glass sheet the footer is frosted whatever glassStrength, so the body never shows through (0.44.2)', (tester) async {
+    for (final strength in UiGlassStrength.values) {
+      await _pump(tester, glass: true, strength: strength);
+      final t = tester.element(find.byType(UiBottomSheet)).ui;
+      final bar = find.byKey(const ValueKey('ui-bottom-sheet-footer'));
+      final filters = tester.widgetList<BackdropFilter>(find.descendant(of: bar, matching: find.byType(BackdropFilter))).toList();
+      expect(filters, hasLength(1), reason: '$strength: one backdrop filter under the footer');
+      expect(filters.single.filter, uiGlassSheetFilter(t, strength: UiGlassStrength.frosted), reason: '$strength: the frosted filter');
+      final fills = tester
+          .widgetList<DecoratedBox>(find.descendant(of: bar, matching: find.byType(DecoratedBox)))
+          .map((d) => d.decoration)
+          .whereType<BoxDecoration>()
+          .map((d) => d.color)
+          .toList();
+      expect(fills.first, t.glassSheetBg, reason: '$strength: the frosted tint');
+    }
+    // The two strengths really differ, so the checks above can tell them apart.
+    final t = tester.element(find.byType(UiBottomSheet)).ui;
+    expect(uiGlassSheetFilter(t, strength: UiGlassStrength.clear), isNot(uiGlassSheetFilter(t, strength: UiGlassStrength.frosted)));
+    expect(t.glassClearBg, isNot(t.glassSheetBg));
   });
 
   testWidgets('without a footer nothing changes: the given snaps', (tester) async {

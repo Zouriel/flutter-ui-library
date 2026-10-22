@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/types.dart';
+import '../forms/text/text_dir.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 import 'snackbar.dart';
@@ -155,11 +156,18 @@ class _UiToastScope extends InheritedWidget {
 ///
 /// A bottom stack moves up above a snackbar that would otherwise cover it (on a phone both sit at
 /// the bottom): [snackbar], or the nearest [UiSnackbarHost]'s controller.
+///
+/// [textStyle] (0.44.2) is merged over every toast's text, as on the text fields: an app font,
+/// e.g. `TextStyle(fontFamilyFallback: ['Faruma'])` so a Dhivehi name doesn't come out as boxes.
 class UiToastHost extends StatefulWidget {
-  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomRight, this.snackbar, this.child});
+  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomRight, this.snackbar, this.textStyle, this.child});
 
   final UiToastController controller;
   final UiToastPosition position;
+
+  /// Merged over each toast's title, message and action label: a font family or
+  /// `fontFamilyFallback` (an app font such as Faruma for Thaana), kept as given (0.44.2).
+  final TextStyle? textStyle;
 
   /// The snackbar to keep clear of; defaults to [UiSnackbarController.maybeOf].
   final UiSnackbarController? snackbar;
@@ -330,6 +338,7 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
                       from: from,
                       onSwiped: () => _swiped(e),
                       controller: widget.controller,
+                      textStyle: widget.textStyle,
                     ),
                 ],
               ),
@@ -347,8 +356,9 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
 }
 
 class _AnimatedToast extends StatelessWidget {
-  const _AnimatedToast({super.key, required this.entry, required this.from, required this.onSwiped, required this.controller, this.first = false});
+  const _AnimatedToast({super.key, required this.entry, required this.from, required this.onSwiped, required this.controller, this.textStyle, this.first = false});
 
+  final TextStyle? textStyle;
   final _Entry entry;
   final bool first;
   final Offset from;
@@ -390,6 +400,7 @@ class _AnimatedToast extends StatelessWidget {
                   onFocusChange: (f) => f ? controller.pause(id) : controller.resume(id),
                   child: UiToastView(
                     toast: entry.toast,
+                    textStyle: textStyle,
                     onAction: () => controller.act(id),
                     onDismiss: () => controller.dismiss(id),
                   ),
@@ -406,9 +417,12 @@ class _AnimatedToast extends StatelessWidget {
 /// How one toast looks (the web `.toast`): raised surface with a tone edge on the start side, the
 /// tone's icon, title and message, an optional action button and a dismiss button.
 class UiToastView extends StatelessWidget {
-  const UiToastView({super.key, required this.toast, this.onAction, this.onDismiss});
+  const UiToastView({super.key, required this.toast, this.onAction, this.onDismiss, this.textStyle});
 
   final UiToast toast;
+
+  /// Merged over the title, message and action label (see [UiToastHost.textStyle]).
+  final TextStyle? textStyle;
   final VoidCallback? onAction;
   final VoidCallback? onDismiss;
 
@@ -424,6 +438,10 @@ class UiToastView extends StatelessWidget {
       UiToastTone.danger => HugeIcons.strokeRoundedCancelCircle,
     };
     final body = theme.typography.body.copyWith(fontSize: t.fontSizeSm, height: 1.35);
+    // The app's textStyle over the library's, as a complete style (inherit: false): merged into the
+    // ambient DefaultTextStyle, an app family would pick up the library font package and turn
+    // 'Faruma' into 'packages/zouriel_ui/Faruma', which doesn't exist (0.44.2).
+    TextStyle font(TextStyle s) => textStyle == null ? s : uiMergeFieldStyle(s, textStyle).copyWith(inherit: false);
     final r = theme.radius();
     // A live region, which is what Android announces. Flutter treats the status/alert roles as
     // live regions of their own and won't take both, and TalkBack reads the flag, so the web's
@@ -464,8 +482,8 @@ class UiToastView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           spacing: 2,
                           children: [
-                            if (toast.title != null) Text(toast.title!, style: body.copyWith(fontWeight: FontWeight.w600)),
-                            Text(toast.message, style: body.copyWith(color: t.textMuted)),
+                            if (toast.title != null) Text(toast.title!, style: font(body.copyWith(fontWeight: FontWeight.w600))),
+                            Text(toast.message, style: font(body.copyWith(color: t.textMuted))),
                           ],
                         ),
                       ),
@@ -473,7 +491,18 @@ class UiToastView extends StatelessWidget {
                   ),
                 ),
                 if (toast.action != null)
-                  UiButton(label: toast.action!.label, variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: onAction),
+                  UiButton(
+                    label: toast.action!.label,
+                    variant: UiButtonVariant.outline,
+                    size: UiSize.sm,
+                    onPressed: onAction,
+                    // The label in the app font too, over the button's own label style.
+                    child: textStyle == null
+                        ? null
+                        : Builder(
+                            builder: (context) => Text(toast.action!.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: font(DefaultTextStyle.of(context).style)),
+                          ),
+                  ),
                 if (onDismiss != null) UiDialogCloseButton(label: context.uiStrings.dismiss, onPressed: onDismiss!, edgePadding: t.space3, outset: t.space1),
               ],
             ),

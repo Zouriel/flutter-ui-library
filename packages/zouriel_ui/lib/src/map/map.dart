@@ -593,6 +593,12 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     _ready = true;
     // Built centred on the middle of the whole map: centre the input in the visible part instead.
     if (_shift != Offset.zero) _controller.move(widget.center._ll, widget.zoom, offset: _shift);
+    // A fit asked for before the map was ready (fitPoints / fitArea on opening) runs now, without animating.
+    final f = _fit;
+    if (f != null) {
+      _fit = (points: f.points, padding: f.padding, maxZoom: f.maxZoom, animate: false);
+      _applyFit();
+    }
   }
 
   /// Moves the map so [c] sits in the middle of the visible part (between the insets), at [zoom] or
@@ -615,8 +621,10 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   /// the points stay inside the visible part. It lets go when anything else moves the map: a
   /// gesture, [flyTo], the zoom buttons, a new [UiMap.center] or [UiMap.zoom].
   void fitPoints(List<UiLatLng> points, {EdgeInsets? padding, double? maxZoom, bool animate = true}) {
-    if (!_ready || points.isEmpty) return;
+    if (points.isEmpty) return;
     _fit = (points: List.unmodifiable(points), padding: padding, maxZoom: maxZoom, animate: animate);
+    // Asked before the map is ready (straight after it is built): held, and run once it is (0.44.2).
+    if (!_ready) return;
     _pan.stop();
     _fly.stop();
     _applyFit();

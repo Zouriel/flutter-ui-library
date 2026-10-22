@@ -270,8 +270,11 @@ class _UiTextareaState extends State<UiTextarea> with UiTextControllerMixin {
     final padY = widget.size == UiSize.sm ? t.space1 : t.space2;
     final lead = widget.leading, trail = widget.trailing;
     const border = 1.0;
-    // One text line, and the last line's box with its padding (where the slots sit).
-    final line = (style.fontSize ?? t.fontSizeMd) * MediaQuery.textScalerOf(context).scale(1) * 1.5;
+    // One text line, and the last line's box with its padding (where the slots sit). Measured as the
+    // editor lays its lines out (its strut, the text scaler, a textStyle height), not worked out from
+    // the font size (0.44.2): Android's non-linear font scaling, a line height in textStyle or the
+    // engine's rounding made the estimate too tall, so a one-row textarea came out under 48dp.
+    final line = uiFieldLineHeight(context, style);
     final lineBox = line + 2 * padY;
     // On touch screens the widget lays out at least 48dp tall, with the visible box centred (as a
     // single-line field does), so the text field's own tap target and semantics node are 48dp

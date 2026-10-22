@@ -645,15 +645,17 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     final t = context.ui;
     final mq = MediaQuery.of(context);
     final safe = _bottom > 0 ? 0.0 : mq.padding.bottom;
+    // On glass the footer is always frosted (0.44.2): the body scrolls under it, so clear glass would
+    // show its text through the buttons.
     Widget bar = Container(
       decoration: BoxDecoration(
-        color: _glass ? uiGlassSheetTint(t, strength: widget.glassStrength) : t.surface,
+        color: _glass ? uiGlassSheetTint(t, strength: UiGlassStrength.frosted) : t.surface,
         border: Border(top: BorderSide(color: _glass ? t.glassBorder : t.borderSubtle)),
       ),
       padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, t.space3 + safe),
       child: footer,
     );
-    if (_glass) bar = ClipRect(child: BackdropFilter(filter: uiGlassSheetFilter(t, strength: widget.glassStrength), child: bar));
+    if (_glass) bar = ClipRect(child: BackdropFilter(filter: uiGlassSheetFilter(t, strength: UiGlassStrength.frosted), child: bar));
     return Stack(fit: StackFit.expand, children: [
       panel,
       Positioned(

@@ -88,6 +88,20 @@ class UiFieldSlot extends StatelessWidget {
   }
 }
 
+/// The height of one line the field's editor lays out in [style]: the strut [EditableText] forces
+/// from its style, scaled by the ambient text scaler (0.44.2).
+double uiFieldLineHeight(BuildContext context, TextStyle style) {
+  final p = TextPainter(
+    text: TextSpan(text: '', style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+    strutStyle: StrutStyle.fromTextStyle(style, forceStrutHeight: true),
+  )..layout();
+  final h = p.preferredLineHeight;
+  p.dispose();
+  return h;
+}
+
 /// The vertical margin a multi-line field with slots lays out with on touch screens, so a slot
 /// button's [uiMinTouchTarget] hit area, centred on the last line, stays inside the widget (hit
 /// tests stop at a widget's bounds) while the visible box stays [lineBox] + border tall.
