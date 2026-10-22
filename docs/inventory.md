@@ -1671,7 +1671,7 @@ Round progress, determinate or turning; centre content slot (Flutter `child`).
 
 ### UiChatBubble (component, `ui-chat-bubble`) (0.35)
 File: `chat-bubble/src/chat-bubble.ts`
-A message: mine at the inline end in primary, theirs at the start on the raised surface; meta line.  
+A message: mine at the inline end in primary, theirs at the start on the raised surface; meta line. Takes the whole row in any parent (0.42.2: column alignments, grid, Row, IntrinsicWidth).  
 - Inputs: `mine` = false; `meta`; `ariaLabel`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

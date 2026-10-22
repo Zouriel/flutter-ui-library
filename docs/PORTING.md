@@ -170,6 +170,27 @@ child). The web gives `.sheet` `max-width` and `margin-inline: auto` (fixed with
 the auto margins split the rest); both are symmetric, so RTL needs nothing. Measured in Chromium at
 1280 and 390 px, LTR and RTL: 560 wide at left 360, full width at 390.
 
+**0.42.2. Chat bubble in any parent.** The Dhirumi nurse web app put `ui-chat-bubble` in a column
+with `align-items: flex-start/flex-end`; the host shrank to its text, the bubble's `max-width: 80%`
+resolved against that shrunk host, and `overflow-wrap: anywhere` let min-content collapse to a
+letter, so "okay" broke as "ok/ay" (48 px, 2 lines in Chromium at 390). Web: the host now takes the
+row whatever the parent aligns (`align-self` and `justify-self: stretch`, `width: 100%`,
+`min-width: 0` so a grid or row can still shrink it, `box-sizing: border-box`), and the bubble uses
+`overflow-wrap: break-word` (a word breaks only where it would overflow; min-content stays whole
+words). `npm run audit:chat-wrap` checks it in Chromium at 390: flex columns aligned
+start/end/center/stretch, a row, a grid with `justify-items: start`, LTR and RTL, yours and theirs;
+a short word on one line at its own side, a 200-character URL inside 80%. Flutter never had the
+column problem (the bubble's LayoutBuilder + Align took the column's max width whatever its
+`crossAxisAlignment`), but two parents broke it: an `IntrinsicWidth` threw (LayoutBuilder can't
+answer intrinsic sizes), and in a Row (unbounded width) the 80% cap became infinite and a long URL
+overflowed the Row by ~1300 px. The LayoutBuilder is now `_RenderBubbleRow`: the row's full width
+when bounded, the bubble at most 80% of it at its inline side, intrinsic widths the bubble's over
+0.8 (plus 0.01 so 0.8 x width can't round under the text's width), so an IntrinsicWidth keeps short
+text on one line; with unbounded width it caps at 80% of `MediaQuery` width and sizes to the
+bubble. `chat_bubble_fit_test.dart` covers each Column alignment in LTR and RTL, IntrinsicWidth
+and Row at 390. There is no web equivalent of an inline-block or float parent guard: a parent that
+shrink-wraps by its own rules still sizes from the text (CSS can't size a host to its text / 0.8).
+
 **0.42.1.** From the Dhirumi nurse app, which carries workarounds for all three until this ships.
 
 - fitPoints vs changing insets. Flutter: the route made the sheet's peek taller just as the fit

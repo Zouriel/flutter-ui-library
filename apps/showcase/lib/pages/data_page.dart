@@ -98,7 +98,7 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Chat bubble',
           widget: 'UiChatBubble',
-          summary: 'One message in a conversation. Your own (mine) sit at the inline end in the primary colour, the other side\'s at the inline start on the raised surface; in RTL they swap. meta is a small line under the text (the time, read status). The corner nearest the speaker is tucked in. In a Column they align themselves; text wraps at 80% of the width.',
+          summary: 'One message in a conversation. Your own (mine) sit at the inline end in the primary colour, the other side\'s at the inline start on the raised surface; in RTL they swap. meta is a small line under the text (the time, read status). The corner nearest the speaker is tucked in. In a Column they align themselves, whatever its crossAxisAlignment: each takes the whole row, so text wraps at 80% of it, between words; inside an IntrinsicWidth short text stays on one line, and in a Row it wraps at 80% of the screen.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: const [
             UiChatBubble(meta: '09:40', child: Text("Hello, I'm on my way to you.")),
             UiChatBubble(mine: true, meta: '09:41 · Read', child: Text('Thank you! The gate code is 2468.')),

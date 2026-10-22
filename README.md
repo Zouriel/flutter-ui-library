@@ -99,6 +99,12 @@ sheets do. A sheet with a 0 snap keeps closing on Back before the route pops. `m
 caps the sheet on wider screens: its surface, handle, title row and body are that wide and centred,
 the backdrop still covers the whole screen, and `onCoverChanged` still reports the covered height.
 
+**Chat bubbles in any parent (0.42.2):** `UiChatBubble` keeps a short word on one line and wraps long
+text at 80% of the row whatever its parent: a Column with any `crossAxisAlignment` (as before), an
+`IntrinsicWidth` (it threw before: it now reports a width that fits its text) or a Row (unbounded
+width: it caps at 80% of the screen instead of overflowing). The web bubble had the column problem
+("okay" broke as "ok/ay" in a column aligned to the start) and now takes the whole row too.
+
 **Map controls, a fit that holds, labels off the edge (0.42.1):** a `UiMapState.fitPoints` fit owns
 the camera: when `viewInsets` change while it animates or after it (a sheet growing as the route
 appears) it is worked out again for the new insets (an animating fit is retargeted, keeping its
