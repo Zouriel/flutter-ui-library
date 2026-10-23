@@ -36,7 +36,8 @@ const double uiSwipeScreensFlingVelocity = 400;
 /// - On the first screen a drag that starts within [leadingEdgeExclusion] of the leading edge is
 ///   left alone (an app drawer opens from there).
 /// - On an [UiSwipeScreen.edgeSwipeOnly] screen only a drag starting in the [edgeWidth] strip at its
-///   leading edge swipes, and only back; all other drags go to the content.
+///   leading edge swipes, and only back; all other drags go to the content. A tap on the strip goes
+///   to what is under it (0.45.1), such as the screen's own Back arrow.
 /// - [index] is the shown screen: a new value animates there. A swipe calls [onIndexChanged]; the
 ///   widget keeps the swiped-to screen even when the parent doesn't pass it back.
 /// - Every screen stays alive (state kept) when off screen. Off-screen screens are not painted,
@@ -230,6 +231,9 @@ class UiSwipeScreensState extends State<UiSwipeScreens> with SingleTickerProvide
                 child: Stack(fit: StackFit.expand, children: [
                   s.child,
                   // The back-swipe strip of an edgeSwipeOnly screen, over its content at the leading edge.
+                  // Translucent (0.45.1): the content under it is hit too, so a tap there still presses
+                  // what is under it (a header's Back arrow, the map); a horizontal drag is the strip's,
+                  // since its drag accepts at the touch slop, before a map's pan (twice the slop).
                   if (s.edgeSwipeOnly && i > 0)
                     PositionedDirectional(
                       start: 0,
@@ -238,7 +242,7 @@ class UiSwipeScreensState extends State<UiSwipeScreens> with SingleTickerProvide
                       width: widget.edgeWidth,
                       child: RawGestureDetector(
                         key: const ValueKey('ui-swipe-screens-edge'),
-                        behavior: HitTestBehavior.opaque,
+                        behavior: HitTestBehavior.translucent,
                         excludeFromSemantics: true,
                         gestures: {UiSwipeDragRecognizer: _recognizer(backOnly: true)},
                       ),

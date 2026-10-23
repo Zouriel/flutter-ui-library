@@ -109,6 +109,9 @@ font, as `textStyle` does on the text fields (`TextStyle(fontFamilyFallback: ['F
 The web twin's map markers were drawn further down one after another; Flutter places each `Marker` on its
 own and never had it (a test now checks 60 dots against their points).
 
+**Swipe strip taps (0.45.1):** a tap on an `edgeSwipeOnly` screen's back-swipe strip reaches what is under it
+(a header's Back arrow, the map); a horizontal drag from it still swipes back.
+
 **Compact density (0.45.0):** `UiConfig(density: UiDensity.comfortable | compact | auto)`, the web
 `provideUiConfig({ density })`. Compact makes things smaller, not tighter: `fontSizeSm/Md/Lg` 12/14/16 (from
 13/15/18), the `UiTypography` headings (new tokens `fontSizeH1/H2/H3/H5/H6`) about 10% smaller, `sizeSm/Md/Lg`

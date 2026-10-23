@@ -350,6 +350,88 @@ void main() {
     expect(key.currentState!.index, 0);
     expect(map.currentState!.controller.camera.center, moved);
   });
+  testWidgets('a tap on the back-swipe strip reaches what is under it (a header Back arrow); a swipe from it presses nothing', (tester) async {
+    tester.view.physicalSize = const Size(_w, _h) * tester.view.devicePixelRatio;
+    tester.view.gestureSettings = GestureSettings(physicalTouchSlop: 8 * tester.view.devicePixelRatio);
+    addTearDown(tester.view.reset);
+    final map = GlobalKey<UiMapState>();
+    final key = GlobalKey<UiSwipeScreensState>();
+    var backs = 0, mapTaps = 0;
+    await tester.pumpWidget(UiApp(
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: UiSwipeScreens(key: key, index: 1, screens: [
+            const UiSwipeScreen(label: 'Chat', child: Text('Chat')),
+            UiSwipeScreen(
+              label: 'Map',
+              edgeSwipeOnly: true,
+              child: Column(children: [
+                Row(children: [
+                  const SizedBox(width: 8),
+                  UiIconButton(key: const ValueKey('back'), icon: const SizedBox(width: 20, height: 20), label: 'Back', onPressed: () => backs++),
+                ]),
+                Expanded(child: UiMap(key: map, fill: true, tileProvider: UiMapBlankTiles(), onMapTap: (_) => mapTaps++)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    ));
+    await tester.pump(const Duration(milliseconds: 100));
+    final back = tester.getRect(find.byKey(const ValueKey('back')));
+    expect(back.left, lessThan(24), reason: 'the arrow starts under the 24 px strip');
+    for (final x in [back.left + 3, 12.0, back.center.dx]) {
+      await tester.tapAt(Offset(x, back.center.dy));
+      await _settle(tester);
+    }
+    expect(backs, 3, reason: 'every tap on the arrow presses it, under the strip or not');
+    expect(key.currentState!.index, 1, reason: 'a tap is not a swipe');
+    // A tap on the strip over the map is the map's tap.
+    await tester.tapAt(const Offset(10, 500));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(mapTaps, 1);
+
+    // A swipe back from the strip over the arrow moves the screens and presses nothing.
+    final moved = map.currentState!.controller.camera.center;
+    await tester.timedDragFrom(Offset(10, back.center.dy), const Offset(250, 0), const Duration(milliseconds: 500));
+    await _settle(tester);
+    expect(key.currentState!.index, 0);
+    expect(backs, 3);
+    expect(map.currentState!.controller.camera.center, moved);
+  });
+
+  for (final fast in [true, false]) {
+    testWidgets('a swipe back from the strip over a real map moves the screens, not the map (${fast ? 'flung' : 'slow, a little diagonal'})', (tester) async {
+      tester.view.physicalSize = const Size(_w, _h) * tester.view.devicePixelRatio;
+      tester.view.gestureSettings = GestureSettings(physicalTouchSlop: 8 * tester.view.devicePixelRatio);
+      addTearDown(tester.view.reset);
+      final map = GlobalKey<UiMapState>();
+      final key = GlobalKey<UiSwipeScreensState>();
+      await tester.pumpWidget(UiApp(
+        home: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: UiSwipeScreens(key: key, index: 1, screens: [
+              const UiSwipeScreen(label: 'Chat', child: Text('Chat')),
+              UiSwipeScreen(label: 'Map', edgeSwipeOnly: true, child: UiMap(key: map, fill: true, tileProvider: UiMapBlankTiles())),
+            ]),
+          ),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 100));
+      final before = map.currentState!.controller.camera.center;
+      if (fast) {
+        await tester.flingFrom(const Offset(10, 500), const Offset(120, 0), 1500);
+      } else {
+        await tester.timedDragFrom(const Offset(6, 400), const Offset(260, 40), const Duration(milliseconds: 600));
+      }
+      await _settle(tester);
+      expect(key.currentState!.index, 0);
+      expect(map.currentState!.controller.camera.center, before);
+    });
+  }
+
   testWidgets('edgeSwipeOnly with a screen after it: an edge drag only goes back, never on', (tester) async {
     final h = await _pump(tester, third: true);
     h.set(() => h.index = 1);
