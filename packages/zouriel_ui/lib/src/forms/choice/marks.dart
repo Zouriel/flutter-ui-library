@@ -23,11 +23,13 @@ class UiCheckMark extends StatelessWidget {
     final on = value != false;
     final animate = context.uiAnimate;
     final border = on ? t.primary : invalid ? t.danger : states.hovered ? t.primary : t.controlBorder;
+    // Compact density draws the mark 10% smaller (the web zoom: var(--ui-density-scale)).
+    final z = t.densityScale;
     return AnimatedContainer(
       duration: animate ? t.motionFast : Duration.zero,
       curve: t.easeStandard,
-      width: small ? 16 : 18,
-      height: small ? 16 : 18,
+      width: (small ? 16 : 18) * z,
+      height: (small ? 16 : 18) * z,
       margin: const EdgeInsets.only(top: 1),
       decoration: BoxDecoration(
         color: on ? t.primary : t.surface,
@@ -37,12 +39,12 @@ class UiCheckMark extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: value == null
-          ? Container(width: 9, height: 2, decoration: BoxDecoration(color: t.primaryContrast, borderRadius: BorderRadius.circular(1)))
+          ? Container(width: 9 * z, height: 2 * z, decoration: BoxDecoration(color: t.primaryContrast, borderRadius: BorderRadius.circular(1)))
           : TweenAnimationBuilder<double>(
               tween: Tween(end: value! ? 1 : 0),
               duration: animate ? t.motionBase : Duration.zero,
               curve: t.easeStandard,
-              builder: (context, p, _) => CustomPaint(size: Size.square(small ? 11 : 12), painter: _TickPainter(p, t.primaryContrast)),
+              builder: (context, p, _) => CustomPaint(size: Size.square((small ? 11 : 12) * z), painter: _TickPainter(p, t.primaryContrast)),
             ),
     );
   }
@@ -91,11 +93,12 @@ class UiRadioMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     final animate = context.uiAnimate;
+    final z = t.densityScale;
     return AnimatedContainer(
       duration: animate ? t.motionFast : Duration.zero,
       curve: t.easeStandard,
-      width: 18,
-      height: 18,
+      width: 18 * z,
+      height: 18 * z,
       margin: const EdgeInsets.only(top: 1),
       decoration: BoxDecoration(
         color: t.surface,
@@ -109,7 +112,7 @@ class UiRadioMark extends StatelessWidget {
         duration: animate ? t.motionFast : Duration.zero,
         // The spring overshoots; reduced motion has no animation at all.
         curve: t.easeSpring,
-        child: Container(width: 8, height: 8, decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle)),
+        child: Container(width: 8 * z, height: 8 * z, decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle)),
       ),
     );
   }

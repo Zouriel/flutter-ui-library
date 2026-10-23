@@ -379,7 +379,7 @@ class UiFbChecksEditor extends StatelessWidget {
       if (implicitDef != null)
         FbBox(children: [
           Row(spacing: 6, children: [
-            Flexible(child: Text(implicitDef.label, style: context.uiText.label.copyWith(fontSize: 13))),
+            Flexible(child: Text(implicitDef.label, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale))),
             const FbChip('Automatic', tone: FbTone.ok),
           ]),
           FbHint('${implicitDef.description ?? implicitDef.label}. Every ${f.type == UiFbFieldType.email ? 'email' : f.type == UiFbFieldType.url ? 'website' : 'phone'} field checks this.'),
@@ -438,7 +438,7 @@ class _DashedButton extends StatelessWidget {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
           UiIcon(HugeIcons.strokeRoundedAdd01, size: 14, color: s.hovered ? t.text : t.textSecondary),
-          Text(label, style: context.uiText.body.copyWith(fontSize: 13, color: s.hovered ? t.text : t.textSecondary)),
+          Text(label, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: s.hovered ? t.text : t.textSecondary)),
         ]),
       ),
     );
@@ -538,7 +538,7 @@ class _CheckBox extends StatelessWidget {
 
     return FbBox(dashed: d == null, children: [
       Row(spacing: 6, children: [
-        Flexible(child: Text(label, style: context.uiText.label.copyWith(fontSize: 13))),
+        Flexible(child: Text(label, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale))),
         if (rule.severity == 'warning') const FbChip('Warning', tone: FbTone.warn),
         const Spacer(),
         FbIconButton(icon: HugeIcons.strokeRoundedCancel01, label: 'Remove $label', danger: true, onPressed: onRemove),

@@ -24,6 +24,13 @@ const themeLabels = {
   UiThemeName.maldivesDark: 'Maldives Dark',
 };
 
+/// The density picker's options (0.45.0), shared by the theme sheet and the Foundation page.
+const densityOptions = [
+  UiSegmentedOption(value: UiDensity.comfortable, label: 'Comfortable'),
+  UiSegmentedOption(value: UiDensity.compact, label: 'Compact'),
+  UiSegmentedOption(value: UiDensity.auto, label: 'Auto'),
+];
+
 /// The showcase frame: a top bar (menu, title, theme picker) over the current page. On a wide
 /// screen the page list stays open on the left.
 class ShowcaseShell extends StatefulWidget {
@@ -76,7 +83,7 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
             label: 'Open menu',
             onPressed: () => _menuOpen.value = true,
           ),
-        Expanded(child: wide ? const SizedBox() : Text(_page.label, style: context.uiText.label.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        Expanded(child: wide ? const SizedBox() : Text(_page.label, style: context.uiText.label.copyWith(fontSize: t.fontSizeMd), maxLines: 1, overflow: TextOverflow.ellipsis)),
         _ThemeButton(controller: widget.controller),
       ]),
     );
@@ -274,11 +281,23 @@ class _ThemeSheet extends StatelessWidget {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 560),
+        // Scrolls when the density row and the 15 themes are taller than a phone screen.
+        constraints: BoxConstraints(maxWidth: 560, maxHeight: MediaQuery.sizeOf(context).height * 0.9),
         decoration: BoxDecoration(color: t.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(t.radiusLg)), boxShadow: t.shadow3),
         padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, t.space4 + MediaQuery.paddingOf(context).bottom),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
           Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: t.borderStrong, borderRadius: BorderRadius.circular(2)))),
+          const UiText('Density', variant: UiTextVariant.h4, heading: true),
+          // 0.45.0: comfortable (the default), compact, or compact below 600 wide.
+          ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) => UiSegmented<UiDensity>(
+              label: 'Density',
+              options: densityOptions,
+              value: controller.config.density,
+              onChanged: (d) => controller.setConfig(controller.config.copyWith(density: d)),
+            ),
+          ),
           const UiText('Theme', variant: UiTextVariant.h4, heading: true),
           DocGrid(minWidth: 150, minColumns: 2, maxColumns: 3, children: [
             for (final th in UiThemeName.values)
@@ -291,7 +310,7 @@ class _ThemeSheet extends StatelessWidget {
                 },
               ),
           ]),
-        ]),
+        ])),
       ),
     );
   }

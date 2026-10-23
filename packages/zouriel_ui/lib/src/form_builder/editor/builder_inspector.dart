@@ -177,7 +177,7 @@ class _Head extends StatelessWidget {
             Text(kind, style: context.uiText.label.copyWith(fontSize: 11, color: t.textMuted)),
             Semantics(
               header: true,
-              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, color: t.text)),
+              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, color: t.text)),
             ),
           ]),
         ),
@@ -229,7 +229,7 @@ class _Tabs extends StatelessWidget {
                       Text(
                         label,
                         style: context.uiText.body.copyWith(
-                          fontSize: 13,
+                          fontSize: 13 * context.ui.fontScale,
                           fontWeight: on ? FontWeight.w600 : FontWeight.w400,
                           color: on || s.hovered ? t.text : t.textSecondary,
                         ),
@@ -827,7 +827,7 @@ class _LogicPanel extends StatelessWidget {
               ),
               child: Text.rich(
                 TextSpan(text: '“${store.name(r.ownerId)}” ', children: [TextSpan(text: _refWords[r.kind] ?? r.kind, style: TextStyle(color: t.textMuted))]),
-                style: context.uiText.body.copyWith(fontSize: 13, color: t.text),
+                style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text),
               ),
             ),
           ),

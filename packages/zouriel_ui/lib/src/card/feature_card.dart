@@ -300,7 +300,7 @@ class UiFeatureCard extends StatelessWidget {
                 overflow: (descriptionLines ?? 0) > 0 ? TextOverflow.ellipsis : null,
                 style: _small
                     ? text.body.copyWith(fontSize: t.fontSizeSm, height: 1.4, color: muted)
-                    : text.body.copyWith(fontSize: _large ? 16 : t.fontSizeMd, height: 1.5, color: muted),
+                    : text.body.copyWith(fontSize: _large ? 16 * t.fontScale : t.fontSizeMd, height: 1.5, color: muted),
               ),
             ),
           // In a stretched grid row the action keeps to the bottom edge.

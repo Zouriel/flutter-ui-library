@@ -493,7 +493,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
 
   // ── Sections ──────────────────────────────────────────────────────────────────────────────
 
-  Widget _h2(String text) => Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 16, fontWeight: FontWeight.w700, color: context.ui.text)));
+  Widget _h2(String text) => Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 16 * context.ui.fontScale, fontWeight: FontWeight.w700, color: context.ui.text)));
 
   Widget _card(List<Widget> children) {
     final t = context.ui;
@@ -819,7 +819,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
           }
           return _card([
             Row(children: [
-              Expanded(child: Text(label, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.text))),
+              Expanded(child: Text(label, style: context.uiText.body.copyWith(fontSize: 13.5 * context.ui.fontScale, fontWeight: FontWeight.w700, color: t.text))),
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 widthFactor: 1,
@@ -843,7 +843,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
                       TextSpan(text: tr.title),
                       TextSpan(text: ' — ${tr.summary}', style: TextStyle(color: t.textMuted, fontSize: 12.5)),
                     ]),
-                    style: context.uiText.body.copyWith(fontSize: 13, color: conflicts.contains(tr.definitionId) ? t.warning : t.text),
+                    style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: conflicts.contains(tr.definitionId) ? t.warning : t.text),
                   ),
                 ),
               ]),
@@ -890,12 +890,12 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         ),
       ]),
       if (reg?.actions?.isNotEmpty ?? false) ...[
-        Text('Actions', style: context.uiText.label.copyWith(fontSize: 13, color: t.text)),
+        Text('Actions', style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
         for (final a in reg!.actions!)
           Text.rich(TextSpan(children: [TextSpan(text: '${a.label} ', style: const TextStyle(fontWeight: FontWeight.w700)), TextSpan(text: a.description ?? '', style: muted)]), style: small),
       ],
       if (reg?.signals?.isNotEmpty ?? false) ...[
-        Text('Events', style: context.uiText.label.copyWith(fontSize: 13, color: t.text)),
+        Text('Events', style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
         for (final sg in reg!.signals!) Text(sg.label, style: small),
       ],
     ];
@@ -943,7 +943,7 @@ class UiWorkflowGlobalSettingsState extends State<UiWorkflowGlobalSettings> {
         children: [if (!wide) nav, body, if (showFoot) foot],
       );
       return DefaultTextStyle.merge(
-        style: context.uiText.body.copyWith(fontSize: 13.5, color: t.text),
+        style: context.uiText.body.copyWith(fontSize: 13.5 * context.ui.fontScale, color: t.text),
         child: Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(color: t.bg, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
@@ -995,7 +995,7 @@ class _Nav extends StatelessWidget {
             boxShadow: st.focused ? t.focusRing : null,
           ),
           child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-            Text(s.label, maxLines: 1, style: context.uiText.body.copyWith(fontSize: 13, fontWeight: on ? FontWeight.w600 : FontWeight.w400, color: on || st.hovered ? t.text : t.textSecondary)),
+            Text(s.label, maxLines: 1, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: on ? FontWeight.w600 : FontWeight.w400, color: on || st.hovered ? t.text : t.textSecondary)),
             if (bad.contains(s.value)) Container(key: ValueKey('bad-${s.value}'), width: 6, height: 6, decoration: BoxDecoration(color: t.danger, shape: BoxShape.circle)),
           ]),
         ),

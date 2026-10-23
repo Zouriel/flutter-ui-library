@@ -358,7 +358,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
         if (def.title.isNotEmpty)
           Semantics(
             header: true,
-            child: Text(def.title, style: ty.h3.copyWith(fontSize: 20, fontWeight: FontWeight.w600, color: t.text, height: 1.25)),
+            child: Text(def.title, style: ty.h3.copyWith(fontSize: 20 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text, height: 1.25)),
           ),
         if ((def.description ?? '').isNotEmpty) _desc(context, def.description!),
       ]));

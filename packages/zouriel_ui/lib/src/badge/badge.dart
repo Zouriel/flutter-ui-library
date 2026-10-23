@@ -36,7 +36,7 @@ class UiBadge extends StatelessWidget {
       );
     }
     return Container(
-      height: 20,
+      height: 20 * t.densityScale,
       padding: EdgeInsets.symmetric(horizontal: t.space2),
       decoration: BoxDecoration(
         color: fill,
@@ -208,7 +208,7 @@ class _UiAvatarState extends State<UiAvatar> {
     final dim = widget.dimension ?? widget.size.height(t);
     final fontSize = widget.dimension != null
         ? (widget.dimension! * 0.38).roundToDouble()
-        : switch (widget.size) { UiSize.sm => 11.0, UiSize.md => t.fontSizeSm, UiSize.lg => t.fontSizeMd, UiSize.xl => 21.0 };
+        : switch (widget.size) { UiSize.sm => 11.0, UiSize.md => t.fontSizeSm, UiSize.lg => t.fontSizeMd, UiSize.xl => 21.0 * t.fontScale };
     final shape = widget.square ? BorderRadius.circular(t.radius) : BorderRadius.circular(dim);
     final initials = Center(
       child: Text(_initials, style: context.uiText.body.copyWith(fontSize: fontSize, fontWeight: FontWeight.w600, color: t.text, height: 1)),

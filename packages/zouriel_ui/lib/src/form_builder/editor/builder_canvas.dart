@@ -479,15 +479,15 @@ class _ItemCard extends StatelessWidget {
             children: [if (f.required?.flag == true) TextSpan(text: ' *', style: TextStyle(color: t.danger))],
           ),
           style: f.label.isNotEmpty
-              ? context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: t.text)
-              : context.uiText.body.copyWith(fontSize: 13, fontStyle: FontStyle.italic, color: t.textMuted),
+              ? context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w500, color: t.text)
+              : context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, fontStyle: FontStyle.italic, color: t.textMuted),
         ),
         ...badges,
       ]);
     } else {
       final s = el as UiFbStatic;
       final text = switch (s.type) {
-        'heading' => Text((s.text ?? '').isNotEmpty ? s.text! : 'Heading', style: context.uiText.h6.copyWith(fontSize: 15, color: t.text)),
+        'heading' => Text((s.text ?? '').isNotEmpty ? s.text! : 'Heading', style: context.uiText.h6.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text)),
         'paragraph' => Text(
           (s.text ?? '').isNotEmpty ? s.text! : 'Text block',
           maxLines: 2,
@@ -667,7 +667,7 @@ class _GroupCard extends StatelessWidget {
             decoration: BoxDecoration(color: t.surfaceHover, borderRadius: BorderRadius.circular(t.radiusXs)),
             child: UiIcon(g.repeat != null ? fbRepeatIcon : fbGroupIcon, size: 13, color: t.textMuted),
           ),
-          Text(title, style: context.uiText.label.copyWith(fontSize: 13, color: t.text)),
+          Text(title, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
           if (g.repeat != null) FbChip(_repeatText()),
           ...badges,
         ]),
@@ -846,7 +846,7 @@ class _AddButton extends StatelessWidget {
           ),
           child: Row(mainAxisSize: wide ? MainAxisSize.max : MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, spacing: 6, children: [
             UiIcon(HugeIcons.strokeRoundedAdd01, size: 15, color: c),
-            Text(label, style: context.uiText.body.copyWith(fontSize: wide ? 13 : 12, color: c)),
+            Text(label, style: context.uiText.body.copyWith(fontSize: wide ? 13 * context.ui.fontScale : 12, color: c)),
           ]),
         );
       },
@@ -868,11 +868,11 @@ class _Empty extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: t.space8, horizontal: t.space4),
       decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
       child: Column(spacing: t.space2, children: [
-        Semantics(header: true, child: Text(multiPage ? 'This page is empty' : 'Start your form', style: context.uiText.label.copyWith(fontSize: 15, color: t.text))),
+        Semantics(header: true, child: Text(multiPage ? 'This page is empty' : 'Start your form', style: context.uiText.label.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text))),
         Text(
           paletteBeside ? 'Drag a field from the left, or start with one of these.' : 'Add a field with the Add button, or start with one of these.',
           textAlign: TextAlign.center,
-          style: context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary),
+          style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary),
         ),
         SizedBox(height: t.space2),
         Wrap(alignment: WrapAlignment.center, spacing: t.space2, runSpacing: t.space2, children: [
@@ -895,7 +895,7 @@ class _Empty extends StatelessWidget {
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
                   UiIcon(type == 'group' ? fbGroupIcon : fbFieldIcon(UiFbFieldType(type)), size: 15, color: t.textSecondary),
-                  Text(label, style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+                  Text(label, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
                 ]),
               ),
             ),
@@ -936,8 +936,8 @@ class _FormHead extends StatelessWidget {
           boxShadow: s.focused ? t.focusRing : null,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-          Text(def.title.isNotEmpty ? def.title : 'Untitled form', style: context.uiText.h4.copyWith(fontSize: 20, color: t.text)),
-          if ((def.description ?? '').isNotEmpty) Text(def.description!, style: context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary)),
+          Text(def.title.isNotEmpty ? def.title : 'Untitled form', style: context.uiText.h4.copyWith(fontSize: 20 * context.ui.fontScale, color: t.text)),
+          if ((def.description ?? '').isNotEmpty) Text(def.description!, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary)),
         ]),
       ),
     );
@@ -977,7 +977,7 @@ class _PageHead extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: 4),
               decoration: BoxDecoration(boxShadow: s.focused ? t.focusRing : null, borderRadius: BorderRadius.circular(t.radius)),
               child: Wrap(spacing: t.space2, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                Text(title, style: context.uiText.label.copyWith(fontSize: 15, color: t.text)),
+                Text(title, style: context.uiText.label.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text)),
                 if (page.visibility != null) FbChip(page.visibility!.action == 'show' ? 'Shown when…' : 'Skipped when…', tone: FbTone.logic),
                 if ((page.jumps ?? const []).isNotEmpty) FbChip('${page.jumps!.length} jump${page.jumps!.length > 1 ? 's' : ''}', tone: FbTone.logic),
               ]),
@@ -1150,7 +1150,7 @@ class _Tab extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.uiText.body.copyWith(
-                  fontSize: 13,
+                  fontSize: 13 * context.ui.fontScale,
                   fontWeight: on ? FontWeight.w600 : FontWeight.w400,
                   color: on || s.hovered ? t.text : (icon != null ? t.textMuted : t.textSecondary),
                 ),

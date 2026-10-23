@@ -596,7 +596,7 @@ class _StateCard extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(14, 4, 12, 4),
                     child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, spacing: 1, children: [
                       if (kind.isNotEmpty) Text(kind.toUpperCase(), style: context.uiText.label.copyWith(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6, height: 1.1, color: t.textMuted)),
-                      Text(s.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
+                      Text(s.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
                       Text(
                         '$outCount way${outCount == 1 ? '' : 's'} out${s.sla != null ? ' · time limit' : ''}',
                         maxLines: 1,
@@ -802,7 +802,7 @@ class _ListState extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(boxShadow: st.focused ? t.focusRing : null),
               child: Row(spacing: 8, children: [
-                Expanded(child: Text(s.label, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w600, color: t.text))),
+                Expanded(child: Text(s.label, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text))),
                 if (s.category != 'active') WfChip(s.category == 'initial' ? 'Start' : 'Final'),
               ]),
             ),
@@ -826,9 +826,9 @@ class _ListState extends StatelessWidget {
                       boxShadow: st.focused ? t.focusRing : null,
                     ),
                     child: Row(spacing: 8, children: [
-                      Flexible(child: Text(tr.label, style: context.uiText.body.copyWith(fontSize: 13, color: t.text))),
+                      Flexible(child: Text(tr.label, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text))),
                       UiIcon(WfIcons.arrowRight02, size: 12, color: t.textMuted),
-                      Text(stateLabel(tr.to), style: context.uiText.body.copyWith(fontSize: 13, color: t.textMuted)),
+                      Text(stateLabel(tr.to), style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textMuted)),
                       if (tr.auto != null) const WfChip('automatic'),
                     ]),
                   ),
@@ -922,7 +922,7 @@ class _WfLifecycleRunsState extends State<WfLifecycleRuns> {
       return Container(
         color: t.bg,
         padding: EdgeInsets.all(t.space3),
-        child: Text('Select a state or a transition to see the steps it runs.', textAlign: TextAlign.center, style: context.uiText.body.copyWith(fontSize: 13, color: t.textMuted)),
+        child: Text('Select a state or a transition to see the steps it runs.', textAlign: TextAlign.center, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textMuted)),
       );
     }
     final sel = store.selection;
@@ -957,7 +957,7 @@ class _WfLifecycleRunsState extends State<WfLifecycleRuns> {
           padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: 6),
           decoration: BoxDecoration(color: t.surface, border: Border(bottom: BorderSide(color: t.borderSubtle))),
           child: Wrap(spacing: t.space3, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            Semantics(header: true, child: Text(title, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: t.text))),
+            Semantics(header: true, child: Text(title, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w700, color: t.text))),
             if (lists.length > 1)
               UiSegmented<String>(
                 label: 'Which steps',

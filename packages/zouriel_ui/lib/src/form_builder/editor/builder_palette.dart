@@ -98,7 +98,7 @@ class _UiFbPaletteState extends State<UiFbPalette> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                 Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: context.uiText.body.copyWith(fontSize: 13, fontWeight: widget.compact ? FontWeight.w500 : null, color: t.text, height: 1.3)),
+                    style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: widget.compact ? FontWeight.w500 : null, color: t.text, height: 1.3)),
                 if (widget.compact)
                   // Up to two lines: a description cut after a few words says nothing.
                   Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textSecondary, height: 1.3)),

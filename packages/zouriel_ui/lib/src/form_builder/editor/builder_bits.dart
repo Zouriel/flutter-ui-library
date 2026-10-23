@@ -280,7 +280,7 @@ class FbHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 13, color: context.ui.text)));
+      Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, color: context.ui.text)));
 }
 
 /// Two settings side by side when there's room, stacked when there isn't (the web `.fb-grid2`).

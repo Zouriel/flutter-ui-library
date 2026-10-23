@@ -51,7 +51,7 @@ class UiStatCard extends StatelessWidget {
           Text(
             value,
             style: ty.h2.copyWith(
-              fontSize: 25.6,
+              fontSize: 25.6 * context.ui.fontScale,
               height: 1.1,
               fontWeight: FontWeight.w700,
               letterSpacing: t.trackingTight * 25.6,

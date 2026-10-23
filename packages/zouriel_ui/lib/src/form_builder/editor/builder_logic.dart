@@ -88,7 +88,7 @@ class _UiFbLogicOverviewState extends State<UiFbLogicOverview> {
     final shown = q.isEmpty ? entries : [for (final e in entries) if (e.name.toLowerCase().contains(q) || e.lines.any((l) => l.text.toLowerCase().contains(q))) e];
     final problems = s.problems;
 
-    Widget heading(String text) => Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 15, color: t.text)));
+    Widget heading(String text) => Semantics(header: true, child: Text(text, style: context.uiText.label.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text)));
 
     return ColoredBox(
       color: t.bg,
@@ -125,7 +125,7 @@ class _UiFbLogicOverviewState extends State<UiFbLogicOverview> {
                             ? 'Nothing matches “$_query”.'
                             : 'No rules yet. Select a question and open its Logic tab to show it only sometimes, make it required under a condition, or fill it in automatically.',
                         textAlign: TextAlign.center,
-                        style: context.uiText.body.copyWith(fontSize: 13, height: 1.5, color: t.textMuted),
+                        style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, height: 1.5, color: t.textMuted),
                       ),
                     ),
                   for (final e in shown)
@@ -145,12 +145,12 @@ class _UiFbLogicOverviewState extends State<UiFbLogicOverview> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
                           Text.rich(
                             TextSpan(text: e.name, children: [TextSpan(text: '  ${e.where}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: t.textMuted))]),
-                            style: context.uiText.label.copyWith(fontSize: 13, color: t.text),
+                            style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text),
                           ),
                           for (final l in e.lines)
                             Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
                               Padding(padding: const EdgeInsets.only(top: 1), child: FbChip(l.kind, tone: FbTone.logic)),
-                              Expanded(child: Text(l.text, style: context.uiText.body.copyWith(fontSize: 13, height: 1.45, color: t.textSecondary))),
+                              Expanded(child: Text(l.text, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, height: 1.45, color: t.textSecondary))),
                             ]),
                         ]),
                       ),
@@ -193,7 +193,7 @@ class _Problem extends StatelessWidget {
             padding: const EdgeInsets.only(top: 1),
             child: UiIcon(err ? HugeIcons.strokeRoundedCancelCircle : HugeIcons.strokeRoundedAlert02, size: 15, color: c),
           ),
-          Expanded(child: Text(problem.message, style: context.uiText.body.copyWith(fontSize: 13, color: t.text))),
+          Expanded(child: Text(problem.message, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text))),
         ]),
       ),
     );

@@ -299,7 +299,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final intro = context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary);
+    final intro = context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
       Align(
         alignment: Alignment.centerLeft,
@@ -360,7 +360,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
           child: Row(spacing: t.space2, children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(c.label.isNotEmpty ? c.label : 'Untitled list', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, color: t.text)),
+                Text(c.label.isNotEmpty ? c.label : 'Untitled list', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, color: t.text)),
                 Text(c.url.isNotEmpty ? _host(c.url) : 'No address yet', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
               ]),
             ),
@@ -373,7 +373,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
       Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: t.space3, runSpacing: t.space2, children: [
-        Text('Lists that dropdowns and multi-selects can search, in any form.', style: context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary)),
+        Text('Lists that dropdowns and multi-selects can search, in any form.', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary)),
         UiButton(label: 'Add a list', size: UiSize.sm, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: _add),
       ]),
       if (_sources.isEmpty && widget.builtIn.isEmpty)
@@ -383,7 +383,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
           child: Text(
             'No lists yet. Add one to let forms search your data, e.g. students or courses.',
             textAlign: TextAlign.center,
-            style: context.uiText.body.copyWith(fontSize: 13, color: t.textMuted),
+            style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textMuted),
           ),
         ),
       for (var i = 0; i < _sources.length; i++) row(i, _sources[i]),
@@ -397,7 +397,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
             padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
             decoration: BoxDecoration(border: Border.all(color: t.borderSubtle), borderRadius: BorderRadius.circular(t.radius)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(d.label, style: context.uiText.label.copyWith(fontSize: 14, color: t.text)),
+              Text(d.label, style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, color: t.text)),
               Text(
                 (d.description ?? '').isNotEmpty ? d.description! : 'Provided by the app’s code. It can’t be changed here.',
                 style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted),
@@ -438,7 +438,7 @@ class _UiFormGlobalSettingsEditorState extends State<UiFormGlobalSettingsEditor>
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text(c.label.isNotEmpty ? c.label : 'Untitled list', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 15, color: t.text)),
+                child: Text(c.label.isNotEmpty ? c.label : 'Untitled list', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text)),
               ),
             ),
             UiButton(label: 'Delete', size: UiSize.sm, variant: UiButtonVariant.ghost, icon: const UiIcon(HugeIcons.strokeRoundedDelete02), onPressed: _remove),
@@ -637,7 +637,7 @@ class _TestResultState extends State<_TestResult> {
     final showDescription = widget.showDescription;
     final t = context.ui;
     final c = run.ok ? t.success : t.danger;
-    final cell = context.uiText.body.copyWith(fontSize: 13, color: t.text);
+    final cell = context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text);
     final head = context.uiText.label.copyWith(fontSize: 12, color: t.textSecondary);
     final mono = context.uiText.code.copyWith(fontSize: 12, color: t.textSecondary);
     Widget cells(List<Widget> children, {bool header = false}) => Container(
@@ -656,7 +656,7 @@ class _TestResultState extends State<_TestResult> {
           borderRadius: BorderRadius.circular(t.radius),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
-          Text(run.message, style: context.uiText.label.copyWith(fontSize: 13, color: t.text)),
+          Text(run.message, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
           Text(run.url, style: mono),
           if (run.items.isNotEmpty)
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

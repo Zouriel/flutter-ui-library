@@ -51,17 +51,46 @@ class UiApp extends StatefulWidget {
   State<UiApp> createState() => _UiAppState();
 }
 
-class _UiAppState extends State<UiApp> {
+class _UiAppState extends State<UiApp> with WidgetsBindingObserver {
   /// The navigator's key when the app passes none, so dialogs opened above it can still find it.
   final GlobalKey<NavigatorState> _ownKey = GlobalKey<NavigatorState>(debugLabel: 'UiApp navigator');
 
   GlobalKey<NavigatorState> get _key => widget.navigatorKey ?? _ownKey;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // UiDensity.auto follows the window's width (resizes, rotation). The app sits above the MediaQuery
+  // WidgetsApp makes, so it reads the view and rebuilds when its metrics change.
+  @override
+  void didChangeMetrics() {
+    final density = (widget.controller?.config ?? widget.config).density;
+    if (density == UiDensity.auto && mounted) setState(() {});
+  }
+
+  double get _width {
+    final view = View.maybeOf(context);
+    if (view == null) return double.infinity;
+    return view.physicalSize.width / view.devicePixelRatio;
+  }
+
+  UiThemeData _data(UiThemeName name, UiConfig config) =>
+      UiThemeData(name: name, config: config, compact: config.density.isCompactAt(_width));
+
+  @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    if (c == null) return _app(UiThemeData(name: widget.theme, config: widget.config));
-    return UiThemeControllerScope(controller: c, child: ListenableBuilder(listenable: c, builder: (context, _) => _app(c.data)));
+    if (c == null) return _app(_data(widget.theme, widget.config));
+    return UiThemeControllerScope(controller: c, child: ListenableBuilder(listenable: c, builder: (context, _) => _app(_data(c.theme, c.config))));
   }
 
   Widget _app(UiThemeData data) {

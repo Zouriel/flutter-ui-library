@@ -68,7 +68,7 @@ class WfTriggerCard extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('STARTS', style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.55, color: t.textMuted)),
-              Text(summary, style: context.uiText.label.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
+              Text(summary, style: context.uiText.label.copyWith(fontSize: 13.5 * context.ui.fontScale, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
               if (condition) Text('Only when conditions hold', style: context.uiText.body.copyWith(fontSize: 12, color: t.textSecondary)),
             ]),
           ),
@@ -187,7 +187,7 @@ class _WfStepCardState extends State<WfStepCard> {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Row(spacing: 6, children: [
-                Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w600, height: 1.3, color: t.text))),
+                Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w600, height: 1.3, color: t.text))),
                 if (step.disabled) const WfChip('Off', height: 16),
               ]),
               Text(summary, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, height: 1.35, color: t.textSecondary)),
@@ -543,7 +543,7 @@ class _WfStepPickerState extends State<WfStepPicker> {
             WfIconTile(wfStepIcon(info.type), color: color, size: 26),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(info.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: t.text, height: 1.3)),
+                Text(info.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w500, color: t.text, height: 1.3)),
                 if (widget.compact) Text(info.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 12, height: 1.3, color: t.textSecondary)),
               ]),
             ),
@@ -566,7 +566,7 @@ class _WfStepPickerState extends State<WfStepPicker> {
             if (groups.isEmpty)
               Padding(
                 padding: EdgeInsets.symmetric(vertical: t.space4),
-                child: Text('No step matches “$_query”.', textAlign: TextAlign.center, style: context.uiText.body.copyWith(fontSize: 13, color: t.textMuted)),
+                child: Text('No step matches “$_query”.', textAlign: TextAlign.center, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textMuted)),
               ),
             for (final g in groups) ...[
               Padding(padding: EdgeInsets.only(top: t.space2, bottom: 4), child: WfSectionTitle(g.name)),

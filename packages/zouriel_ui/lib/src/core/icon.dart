@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../theme/theme.dart';
+
 /// A Hugeicons icon: `HugeIcons.strokeRoundedHome01` and friends.
 typedef UiIconData = List<List<dynamic>>;
 
@@ -21,7 +23,9 @@ class UiIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = IconTheme.of(context);
-    final s = size ?? theme.size ?? 20;
+    // Compact density draws every icon 10% smaller (a 20 icon at 18), like the web's
+    // hugeicons-icon zoom: var(--ui-density-scale).
+    final s = (size ?? theme.size ?? 20) * UiTheme.of(context).tokens.densityScale;
     final drawn = SizedBox.square(
       dimension: s,
       child: HugeIcon(icon: icon, size: s, color: color ?? theme.color ?? DefaultTextStyle.of(context).style.color, strokeWidth: strokeWidth ?? 1.8),

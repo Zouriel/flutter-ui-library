@@ -31,7 +31,7 @@ class _Card extends StatelessWidget {
       padding: EdgeInsets.all(t.space3),
       decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
-        Semantics(header: true, child: Text(title, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w700, color: t.text))),
+        Semantics(header: true, child: Text(title, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w700, color: t.text))),
         ...children,
       ]),
     );
@@ -149,7 +149,7 @@ class _WfVersionsState extends State<WfVersions> {
       size: UiModalSize.sm,
       builder: (ctx) => Text(
         'This publishes version $version again as a new version, and the draft becomes a copy of it. Edits not yet saved are replaced.',
-        style: ctx.uiText.body.copyWith(fontSize: 14, height: 1.5, color: ctx.ui.text),
+        style: ctx.uiText.body.copyWith(fontSize: 14 * ctx.ui.fontScale, height: 1.5, color: ctx.ui.text),
       ),
       footerBuilder: (ctx) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
         UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: () => Navigator.of(ctx).pop(false)),
@@ -204,7 +204,7 @@ class _WfVersionsState extends State<WfVersions> {
       _Card(title: 'Unpublished changes', children: [
         if (_diff.isNotEmpty)
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            for (final line in _diff) Text('•  $line', style: context.uiText.body.copyWith(fontSize: 13, height: 1.5, color: t.text)),
+            for (final line in _diff) Text('•  $line', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, height: 1.5, color: t.text)),
           ])
         else
           const FbHint('None. The draft matches the published version.'),
@@ -246,7 +246,7 @@ class _WfVersionsState extends State<WfVersions> {
               SizedBox(width: 36, child: Text('v${v.version}', style: context.uiText.code.copyWith(fontSize: 12, fontWeight: FontWeight.w600, color: t.text))),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text((v.note ?? '').isNotEmpty ? v.note! : 'No note', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+                  Text((v.note ?? '').isNotEmpty ? v.note! : 'No note', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
                   Text(
                     '${wfDateTime(v.publishedAt)}${v.publishedBy != null ? ' · ${_names[v.publishedBy] ?? v.publishedBy}' : ''} · ${v.instances} run${v.instances == 1 ? '' : 's'}',
                     style: context.uiText.body.copyWith(fontSize: 11.5, color: t.textMuted),
@@ -458,7 +458,7 @@ class _WfTestState extends State<WfTest> {
           ]),
           if (r.openTasks.isNotEmpty) ...[
             Text('Still waiting for', style: context.uiText.label.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: t.textSecondary)),
-            for (final tk in r.openTasks) Text('•  ${tk.title} — ${tk.assigneeNames.join(', ')}', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+            for (final tk in r.openTasks) Text('•  ${tk.title} — ${tk.assigneeNames.join(', ')}', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
           ],
           if (r.record != null) ...[
             Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: 'The record afterwards', fontSize: 12, onTap: () => setState(() => _showRecord = !_showRecord))),

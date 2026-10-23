@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'tokens.dart';
 
-export 'tokens.dart' show UiGradientSpec, UiRingShadow, UiThemeName, UiTokens, uiThemeTokens;
+export 'tokens.dart' show UiGradientSpec, UiRingShadow, UiThemeName, UiTokens, uiThemeTokens, uiCompactDensityTokens, UiCompactDensity;
 
 /// The package that ships the bundled fonts (Roboto, Space Grotesk, Bricolage Grotesque, JetBrains Mono,
 /// Poppins).
@@ -15,10 +15,40 @@ const String uiDefaultMonoFamily = 'JetBrains Mono';
 /// Android; bundling it makes Android, the web build and test screenshots render identically.
 const String uiDefaultFamily = 'Roboto';
 
+/// Below this logical width [UiDensity.auto] is compact (the web `UI_COMPACT_BELOW`, 600px).
+const double uiCompactBelow = 600;
+
+/// How big things are drawn (0.45.0), the web `UiConfig.density`.
+///
+/// [compact] makes things smaller, not tighter: type one step down (14 body), controls lower
+/// (sm 24, md 26, lg 34), icons and the switch, checkbox and radio marks 10% smaller. Spacing, radii
+/// and the 48dp touch targets do not change.
+enum UiDensity {
+  /// The library as it always was. The default.
+  comfortable,
+
+  /// Smaller sizes everywhere.
+  compact,
+
+  /// Compact when the screen is narrower than [uiCompactBelow], comfortable otherwise; follows
+  /// resizes and rotation.
+  auto;
+
+  /// Whether this density draws compact on a screen [width] logical pixels wide.
+  bool isCompactAt(double width) => this == compact || (this == auto && width < uiCompactBelow);
+}
+
 /// Library-wide defaults, the Flutter twin of the web library's `provideUiConfig`.
 @immutable
 class UiConfig {
-  const UiConfig({this.glass = false, this.radius = true, this.animations = true, this.fontFamily, this.strings = const UiStrings()});
+  const UiConfig({
+    this.glass = false,
+    this.radius = true,
+    this.animations = true,
+    this.fontFamily,
+    this.strings = const UiStrings(),
+    this.density = UiDensity.comfortable,
+  });
 
   /// Frosted, translucent surfaces on components that support them (navbar, bottom nav, cards).
   final bool glass;
@@ -35,12 +65,17 @@ class UiConfig {
   /// The library's built-in words (the web `provideUiStrings`).
   final UiStrings strings;
 
-  UiConfig copyWith({bool? glass, bool? radius, bool? animations, String? fontFamily, UiStrings? strings}) => UiConfig(
+  /// How big things are drawn (0.45.0, see [UiDensity]). [UiApp] resolves [UiDensity.auto] from the
+  /// screen width; with a bare [UiTheme], pass [UiThemeData.new]'s `compact`.
+  final UiDensity density;
+
+  UiConfig copyWith({bool? glass, bool? radius, bool? animations, String? fontFamily, UiStrings? strings, UiDensity? density}) => UiConfig(
         glass: glass ?? this.glass,
         radius: radius ?? this.radius,
         animations: animations ?? this.animations,
         fontFamily: fontFamily ?? this.fontFamily,
         strings: strings ?? this.strings,
+        density: density ?? this.density,
       );
 }
 
@@ -158,13 +193,13 @@ class UiTypography {
     TextStyle sized(TextStyle s, double size, FontWeight w, {double height = 1.35, double tracking = 0}) =>
         s.copyWith(fontSize: size, fontWeight: w, height: height, letterSpacing: tracking * size);
     return UiTypography(
-      h1: sized(display, 40, FontWeight.w700, height: 1.1, tracking: t.trackingTighter),
-      h2: sized(display, 30, FontWeight.w700, height: 1.18, tracking: t.trackingTight),
-      h3: sized(display, 22, FontWeight.w600, tracking: t.trackingTight),
+      h1: sized(display, t.fontSizeH1, FontWeight.w700, height: 1.1, tracking: t.trackingTighter),
+      h2: sized(display, t.fontSizeH2, FontWeight.w700, height: 1.18, tracking: t.trackingTight),
+      h3: sized(display, t.fontSizeH3, FontWeight.w600, tracking: t.trackingTight),
       h4: sized(base, t.fontSizeLg, FontWeight.w600),
-      h5: sized(base, 16, FontWeight.w600),
+      h5: sized(base, t.fontSizeH5, FontWeight.w600),
       // Rendered upper-case by UiText; TextStyle has no text-transform.
-      h6: sized(base, 14.4, FontWeight.w600, tracking: 0.04).copyWith(color: t.textMuted),
+      h6: sized(base, t.fontSizeH6, FontWeight.w600, tracking: 0.04).copyWith(color: t.textMuted),
       body: base.copyWith(fontSize: t.fontSizeMd, height: 1.45),
       caption: base.copyWith(fontSize: t.fontSizeSm, color: t.textMuted),
       label: base.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w600),
@@ -183,16 +218,48 @@ class UiTypography {
 /// Everything a component needs from the current theme.
 @immutable
 class UiThemeData {
-  UiThemeData({required this.name, UiTokens? tokens, this.config = const UiConfig()})
-      : tokens = tokens ?? uiThemeTokens[name]!,
-        typography = UiTypography.from(tokens ?? uiThemeTokens[name]!, fontFamily: config.fontFamily);
+  /// The theme [name] (or custom [tokens]) with [config]. [compact] says whether compact density is
+  /// drawn (0.45.0); by default it is when `config.density` is [UiDensity.compact] ([UiApp] also
+  /// resolves [UiDensity.auto] from the screen width).
+  factory UiThemeData({required UiThemeName name, UiTokens? tokens, UiConfig config = const UiConfig(), bool? compact}) {
+    final base = tokens ?? uiThemeTokens[name]!;
+    final isCompact = compact ?? config.density == UiDensity.compact;
+    final drawn = isCompact ? base.withCompactDensity() : base;
+    return UiThemeData._raw(
+      name: name,
+      tokens: drawn,
+      baseTokens: base,
+      config: config,
+      compact: isCompact,
+      typography: UiTypography.from(drawn, fontFamily: config.fontFamily),
+    );
+  }
 
-  const UiThemeData._raw({required this.name, required this.tokens, required this.config, required this.typography});
+  const UiThemeData._raw({
+    required this.name,
+    required this.tokens,
+    required this.baseTokens,
+    required this.config,
+    required this.compact,
+    required this.typography,
+  });
 
   final UiThemeName name;
+
+  /// The tokens components draw with: [baseTokens] with compact density applied when [compact].
   final UiTokens tokens;
+
+  /// The theme's tokens before density.
+  final UiTokens baseTokens;
   final UiConfig config;
+
+  /// Whether compact density is drawn (0.45.0).
+  final bool compact;
   final UiTypography typography;
+
+  /// This theme drawn compact or comfortable.
+  UiThemeData withCompact(bool compact) =>
+      compact == this.compact ? this : UiThemeData(name: name, tokens: baseTokens, config: config, compact: compact);
 
   /// Light or dark, from the background's luminance (the web themes set `color-scheme` the same way).
   Brightness get brightness => tokens.bg.computeLuminance() > 0.4 ? Brightness.light : Brightness.dark;
@@ -200,8 +267,13 @@ class UiThemeData {
   /// Corner radius honouring [UiConfig.radius].
   double radius([double? value]) => config.radius ? (value ?? tokens.radius) : 0;
 
-  UiThemeData copyWith({UiThemeName? name, UiConfig? config}) =>
-      UiThemeData(name: name ?? this.name, config: config ?? this.config);
+  /// A copy with another theme or config. The density stays as it was resolved unless [config]
+  /// changes it.
+  UiThemeData copyWith({UiThemeName? name, UiConfig? config}) => UiThemeData(
+        name: name ?? this.name,
+        config: config ?? this.config,
+        compact: config == null || config.density == this.config.density ? compact : null,
+      );
 
   /// For animated theme changes: tokens and type interpolate; the name switches half-way.
   static UiThemeData lerp(UiThemeData a, UiThemeData b, double t) {
@@ -211,16 +283,19 @@ class UiThemeData {
     return UiThemeData._raw(
       name: t < 0.5 ? a.name : b.name,
       tokens: tokens,
+      baseTokens: a.baseTokens.lerp(b.baseTokens, t),
       config: t < 0.5 ? a.config : b.config,
+      compact: t < 0.5 ? a.compact : b.compact,
       typography: UiTypography.from(tokens, fontFamily: (t < 0.5 ? a.config : b.config).fontFamily),
     );
   }
 
   @override
-  bool operator ==(Object other) => other is UiThemeData && other.name == name && identical(other.tokens, tokens) && other.config == config;
+  bool operator ==(Object other) =>
+      other is UiThemeData && other.name == name && identical(other.baseTokens, baseTokens) && other.config == config && other.compact == compact;
 
   @override
-  int get hashCode => Object.hash(name, tokens, config);
+  int get hashCode => Object.hash(name, baseTokens, config, compact);
 }
 
 /// Provides a [UiThemeData] to the subtree. Use [UiThemeScope] for a scoped theme inside a page.
@@ -304,7 +379,10 @@ class UiThemeScope extends StatelessWidget {
     // panel recipe, as on the web (`ui-theme-provider` without `ui-surface`).
     final base = uiThemeTokens[theme]!;
     final data = UiThemeData(
-        name: theme, tokens: paintBackground ? base : base.copyWith(glassBg: base.glassPanelBg), config: parent.config);
+        name: theme,
+        tokens: paintBackground ? base : base.copyWith(glassBg: base.glassPanelBg),
+        config: parent.config,
+        compact: parent.compact);
     Widget content = IconTheme(
       data: IconThemeData(color: data.tokens.icon ?? data.tokens.text, size: 20),
       child: DefaultTextStyle(style: data.typography.body, child: child),
@@ -343,6 +421,8 @@ class UiThemeController extends ChangeNotifier {
 
   UiThemeName get theme => _theme;
   UiConfig get config => _config;
+  /// The theme data. [UiDensity.auto] is drawn comfortable here; [UiApp] resolves it from the screen
+  /// width.
   UiThemeData get data => UiThemeData(name: _theme, config: _config);
 
   void set(UiThemeName theme) {
@@ -358,4 +438,22 @@ class UiThemeController extends ChangeNotifier {
 
   /// Flips between the Winter dark and light themes (from any other theme it goes to dark).
   void toggle() => set(_theme == UiThemeName.dark ? UiThemeName.light : UiThemeName.dark);
+}
+
+/// Draws a subtree in another density (0.45.0), the web `data-density` on an element:
+/// [UiDensity.auto] follows the screen width here too.
+class UiDensityScope extends StatelessWidget {
+  const UiDensityScope({super.key, required this.density, required this.child});
+
+  final UiDensity density;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final parent = UiTheme.of(context);
+    final width = MediaQuery.maybeSizeOf(context)?.width ?? double.infinity;
+    final data = parent.withCompact(density.isCompactAt(width));
+    if (identical(data, parent)) return child;
+    return UiTheme(data: data, child: DefaultTextStyle.merge(style: TextStyle(fontSize: data.typography.body.fontSize), child: child));
+  }
 }

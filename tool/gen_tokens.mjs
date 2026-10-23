@@ -30,6 +30,8 @@ const names = [...new Set([...css.matchAll(/(--ui-[a-z0-9-]+)\s*:/g)].map((m) =>
   .filter((n) => n !== '--ui-glass-sheet-filter' && n !== '--ui-glass-clear-filter');
 
 function kind(n) {
+  // Density scales (0.45.0): plain numbers, checked before the --ui-font- family names.
+  if (n === '--ui-font-scale' || n === '--ui-density-scale') return 'number';
   if (n.startsWith('--ui-gradient-')) return 'gradient';
   if (/^--ui-(shadow-\d|glow-|focus-ring)/.test(n)) return 'shadow';
   if (/^--ui-(size|space|font-size|radius)/.test(n) || n === '--ui-glass-blur' || n === '--ui-glass-sheet-blur' || n === '--ui-glass-clear-blur') return 'length';
@@ -68,6 +70,19 @@ for (const theme of THEMES) {
     return out;
   }, { theme, names, kinds: Object.fromEntries(names.map((n) => [n, kind(n)])) });
 }
+// Compact density (0.45.0): the tokens tokens.css's [data-density="compact"] block changes. They
+// are theme-independent sizes and scales, resolved under the base theme.
+const compactNames = [...new Set([...(/\[data-density="compact"\] \{([^}]*)\}/.exec(css)?.[1] ?? '').matchAll(/(--ui-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))];
+if (!compactNames.length) throw new Error('no [data-density="compact"] block in tokens.css');
+const compactRaw = await page.evaluate((names) => {
+  const host = document.createElement('div');
+  host.setAttribute('data-theme', 'dark');
+  host.setAttribute('data-density', 'compact');
+  document.body.appendChild(host);
+  const out = Object.fromEntries(names.map((n) => [n, getComputedStyle(host).getPropertyValue(n).trim()]));
+  host.remove();
+  return out;
+}, compactNames);
 await browser.close();
 
 // ---------- parsing computed values ----------
@@ -142,6 +157,13 @@ function dartFont(s) {
   return named.length ? `'${named[0]}'` : 'null';
 }
 
+// A length in px; rem (the ui-text heading sizes) at the browser's 16px.
+function lengthPx(n, v) {
+  if (/px$/.test(v)) return String(parseFloat(v));
+  if (/rem$/.test(v)) return String(Math.round(parseFloat(v) * 16 * 1000) / 1000);
+  throw new Error(n + ' ' + v);
+}
+
 const camel = (n) => n.replace(/^--ui-(color-)?/, '').replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase());
 const dartName = (n) => {
   let c = camel(n);
@@ -165,7 +187,7 @@ function value(f, theme) {
     case 'color': return dartColor(parseColor(v));
     case 'gradient': return dartGradient(v);
     case 'shadow': return dartShadows(v);
-    case 'length': return /px$/.test(v) ? String(parseFloat(v)) : (() => { throw new Error(f.n + ' ' + v); })();
+    case 'length': return lengthPx(f.n, v);
     case 'em': return String(parseFloat(v));
     case 'number': return String(parseFloat(v));
     case 'duration': return `Duration(milliseconds: ${ms(v)})`;
@@ -223,6 +245,25 @@ ${fields.map((f) => `        ${f.name}: ${f.name} ?? this.${f.name},`).join('\n'
 const Map<UiThemeName, UiTokens> uiThemeTokens = {
 ${THEMES.map((t) => `  UiThemeName.${enumName(t)}: UiTokens(\n${fields.map((f) => `    ${f.name}: ${value(f, t)},`).join('\n')}\n  ),`).join('\n')}
 };
+`);
+const compactFields = compactNames.map((n) => {
+  const f = fields.find((x) => x.n === n);
+  if (!f || !['length', 'number'].includes(f.k)) throw new Error('compact token must be a length or number token: ' + n);
+  return { f, v: f.k === 'length' ? lengthPx(n, compactRaw[n]) : String(parseFloat(compactRaw[n])) };
+});
+out.push(`
+/// What compact density (0.45.0, [UiDensity.compact]) changes: the sizes and scales of tokens.css's
+/// \`[data-density="compact"]\` block. Spacing, radii and the touch target are not in it.
+const Map<String, double> uiCompactDensityTokens = {
+${compactFields.map(({ f, v }) => `  '${f.n}': ${v},`).join('\n')}
+};
+
+/// Compact density applied to a theme's tokens.
+extension UiCompactDensity on UiTokens {
+  UiTokens withCompactDensity() => copyWith(
+${compactFields.map(({ f, v }) => `        ${f.name}: ${v},`).join('\n')}
+      );
+}
 `);
 writeFileSync(outFile, out.join('\n'));
 console.log(`${fields.length} tokens x ${THEMES.length} themes -> ${outFile}`);

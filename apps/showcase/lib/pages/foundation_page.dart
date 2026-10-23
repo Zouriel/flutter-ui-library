@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
-import '../shell.dart' show themeLabels;
+import 'package:hugeicons/hugeicons.dart';
+
+import '../shell.dart' show densityOptions, themeLabels;
 
 class FoundationPage extends StatelessWidget {
   const FoundationPage({super.key});
@@ -64,6 +66,52 @@ class FoundationPage extends StatelessWidget {
           shapes: 'enum UiThemeName { dark, light, lightOrange, lightPink, lightTeal, lightPurple,\n  lightPurpleGold, darkPink, darkTeal, darkPurple, goldBlack, goldRed, darkOrange,\n  maldives, maldivesDark }',
         ),
         DocSection(
+          name: 'Density',
+          widget: 'UiConfig.density',
+          summary: 'How big things are drawn (0.45.0). Comfortable, the default, is the library as it always was. Compact makes things smaller, not tighter: body text 14 instead of 15 (small 12, large 16), headings about 10% smaller, controls lower (md 26 and lg 34, 4 less; sm 24, 2 less), icons and the switch, checkbox and radio marks 10% smaller (a 20 icon is drawn at 18). Spacing, corner radii and touch targets do not change: every control keeps its 48dp tap area. Auto is compact below 600 wide and comfortable above, and follows resizes and rotation. Set it in UiConfig, change it at runtime with the controller\'s setConfig, or draw one subtree in another density with UiDensityScope. Try it here, or in the theme sheet from the top bar.',
+          demo: Builder(builder: (context) {
+            final c = UiThemeController.maybeOf(context);
+            final s = context.ui;
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: s.space3, children: [
+              if (c != null)
+                ListenableBuilder(
+                  listenable: c,
+                  builder: (context, _) => UiSegmented<UiDensity>(
+                    label: 'Density',
+                    options: densityOptions,
+                    value: c.config.density,
+                    onChanged: (d) => c.setConfig(c.config.copyWith(density: d)),
+                  ),
+                ),
+              const UiText('Find a nurse', variant: UiTextVariant.h3),
+              const UiText('Body text, inputs, chips and buttons follow the density tokens.'),
+              const SizedBox(width: 360, child: UiInput(placeholder: 'Search an island')),
+              Wrap(spacing: s.space3, runSpacing: s.space2, crossAxisAlignment: WrapCrossAlignment.center, children: const [
+                UiChip(label: 'Home visit'),
+                UiChip(label: 'Today'),
+                UiAvatar(name: 'Aisha Rasheed'),
+                UiIcon(HugeIcons.strokeRoundedNotification01),
+              ]),
+              Wrap(spacing: s.space3, runSpacing: s.space2, children: [
+                UiSwitch(value: true, label: 'Notify me', onChanged: (_) {}),
+                UiCheckbox(value: true, label: 'Remember', onChanged: (_) {}),
+              ]),
+              Wrap(spacing: s.space3, children: [
+                UiButton(label: 'Book', variant: UiButtonVariant.primary, onPressed: () {}),
+                UiButton(label: 'Later', variant: UiButtonVariant.outline, onPressed: () {}),
+              ]),
+            ]);
+          }),
+          code: 'UiApp(config: const UiConfig(density: UiDensity.auto), home: ...) // compact on phones\n\n// At runtime:\nthemes.setConfig(themes.config.copyWith(density: UiDensity.compact));\n\n// One subtree:\nUiDensityScope(density: UiDensity.compact, child: ...)',
+          api: const [
+            ApiRow('UiConfig.density', 'UiDensity', 'comfortable, compact or auto (compact below uiCompactBelow, 600).', def: 'comfortable'),
+            ApiRow('UiDensityScope', 'widget', 'Draws its child in another density.'),
+            ApiRow('UiThemeData.compact', 'bool', 'Whether compact is drawn (UiApp resolves auto from the window width).'),
+            ApiRow('compact values', 'tokens', 'fontSizeSm/Md/Lg 12/14/16; fontSizeH1/H2/H3/H5/H6 36/27/20/15/13; sizeSm/Md/Lg 24/26/34; fontScale 0.93 (text components size in px); densityScale 0.9 (icons, switch, checkbox, radio). Spacing, radii, sizeTouch and sizeXl unchanged.'),
+          ],
+          shapes: 'enum UiDensity { comfortable, compact, auto }',
+        ),
+        DocSection(
           name: 'Library defaults',
           widget: 'UiConfig',
           summary: 'App-wide defaults, the twin of the web provideUiConfig. animations: false removes the library\'s motion; the Android "remove animations" setting does the same automatically.',
@@ -72,6 +120,7 @@ class FoundationPage extends StatelessWidget {
             ApiRow('glass', 'bool', 'Frosted surfaces on components that support it.', def: 'false'),
             ApiRow('radius', 'bool', 'Rounded corners.', def: 'true'),
             ApiRow('animations', 'bool', 'Library motion.', def: 'true'),
+            ApiRow('density', 'UiDensity', 'How big things are drawn (0.45.0); see Density.', def: 'comfortable'),
             ApiRow('fontFamily', 'String?', 'Overrides the theme font.'),
             ApiRow('strings', 'UiStrings', 'The library\'s own words (the web provideUiStrings), English by default: close, dismiss, clear, clearAll, clearSearch, previousPage, nextPage, previousMonth, nextMonth, chooseDate, moreActions, uploadLabel, uploadHint, holdHint, confirmTitle, confirm, cancel, zoomIn, zoomOut, placePinAtCentre, mapLocate, mapLocationOff, mapYourLocation, mapOpen, googleSignIn, googleSignUp, googleContinue, googleSignInShort, sidebarToggle, sidebarClose, sidebarLabel. Read with context.uiStrings.', def: 'UiStrings()'),
           ],

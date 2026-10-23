@@ -277,7 +277,7 @@ class UiFormBuilderState extends State<UiFormBuilder> {
       size: UiModalSize.sm,
       title: answers && !page ? '“$name” has answers' : 'Delete “$name”?',
       builder: (ctx) {
-        final style = context.uiText.body.copyWith(fontSize: 14, height: 1.5, color: t.text);
+        final style = context.uiText.body.copyWith(fontSize: 14 * context.ui.fontScale, height: 1.5, color: t.text);
         return DefaultTextStyle.merge(
           style: style,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
@@ -517,7 +517,7 @@ class UiFormBuilderState extends State<UiFormBuilder> {
             ),
             child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
               UiIcon(p.icon, size: 14, color: t.text),
-              Text(p.label, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: t.text)),
+              Text(p.label, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w500, color: t.text)),
             ]),
           ),
         ),
@@ -547,7 +547,7 @@ class _Fab extends StatelessWidget {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
           UiIcon(HugeIcons.strokeRoundedAdd01, size: 18, color: t.primaryContrast, strokeWidth: 2),
-          Text('Add field', style: context.uiText.label.copyWith(fontSize: 14, color: t.primaryContrast)),
+          Text('Add field', style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, color: t.primaryContrast)),
         ]),
       ),
     );
@@ -583,7 +583,7 @@ class _TopBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(t.radiusXs),
           boxShadow: s.focused ? t.focusRing : null,
         ),
-        child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, color: t.text)),
+        child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, color: t.text)),
       ),
     ));
 
@@ -621,7 +621,7 @@ class _TopBar extends StatelessWidget {
             title: 'Unpublished changes',
             size: UiModalSize.sm,
             builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
-              for (final line in changes) Text('•  $line', style: context.uiText.body.copyWith(fontSize: 13, height: 1.4, color: t.text)),
+              for (final line in changes) Text('•  $line', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, height: 1.4, color: t.text)),
             ]),
           ),
         ),

@@ -87,7 +87,7 @@ class _UiFbPreviewState extends State<UiFbPreview> {
       decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.borderSubtle), borderRadius: BorderRadius.circular(t.radius)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
         if (_last != null)
-          Text('Submitted. This is what would be saved:', style: context.uiText.body.copyWith(fontSize: 13, color: t.success))
+          Text('Submitted. This is what would be saved:', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.success))
         else
           const FbHint('Answers so far, as they would be saved:'),
         Text(_pretty.convert(_last?.toJson() ?? _live), style: context.uiText.code.copyWith(fontSize: 12, height: 1.5, color: t.textSecondary)),

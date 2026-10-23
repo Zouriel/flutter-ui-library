@@ -187,6 +187,21 @@ each was ~16px lower than the last; now `absolute`, lifted 12px (half the 24px b
 the point, hit area recentred. flutter_map positions each `Marker` independently (centred), so Flutter only
 gained a test.
 
+**0.45.0. Compact density.** The web drives it with CSS: a `[data-density="compact"]` token block (and the
+same block under `@media (max-width: 599.98px)` for `auto`), `zoom: var(--ui-density-scale)` on every
+`hugeicons-icon` and on the switch track, checkbox box and radio dot, and `calc(Npx * var(--ui-font-scale))`
+for text components size in px (13px and up; smaller text stays, the floor is 11px). Flutter mirrors it: the
+generator reads the compact block into `uiCompactDensityTokens` / `UiTokens.withCompactDensity()`,
+`UiThemeData(compact:)` applies it (keeping `baseTokens` so `UiDensityScope` can switch a subtree), `UiApp`
+resolves `auto` from the view's width with a metrics observer (it sits above WidgetsApp's MediaQuery),
+`UiIcon` multiplies every size by `densityScale` (so `IconTheme` sizes keep their comfortable values, like the
+web zoom), and literal `fontSize: N` (13 and up) became `N * fontScale`. The Google sign-in button keeps
+Google's 14px in both (branding rules). Compact sm is 24, not 22: with a mouse there is no 44px touch area, so
+sm stops at WCAG 2.5.8's 24px minimum. Web only: on iOS (`@supports (-webkit-touch-callout: none)`) compact
+keeps typed text at 16px, because Safari zooms into any focused field under 16px; Flutter has no such zoom.
+The web segmented options and password toggle also gained hit areas that stay 24px when compact paints them
+20px; Flutter's `UiInteractive` already gives 48dp.
+
 **0.44.3. Sheet body ends at the footer (web only).** On the web a nested `backdrop-filter` inside the glass
 sheet barely blurs in light themes, so text scrolling under the footer stayed readable; the web body's scroll box
 now ends at the footer's top. Flutter's footer BackdropFilter blurs fully, so the Flutter sheet keeps scrolling

@@ -58,9 +58,10 @@ class UiSwitch extends StatelessWidget {
         mark: AnimatedContainer(
           duration: animate ? t.motionBase : Duration.zero,
           curve: t.easeStandard,
-          width: sm ? 30 : 38,
-          height: sm ? 18 : 22,
-          padding: const EdgeInsets.all(2),
+          // Compact density draws the switch 10% smaller (the web zoom: var(--ui-density-scale)).
+          width: (sm ? 30 : 38) * t.densityScale,
+          height: (sm ? 18 : 22) * t.densityScale,
+          padding: EdgeInsets.all(2 * t.densityScale),
           decoration: BoxDecoration(
             color: value ? t.switchTrackChecked : t.switchTrack,
             borderRadius: BorderRadius.circular(t.radiusPill),
@@ -72,8 +73,8 @@ class UiSwitch extends StatelessWidget {
             curve: t.easeSpring,
             child: AnimatedContainer(
               duration: animate ? t.motionBase : Duration.zero,
-              width: sm ? 14 : 18,
-              height: sm ? 14 : 18,
+              width: (sm ? 14 : 18) * t.densityScale,
+              height: (sm ? 14 : 18) * t.densityScale,
               decoration: BoxDecoration(
                 color: value ? t.switchThumbChecked : t.switchThumb,
                 shape: BoxShape.circle,

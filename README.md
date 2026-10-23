@@ -109,6 +109,16 @@ font, as `textStyle` does on the text fields (`TextStyle(fontFamilyFallback: ['F
 The web twin's map markers were drawn further down one after another; Flutter places each `Marker` on its
 own and never had it (a test now checks 60 dots against their points).
 
+**Compact density (0.45.0):** `UiConfig(density: UiDensity.comfortable | compact | auto)`, the web
+`provideUiConfig({ density })`. Compact makes things smaller, not tighter: `fontSizeSm/Md/Lg` 12/14/16 (from
+13/15/18), the `UiTypography` headings (new tokens `fontSizeH1/H2/H3/H5/H6`) about 10% smaller, `sizeSm/Md/Lg`
+24/26/34 (from 26/30/38), literal text sizes scaled by `fontScale` 0.93, and every `UiIcon` plus the switch,
+checkbox and radio marks 10% smaller (`densityScale` 0.9). Spacing, radii, `sizeXl` and the 48dp touch targets
+don't change. `UiApp` resolves `auto` from the window width (compact below `uiCompactBelow`, 600) and follows
+resizes; `UiDensityScope` draws one subtree in another density; `UiThemeController.setConfig` switches at runtime.
+The compact values come from tokens.css's `[data-density="compact"]` block through `tool/gen_tokens.mjs`
+(`uiCompactDensityTokens`, `UiTokens.withCompactDensity()`). Default: comfortable, unchanged.
+
 **0.44.3:** no Flutter change. The web sheet's body now ends at its footer's top; here the frosted footer
 already hides what scrolls under it (nested backdrop blur is weak on the web, strong in Flutter).
 

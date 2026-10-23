@@ -397,7 +397,7 @@ class _StoppedRow extends StatelessWidget {
           boxShadow: s.focused ? t.focusRing : null,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-          Text(title, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.text)),
+          Text(title, style: context.uiText.body.copyWith(fontSize: 13.5 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text)),
           Text(why, style: context.uiText.body.copyWith(fontSize: 12, color: t.danger)),
         ]),
       ),

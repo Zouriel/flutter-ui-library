@@ -404,7 +404,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
         valueListenable: _stuckTick,
         builder: (ctx, _, _) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: ctx.ui.space2, children: [
           Text('It is dropped without running: the record stays where it is, with nothing scheduled in its place. It can still be moved by hand.',
-              style: ctx.uiText.body.copyWith(fontSize: 14, color: ctx.ui.text)),
+              style: ctx.uiText.body.copyWith(fontSize: 14 * ctx.ui.fontScale, color: ctx.ui.text)),
           if (_recordActError.isNotEmpty) WfNote(_recordActError),
         ]),
       ),
@@ -435,7 +435,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       tone: UiAlertTone.warning,
       heading: 'Needs attention',
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
-        Text(wfReadableError(r.error).isNotEmpty ? wfReadableError(r.error) : 'Something in this record’s workflow stopped.', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+        Text(wfReadableError(r.error).isNotEmpty ? wfReadableError(r.error) : 'Something in this record’s workflow stopped.', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
         if (_mayIntervene) ...[
           FbHint('Try again runs it now. Skip drops it, and the record stays ${(r.stateLabel ?? '').isNotEmpty ? 'in ${r.stateLabel}' : 'where it is'}. Moving the record also clears this.'),
           Wrap(spacing: t.space2, runSpacing: t.space2, children: [
@@ -516,7 +516,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
             ? null
             : WfNote.custom(
                 child: Wrap(spacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  Text('${_error.value} What is shown may be out of date.', style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+                  Text('${_error.value} What is shown may be out of date.', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
                   FbLink(label: 'Try again', fontSize: 12.5, onTap: reload),
                 ]),
               );
@@ -659,7 +659,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
           padding: const EdgeInsets.fromLTRB(10, 4, 0, 4),
           decoration: BoxDecoration(border: Border(left: BorderSide(color: t.border, width: 2))),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            WfArrowText(_describe(h), style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+            WfArrowText(_describe(h), style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
             Text('${wfActorLabel(h, (k) => r.instances.where((i) => i.definitionKey == k).firstOrNull?.title)} · ${wfAgo(h.at, now)}', style: muted),
           ]),
         ),
@@ -873,7 +873,7 @@ class _RunCard extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
                     Row(spacing: t.space2, children: [
                       WfChip(wfRunStatusLabel(run.status), tone: wfRunStatusTone(run.status)),
-                      Expanded(child: Text(run.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.text))),
+                      Expanded(child: Text(run.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 13.5 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text))),
                     ]),
                     Text(subtitle, style: context.uiText.body.copyWith(fontSize: 12, color: stopped ? t.danger : t.textMuted)),
                   ]),

@@ -460,7 +460,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
       size: UiModalSize.sm,
       title: 'Delete “$name”?',
       builder: (ctx) => DefaultTextStyle.merge(
-        style: context.uiText.body.copyWith(fontSize: 14, height: 1.5, color: t.text),
+        style: context.uiText.body.copyWith(fontSize: 14 * context.ui.fontScale, height: 1.5, color: t.text),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
           for (final d in detail) Text(d),
           const FbHint('You can undo this.'),
@@ -538,7 +538,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
                   boxShadow: s.focused ? t.focusRing : null,
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-                  Text(p.message, style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+                  Text(p.message, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
                   Text(_whereOf(p), style: context.uiText.body.copyWith(fontSize: 11.5, color: t.textMuted)),
                 ]),
               );
@@ -699,7 +699,7 @@ class UiWorkflowBuilderState extends State<UiWorkflowBuilder> {
         padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: 6),
         decoration: BoxDecoration(color: Color.alphaBlend(t.danger.withValues(alpha: 0.12), t.surface), border: Border(bottom: BorderSide(color: t.border))),
         child: Wrap(spacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text(_saveError, style: context.uiText.body.copyWith(fontSize: 13, color: t.text)),
+          Text(_saveError, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
           FbLink(label: 'Dismiss', fontSize: 12, onTap: () => setState(() => _saveError = '')),
         ]),
       ),
@@ -820,7 +820,7 @@ class _DragLayer extends StatelessWidget {
                   decoration: BoxDecoration(color: t.surfaceRaised, border: Border.all(color: t.primary), borderRadius: BorderRadius.circular(t.radius), boxShadow: t.shadow3),
                   child: Row(mainAxisSize: MainAxisSize.min, spacing: 6, children: [
                     UiIcon(p.icon, size: 14, color: t.text),
-                    Text(p.label, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: t.text)),
+                    Text(p.label, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w500, color: t.text)),
                   ]),
                 ),
               ));
@@ -869,7 +869,7 @@ class _TopBar extends StatelessWidget {
         decoration: BoxDecoration(color: s.hovered || s.pressed ? t.surfaceHover : null, borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : null),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Text(def.kind == 'lifecycle' ? 'LIFECYCLE' : 'AUTOMATION', style: context.uiText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.55, color: t.textMuted)),
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: t.text)),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text)),
         ]),
       ),
     ));

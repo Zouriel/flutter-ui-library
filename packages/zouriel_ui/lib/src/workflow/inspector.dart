@@ -215,7 +215,7 @@ class _WfTriggerEditorState extends State<WfTriggerEditor> {
                     UiIcon(wfTriggerIcon(tt.type), size: 14, color: on ? t.primary : t.textSecondary),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(tt.label, style: context.uiText.label.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: t.text)),
+                        Text(tt.label, style: context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w500, color: t.text)),
                         Text(tt.hint, style: context.uiText.body.copyWith(fontSize: 11.5, color: t.textMuted)),
                       ]),
                     ),
@@ -816,7 +816,7 @@ class WfInspector extends StatelessWidget {
               ),
             Row(spacing: t.space2, children: [
               WfIconTile(icon, color: t.primary, size: 24, iconSize: 15),
-              Expanded(child: Semantics(header: true, child: Text(heading, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14, fontWeight: FontWeight.w700, color: t.text)))),
+              Expanded(child: Semantics(header: true, child: Text(heading, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(fontSize: 14 * context.ui.fontScale, fontWeight: FontWeight.w700, color: t.text)))),
               if (canDelete && !store.readOnly) FbIconButton(icon: WfIcons.delete02, label: 'Delete $heading', danger: true, onPressed: onDeleteRequest),
             ]),
           ]),

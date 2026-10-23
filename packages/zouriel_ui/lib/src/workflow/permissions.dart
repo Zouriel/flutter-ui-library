@@ -446,7 +446,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text(w.summary.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: t.text)),
+                child: Text(w.summary.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: 14 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text)),
               ),
             ),
             WfChip('${w.summary.kind == 'lifecycle' ? 'Lifecycle' : 'Automation'} · v${w.summary.version}'),
@@ -511,7 +511,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     final t = context.ui;
     final changed = _isChanged(w, r);
     final what = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, spacing: 2, children: [
-      Text(r.label, style: context.uiText.body.copyWith(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.text)),
+      Text(r.label, style: context.uiText.body.copyWith(fontSize: 13.5 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text)),
       WfArrowText(r.detail, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
     ]);
     final who = _canEdit
@@ -525,7 +525,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
             emptyText: emptyWhoText(r.kind, editing: true),
             onChanged: (v) => _edit(w, r, v),
           )
-        : Text(_describe(w, r), style: context.uiText.body.copyWith(fontSize: 13, color: r.who.isEmpty ? t.textMuted : t.textSecondary));
+        : Text(_describe(w, r), style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: r.who.isEmpty ? t.textMuted : t.textSecondary));
     return Semantics(
       container: true,
       value: changed ? 'Changed' : null,

@@ -440,7 +440,7 @@ class _WfAssigneesEditorState extends State<WfAssigneesEditor> {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(color: s.hovered || s.focused ? t.surfaceHover : null, borderRadius: BorderRadius.circular(t.radiusXs)),
                       child: Row(spacing: 8, children: [
-                        Expanded(child: Text(u.name, style: context.uiText.body.copyWith(fontSize: 13, color: t.text))),
+                        Expanded(child: Text(u.name, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text))),
                         // A long address shrinks to an ellipsis rather than pushing past the edge.
                         Flexible(child: Text(u.email ?? u.id, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted))),
                       ]),
@@ -909,7 +909,7 @@ class WfFormField extends StatelessWidget {
     if (f == null) return Align(alignment: AlignmentDirectional.centerStart, child: FbLink(label: addLabel, onTap: () => _edit(context)));
     final n = wfFormQuestionCount(f);
     return Wrap(spacing: t.space3, crossAxisAlignment: WrapCrossAlignment.center, children: [
-      Text('$n question${n == 1 ? '' : 's'}', style: context.uiText.body.copyWith(fontSize: 13, color: t.textSecondary)),
+      Text('$n question${n == 1 ? '' : 's'}', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary)),
       FbLink(label: 'Edit form', onTap: () => _edit(context)),
       FbLink(label: 'Remove', color: t.danger, onTap: () => onChanged(null)),
     ]);

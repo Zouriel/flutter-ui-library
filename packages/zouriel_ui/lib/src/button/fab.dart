@@ -141,7 +141,7 @@ class UiFab extends StatelessWidget {
                   ? icon
                   : Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
                       icon,
-                      Text(text, maxLines: 1, style: context.uiText.label.copyWith(color: ink, fontSize: size == UiFabSize.md ? 16 : 14, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                      Text(text, maxLines: 1, style: context.uiText.label.copyWith(color: ink, fontSize: (size == UiFabSize.md ? 16 : 14) * context.ui.fontScale, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                     ]),
             ),
           ),
