@@ -79,7 +79,7 @@ class _MapPageState extends State<MapPage> {
         DocSection(
           name: 'Map',
           widget: 'UiMap',
-          summary: 'Markers are dots in their tone with a label pill; tapping one calls onMarkerSelected. center and zoom move the map; onCenterChanged reports where the person moved it. The zoom buttons sit at the inline start and the attribution at the inline end, so they swap in RTL; the attribution itself is always set left to right, so English credits keep their © signs in place. On touch screens every control has a 48dp hit area. The controls use the theme, and on a dark theme the tiles are dimmed; under reduced motion there is no fling. Pass userAgentPackageName (your app id) for the OSM tile policy.',
+          summary: 'Markers are dots in their tone with a label pill; tapping one calls onMarkerSelected. center and zoom move the map; onCenterChanged reports where the person moved it. The zoom buttons sit at the inline start and the attribution at the inline end, so they swap in RTL; the attribution itself is always set left to right, so English credits keep their © signs in place. On touch screens every control has a 48dp hit area. The controls use the theme, and on a dark theme the tiles are dimmed; under reduced motion there is no fling. The Flutter widget owns its MapController and disposes it with its state. Its web twin ignores queued Leaflet events after the map host is removed. Pass userAgentPackageName (your app id) for the OSM tile policy.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             SizedBox(
               height: 360,
