@@ -187,6 +187,12 @@ each was ~16px lower than the last; now `absolute`, lifted 12px (half the 24px b
 the point, hit area recentred. flutter_map positions each `Marker` independently (centred), so Flutter only
 gained a test.
 
+**0.45.2. Queued Leaflet events after teardown.** The web map can unmount while Leaflet is finishing an
+animated pan; its queued `moveend` used to read the cleared map field and throw. The listener now checks
+that its map instance is still current, and `visibleCenter()` safely returns null after teardown. Flutter's
+`UiMap` already scopes `MapController` to `UiMapState` and disposes the controller with the state, so no
+Flutter runtime change or new test is needed. The Flutter version and showcase note stay aligned at 0.45.2.
+
 **0.45.0. Compact density.** The web drives it with CSS: a `[data-density="compact"]` token block (and the
 same block under `@media (max-width: 599.98px)` for `auto`), `zoom: var(--ui-density-scale)` on every
 `hugeicons-icon` and on the switch track, checkbox box and radio dot, and `calc(Npx * var(--ui-font-scale))`
