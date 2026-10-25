@@ -178,8 +178,9 @@ class _UiCodeViewerState extends State<UiCodeViewer> with _TextSource<UiCodeView
       ]),
     );
 
+    // Code and its line numbers read left to right in an RTL app too (0.46.0).
     final body = statusMessage(context) ??
-        SingleChildScrollView(
+        Directionality(textDirection: TextDirection.ltr, child: SingleChildScrollView(
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             ExcludeSemantics(
               child: Container(
@@ -200,7 +201,7 @@ class _UiCodeViewerState extends State<UiCodeViewer> with _TextSource<UiCodeView
               ),
             ),
           ]),
-        );
+        ));
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: widget.maxHeight ?? double.infinity),

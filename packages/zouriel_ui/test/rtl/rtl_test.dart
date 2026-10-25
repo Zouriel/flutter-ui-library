@@ -332,4 +332,16 @@ void main() {
     // Open by default: a left-pointing chevron turns a quarter anticlockwise to point down.
     expect(rotation.turns, -0.25);
   });
+
+  group('UiCodeBlock in RTL', () {
+    testWidgets('the code reads left to right: its first line starts at the left of the block', (tester) async {
+      await _pump(tester, const SizedBox(width: 300, child: UiCodeBlock(code: 'const a = 1;', language: 'ts')));
+      final text = find.text('const a = 1;');
+      expect(Directionality.of(tester.element(text)), TextDirection.ltr);
+      final block = tester.getRect(find.byType(UiCodeBlock));
+      final line = tester.getRect(text);
+      expect(line.left - block.left, lessThan(block.right - line.right));
+    });
+  });
 }
+

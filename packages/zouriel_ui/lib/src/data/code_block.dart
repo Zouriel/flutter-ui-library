@@ -103,11 +103,15 @@ class _UiCodeBlockState extends State<UiCodeBlock> {
                 ),
               ]),
             ),
-            UiScrollFade(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.all(t.space3),
-                child: Text(widget.code.replaceAll('\t', '  '), softWrap: false, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, height: 1.5, color: t.text)),
+            // Code reads left to right in every language (0.46.0): an RTL app mirrors the header, not the code.
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: UiScrollFade(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.all(t.space3),
+                  child: Text(widget.code.replaceAll('\t', '  '), softWrap: false, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, height: 1.5, color: t.text)),
+                ),
               ),
             ),
           ],

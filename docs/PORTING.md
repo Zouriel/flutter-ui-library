@@ -201,7 +201,8 @@ tween's `transform` and `lerp` take the new strings at t = 0 (Tween.transform re
 (5) `intl` has no Dhivehi, so names come from `UiStrings.months`/`weekdays` and formats from `dateFormat`
 patterns; the first weekday comes from `UiStrings.firstDayOfWeek` or `intl` date symbols. (6) Typography names
 bundled families with their `packages/zouriel_ui/` prefix instead of `package:`, so `UiConfig.fontFamilyFallback`
-isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as the web group's `dir="ltr"`.
+isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as the web group's `dir="ltr"`; so is the code in
+`UiCodeBlock` and `UiCodeViewer` (with its line numbers), as the web `pre dir="ltr"`.
 (8) Not moved to UiStrings: form builder, workflow and canvas/sequencer editor text, window chrome
 (Restore/Minimize/Maximize), file-viewer extras (Copy/Copied, Mute, Full screen, Media viewer, Current folder),
 tree-table Expand/Collapse, anchor picker point names, side nav and choice grid default names.
