@@ -141,6 +141,17 @@ line laid out as in LTR; a Text child keeps its own direction (Thaana right to l
 once for the app with `UiConfig(chatMineSide: UiChatBubbleSide.right)`. The default, `end` (the inline end, so the
 left in RTL), is unchanged.
 
+**Navigation action hold and status wrapping (0.47.2):** `UiNavAction(hold: true)` (2 s, `uiNavHoldDuration`) or
+`holdDuration:` calls `onPressed` only when held to the end, on `UiHoldActivator` (as `UiHoldButton` and a holding
+`UiFab`): a ring in the button's ink fills clockwise round its edge (`UiNavHoldRingPainter`); letting go or sliding
+off cancels; Space or Enter held works; it is announced with `holdHint`, and the progress ("Holding, 50%") and an
+early release ("Hold cancelled") are read out (new strings `holdProgress`, `holdCancelled`). With animations off the
+hold is still needed and the ring shows whole and steady. A tap or a screen reader's activation calls `onTap` (the
+SOS confirm sheet) or, without one, the confirm dialog. `UiHoldActivator` gained `onTap`, `cancelOnMoveOff`,
+`ringBuilder` and `announceProgress` (all off by default). The status pill wraps to two lines and then ends on a
+whole word with an ellipsis (`uiNavFitWords`, measured with TextPainter; semantics get the whole text), between the
+compass column and the buttons; a taller pill moves neither the banner, the buttons nor the map.
+
 **Navigation view gaps (0.47.1):** `UiMapNavigation(actions: [...])` stacks the app's own buttons (`UiNavAction`:
 48dp round opaque buttons, `tone: UiNavActionTone.danger` for SOS, `pressed` for a toggle) at the end side under the
 banner, clear of the compass and Recenter; `status` shows a pill under the banner (a live region: "Rerouting…");

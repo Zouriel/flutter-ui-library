@@ -7,6 +7,7 @@ import 'package:flutter_map/flutter_map.dart' show TileProvider;
 import 'package:hugeicons/hugeicons.dart';
 
 import '../button/button.dart';
+import '../button/hold_button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
@@ -33,19 +34,51 @@ EdgeInsetsDirectional uiNavFollowInsets(double height, double top, double bottom
 /// A [UiNavAction]'s colour (0.47.1, the web `UiNavActionTone`): [neutral], or [danger] for SOS.
 enum UiNavActionTone { neutral, danger }
 
+/// How long a holding [UiNavAction] is held by default (0.47.2, the web `UI_NAV_HOLD_MS`): the
+/// Dhirumi SOS hold.
+const Duration uiNavHoldDuration = Duration(seconds: 2);
+
 /// One of the app's own buttons on a [UiMapNavigation] (0.47.1, the web `button[uiNavAction]`): mute,
 /// SOS. Pass them in [UiMapNavigation.actions]; they stack at the end side under the banner. A 48dp
 /// opaque circle with the icon; [label] is its accessible name. [tone] danger is the prominent SOS
 /// style (the danger fill inside a raised-surface ring). [pressed] makes it a toggle (announced as
 /// toggled), drawn in the primary fill while on (muted).
+///
+/// Press and hold (0.47.2, off by default): [hold] (2 s) or [holdDuration] makes it call [onPressed]
+/// only when held to the end, the way [UiHoldButton] and a holding [UiFab] do (the same
+/// [UiHoldActivator]): a ring fills around the button while it is held; letting go, or sliding off
+/// it, cancels. Space or Enter held works the same. It is announced with [holdHint] ("Press and hold
+/// to confirm"), and the hold's progress is read out ("Holding, 50%"), as is a hold let go early
+/// ("Hold cancelled"). With animations off (reduced motion) the hold is still needed, but the ring
+/// doesn't animate: it shows whole and steady while held. A tap (shorter than 300ms), a quick Enter or
+/// Space, or a screen reader's activation calls [onTap] when the app gives one (an SOS's confirm
+/// sheet), or opens the library's confirm dialog ([confirmTitle], [confirmMessage], [confirmLabel],
+/// [destructive]), which confirms the same way.
 class UiNavAction extends StatelessWidget {
-  const UiNavAction({super.key, required this.icon, required this.label, required this.onPressed, this.tone = UiNavActionTone.neutral, this.pressed});
+  const UiNavAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.tone = UiNavActionTone.neutral,
+    this.pressed,
+    this.hold = false,
+    this.holdDuration,
+    this.holdHint,
+    this.onTap,
+    this.confirmTitle,
+    this.confirmMessage = '',
+    this.confirmLabel,
+    this.destructive = false,
+  });
 
   /// The icon (a hugeicons icon).
   final UiIconData icon;
 
   /// The accessible name: "Mute", "SOS".
   final String label;
+
+  /// Pressed; for a holding button, held to the end (or confirmed in the dialog). Null disables it.
   final VoidCallback? onPressed;
 
   /// [UiNavActionTone.danger]: the prominent SOS style.
@@ -54,18 +87,77 @@ class UiNavAction extends StatelessWidget {
   /// A toggle's state, drawn in the primary fill while true; null: not a toggle.
   final bool? pressed;
 
+  /// Press and hold [uiNavHoldDuration] (2 s) to fire (0.47.2); off by default.
+  final bool hold;
+
+  /// Press and hold this long to fire (0.47.2; implies [hold]); null: [hold] decides.
+  final Duration? holdDuration;
+
+  /// What holding does, read with the button; null: [UiStrings.holdHint].
+  final String? holdHint;
+
+  /// A holding button's tap (and a screen reader's activation): called instead of the confirm dialog
+  /// (0.47.2).
+  final VoidCallback? onTap;
+
+  /// The tap fallback dialog, when there is no [onTap]; titles default to [UiStrings.confirmTitle] and
+  /// [UiStrings.confirm].
+  final String? confirmTitle;
+  final String confirmMessage;
+  final String? confirmLabel;
+
+  /// The dialog's confirm button is destructive.
+  final bool destructive;
+
   /// Its diameter: 48dp everywhere (a touch target on its own).
   static const double size = 48;
 
+  /// How long to hold; null: an ordinary button.
+  Duration? get holding => holdDuration ?? (hold ? uiNavHoldDuration : null);
+
+  Color _ink(UiTokens t, bool disabled) {
+    final danger = tone == UiNavActionTone.danger;
+    final on = pressed ?? false;
+    return danger ? t.dangerContrast : (on ? t.primaryContrast : (disabled ? t.textMuted : t.text));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final holding = this.holding;
+    if (holding == null) return _button(context, null, onPressed, null);
+    final t = context.ui;
+    final ink = _ink(t, onPressed == null);
+    final still = !context.uiAnimate;
+    return UiHoldActivator(
+      onConfirmed: onPressed,
+      hold: holding,
+      confirmTitle: confirmTitle,
+      confirmMessage: confirmMessage,
+      confirmLabel: confirmLabel,
+      destructive: destructive,
+      fillColor: ink,
+      borderRadius: BorderRadius.circular(size),
+      onTap: onTap,
+      cancelOnMoveOff: true,
+      announceProgress: true,
+      ringBuilder: (context, progress, held) => CustomPaint(
+        key: const ValueKey('ui-nav-hold-ring'),
+        painter: UiNavHoldRingPainter(progress: progress, holding: held, still: still, color: ink),
+      ),
+      builder: (context, node, activate) => _button(context, node, activate, holdHint ?? context.uiStrings.holdHint),
+    );
+  }
+
+  Widget _button(BuildContext context, FocusNode? focusNode, VoidCallback? onPressed, String? hint) {
     final t = context.ui;
     final danger = tone == UiNavActionTone.danger;
     final on = pressed ?? false;
     return UiInteractive(
       onTap: onPressed,
       enabled: onPressed != null,
+      focusNode: focusNode,
       semanticLabel: label,
+      semanticHint: hint,
       toggled: pressed,
       excludeChildSemantics: true,
       builder: (context, st) {
@@ -75,7 +167,7 @@ class UiNavAction extends StatelessWidget {
             : on
                 ? (hot ? t.primaryHover : t.primary)
                 : (hot ? t.surfaceHover : t.surfaceRaised);
-        final ink = danger ? t.dangerContrast : (on ? t.primaryContrast : (st.disabled ? t.textMuted : t.text));
+        final ink = _ink(t, st.disabled);
         return Container(
           width: size,
           height: size,
@@ -96,6 +188,37 @@ class UiNavAction extends StatelessWidget {
       },
     );
   }
+}
+
+/// A holding [UiNavAction]'s ring (0.47.2): the button's ink, 3dp wide just inside its edge, filling
+/// clockwise from the top while it is held (the same way in right-to-left text, like a clock), over a
+/// faint track. [still] (animations off): no filling arc, the whole ring steady while held.
+class UiNavHoldRingPainter extends CustomPainter {
+  const UiNavHoldRingPainter({required this.progress, required this.holding, required this.still, required this.color});
+
+  final double progress;
+  final bool holding;
+  final bool still;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!holding) return;
+    final r = size.shortestSide / 2 * 21 / 24;
+    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: r);
+    final pen = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = color.withValues(alpha: still ? 1 : 0.3);
+    canvas.drawCircle(rect.center, r, pen);
+    if (still || progress <= 0) return;
+    canvas.drawArc(rect, -math.pi / 2, 2 * math.pi * progress.clamp(0.0, 1.0), false, pen
+      ..color = color
+      ..strokeCap = StrokeCap.round);
+  }
+
+  @override
+  bool shouldRepaint(UiNavHoldRingPainter old) => old.progress != progress || old.holding != holding || old.still != still || old.color != color;
 }
 
 /// `ui-map-navigation` for Flutter (0.47.0): a turn-by-turn view, like a car's navigation. A flat
@@ -531,11 +654,12 @@ class UiMapNavigationState extends State<UiMapNavigation> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: t.surfaceRaised,
-                  borderRadius: BorderRadius.circular(999),
+                  // 0.47.2: one line is still a pill (more than half its 32dp); two lines a rounded box.
+                  borderRadius: BorderRadius.circular(t.radiusLg),
                   border: Border.all(color: t.border),
                   boxShadow: t.shadow2,
                 ),
-                child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(color: t.text, fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, height: 1.35)),
+                child: _UiNavStatusText(status, style: context.uiText.label.copyWith(color: t.text, fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, height: 1.35)),
               ),
             ),
           );
@@ -602,5 +726,37 @@ class UiMapNavigationState extends State<UiMapNavigation> {
         ]);
       }),
     );
+  }
+}
+
+/// The status pill's words (0.47.2): up to two lines, then whole words and an ellipsis
+/// ([uiNavFitWords], measured with the same style, width, text scale and direction), never cut in the
+/// middle of a word; only a word longer than the line breaks, and the [Text]'s own ellipsis is the
+/// fallback. The pill sits outside the measured banner, so a taller pill moves neither the banner, the
+/// buttons nor the map's follow point.
+class _UiNavStatusText extends StatelessWidget {
+  const _UiNavStatusText(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, box) {
+      var shown = text;
+      if (box.maxWidth.isFinite) {
+        final dir = Directionality.of(context);
+        final scaler = MediaQuery.textScalerOf(context);
+        final locale = Localizations.maybeLocaleOf(context);
+        shown = uiNavFitWords(text, (candidate) {
+          final p = TextPainter(text: TextSpan(text: candidate, style: style), textDirection: dir, textScaler: scaler, maxLines: 2, locale: locale)
+            ..layout(maxWidth: box.maxWidth);
+          final fits = !p.didExceedMaxLines;
+          p.dispose();
+          return fits;
+        });
+      }
+      return Text(shown, key: const ValueKey('ui-nav-status-text'), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: style);
+    });
   }
 }

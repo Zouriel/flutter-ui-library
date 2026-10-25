@@ -107,6 +107,8 @@ class NavDriveDemoState extends State<NavDriveDemo> {
   // 0.47.1: the app's buttons, the status and an app bar (insets).
   bool _muted = false, _appBar = false;
   String? _status;
+  // 0.47.2: a long status (two lines, then whole words and an ellipsis).
+  bool _longStatus = false;
   double _along = 0, _off = 0;
   int _clock = DateTime.now().millisecondsSinceEpoch;
   final _events = <String>[];
@@ -210,7 +212,11 @@ class NavDriveDemoState extends State<NavDriveDemo> {
                 onProgress: (s) {
                   if (_status != null && !s.offRoute && s.distanceFromRoute < 40) setState(() => _status = null);
                 },
-                status: _status,
+                status: _longStatus
+                    ? (dv
+                        ? 'އަލުން މަގު ހޯދަނީ، ބަނދަރު ކައިރީގައި މަގު ބަންދުކޮށްފައިވާތީ އެހެން މަގަކުން ގެންދާނަން، މަޑުކޮށްލައްވާ'
+                        : 'Rerouting around the closed road near the harbour, please wait while we find the way')
+                    : _status,
                 insets: EdgeInsetsDirectional.only(top: _appBar ? 48 : 0),
                 actions: [
                   UiNavAction(
@@ -219,7 +225,15 @@ class NavDriveDemoState extends State<NavDriveDemo> {
                     pressed: _muted,
                     onPressed: () => setState(() => _muted = !_muted),
                   ),
-                  UiNavAction(icon: HugeIcons.strokeRoundedAlert02, label: 'SOS', tone: UiNavActionTone.danger, onPressed: () => _log('SOS pressed')),
+                  // 0.47.2: hold 2 s to send; a tap opens the app's own confirm sheet (here, a log line).
+                  UiNavAction(
+                    icon: HugeIcons.strokeRoundedAlert02,
+                    label: 'SOS',
+                    tone: UiNavActionTone.danger,
+                    hold: true,
+                    onTap: () => _log('SOS tapped: the app opens its confirm sheet (onTap)'),
+                    onPressed: () => _log('SOS held: sent'),
+                  ),
                 ],
                 onArrived: () => _log('arrived'),
                 onEnd: () {
@@ -265,6 +279,13 @@ class NavDriveDemoState extends State<NavDriveDemo> {
           options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
           value: _glass,
           onChanged: (v) => setState(() => _glass = v),
+        ),
+        UiSegmented<bool>(
+          label: 'Long status (demo)',
+          size: UiSize.sm,
+          options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
+          value: _longStatus,
+          onChanged: (v) => setState(() => _longStatus = v),
         ),
         UiSegmented<bool>(
           label: 'App bar (demo)',

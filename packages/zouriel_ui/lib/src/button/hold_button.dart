@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart' show kPrimaryButton;
+import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -108,6 +111,12 @@ class UiHoldButtonState extends State<UiHoldButton> {
 /// disabled); a fill of [fillColor] grows across it from the inline start while it is held, clipped
 /// to [borderRadius]. Held [hold] long (pointer, or Space / Enter), it calls [onConfirmed]; a tap, a
 /// quick key press or a screen reader's activation opens the confirm dialog instead.
+///
+/// 0.47.2 (for a holding [UiNavAction], all off by default): [onTap] is called for a tap instead of
+/// the dialog; [cancelOnMoveOff] cancels a hold when the pointer slides off the button; [ringBuilder]
+/// draws the progress (0 to 1, and whether a hold is under way) instead of the fill; [announceProgress]
+/// reads the progress out at each quarter ([UiStrings.holdProgress]) and a hold let go early
+/// ([UiStrings.holdCancelled]).
 class UiHoldActivator extends StatefulWidget {
   const UiHoldActivator({
     super.key,
@@ -120,6 +129,10 @@ class UiHoldActivator extends StatefulWidget {
     this.destructive = false,
     required this.fillColor,
     this.borderRadius = BorderRadius.zero,
+    this.onTap,
+    this.cancelOnMoveOff = false,
+    this.ringBuilder,
+    this.announceProgress = false,
   });
 
   final Widget Function(BuildContext context, FocusNode focusNode, VoidCallback? onActivate) builder;
@@ -132,17 +145,35 @@ class UiHoldActivator extends StatefulWidget {
   final Color fillColor;
   final BorderRadiusGeometry borderRadius;
 
+  /// A tap, a quick key press or a screen reader's activation: called instead of the confirm dialog.
+  final VoidCallback? onTap;
+
+  /// Sliding the pointer off the button cancels the hold.
+  final bool cancelOnMoveOff;
+
+  /// Draws the hold's progress over the button instead of the fill: `progress` 0 to 1, `holding`
+  /// while a hold is under way (or just completed).
+  final Widget Function(BuildContext context, double progress, bool holding)? ringBuilder;
+
+  /// Reads the hold's progress out at 25, 50 and 75%, and "Hold cancelled" when let go early.
+  final bool announceProgress;
+
   @override
   State<UiHoldActivator> createState() => UiHoldActivatorState();
 }
 
 class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProviderStateMixin {
-  late final AnimationController _fill = AnimationController(vsync: this, duration: widget.hold)..addStatusListener(_status);
+  late final AnimationController _fill = AnimationController(vsync: this, duration: widget.hold)
+    ..addStatusListener(_status)
+    ..addListener(_tick);
   late final FocusNode _focus = FocusNode(onKeyEvent: _onKey);
   bool _holding = false;
   bool _done = false;
   bool _pressed = false;
   Duration _pressLength = Duration.zero;
+
+  /// The last quarter read out (0: none yet this hold).
+  int _said = 0;
 
   /// How far the hold has got, 0 to 1 (for tests).
   double get progress => _fill.value;
@@ -162,6 +193,22 @@ class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProvi
     super.dispose();
   }
 
+  /// Whether a hold is under way, or just completed and showing full.
+  bool get holding => _holding || (_done && _fill.value > 0);
+
+  void _announce(String message) {
+    if (!widget.announceProgress || !mounted) return;
+    SemanticsService.sendAnnouncement(View.of(context), message, Directionality.of(context));
+  }
+
+  void _tick() {
+    if (!_holding || !widget.announceProgress) return;
+    final q = math.min(3, (_fill.value * 4).floor());
+    if (q <= _said) return;
+    _said = q;
+    _announce(context.uiStrings.holdProgress.replaceAll('{percent}', '${q * 25}'));
+  }
+
   void _status(AnimationStatus s) {
     if (s != AnimationStatus.completed || !_pressed) return;
     _done = true;
@@ -178,6 +225,7 @@ class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProvi
     _done = false;
     _pressed = true;
     _holding = true;
+    _said = 0;
     HapticFeedback.selectionClick();
     _fill.duration = widget.hold;
     _fill.forward(from: 0);
@@ -192,7 +240,18 @@ class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProvi
     _pressed = false;
     if (_done) return false;
     _fill.animateBack(0, duration: const Duration(milliseconds: 160));
-    return _pressLength < _kTap;
+    final tap = _pressLength < _kTap;
+    // Let go before the end after a real try (not a tap, which opens the fallback instead).
+    if (!tap) _announce(context.uiStrings.holdCancelled);
+    return tap;
+  }
+
+  /// The pointer slid off: the hold is cancelled, and the release after it is no tap.
+  void _cancelHold() {
+    if (!_holding || _done) return;
+    _end();
+    // Long enough not to count as a tap when the button's own tap arrives.
+    _pressLength = _kTap;
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
@@ -226,6 +285,11 @@ class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProvi
   }
 
   Future<void> _confirmDialog() async {
+    final tap = widget.onTap;
+    if (tap != null) {
+      tap();
+      return;
+    }
     final s = context.uiStrings;
     final ok = await showUiConfirm(
       context: context,
@@ -246,8 +310,19 @@ class UiHoldActivatorState extends State<UiHoldActivator> with SingleTickerProvi
       },
       onPointerUp: (_) => _end(),
       onPointerCancel: (_) => _end(),
+      onPointerMove: widget.cancelOnMoveOff
+          ? (e) {
+              final box = context.findRenderObject();
+              if (box is RenderBox && !(Offset.zero & box.size).contains(e.localPosition)) setState(_cancelHold);
+            }
+          : null,
       child: Stack(children: [
         widget.builder(context, _focus, _enabled ? _activated : null),
+        if (widget.ringBuilder case final ring?)
+          Positioned.fill(
+            child: IgnorePointer(child: AnimatedBuilder(animation: _fill, builder: (context, _) => ring(context, _fill.value, holding))),
+          )
+        else
         Positioned.fill(
           child: IgnorePointer(
             child: ClipRRect(

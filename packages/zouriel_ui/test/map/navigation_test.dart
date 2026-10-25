@@ -245,4 +245,42 @@ void main() {
       expect(uiNavIconKind(b.first.state.next!.maneuver), UiNavIconKind.sharpRight);
     });
   });
+
+  group('uiNavFitWords (0.47.2)', () {
+    // Greedy word wrap: whole words, a word longer than the line takes lines of its own.
+    bool Function(String) lines(int perLine, [int max = 2]) => (s) {
+          var n = 1, used = 0;
+          for (final w in s.split(' ')) {
+            final need = used > 0 ? used + 1 + w.length : w.length;
+            if (need <= perLine) {
+              used = need;
+            } else {
+              n += used > 0 ? 1 : 0;
+              used = w.length;
+              n += math.max(0, (w.length / perLine).ceil() - 1);
+            }
+          }
+          return n <= max;
+        };
+    test('the whole text when it fits; else whole words and an ellipsis, the most that fit', () {
+      expect(uiNavFitWords('Rerouting…', lines(20)), 'Rerouting…');
+      expect(uiNavFitWords('  Rerouting   now ', lines(20)), 'Rerouting now');
+      final out = uiNavFitWords('Rerouting around the closed road near the harbour', lines(20));
+      expect(out, 'Rerouting around the closed road near…');
+      expect(lines(20)(out), isTrue);
+    });
+    test('drops a comma or colon before the ellipsis; Thaana words cut the same way', () {
+      expect(uiNavFitWords('Rerouting, closed road, harbour ahead, please wait for it', lines(12)), 'Rerouting, closed road…');
+      const dv = 'އަލުން މަގު ހޯދަނީ، ބަނދަރު ކައިރީގައި މަގު ބަންދުކޮށްފައި';
+      final cut = uiNavFitWords(dv, lines(16));
+      expect(cut.endsWith('…'), isTrue);
+      expect(dv.startsWith(cut.substring(0, cut.length - 1)), isTrue);
+      expect(cut.substring(cut.length - 2, cut.length - 1), isNot('،'));
+      expect(' ،'.contains(dv[cut.length - 1]), isTrue);
+    });
+    test('a first word longer than the space: the text as it is (the pill\'s own ellipsis cuts it)', () {
+      expect(uiNavFitWords('Supercalifragilisticexpialidocious', (_) => false), 'Supercalifragilisticexpialidocious');
+      expect(uiNavFitWords('', (_) => false), '');
+    });
+  });
 }

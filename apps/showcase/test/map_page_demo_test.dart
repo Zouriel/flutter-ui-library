@@ -158,4 +158,37 @@ void main() {
     expect(find.text('Rerouting…'), findsOneWidget);
     key.currentState!.stop();
   });
+
+  testWidgets('nav demo (0.47.2): SOS needs a 2 s hold, a tap is the app\'s fallback; Long status wraps to two lines', (tester) async {
+    tester.view.physicalSize = const Size(420, 1000) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    final key = GlobalKey<NavDriveDemoState>();
+    await tester.pumpWidget(UiApp(theme: UiThemeName.maldives, home: SingleChildScrollView(child: NavDriveDemo(key: key, tileProvider: UiMapBlankTiles()))));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final sos = find.bySemanticsLabel('SOS');
+    await tester.tap(sos);
+    await tester.pump();
+    expect(find.text('SOS tapped: the app opens its confirm sheet (onTap)'), findsOneWidget);
+    expect(find.text('SOS held: sent'), findsNothing);
+    final g = await tester.startGesture(tester.getCenter(sos));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1000));
+    expect(find.text('SOS held: sent'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 1010));
+    expect(find.text('SOS held: sent'), findsOneWidget);
+    await g.up();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('SOS tapped: the app opens its confirm sheet (onTap)'), findsOneWidget);
+    final banner = tester.getRect(find.byKey(const ValueKey('ui-nav-banner')));
+    await tester.tap(find.text('On').at(find.text('On').evaluate().length - 2));
+    await tester.pump();
+    await tester.pump();
+    final shown = tester.widget<Text>(find.byKey(const ValueKey('ui-nav-status-text'))).data!;
+    expect(shown.endsWith('…'), isTrue, reason: shown);
+    expect(tester.getRect(find.byKey(const ValueKey('ui-nav-status'))).height, greaterThan(40));
+    expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))), banner);
+    key.currentState!.stop();
+  });
 }

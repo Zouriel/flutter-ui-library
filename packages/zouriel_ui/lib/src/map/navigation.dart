@@ -553,3 +553,27 @@ final Map<UiNavIconKind, UiIconData> uiNavIcons = {
 
 /// The drawing for a maneuver (0.47.0, the web `uiNavIcon`).
 UiIconData uiNavIcon(UiNavManeuver m) => uiNavIcons[uiNavIconKind(m)]!;
+
+/// The status pill's text cut to whole words (0.47.2, the web `uiNavFitWords`): [text] when it [fits];
+/// otherwise the most words from its start that fit with an ellipsis after them, so the pill's second
+/// line ends on a word, never in the middle of one (a trailing comma or colon before the ellipsis goes).
+/// When not even the first word fits, [text] (the pill's own ellipsis cuts that one word). Whitespace
+/// runs become single spaces. [fits] is the caller's measure: two lines in the pill's width.
+String uiNavFitWords(String text, bool Function(String candidate) fits) {
+  final t = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+  if (t.isEmpty || fits(t)) return t;
+  final words = t.split(' ');
+  String cut(int n) => '${words.take(n).join(' ').replaceAll(RegExp('[\\s,\u060C;:.\\-\u2013\u2014]+\$'), '')}\u2026';
+  // lo: the most words known to fit (0: none yet); never all of them, which didn't fit.
+  var lo = 0;
+  var hi = words.length - 1;
+  while (lo < hi) {
+    final mid = (lo + hi + 1) ~/ 2;
+    if (fits(cut(mid))) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return lo > 0 ? cut(lo) : t;
+}

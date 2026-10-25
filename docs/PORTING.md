@@ -248,6 +248,25 @@ app's `.x hugeicons-icon` rule without !important; Flutter's `UiIcon` already to
 `bottomOffset` on `ui-fab` / `UiFabHost`, eased (Flutter `AnimatedPositionedDirectional`). Tooltips: the web action
 sets `title`; Flutter has no tooltip on it (the name is in semantics).
 
+**0.47.2. Navigation action hold, status wrapping.** (1) Hold: the web reuses `UiHoldPress` (hold-button entry) on
+the native button and Flutter reuses `UiHoldActivator`, so the tap / quick-key / assistive-activation fallback and
+the timing (300 ms tap, Space / Enter held) match `ui-hold-button`. Web `hold` (boolean attribute) / `holdMs` (ms)
+and output `(confirmed)`; Flutter `hold` / `holdDuration` (Duration) and `onPressed`, as `ui-fab [hold]` / `UiFab`
+already map. The tap fallback is `onTap` on both: on the web a function input (`[onTap]`), since a component can't
+tell whether an output has listeners, and without it the library confirm dialog, created beside the button (its
+host is `display: contents`, so no gap in the stack). Sliding off cancels: the web checks `pointermove` against the
+button's rect (the pointer is captured, so `pointerleave` never comes); Flutter `cancelOnMoveOff` checks the
+Listener's local position. Progress: a polite live region inside the button on the web, `SemanticsService
+.sendAnnouncement` in Flutter, at 25 / 50 / 75 % and on an early release after a real try (not a tap). Ring: an
+SVG circle (r 21 of 48, 3 wide, `pathLength` 100, dash offset transitioned linearly over the hold) and
+`UiNavHoldRingPainter` (same geometry), clockwise from the top in both directions. Reduced motion: web reads
+`prefers-reduced-motion` at the press (`data-still`), Flutter `context.uiAnimate`; the arc is hidden and the track
+drawn whole. (2) Status: line-clamp / maxLines 2 is only the fallback; both cut to whole words with
+`uiNavFitWords` and a measure (web: the clamped span's scrollHeight vs clientHeight, refitted on status, width and
+font load; Flutter: TextPainter with the same style, width, scaler and direction). Radius moved from pill to
+`radiusLg` (18 > 16, so one line is still a pill). The web pill shrinks to its text; Flutter's fills the middle
+column (unchanged from 0.47.1).
+
 **0.46.2. Route draw-in.** Both libs animate the route geometry itself rather than a dash offset: each frame
 draws `uiMapRoutePartial(points, ease(t))` (the first fraction of the route by haversine length, ending on an
 interpolated point), so the line grows correctly while the map pans or zooms mid-draw (a dash offset would be

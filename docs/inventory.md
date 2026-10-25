@@ -1697,6 +1697,7 @@ A turn-by-turn view: the map follows the person heading-up, the way behind dimme
 - Outputs: `announce` / `offRoute` / `arrived` / `progress` / `end` (Flutter `onAnnounce` / `onOffRoute` / `onArrived` / `onProgress` / `onEnd`)
 - Methods: `recenter()` (Flutter `UiMapNavigationState.recenter`)
 - (0.47.1) `status`; `insets` (Flutter `EdgeInsetsDirectional`); actions as children `button[uiNavAction]` (`UiNavAction`: `icon`, `label`, `tone` 'neutral' | 'danger', `pressed`; Flutter `actions: List<Widget>` of `UiNavAction` with `UiNavActionTone`, `onPressed`); `uiNavWord`
+- (0.47.2) `UiNavAction` `hold` / `holdMs` (Flutter `holdDuration`) / `holdHint` / `onTap` / `confirmTitle` / `confirmMessage` / `confirmLabel` / `destructive`, output `confirmed` (Flutter `onPressed`), `UI_NAV_HOLD_MS` (Flutter `uiNavHoldDuration`), Flutter `UiNavHoldRingPainter`; status wraps to two lines (`uiNavFitWords`); strings `holdProgress`, `holdCancelled`; Flutter `UiHoldActivator` `onTap` / `cancelOnMoveOff` / `ringBuilder` / `announceProgress`
 - Logic: `UiNavTracker` (update, split, pointAt; events announce / offRoute / arrived, Flutter `UiNavAnnounce` / `UiNavOffRoute` / `UiNavArrived`); `uiNavFormatDistance`, `uiNavFormatDuration`, `uiNavFormatClock`, `uiNavDistance`, `uiNavBearing`, `uiNavFollowInsets`; maneuver icons `uiNavIconKind`, `uiNavIcon`, `UI_NAV_ICONS` (Flutter `uiNavIcons`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

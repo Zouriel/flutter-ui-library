@@ -1,6 +1,8 @@
 import 'dart:ui' show Tristate;
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart' show PolylineLayer;
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +46,11 @@ class _Host {
   String? status;
   EdgeInsetsDirectional insets = EdgeInsetsDirectional.zero;
   EdgeInsets padding = EdgeInsets.zero;
+  // 0.47.2
+  bool holdSos = false;
+  Duration? holdDuration;
+  bool tapFallback = true;
+  int sosTaps = 0;
 }
 
 Future<_Host> _pump(WidgetTester tester, {void Function(_Host h)? init}) async {
@@ -85,7 +92,18 @@ Future<_Host> _pump(WidgetTester tester, {void Function(_Host h)? init}) async {
                       label: 'Mute',
                       pressed: h.muted,
                       onPressed: () => h.set(() => h.muted = !h.muted)),
-                  UiNavAction(key: const ValueKey('sos'), icon: HugeIcons.strokeRoundedAlert02, label: 'SOS', tone: UiNavActionTone.danger, onPressed: () => h.sos++),
+                  UiNavAction(
+                      key: const ValueKey('sos'),
+                      icon: HugeIcons.strokeRoundedAlert02,
+                      label: 'SOS',
+                      tone: UiNavActionTone.danger,
+                      hold: h.holdSos,
+                      holdDuration: h.holdDuration,
+                      onTap: h.tapFallback ? () => h.sosTaps++ : null,
+                      confirmTitle: 'Send an SOS?',
+                      confirmLabel: 'Send SOS',
+                      destructive: true,
+                      onPressed: () => h.sos++),
                 ],
               ],
             ),
@@ -442,5 +460,248 @@ void main() {
         height: 560,
       );
     });
+  });
+
+  group('0.47.2: holding actions and the status pill', () {
+    final sos = find.byKey(const ValueKey('sos'));
+    UiNavHoldRingPainter ring(WidgetTester tester) => tester.widget<CustomPaint>(find.byKey(const ValueKey('ui-nav-hold-ring'))).painter! as UiNavHoldRingPainter;
+
+    /// Announcements sent to the platform (SemanticsService.sendAnnouncement).
+    List<String> listen(WidgetTester tester) {
+      final said = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<dynamic>(SystemChannels.accessibility, (message) async {
+        final data = (message as Map)['data'] as Map?;
+        if (message['type'] == 'announce' && data != null) said.add(data['message'] as String);
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<dynamic>(SystemChannels.accessibility, null));
+      return said;
+    }
+
+    Future<_Host> holdPump(WidgetTester tester, {void Function(_Host h)? init}) async {
+      final h = await _pump(tester, init: (h) {
+        h.withActions = true;
+        h.holdSos = true;
+        init?.call(h);
+      });
+      await _feed(tester, h, along(0), t: 0);
+      return h;
+    }
+
+    testWidgets('fires only when held to the end (2 s by default), the ring filling over the hold', (tester) async {
+      final h = await holdPump(tester, init: (h) => h.reduced = false);
+      expect(ring(tester).holding, isFalse);
+      final g = await tester.startGesture(tester.getCenter(sos));
+      await tester.pump(); // the hold's first frame
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(ring(tester).holding, isTrue);
+      expect(ring(tester).still, isFalse);
+      expect(ring(tester).progress, closeTo(0.5, 0.02));
+      expect(ring(tester).color, tester.element(sos).ui.dangerContrast);
+      await tester.pump(const Duration(milliseconds: 990));
+      expect(h.sos, 0);
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(h.sos, 1);
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect([h.sos, h.sosTaps], [1, 0]);
+      expect(find.text('Send an SOS?'), findsNothing);
+      expect(ring(tester).holding, isFalse);
+    });
+
+    testWidgets('let go early: cancelled, nothing fires, "Hold cancelled" is read; progress is read at each quarter', (tester) async {
+      final said = listen(tester);
+      final h = await holdPump(tester);
+      final g = await tester.startGesture(tester.getCenter(sos));
+      await tester.pump(); // the hold's first frame
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(said, isEmpty);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(said, ['Holding, 25%', 'Holding, 50%']);
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 3000));
+      expect([h.sos, h.sosTaps], [0, 0]);
+      expect(said.last, 'Hold cancelled');
+    });
+
+    testWidgets('sliding off the button cancels the hold', (tester) async {
+      final h = await holdPump(tester);
+      final g = await tester.startGesture(tester.getCenter(sos));
+      await tester.pump(); // the hold's first frame
+      await tester.pump(const Duration(milliseconds: 500));
+      await g.moveBy(const Offset(10, 0));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(ring(tester).holding, isTrue);
+      await g.moveBy(const Offset(40, 0));
+      await tester.pump();
+      expect(ring(tester).holding, isFalse);
+      await tester.pump(const Duration(milliseconds: 3000));
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect([h.sos, h.sosTaps], [0, 0]);
+    });
+
+    testWidgets('a tap or a screen reader\'s activation calls onTap; without one, the confirm dialog confirms', (tester) async {
+      final handle = tester.ensureSemantics();
+      final h = await holdPump(tester);
+      await tester.tap(sos);
+      await tester.pump();
+      expect([h.sos, h.sosTaps], [0, 1]);
+      final node = tester.getSemantics(find.descendant(of: sos, matching: find.byType(UiInteractive)));
+      expect(node.getSemanticsData().label, 'SOS');
+      expect(node.getSemanticsData().hint, 'Press and hold to confirm');
+      tester.semantics.tap(find.semantics.byLabel('SOS'));
+      await tester.pump();
+      expect(h.sosTaps, 2);
+      h.set(() => h.tapFallback = false);
+      await tester.pump();
+      await tester.tap(sos);
+      await tester.pumpAndSettle();
+      expect(h.sosTaps, 2);
+      expect(find.text('Send an SOS?'), findsOneWidget);
+      await tester.tap(find.text('Send SOS'));
+      await tester.pumpAndSettle();
+      expect(h.sos, 1);
+      handle.dispose();
+    });
+
+    testWidgets('keyboard: Space held to the end fires', (tester) async {
+      final h = await holdPump(tester);
+      Focus.of(tester.element(find.descendant(of: sos, matching: find.byType(UiIcon)))).requestFocus();
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 2010));
+      expect(h.sos, 1);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect([h.sos, h.sosTaps], [1, 0]);
+    });
+
+    testWidgets('holdDuration sets the time; animations off still need the whole hold, with a steady ring', (tester) async {
+      final h = await holdPump(tester, init: (h) {
+        h.reduced = true;
+        h.holdDuration = const Duration(seconds: 3);
+      });
+      final g = await tester.startGesture(tester.getCenter(sos));
+      await tester.pump(); // the hold's first frame
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(ring(tester).still, isTrue);
+      expect(ring(tester).holding, isTrue);
+      await tester.pump(const Duration(milliseconds: 1500));
+      expect(h.sos, 0);
+      await tester.pump(const Duration(milliseconds: 510));
+      expect(h.sos, 1);
+      await g.up();
+      await tester.pump(const Duration(milliseconds: 600));
+    });
+
+    testWidgets('the ring painter: a faint track and an arc from the top; steady and whole when still; nothing at rest', (tester) async {
+      const c = Color(0xFFFFFFFF);
+      const filling = UiNavHoldRingPainter(progress: 0.25, holding: true, still: false, color: c);
+      expect(filling.shouldRepaint(const UiNavHoldRingPainter(progress: 0.5, holding: true, still: false, color: c)), isTrue);
+      expect(filling.shouldRepaint(const UiNavHoldRingPainter(progress: 0.25, holding: true, still: false, color: c)), isFalse);
+      expect(
+        (Canvas canvas) => filling.paint(canvas, const Size(48, 48)),
+        paints
+          ..circle(x: 24, y: 24, radius: 21, color: c.withValues(alpha: 0.3), strokeWidth: 3, style: PaintingStyle.stroke)
+          ..arc(startAngle: -math.pi / 2, sweepAngle: math.pi / 2, color: c),
+      );
+      void still(Canvas canvas) => const UiNavHoldRingPainter(progress: 0.25, holding: true, still: true, color: c).paint(canvas, const Size(48, 48));
+      expect(still, paints..circle(radius: 21, color: c));
+      expect(still, isNot(paints..arc()));
+      expect((Canvas canvas) => const UiNavHoldRingPainter(progress: 0, holding: false, still: false, color: c).paint(canvas, const Size(48, 48)), paintsNothing);
+    });
+
+    testWidgets('a plain action has no ring and no hold hint, and a tap fires at once', (tester) async {
+      final handle = tester.ensureSemantics();
+      final h = await _pump(tester, init: (h) => h.withActions = true);
+      await _feed(tester, h, along(0), t: 0);
+      expect(find.byKey(const ValueKey('ui-nav-hold-ring')), findsNothing);
+      expect(tester.getSemantics(find.descendant(of: sos, matching: find.byType(UiInteractive))).getSemanticsData().hint, isEmpty);
+      await tester.tap(sos);
+      await tester.pump();
+      expect([h.sos, h.sosTaps], [1, 0]);
+      handle.dispose();
+    });
+
+    testWidgets('golden: a two-line status and the SOS half held', (tester) async {
+      debugDisableShadows = false;
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(390, 560) * 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(UiApp(
+        theme: UiThemeName.dark,
+        home: UiMapNavigation(
+          route: baseRoute,
+          steps: steps,
+          position: UiNavPosition(along(100).lat, along(100).lng, heading: 0, speed: 8, timestamp: 0),
+          tileProvider: UiMapBlankTiles(),
+          formatTime: (t) => '14:05',
+          status: 'Rerouting around the closed road near the harbour, please wait',
+          actions: [
+            UiNavAction(icon: HugeIcons.strokeRoundedVolumeHigh, label: 'Mute', onPressed: () {}),
+            UiNavAction(key: const ValueKey('sos'), icon: HugeIcons.strokeRoundedAlert02, label: 'SOS', tone: UiNavActionTone.danger, hold: true, onPressed: () {}),
+          ],
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 400));
+      final g = await tester.startGesture(tester.getCenter(sos));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
+      try {
+        await expectLater(find.byType(UiMapNavigation), matchesGoldenFile('goldens/map_navigation_hold.png'));
+      } finally {
+        debugDisableShadows = true;
+        await g.up();
+        await tester.pump(const Duration(milliseconds: 600));
+      }
+    });
+
+    for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+      testWidgets('status ($dir): up to two lines, ending on a whole word with an ellipsis; banner, buttons and map don\'t move', (tester) async {
+        final handle = tester.ensureSemantics();
+        final h = await _pump(tester, init: (h) {
+          h.withActions = true;
+          h.dir = dir;
+          h.status = 'Rerouting…';
+        });
+        await _feed(tester, h, along(0), t: 0);
+        await tester.pump();
+        final banner = tester.getRect(find.byKey(const ValueKey('ui-nav-banner')));
+        final mute = tester.getRect(find.byKey(const ValueKey('mute')));
+        final insets = tester.widget<UiMap>(find.byType(UiMap)).viewInsets;
+        final short = tester.getRect(find.byKey(const ValueKey('ui-nav-status')));
+        expect(short.height, closeTo(32, 0.5));
+        final long = dir == TextDirection.ltr
+            ? 'Rerouting around the closed road near the harbour, please wait while we find the way'
+            : 'އަލުން މަގު ހޯދަނީ، ބަނދަރު ކައިރީގައި މަގު ބަންދުކޮށްފައިވާތީ އެހެން މަގަކުން ގެންދާނަން، މަޑުކޮށްލައްވާ';
+        h.set(() => h.status = long);
+        await tester.pump();
+        await tester.pump();
+        final shown = _text(tester, 'ui-nav-status-text');
+        expect(shown.endsWith('…'), isTrue, reason: shown);
+        final kept = shown.substring(0, shown.length - 1);
+        expect(long.startsWith(kept), isTrue);
+        expect(long[kept.length] == ' ' || ',،'.contains(long[kept.length]), isTrue, reason: 'cut at a word: "$shown"');
+        final para = tester.renderObject<RenderParagraph>(find.byKey(const ValueKey('ui-nav-status-text')));
+        expect(para.didExceedMaxLines, isFalse);
+        final lineHeight = para.text.style!.fontSize! * 1.35;
+        expect(para.size.height, lessThanOrEqualTo(2 * lineHeight + 1));
+        expect(para.size.height, greaterThan(1.5 * lineHeight));
+        final pill = tester.getRect(find.byKey(const ValueKey('ui-nav-status')));
+        expect(pill.height, greaterThan(short.height));
+        // Clear of the compass column and the button stack; nothing else moved.
+        final m = dir == TextDirection.ltr ? (start: pill.left, end: 390 - pill.right) : (start: 390 - pill.right, end: pill.left);
+        expect(m.start, greaterThanOrEqualTo(12 + 48 + 12 - 0.5));
+        expect(m.end, greaterThanOrEqualTo(12 + 48 + 12 - 0.5));
+        expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))), banner);
+        expect(tester.getRect(find.byKey(const ValueKey('mute'))), mute);
+        expect(tester.widget<UiMap>(find.byType(UiMap)).viewInsets, insets);
+        // Screen readers hear it all.
+        expect(tester.getSemantics(find.bySemanticsLabel(long)).getSemanticsData().flagsCollection.isLiveRegion, isTrue);
+        handle.dispose();
+      });
+    }
   });
 }

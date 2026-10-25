@@ -148,6 +148,8 @@ class UiStrings {
     this.navMeters = '{n} m',
     this.navKilometers = '{n} km',
     this.navSummary = '{time} left, {distance}, arrive at {clock}',
+    this.holdProgress = 'Holding, {percent}%',
+    this.holdCancelled = 'Hold cancelled',
     this.adding = 'Adding {label}',
     this.today = 'Today',
     this.notSet = 'Not set',
@@ -326,6 +328,8 @@ class UiStrings {
     navMeters: '{n} މީޓަރު',
     navKilometers: '{n} ކިލޯމީޓަރު',
     navSummary: '{time} ބާކީ، {distance}، {clock} ގައި ވާސިލުވާނެ',
+    holdProgress: 'ހިފަހައްޓަނީ، {percent}%',
+    holdCancelled: 'ހިފެހެއްޓުން ހުއްޓުނު',
     adding: '{label} އިތުރުކުރަނީ',
     today: 'މިއަދު',
     notSet: 'ކަނޑައަޅާފައެއް ނެތް',
@@ -763,6 +767,12 @@ class UiStrings {
   /// The bottom bar for screen readers (`{time}`, `{distance}`, `{clock}`).
   final String navSummary;
 
+  /// Read out while a hold button is held (`{percent}`: 25, 50, 75), 0.47.2.
+  final String holdProgress;
+
+  /// Read out when a hold is let go before it completes (0.47.2).
+  final String holdCancelled;
+
   /// Image picker busy tile ({label}).
   final String adding;
 
@@ -1005,6 +1015,8 @@ class UiStrings {
     String? navMeters,
     String? navKilometers,
     String? navSummary,
+    String? holdProgress,
+    String? holdCancelled,
     String? adding,
     String? today,
     String? notSet,
@@ -1178,6 +1190,8 @@ class UiStrings {
         navMeters: navMeters ?? this.navMeters,
         navKilometers: navKilometers ?? this.navKilometers,
         navSummary: navSummary ?? this.navSummary,
+        holdProgress: holdProgress ?? this.holdProgress,
+        holdCancelled: holdCancelled ?? this.holdCancelled,
         adding: adding ?? this.adding,
         today: today ?? this.today,
         notSet: notSet ?? this.notSet,
@@ -1353,6 +1367,8 @@ class UiStrings {
         'navMeters': navMeters,
         'navKilometers': navKilometers,
         'navSummary': navSummary,
+        'holdProgress': holdProgress,
+        'holdCancelled': holdCancelled,
         'adding': adding,
         'today': today,
         'notSet': notSet,
