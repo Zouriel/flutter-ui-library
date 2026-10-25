@@ -41,6 +41,15 @@ enum UiDensity {
   bool isCompactAt(double width) => this == compact || (this == auto && width < uiCompactBelow);
 }
 
+/// Where [UiChatBubble] puts your own (`mine`) messages (0.46.3), the web `UiChatBubbleSide`.
+enum UiChatBubbleSide {
+  /// The inline end: the right in LTR, the left in RTL. The default.
+  end,
+
+  /// Always the right, with the other side's on the left, in LTR and RTL alike (the chat-app habit).
+  right,
+}
+
 /// Library-wide defaults, the Flutter twin of the web library's `provideUiConfig`.
 @immutable
 class UiConfig {
@@ -52,6 +61,7 @@ class UiConfig {
     this.strings = const UiStrings(),
     this.density = UiDensity.comfortable,
     this.fontFamilyFallback,
+    this.chatMineSide = UiChatBubbleSide.end,
   });
 
   /// Frosted, translucent surfaces on components that support them (navbar, bottom nav, cards).
@@ -79,6 +89,10 @@ class UiConfig {
   /// the app puts the same fonts in `--ui-font-default` (`provideUiConfig({ defaultFont })`).
   final List<String>? fontFamilyFallback;
 
+  /// Where [UiChatBubble] puts your own messages when it has no `mineSide` of its own (0.46.3, the web
+  /// `chatMineSide`). [UiChatBubbleSide.right] keeps them on the right in RTL too.
+  final UiChatBubbleSide chatMineSide;
+
   UiConfig copyWith({
     bool? glass,
     bool? radius,
@@ -87,6 +101,7 @@ class UiConfig {
     UiStrings? strings,
     UiDensity? density,
     List<String>? fontFamilyFallback,
+    UiChatBubbleSide? chatMineSide,
   }) =>
       UiConfig(
         glass: glass ?? this.glass,
@@ -96,6 +111,7 @@ class UiConfig {
         strings: strings ?? this.strings,
         density: density ?? this.density,
         fontFamilyFallback: fontFamilyFallback ?? this.fontFamilyFallback,
+        chatMineSide: chatMineSide ?? this.chatMineSide,
       );
 }
 

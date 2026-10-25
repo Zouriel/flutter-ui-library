@@ -219,6 +219,17 @@ removed last route can fade. "No animation" is the same test as `fitPoints` on e
 or preview; Flutter `uiFxMotion != full` (config animations off or reduced motion) or preview. Replays are keyed
 on id plus exact geometry (web: a string of the coordinates; Flutter: `listEquals` on `UiLatLng`).
 
+**0.46.3. Chat bubble side.** `mineSide: UiChatBubbleSide.right` (web `mineSide="right"`) and
+`UiConfig.chatMineSide` (web `provideUiConfig({ chatMineSide })`); default `end`, unchanged. Right lays the bubble
+out exactly as LTR does whatever the ambient direction: the row places it with `TextDirection.ltr`, the corners
+are a physical `BorderRadius` (tucked bottom right for yours, bottom left for theirs) and the meta line is
+`TextAlign.right` (the web uses auto margins, physical corner longhands and `text-align: right`; its logical and
+physical corner rules are scoped to `:not(.side-right)` / `.side-right` so they never compete). The message
+keeps its own direction like the web's `dir="auto"`: `uiChatTextDirection(child)` reads the first strong
+character of a Text/RichText (intl `Bidi.startsWithRtl` / `startsWithLtr`) and wraps the message in that
+`Directionality`; other children, or digits only, keep the ambient direction. The meta row keeps the ambient
+direction. There is no chat list/thread container in either library, so only the bubble has the option.
+
 **0.46.1. RTL fixes from the Dhirumi web app.** (1) Web: an empty `dir="auto"` field resolved to LTR, so a
 Thaana placeholder sat on the left of an RTL page; the field now leaves `dir` off its native control until it has
 text. Flutter's `UiFieldDirection` already fell back to the ambient `Directionality` for text with no strong

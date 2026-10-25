@@ -34,6 +34,8 @@ class _DataPageState extends State<DataPage> {
   List<String> _tags = ['angular', 'flutter', 'design'];
   int _cardTaps = 0;
   UiFeatureTone _ftTone = UiFeatureTone.primary;
+  UiChatBubbleSide _bubbleSide = UiChatBubbleSide.right;
+  TextDirection _bubbleDir = TextDirection.rtl;
   UiFeatureLayout _ftLayout = UiFeatureLayout.vertical;
   UiSize _ftSize = UiSize.md;
   int _ftTaps = 0;
@@ -111,16 +113,43 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Chat bubble',
           widget: 'UiChatBubble',
-          summary: 'One message in a conversation. Your own (mine) sit at the inline end in the primary colour, the other side\'s at the inline start on the raised surface; in RTL they swap. meta is a small line under the text (the time, read status). The corner nearest the speaker is tucked in. In a Column they align themselves, whatever its crossAxisAlignment: each takes the whole row, so text wraps at 80% of it, between words; inside an IntrinsicWidth short text stays on one line, and in a Row it wraps at 80% of the screen.',
-          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: const [
-            UiChatBubble(meta: '09:40', child: Text("Hello, I'm on my way to you.")),
-            UiChatBubble(mine: true, meta: '09:41 · Read', child: Text('Thank you! The gate code is 2468.')),
-            UiChatBubble(meta: '09:43', child: Text('Arriving in about ten minutes. Is there parking nearby?')),
+          summary: 'One message in a conversation. Your own (mine) sit at the inline end in the primary colour, the other side\'s at the inline start on the raised surface; in RTL they swap, unless mineSide is right (0.46.3), which keeps yours on the right in both directions. meta is a small line under the text (the time, read status). The corner nearest the speaker is tucked in. In a Column they align themselves, whatever its crossAxisAlignment: each takes the whole row, so text wraps at 80% of it, between words; inside an IntrinsicWidth short text stays on one line, and in a Row it wraps at 80% of the screen.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            const UiChatBubble(meta: '09:40', child: Text("Hello, I'm on my way to you.")),
+            const UiChatBubble(mine: true, meta: '09:41 · Read', child: Text('Thank you! The gate code is 2468.')),
+            const UiChatBubble(meta: '09:43', child: Text('Arriving in about ten minutes. Is there parking nearby?')),
+            SizedBox(height: t.space4),
+            Wrap(spacing: t.space3, runSpacing: t.space2, children: [
+              UiSegmented<UiChatBubbleSide>(
+                label: 'Your messages',
+                size: UiSize.sm,
+                value: _bubbleSide,
+                onChanged: (v) => setState(() => _bubbleSide = v),
+                options: const [UiSegmentedOption(value: UiChatBubbleSide.end, label: 'Inline end'), UiSegmentedOption(value: UiChatBubbleSide.right, label: 'Right')],
+              ),
+              UiSegmented<TextDirection>(
+                label: 'Direction',
+                size: UiSize.sm,
+                value: _bubbleDir,
+                onChanged: (v) => setState(() => _bubbleDir = v),
+                options: const [UiSegmentedOption(value: TextDirection.ltr, label: 'LTR'), UiSegmentedOption(value: TextDirection.rtl, label: 'RTL')],
+              ),
+            ]),
+            Directionality(
+              textDirection: _bubbleDir,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+                UiChatBubble(mineSide: _bubbleSide, meta: '09:40', child: const Text('އައްސަލާމު ޢަލައިކުމް، ދަނޑިވަޅެއް ބޭނުންތަ؟')),
+                UiChatBubble(mine: true, mineSide: _bubbleSide, meta: '09:41', child: const Text('ޝުކުރިއްޔާ، މެންދުރު ފަހުން')),
+                UiChatBubble(mine: true, mineSide: _bubbleSide, meta: '09:41', child: const Text('Is 3 pm okay?')),
+                UiChatBubble(mineSide: _bubbleSide, meta: '09:42', child: const Text('Yes, see you at 3.')),
+              ]),
+            ),
           ]),
-          code: "UiChatBubble(mine: true, meta: '09:41 · Read', child: Text('On my way'))",
+          code: "UiChatBubble(mine: true, meta: '09:41 · Read', child: Text('On my way'))\n\n// Yours on the right in LTR and RTL; the text keeps its own direction\nUiChatBubble(mine: true, mineSide: UiChatBubbleSide.right, child: Text('ޝުކުރިއްޔާ'))\n\n// or once for the app\nUiApp(config: UiConfig(chatMineSide: UiChatBubbleSide.right), home: ...)",
           api: const [
             ApiRow('child', 'Widget', 'The message, usually a Text.'),
-            ApiRow('mine', 'bool', 'Your own message: inline end, primary colour.', def: 'false'),
+            ApiRow('mine', 'bool', 'Your own message: inline end (or right, see mineSide), primary colour.', def: 'false'),
+            ApiRow('mineSide', 'UiChatBubbleSide?', 'Where your own messages sit. end: the inline end, so the left in RTL. right: always the right, theirs always the left, in LTR and RTL; the tucked corners and meta line follow, laid out as in LTR, and a Text child takes its own direction (Thaana right to left, Latin left to right). Null follows UiConfig.chatMineSide.', def: 'UiConfig.chatMineSide (end)'),
             ApiRow('meta', 'String?', 'A small line under the text.'),
             ApiRow('semanticLabel', 'String?', 'Names the message ("You, 09:41").'),
           ],

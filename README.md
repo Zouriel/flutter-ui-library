@@ -135,6 +135,12 @@ fallback names stay as given). Constructor defaults that were English words (`Ui
 during an animated move. Flutter's `UiMap` already keeps its `MapController` within widget state and
 disposes it with that state, so this web-specific fix requires no Flutter implementation change.
 
+**Chat bubble side (0.46.3):** `UiChatBubble(mineSide: UiChatBubbleSide.right)` keeps your own messages on the
+right and the other side's on the left in LTR and RTL alike (the chat-app habit), with the tucked corners and meta
+line laid out as in LTR; a Text child keeps its own direction (Thaana right to left, Latin left to right). Set it
+once for the app with `UiConfig(chatMineSide: UiChatBubbleSide.right)`. The default, `end` (the inline end, so the
+left in RTL), is unchanged.
+
 **Route draw-in (0.46.2):** a route that appears in `UiMap(routes:)`, or gets new points, grows along its path
 from start to end (casing and line together, ease-out, 250..900 ms by length: `uiMapRouteDrawDuration`), then
 sits as before; `fitPoints` is unchanged. Rebuilding with the same id and points doesn't replay it.
