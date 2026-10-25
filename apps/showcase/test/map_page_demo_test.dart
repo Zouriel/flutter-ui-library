@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 import 'package:zouriel_ui_showcase/pages/map_page.dart';
+import 'package:zouriel_ui_showcase/pages/nav_demo.dart';
 
 void main() {
   testWidgets('map page demo: searching shows the pulse and says so; RTL moves the zoom buttons; the map centres between card and sheet', (tester) async {
@@ -117,5 +118,44 @@ void main() {
     expect(dots(16), findsNWidgets(3));
     expect(find.text('Tap a pin to see the nurse.'), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('nav demo (0.47.1): Mute and SOS under the banner, a toggle; the App bar pushes the banner down; off the road shows Rerouting', (tester) async {
+    tester.view.physicalSize = const Size(420, 1000) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    final key = GlobalKey<NavDriveDemoState>();
+    await tester.pumpWidget(UiApp(theme: UiThemeName.maldives, home: SingleChildScrollView(child: NavDriveDemo(key: key, tileProvider: UiMapBlankTiles()))));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final banner = tester.getRect(find.byKey(const ValueKey('ui-nav-banner')));
+    final mute = tester.getRect(find.bySemanticsLabel('Mute'));
+    final sos = tester.getRect(find.bySemanticsLabel('SOS'));
+    expect(mute.top, greaterThan(banner.bottom));
+    expect(sos.top, greaterThan(mute.bottom));
+    await tester.tap(find.bySemanticsLabel('Mute'));
+    await tester.pump();
+    expect(find.bySemanticsLabel('Unmute'), findsOneWidget);
+    await tester.tap(find.text('On').last);
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.byKey(const ValueKey('nav-demo-appbar')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))).top, closeTo(banner.top + 48, 0.5));
+    expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))).top, greaterThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('nav-demo-appbar'))).bottom));
+    // Off the road for the off-route time: Rerouting.
+    await tester.tap(find.text('Wander off'));
+    for (var i = 0; i < 16 && find.text('offRoute, 80 m off').evaluate().isEmpty; i++) {
+      key.currentState!.advance(1);
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    await tester.pump();
+    expect(find.text('offRoute, 80 m off'), findsOneWidget);
+    // One tracker for the drive: each maneuver announced once (the demo used to start a new one every frame).
+    final log = tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? '').where((d) => d.startsWith('announce (step)')).toList();
+    expect(log.toSet().length, log.length);
+    expect(find.byKey(const ValueKey('ui-nav-status')), findsOneWidget);
+    expect(find.text('Rerouting…'), findsOneWidget);
+    key.currentState!.stop();
   });
 }

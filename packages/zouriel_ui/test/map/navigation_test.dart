@@ -204,4 +204,45 @@ void main() {
       }
     });
   });
+
+  group('maneuver words: OSRM spaced and snake_case (0.47.1)', () {
+    test('uiNavWord puts every spelling in OSRM\'s spaced form', () {
+      expect(['sharp_right', 'SHARP_RIGHT', 'sharp-right', 'sharp right', ' sharp  right ', 'sharp__right'].map(uiNavWord), List.filled(6, 'sharp right'));
+      expect([uiNavWord('end_of_road'), uiNavWord('exit_roundabout'), uiNavWord(null), uiNavWord('u_turn')], ['end of road', 'exit roundabout', '', 'u turn']);
+    });
+
+    test('every type and modifier picks the same drawing in either form', () {
+      const types = ['depart', 'arrive', 'turn', 'continue', 'new name', 'merge', 'on ramp', 'off ramp', 'fork', 'end of road', 'roundabout', 'rotary', 'roundabout turn', 'exit roundabout', 'exit rotary', 'notification'];
+      const mods = <String?>[null, 'uturn', 'sharp right', 'right', 'slight right', 'straight', 'slight left', 'left', 'sharp left'];
+      String? snake(String? w) => w?.replaceAll(' ', '_');
+      var checked = 0;
+      for (final type in types) {
+        for (final modifier in mods) {
+          for (final side in ['left', 'right']) {
+            final spaced = uiNavIconKind(UiNavManeuver(type: type, modifier: modifier, location: at(0, 0), drivingSide: side));
+            expect(uiNavIconKind(UiNavManeuver(type: snake(type)!, modifier: snake(modifier), location: at(0, 0), drivingSide: side)), spaced, reason: '$type/$modifier');
+            expect(uiNavIconKind(UiNavManeuver(type: snake(type)!.toUpperCase(), modifier: snake(modifier)?.toUpperCase(), location: at(0, 0), drivingSide: side)), spaced,
+                reason: '$type/$modifier upper');
+            checked++;
+          }
+        }
+      }
+      expect(checked, types.length * mods.length * 2);
+      String k(String type, [String? modifier]) => uiNavIconKind(UiNavManeuver(type: type, modifier: modifier, location: at(0, 0))).webName;
+      expect([k('turn', 'sharp_right'), k('turn', 'slight_left'), k('end_of_road', 'left'), k('roundabout', 'sharp_left'), k('exit_roundabout', 'slight_right'),
+        k('on_ramp', 'slight_right'), k('off_ramp', 'left'), k('roundabout_turn', 'right'), k('fork', 'slight_left'), k('turn', 'u_turn')],
+          ['sharp-right', 'slight-left', 'left', 'roundabout-sharp-left', 'roundabout-slight-right', 'slight-right', 'slight-left', 'roundabout-right', 'fork-left', 'uturn-left']);
+    });
+
+    test('the tracker gives the same drive with snake_case steps', () {
+      UiNavStep with_(UiNavStep x, String type, String? modifier) => UiNavStep(
+          maneuver: UiNavManeuver(type: type, modifier: modifier, location: x.maneuver.location), distanceMeters: x.distanceMeters, durationSeconds: x.durationSeconds, instruction: x.instruction, streetName: x.streetName);
+      final spaced = [for (final (i, x) in steps.indexed) i == 1 ? with_(x, 'end of road', 'sharp right') : x];
+      final snake = [for (final x in spaced) with_(x, x.maneuver.type.replaceAll(' ', '_'), x.maneuver.modifier?.replaceAll(' ', '_'))];
+      final a = drive(UiNavTracker(route, spaced)), b = drive(UiNavTracker(route, snake));
+      String sig(UiNavState s) => '${s.stepIndex} ${s.distanceToManeuver.toStringAsFixed(3)} ${s.remainingSeconds.toStringAsFixed(3)} ${s.next?.instruction} ${s.events.map((e) => e.runtimeType).join(',')}';
+      expect(b.map((r) => sig(r.state)), a.map((r) => sig(r.state)));
+      expect(uiNavIconKind(b.first.state.next!.maneuver), UiNavIconKind.sharpRight);
+    });
+  });
 }

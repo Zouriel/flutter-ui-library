@@ -20,9 +20,11 @@ class UiNavManeuver {
 
   /// 'depart', 'turn', 'continue', 'new name', 'merge', 'on ramp', 'off ramp', 'fork', 'end of road',
   /// 'roundabout', 'rotary', 'roundabout turn', 'exit roundabout', 'notification', 'arrive', ...
+  /// (snake_case 'end_of_road' works too, 0.47.1)
   final String type;
 
-  /// 'uturn', 'sharp right', 'right', 'slight right', 'straight', 'slight left', 'left', 'sharp left'.
+  /// 'uturn', 'sharp right', 'right', 'slight right', 'straight', 'slight left', 'left', 'sharp left'
+  /// (or 'sharp_right', 0.47.1).
   final String? modifier;
 
   /// Where it happens (OSRM's `location` is [lng, lat]: swap it).
@@ -479,8 +481,12 @@ enum UiNavIconKind {
   static UiNavIconKind byWebName(String n) => values.firstWhere((k) => k.webName == n);
 }
 
-String _dirOf(String? modifier) => switch ((modifier ?? '').toLowerCase()) {
-      'uturn' => 'uturn',
+/// A maneuver word in OSRM's spaced form (0.47.1, the web `uiNavWord`): lower case, with underscores
+/// and hyphens as spaces, so 'sharp_right', 'END_OF_ROAD', 'sharp-right' and 'sharp right' are the same.
+String uiNavWord(String? word) => (word ?? '').toLowerCase().replaceAll(RegExp(r'[_-]+'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+String _dirOf(String? modifier) => switch (uiNavWord(modifier)) {
+      'uturn' || 'u turn' => 'uturn',
       'sharp right' => 'sharp-right',
       'right' => 'right',
       'slight right' => 'slight-right',
@@ -493,11 +499,12 @@ String _dirOf(String? modifier) => switch ((modifier ?? '').toLowerCase()) {
 /// Which drawing a maneuver gets (0.47.0, the web `uiNavIconKind`): roundabouts and rotaries by
 /// their exit's direction, forks and merges by side, ramps as slight turns, depart and arrive their
 /// own, everything else by its modifier. A U-turn bends left where traffic keeps right and right
-/// where it keeps left. Never mirrored for right-to-left text: left means left.
+/// where it keeps left. Never mirrored for right-to-left text: left means left. Type and modifier may
+/// be OSRM's spaced words ('end of road', 'sharp right') or snake_case ('end_of_road', 'sharp_right'), 0.47.1.
 UiNavIconKind uiNavIconKind(UiNavManeuver m) {
-  final type = m.type.toLowerCase();
+  final type = uiNavWord(m.type);
   final dir = _dirOf(m.modifier);
-  final side = (m.modifier ?? '').contains('left') ? 'left' : 'right';
+  final side = uiNavWord(m.modifier).contains('left') ? 'left' : 'right';
   final name = switch (type) {
     'depart' => 'depart',
     'arrive' => 'arrive',

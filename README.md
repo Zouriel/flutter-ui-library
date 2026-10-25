@@ -141,6 +141,14 @@ line laid out as in LTR; a Text child keeps its own direction (Thaana right to l
 once for the app with `UiConfig(chatMineSide: UiChatBubbleSide.right)`. The default, `end` (the inline end, so the
 left in RTL), is unchanged.
 
+**Navigation view gaps (0.47.1):** `UiMapNavigation(actions: [...])` stacks the app's own buttons (`UiNavAction`:
+48dp round opaque buttons, `tone: UiNavActionTone.danger` for SOS, `pressed` for a toggle) at the end side under the
+banner, clear of the compass and Recenter; `status` shows a pill under the banner (a live region: "Rerouting…");
+`insets` (EdgeInsetsDirectional) keeps the banner, buttons, Recenter and bar clear of the app's own bars, and the
+banner and bar now respect the safe area (MediaQuery padding: status bar, gesture bar) wherever it is bigger.
+Maneuver types and modifiers may be snake_case (`sharp_right`, `end_of_road`) as well as OSRM's words
+(`uiNavWord`). `UiFabHost.bottomOffset` floats a bottom fab above a sheet's peek (eased).
+
 **Navigation and turning the map (0.47.0):** `UiMapNavigation` is a turn-by-turn view (the map follows the
 person heading-up, the way behind dimmed, an arrow puck, a banner with the next maneuver's arrow, "in 80 m", the
 instruction and street, the maneuver after it small, and the time / distance left, arrival time and End). The app

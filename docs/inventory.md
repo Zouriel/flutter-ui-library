@@ -147,7 +147,7 @@ File: `button/src/dropdown-button.ts`
 ### UiFab (component, `ui-fab`)
 File: `button/src/fab.ts`  
 `ui-fab` — floating action button, fixed to a screen corner. `label` is required (a11y).  
-- Inputs: `label`: string; `position`: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = 'bottom-right', plus (0.44) 'top-start' | 'top-center' | 'top-end' | 'bottom-start' | 'bottom-center' | 'bottom-end' (Flutter `UiFabPosition` on `UiFabHost`, with topCenter / bottomCenter); `size`: 'sm' | 'md' = 'md'; `disabled` = false; `tone`: 'primary' | 'danger' (0.44, Flutter `UiFabTone`); `text` (0.44, extended pill); `topOffset` (0.44; Flutter on `UiFabHost`); `hold` / `holdHint` / `confirmTitle` / `confirmMessage` / `confirmLabel` / `destructive` (0.44, hold to activate; web output `confirmed`, Flutter `onPressed`); `aboveOverlays` (0.44, web only: in Flutter z-order is where the `UiFabHost` sits in the tree)
+- Inputs: `label`: string; `position`: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = 'bottom-right', plus (0.44) 'top-start' | 'top-center' | 'top-end' | 'bottom-start' | 'bottom-center' | 'bottom-end' (Flutter `UiFabPosition` on `UiFabHost`, with topCenter / bottomCenter); `size`: 'sm' | 'md' = 'md'; `disabled` = false; `tone`: 'primary' | 'danger' (0.44, Flutter `UiFabTone`); `text` (0.44, extended pill); `topOffset` (0.44; Flutter on `UiFabHost`); `bottomOffset` (0.47.1; Flutter on `UiFabHost`); `hold` / `holdHint` / `confirmTitle` / `confirmMessage` / `confirmLabel` / `destructive` (0.44, hold to activate; web output `confirmed`, Flutter `onPressed`); `aboveOverlays` (0.44, web only: in Flutter z-order is where the `UiFabHost` sits in the tree)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiIconButton (component, `ui-icon-button`)
@@ -1696,6 +1696,7 @@ A turn-by-turn view: the map follows the person heading-up, the way behind dimme
 - Inputs: `route`; `steps` (UiNavStep / UiNavManeuver); `position` (UiNavPosition); `options` (UiNavOptions); `zoom`; `destinationLabel`; `formatTime`; `glass`; `ariaLabel` (Flutter `semanticLabel`); `mapLabel`; the tile inputs
 - Outputs: `announce` / `offRoute` / `arrived` / `progress` / `end` (Flutter `onAnnounce` / `onOffRoute` / `onArrived` / `onProgress` / `onEnd`)
 - Methods: `recenter()` (Flutter `UiMapNavigationState.recenter`)
+- (0.47.1) `status`; `insets` (Flutter `EdgeInsetsDirectional`); actions as children `button[uiNavAction]` (`UiNavAction`: `icon`, `label`, `tone` 'neutral' | 'danger', `pressed`; Flutter `actions: List<Widget>` of `UiNavAction` with `UiNavActionTone`, `onPressed`); `uiNavWord`
 - Logic: `UiNavTracker` (update, split, pointAt; events announce / offRoute / arrived, Flutter `UiNavAnnounce` / `UiNavOffRoute` / `UiNavArrived`); `uiNavFormatDistance`, `uiNavFormatDuration`, `uiNavFormatClock`, `uiNavDistance`, `uiNavBearing`, `uiNavFollowInsets`; maneuver icons `uiNavIconKind`, `uiNavIcon`, `UI_NAV_ICONS` (Flutter `uiNavIcons`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

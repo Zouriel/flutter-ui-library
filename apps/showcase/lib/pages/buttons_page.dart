@@ -22,6 +22,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
   bool _bold = true, _italic = false;
   String _log = 'Nothing yet';
   UiFabPosition _sosAt = UiFabPosition.topCenter;
+  double _fabPeek = 72;
 
   static const _menu = [
     UiDropdownItem(label: 'Edit', value: 'edit', icon: UiIcon(HugeIcons.strokeRoundedEdit02)),
@@ -330,7 +331,7 @@ UiGoogleSignInButton(
         DocSection(
           name: 'FAB',
           widget: 'UiFab · UiFabHost',
-          summary: 'The floating action button: round, primary, with a shadow; it grows a little on hover and shrinks when pressed. label is required and is its accessible name. UiFabHost pins it to a corner, or the middle of the top or bottom edge (topCenter, bottomCenter: 0.44.0), offset by the safe area, so a top button never covers the status bar. The sm size grows to 48dp on phones. tone: UiFabTone.danger (0.44.0) is for an emergency action such as SOS: the danger colour with a ring and a soft halo that stand out on any page or map; text makes it an extended pill with the word after the icon. UiFabHost draws the button above its child, so a bottom sheet or the sidebar drawer inside the page stays under it; to keep it above routes too, put the host in UiApp.builder. The demo frames are their own hosts.',
+          summary: 'The floating action button: round, primary, with a shadow; it grows a little on hover and shrinks when pressed. label is required and is its accessible name. UiFabHost pins it to a corner, or the middle of the top or bottom edge (topCenter, bottomCenter: 0.44.0), offset by the safe area, so a top button never covers the status bar. topOffset adds px above a top button for an app bar; bottomOffset (0.47.1) adds px below a bottom button so it floats above a bottom sheet\'s peek or a bottom navigation, easing when it changes. The sm size grows to 48dp on phones. tone: UiFabTone.danger (0.44.0) is for an emergency action such as SOS: the danger colour with a ring and a soft halo that stand out on any page or map; text makes it an extended pill with the word after the icon. UiFabHost draws the button above its child, so a bottom sheet or the sidebar drawer inside the page stays under it; to keep it above routes too, put the host in UiApp.builder. The demo frames are their own hosts.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             SizedBox(
               height: 180,
@@ -387,8 +388,44 @@ UiGoogleSignInButton(
                 ),
               ),
             ),
+            // 0.47.1: bottomOffset, above a sheet's peek.
+            SizedBox(
+              key: const ValueKey('fab-peek-frame'),
+              height: 240,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(t.radius),
+                child: UiFabHost(
+                  bottomOffset: _fabPeek,
+                  fab: UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New item, above the sheet', onPressed: () => _did('New item')),
+                  child: Stack(children: [
+                    Positioned.fill(child: Container(color: t.surface)),
+                    AnimatedPositioned(
+                      duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                      curve: t.easeStandard,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: _fabPeek,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
+                        decoration: BoxDecoration(
+                            color: t.surfaceRaised, border: Border(top: BorderSide(color: t.border)), borderRadius: BorderRadius.vertical(top: Radius.circular(t.radiusLg)), boxShadow: t.shadow3),
+                        child: UiText('Bottom sheet (${_fabPeek.round()} px)', color: t.textMuted, variant: UiTextVariant.caption),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+            UiSegmented<double>(
+              label: 'Sheet (demo)',
+              size: UiSize.sm,
+              options: const [UiSegmentedOption(value: 0, label: 'None'), UiSegmentedOption(value: 72, label: 'Peek'), UiSegmentedOption(value: 160, label: 'Open')],
+              value: _fabPeek,
+              onChanged: (v) => setState(() => _fabPeek = v),
+            ),
           ]),
-          code: "UiFabHost(\n  fab: UiFab(icon: UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New note', onPressed: create),\n  child: notesList,\n)",
+          code: "UiFabHost(\n  fab: UiFab(icon: UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New note', onPressed: create),\n  bottomOffset: sheetVisibleHeight, // 0.47.1: above a bottom sheet's peek\n  child: notesList,\n)",
           api: const [
             ApiRow('icon', 'Widget', 'The icon.'),
             ApiRow('label', 'String', 'Required accessible name.'),
@@ -399,6 +436,7 @@ UiGoogleSignInButton(
             ApiRow('hold', 'Duration?', 'Press and hold that long to activate (0.44.0), as UiHoldButton: a tap, quick Enter / Space or a screen reader opens the confirm dialog instead.'),
             ApiRow('holdHint / confirmTitle / confirmMessage / confirmLabel / destructive', 'String? / String? / String / String? / bool', 'Read with a held button (UiStrings.holdHint), and the tap fallback dialog.'),
             ApiRow('UiFabHost.topOffset', 'double', 'Px added above a top button, for the app bar (0.44.0).', def: '0'),
+            ApiRow('UiFabHost.bottomOffset', 'double', 'Px added below a bottom button, for a bottom sheet\'s peek or a bottom navigation; eased when it changes (0.47.1, the web ui-fab bottomOffset).', def: '0'),
             ApiRow('UiFabHost.position', 'UiFabPosition', 'bottomEnd, bottomStart, topEnd, topStart, topCenter, bottomCenter (0.44.0). Offset by the safe area, so top ones sit below the status bar.', def: 'bottomEnd'),
           ],
         ),

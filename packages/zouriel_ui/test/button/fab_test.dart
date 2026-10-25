@@ -139,4 +139,40 @@ void main() {
       height: 140,
     );
   });
+
+  testWidgets('UiFabHost.bottomOffset (0.47.1) lifts a bottom button above a sheet\'s peek, easing when it changes; top ones ignore it', (tester) async {
+    tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
+    tester.view.padding = FakeViewPadding(bottom: 16 * tester.view.devicePixelRatio);
+    addTearDown(tester.view.reset);
+    var peek = 72.0;
+    var position = UiFabPosition.bottomEnd;
+    late StateSetter set;
+    await tester.pumpWidget(UiApp(
+      home: StatefulBuilder(builder: (context, s) {
+        set = s;
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: false),
+          child: UiFabHost(
+            position: position,
+            bottomOffset: peek,
+            fab: UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'New item', onPressed: () {}),
+            child: const SizedBox.expand(),
+          ),
+        );
+      }),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(UiFab)).bottom, 844 - 16 - 24 - 72);
+    set(() => peek = 160);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    final mid = tester.getRect(find.byType(UiFab)).bottom;
+    expect(mid, lessThan(844 - 16 - 24 - 72));
+    expect(mid, greaterThan(844 - 16 - 24 - 160));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(UiFab)).bottom, 844 - 16 - 24 - 160);
+    set(() => position = UiFabPosition.topEnd);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(UiFab)).top, 24);
+  });
 }

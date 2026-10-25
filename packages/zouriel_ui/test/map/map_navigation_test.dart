@@ -1,10 +1,14 @@
+import 'dart:ui' show Tristate;
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart' show PolylineLayer;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
+
+import '../helpers.dart';
 
 /// 0.47.0: UiMapNavigation, on the web spec's drive (navigation.spec.ts / map-navigation.spec.ts).
 
@@ -33,6 +37,13 @@ class _Host {
   int ended = 0;
   late StateSetter set;
   final key = GlobalKey<UiMapNavigationState>();
+  // 0.47.1
+  bool withActions = false;
+  bool muted = false;
+  int sos = 0;
+  String? status;
+  EdgeInsetsDirectional insets = EdgeInsetsDirectional.zero;
+  EdgeInsets padding = EdgeInsets.zero;
 }
 
 Future<_Host> _pump(WidgetTester tester, {void Function(_Host h)? init}) async {
@@ -47,7 +58,7 @@ Future<_Host> _pump(WidgetTester tester, {void Function(_Host h)? init}) async {
       config: UiConfig(strings: h.strings),
       home: Builder(
         builder: (context) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(disableAnimations: h.reduced),
+          data: MediaQuery.of(context).copyWith(disableAnimations: h.reduced, padding: h.padding),
           child: Directionality(
             textDirection: h.dir,
             child: UiMapNavigation(
@@ -64,6 +75,19 @@ Future<_Host> _pump(WidgetTester tester, {void Function(_Host h)? init}) async {
               onArrived: () => h.events.add(const UiNavArrived()),
               onProgress: h.states.add,
               onEnd: () => h.ended++,
+              status: h.status,
+              insets: h.insets,
+              actions: [
+                if (h.withActions) ...[
+                  UiNavAction(
+                      key: const ValueKey('mute'),
+                      icon: HugeIcons.strokeRoundedVolumeHigh,
+                      label: 'Mute',
+                      pressed: h.muted,
+                      onPressed: () => h.set(() => h.muted = !h.muted)),
+                  UiNavAction(key: const ValueKey('sos'), icon: HugeIcons.strokeRoundedAlert02, label: 'SOS', tone: UiNavActionTone.danger, onPressed: () => h.sos++),
+                ],
+              ],
             ),
           ),
         ),
@@ -259,5 +283,164 @@ void main() {
     final ins = uiNavFollowInsets(844, 150, 90);
     expect((ins.top + 844 - ins.bottom) / 2, closeTo(150 + (844 - 150 - 90) * uiNavFollowAt, 1e-9));
     expect(ins.bottom, 90);
+  });
+
+  group('0.47.1: actions, status, insets, safe area', () {
+    bool overlaps(Rect a, Rect b) => a.deflate(0.5).overlaps(b.deflate(0.5));
+    Rect rect(WidgetTester tester, String key) => tester.getRect(find.byKey(ValueKey(key)));
+
+    testWidgets('the app\'s buttons stack at the end side under the banner: 48dp round, apart, clear of compass, Recenter and bar', (tester) async {
+      final h = await _pump(tester, init: (h) => h.withActions = true);
+      await _feed(tester, h, along(600), t: 0, heading: 90);
+      await tester.dragFrom(const Offset(195, 600), const Offset(80, 60));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final banner = tester.getRect(find.byKey(const ValueKey('ui-nav-banner')));
+      final top = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('ui-nav-banner')), matching: find.byType(Column)).first);
+      final mute = rect(tester, 'mute'), sos = rect(tester, 'sos');
+      final recenter = rect(tester, 'ui-nav-recenter'), compass = rect(tester, 'ui-map-compass');
+      final bar = tester.getRect(find.byKey(const ValueKey('ui-nav-end')).first);
+      for (final r in [mute, sos]) {
+        expect(r.size, const Size(48, 48));
+        expect(r.top, greaterThanOrEqualTo(top.bottom)); // under the banner and its tab
+        expect(390 - r.right, lessThan(390 / 4)); // the end side (right in LTR)
+        for (final other in [banner, recenter, compass, bar]) {
+          expect(overlaps(r, other), isFalse, reason: '$r vs $other');
+        }
+      }
+      expect(sos.top, greaterThanOrEqualTo(mute.bottom + 12 - 0.5)); // in their order, 12 apart
+      expect(390 - mute.right, closeTo(12, 0.5));
+      // Taps reach the app; a drag on the map around them still moves the map (the row lets it through).
+      await tester.tap(find.byKey(const ValueKey('sos')));
+      await tester.tap(find.byKey(const ValueKey('mute')));
+      await tester.pump();
+      expect(h.sos, 1);
+      expect(h.muted, isTrue);
+    });
+
+    testWidgets('RTL: the stack at the inline end (the left); the compass at the right', (tester) async {
+      final h = await _pump(tester, init: (h) {
+        h.withActions = true;
+        h.dir = TextDirection.rtl;
+      });
+      await _feed(tester, h, along(600), t: 0, heading: 90);
+      await tester.dragFrom(const Offset(195, 600), const Offset(80, 60));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final mute = rect(tester, 'mute'), compass = rect(tester, 'ui-map-compass');
+      expect(mute.left, closeTo(12, 0.5));
+      expect(compass.center.dx, greaterThan(390 / 2));
+      expect(overlaps(mute, compass), isFalse);
+    });
+
+    testWidgets('pressed is a toggle (announced, primary fill); danger is the SOS style; guidelines', (tester) async {
+      final handle = tester.ensureSemantics();
+      final h = await _pump(tester, init: (h) => h.withActions = true);
+      await _feed(tester, h, along(0), t: 0);
+      final t = tester.element(find.byType(UiMapNavigation)).ui;
+      BoxDecoration deco(String key) =>
+          tester.widget<Container>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(Container)).first).decoration! as BoxDecoration;
+      expect(deco('mute').color, t.surfaceRaised);
+      expect(deco('mute').shape, BoxShape.circle);
+      expect(tester.getSemantics(find.byKey(const ValueKey('mute'))).getSemanticsData().label, 'Mute');
+      expect(tester.getSemantics(find.byKey(const ValueKey('mute'))).getSemanticsData().flagsCollection.isToggled, Tristate.isFalse);
+      h.set(() => h.muted = true);
+      await tester.pump();
+      expect(deco('mute').color, t.primary);
+      expect(tester.getSemantics(find.byKey(const ValueKey('mute'))).getSemanticsData().flagsCollection.isToggled, Tristate.isTrue);
+      expect(deco('sos').color, t.danger);
+      expect(deco('sos').boxShadow!.first.color, t.surfaceRaised);
+      expect(deco('sos').boxShadow!.first.spreadRadius, 3);
+      expect(tester.widget<UiIcon>(find.descendant(of: find.byKey(const ValueKey('sos')), matching: find.byType(UiIcon))).color, t.dangerContrast);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      handle.dispose();
+    });
+
+    testWidgets('status: a pill under the banner in the middle, a live region; none without one', (tester) async {
+      final handle = tester.ensureSemantics();
+      final h = await _pump(tester, init: (h) => h.withActions = true);
+      await _feed(tester, h, along(0), t: 0);
+      expect(find.byKey(const ValueKey('ui-nav-status')), findsNothing);
+      h.set(() => h.status = 'Rerouting…');
+      await tester.pump();
+      await tester.pump();
+      final pill = rect(tester, 'ui-nav-status');
+      final top = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('ui-nav-banner')), matching: find.byType(Column)).first);
+      expect(pill.top, greaterThanOrEqualTo(top.bottom));
+      expect(pill.center.dx, closeTo(195, 0.5));
+      expect(overlaps(pill, rect(tester, 'mute')), isFalse);
+      expect(pill.left, greaterThanOrEqualTo(12 + 48 + 12 - 0.5)); // the compass column stays free
+      expect(find.text('Rerouting…'), findsOneWidget);
+      final node = tester.getSemantics(find.bySemanticsLabel('Rerouting…'));
+      expect(node.getSemanticsData().flagsCollection.isLiveRegion, isTrue);
+      handle.dispose();
+    });
+
+    testWidgets('insets: the banner below an app bar, the bar above a bottom bar, sides kept; the map gets the sides', (tester) async {
+      final h = await _pump(tester, init: (h) {
+        h.withActions = true;
+        h.insets = const EdgeInsetsDirectional.only(top: 56, bottom: 64, start: 72, end: 8);
+      });
+      await _feed(tester, h, along(600), t: 0, heading: 90);
+      await tester.dragFrom(const Offset(195, 500), const Offset(80, 60));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final banner = tester.getRect(find.byKey(const ValueKey('ui-nav-banner')));
+      expect(banner.top, 56 + 12);
+      expect(banner.left, 72 + 12);
+      expect(banner.right, 390 - 8 - 12);
+      final bar = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('ui-nav-end')), matching: find.byType(KeyedSubtree)).first);
+      expect(bar.bottom, 844 - 64);
+      expect([bar.left, bar.right], [72, 390 - 8]);
+      expect(rect(tester, 'mute').right, 390 - 8 - 12);
+      expect(rect(tester, 'ui-nav-recenter').left, closeTo(72 + 12, 0.5));
+      expect(rect(tester, 'ui-nav-recenter').bottom, lessThanOrEqualTo(bar.top - 12 + 0.5));
+      expect(rect(tester, 'mute').top, greaterThanOrEqualTo(banner.bottom));
+      final vi = tester.widget<UiMap>(find.byType(UiMap)).viewInsets;
+      expect([vi.start, vi.end], [72, 8]);
+      expect(rect(tester, 'ui-map-compass').left, greaterThanOrEqualTo(72));
+      // The follow point measures from the bar's top (its height plus the bottom inset).
+      expect(vi.bottom, closeTo(844 - bar.top, 0.5));
+    });
+
+    testWidgets('safe area: the banner below the status bar, the bar\'s content above the gesture bar; insets win where bigger', (tester) async {
+      final h = await _pump(tester, init: (h) => h.padding = const EdgeInsets.only(top: 40, bottom: 34, left: 0, right: 20));
+      await _feed(tester, h, along(0), t: 0);
+      expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))).top, 40 + 12);
+      // Sides: the larger side safe area on both sides (a notch either side, any direction).
+      expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))).left, 20 + 12);
+      final bar = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('ui-nav-end')), matching: find.byType(KeyedSubtree)).first);
+      expect(bar.bottom, 844); // the bar's surface reaches the edge
+      expect(rect(tester, 'ui-nav-end').bottom, lessThanOrEqualTo(844 - 34 - 12 + 0.5)); // its content clears the gesture bar
+      // An app bar taller than the status bar: the inset decides, no double counting; the same for the bottom.
+      h.set(() => h.insets = const EdgeInsetsDirectional.only(top: 56, bottom: 50));
+      await tester.pump();
+      await tester.pump();
+      expect(tester.getRect(find.byKey(const ValueKey('ui-nav-banner'))).top, 56 + 12);
+      final bar2 = tester.getRect(find.ancestor(of: find.byKey(const ValueKey('ui-nav-end')), matching: find.byType(KeyedSubtree)).first);
+      expect(bar2.bottom, 844 - 50);
+      expect(rect(tester, 'ui-nav-end').bottom, closeTo(bar2.bottom - 12 - (bar2.height - 24 - rect(tester, 'ui-nav-end').height) / 2, 0.5));
+    });
+
+    testWidgets('golden: the app\'s buttons and the status pill', (tester) async {
+      await expectThemedGolden(
+        tester,
+        'map_navigation_actions',
+        (context) => UiMapNavigation(
+          route: baseRoute,
+          steps: steps,
+          position: UiNavPosition(along(100).lat, along(100).lng, heading: 0, speed: 8, timestamp: 0),
+          tileProvider: UiMapBlankTiles(),
+          formatTime: (t) => '14:05',
+          status: 'Rerouting…',
+          actions: [
+            UiNavAction(icon: HugeIcons.strokeRoundedVolumeHigh, label: 'Mute', pressed: true, onPressed: () {}),
+            UiNavAction(icon: HugeIcons.strokeRoundedAlert02, label: 'SOS', tone: UiNavActionTone.danger, onPressed: () {}),
+          ],
+        ),
+        height: 560,
+      );
+    });
   });
 }

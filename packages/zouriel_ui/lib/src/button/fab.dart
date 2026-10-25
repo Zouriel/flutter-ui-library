@@ -160,9 +160,11 @@ class UiFab extends StatelessWidget {
 /// [showUiDrawer]), put the host in [UiApp.builder] around the navigator.
 ///
 /// [topOffset] (0.44.0) moves a top button down by that many px, for an app bar over the page, so
-/// it sits just under the bar instead of on it.
+/// it sits just under the bar instead of on it. [bottomOffset] (0.47.1, the web `ui-fab`
+/// `bottomOffset`) moves a bottom button up by that many px, so it floats above a bottom sheet's peek
+/// or a bottom navigation; it moves smoothly when it changes (a sheet opening).
 class UiFabHost extends StatelessWidget {
-  const UiFabHost({super.key, required this.child, required this.fab, this.position = UiFabPosition.bottomEnd, this.topOffset = 0});
+  const UiFabHost({super.key, required this.child, required this.fab, this.position = UiFabPosition.bottomEnd, this.topOffset = 0, this.bottomOffset = 0});
 
   final Widget child;
   final Widget fab;
@@ -170,6 +172,9 @@ class UiFabHost extends StatelessWidget {
 
   /// Px added above a top button (0.44.0): the app bar's height.
   final double topOffset;
+
+  /// Px added below a bottom button (0.47.1): a bottom sheet's visible height.
+  final double bottomOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -183,9 +188,11 @@ class UiFabHost extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(child: child),
-        PositionedDirectional(
+        AnimatedPositionedDirectional(
+          duration: context.uiAnimate ? t.motionBase : Duration.zero,
+          curve: t.easeStandard,
           top: top ? t.space6 + pad.top + topOffset : null,
-          bottom: top ? null : t.space6 + pad.bottom,
+          bottom: top ? null : t.space6 + pad.bottom + bottomOffset,
           end: center ? t.space6 + endInset : (end ? t.space6 + endInset : null),
           start: center ? t.space6 + startInset : (end ? null : t.space6 + startInset),
           child: center ? Center(widthFactor: 1, heightFactor: 1, child: fab) : fab,

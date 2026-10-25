@@ -30,6 +30,74 @@ EdgeInsetsDirectional uiNavFollowInsets(double height, double top, double bottom
   return EdgeInsetsDirectional.only(top: math.max(0.0, 2 * at - height + bottom), bottom: bottom);
 }
 
+/// A [UiNavAction]'s colour (0.47.1, the web `UiNavActionTone`): [neutral], or [danger] for SOS.
+enum UiNavActionTone { neutral, danger }
+
+/// One of the app's own buttons on a [UiMapNavigation] (0.47.1, the web `button[uiNavAction]`): mute,
+/// SOS. Pass them in [UiMapNavigation.actions]; they stack at the end side under the banner. A 48dp
+/// opaque circle with the icon; [label] is its accessible name. [tone] danger is the prominent SOS
+/// style (the danger fill inside a raised-surface ring). [pressed] makes it a toggle (announced as
+/// toggled), drawn in the primary fill while on (muted).
+class UiNavAction extends StatelessWidget {
+  const UiNavAction({super.key, required this.icon, required this.label, required this.onPressed, this.tone = UiNavActionTone.neutral, this.pressed});
+
+  /// The icon (a hugeicons icon).
+  final UiIconData icon;
+
+  /// The accessible name: "Mute", "SOS".
+  final String label;
+  final VoidCallback? onPressed;
+
+  /// [UiNavActionTone.danger]: the prominent SOS style.
+  final UiNavActionTone tone;
+
+  /// A toggle's state, drawn in the primary fill while true; null: not a toggle.
+  final bool? pressed;
+
+  /// Its diameter: 48dp everywhere (a touch target on its own).
+  static const double size = 48;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final danger = tone == UiNavActionTone.danger;
+    final on = pressed ?? false;
+    return UiInteractive(
+      onTap: onPressed,
+      enabled: onPressed != null,
+      semanticLabel: label,
+      toggled: pressed,
+      excludeChildSemantics: true,
+      builder: (context, st) {
+        final hot = st.hovered || st.pressed;
+        final fill = danger
+            ? (hot ? t.dangerHover : t.danger)
+            : on
+                ? (hot ? t.primaryHover : t.primary)
+                : (hot ? t.surfaceHover : t.surfaceRaised);
+        final ink = danger ? t.dangerContrast : (on ? t.primaryContrast : (st.disabled ? t.textMuted : t.text));
+        return Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: fill,
+            shape: BoxShape.circle,
+            border: danger || on ? null : Border.all(color: t.border),
+            boxShadow: [
+              // Danger: a ring of the raised surface, so it stands out on any map.
+              if (danger) BoxShadow(color: t.surfaceRaised, spreadRadius: 3),
+              ...t.shadow2,
+              if (st.focused) ...t.focusRing,
+            ],
+          ),
+          child: UiIcon(icon, size: 22, strokeWidth: 1.8, color: ink),
+        );
+      },
+    );
+  }
+}
+
 /// `ui-map-navigation` for Flutter (0.47.0): a turn-by-turn view, like a car's navigation. A flat
 /// map that follows the person and turns heading-up, the route ahead in the primary tone and the
 /// part behind dimmed, an arrow for the person, a banner with the next maneuver (its arrow, "in 80 m",
@@ -47,6 +115,12 @@ EdgeInsetsDirectional uiNavFollowInsets(double height, double top, double bottom
 ///   shows Recenter, which follows again heading-up at [zoom]; the compass shows meanwhile. With animations off (reduced motion) the map turns at once.
 /// - In right-to-left text the banner and bar are mirrored; the maneuver arrows are not (left is left).
 /// - [glass] (the config's by default) puts the banner and bar on glass.
+/// - [actions] (0.47.1): the app's [UiNavAction]s stack as 48dp round buttons at the end side under
+///   the banner, clear of the compass (inline start) and Recenter (bottom start). [status]
+///   ("Rerouting…") shows as a pill under the banner, a live region.
+/// - [insets] (0.47.1): what the app covers along each edge (an app bar with the status bar under it,
+///   a bottom navigation); the banner, actions, Recenter and bar stay inside them. The device safe
+///   area (MediaQuery padding: status bar, notch, gesture bar) is used wherever it is bigger.
 class UiMapNavigation extends StatefulWidget {
   const UiMapNavigation({
     super.key,
@@ -73,7 +147,20 @@ class UiMapNavigation extends StatefulWidget {
     this.onArrived,
     this.onProgress,
     this.onEnd,
+    this.actions = const [],
+    this.status,
+    this.insets = EdgeInsetsDirectional.zero,
   });
+
+  /// The app's own buttons (0.47.1), usually [UiNavAction]s: a stack at the end side under the banner.
+  final List<Widget> actions;
+
+  /// A short state under the banner, as a pill ("Rerouting…"), a live region; null for none (0.47.1).
+  final String? status;
+
+  /// What the app covers along each edge (0.47.1): an app bar (with the status bar under it) at the
+  /// top, a bottom navigation, a side rail. The device safe area counts wherever it is bigger.
+  final EdgeInsetsDirectional insets;
 
   /// The route's geometry (OSRM's GeoJSON is [lng, lat]: swap it).
   final List<UiLatLng> route;
@@ -217,7 +304,10 @@ class UiMapNavigationState extends State<UiMapNavigation> {
     if (top == null || bar == null || !top.hasSize || !bar.hasSize) return;
     final parent = context.findRenderObject() as RenderBox?;
     final offset = parent == null ? 0.0 : top.localToGlobal(Offset.zero, ancestor: parent).dy;
-    final th = top.size.height + offset, bh = bar.size.height;
+    // The bar's top from the bottom: its height plus the app's bottom inset (0.47.1).
+    final barTop = parent == null ? null : bar.localToGlobal(Offset.zero, ancestor: parent).dy;
+    final th = top.size.height + offset;
+    final bh = parent == null || !parent.hasSize || barTop == null ? bar.size.height : math.max(bar.size.height, parent.size.height - barTop);
     if (th != _topHeight || bh != _barHeight) {
       setState(() {
         _topHeight = th;
@@ -264,6 +354,12 @@ class UiMapNavigationState extends State<UiMapNavigation> {
     final clock = widget.formatTime(DateTime.fromMillisecondsSinceEpoch(at + (secondsLeft * 1000).round()));
     final summary = strings.navSummary.replaceAll('{time}', timeLeft).replaceAll('{distance}', distanceLeft).replaceAll('{clock}', clock);
     final size = MediaQuery.sizeOf(context);
+    // 0.47.1: the edges the overlays keep to: the app's insets, or the device's safe area where that is
+    // bigger. The side safe area is the larger of the two, so either direction keeps clear of a notch.
+    final pad = MediaQuery.paddingOf(context);
+    final ins = widget.insets;
+    final safeX = math.max(pad.left, pad.right);
+    final edgeTop = math.max(ins.top, pad.top), edgeStart = math.max(ins.start, safeX), edgeEnd = math.max(ins.end, safeX);
 
     Widget frosted(Widget child, BorderRadius radius) => glass
         ? ClipRRect(borderRadius: radius, child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: child))
@@ -366,7 +462,9 @@ class UiMapNavigationState extends State<UiMapNavigation> {
     final barRadius = BorderRadius.vertical(top: Radius.circular(t.radiusLg));
     final bar = frosted(
       Container(
-        padding: EdgeInsetsDirectional.fromSTEB(t.space4, t.space3, t.space4, t.space3 + MediaQuery.paddingOf(context).bottom),
+        // The safe area pads it only where the app's insets don't already cover it (0.47.1).
+        padding: EdgeInsetsDirectional.fromSTEB(t.space4 + math.max(0.0, safeX - ins.start), t.space3, t.space4 + math.max(0.0, safeX - ins.end),
+            t.space3 + math.max(0.0, pad.bottom - ins.bottom)),
         decoration: BoxDecoration(
           color: glass ? t.glassBg : t.surfaceRaised,
           borderRadius: barRadius,
@@ -418,6 +516,42 @@ class UiMapNavigationState extends State<UiMapNavigation> {
       ),
     );
 
+    final status = widget.status;
+    final statusPill = status == null || status.isEmpty
+        ? null
+        : Semantics(
+            container: true,
+            liveRegion: true,
+            label: status,
+            child: ExcludeSemantics(
+              child: Container(
+                key: const ValueKey('ui-nav-status'),
+                constraints: const BoxConstraints(minHeight: 32),
+                padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space1),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: t.surfaceRaised,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: t.border),
+                  boxShadow: t.shadow2,
+                ),
+                child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(color: t.text, fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, height: 1.35)),
+              ),
+            ),
+          );
+    // 0.47.1: under the banner, three columns: the inline start kept free for the map's compass, the
+    // status pill in the middle, the app's buttons in a stack at the inline end. Mirrored in RTL.
+    final under = Row(key: const ValueKey('ui-nav-under'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(width: UiNavAction.size),
+      SizedBox(width: t.space3),
+      Expanded(child: Align(alignment: Alignment.topCenter, child: statusPill)),
+      SizedBox(width: t.space3),
+      SizedBox(
+        width: UiNavAction.size,
+        child: Column(key: const ValueKey('ui-nav-actions'), mainAxisSize: MainAxisSize.min, spacing: t.space3, children: widget.actions),
+      ),
+    ]);
+
     return Semantics(
       container: true,
       explicitChildNodes: true,
@@ -436,7 +570,8 @@ class UiMapNavigationState extends State<UiMapNavigation> {
               userLocation: puck,
               markers: [if (end != null) UiMapMarker(id: 'nav-destination', lat: end.lat, lng: end.lng, tone: UiStatus.danger, label: widget.destinationLabel)],
               bearing: _following && s != null ? s.bearing : _heldBearing,
-              viewInsets: insets,
+              // The follow point's top and bottom, and the app's sides (the compass keeps clear of a side rail).
+              viewInsets: insets.copyWith(start: ins.start, end: ins.end),
               zoomButtons: false,
               // North up is a tap away only while not following (heading-up is the point otherwise).
               compass: !_following,
@@ -455,13 +590,15 @@ class UiMapNavigationState extends State<UiMapNavigation> {
             ),
           ),
           PositionedDirectional(
-            top: t.space3,
-            start: t.space3,
-            end: t.space3,
+            top: edgeTop + t.space3,
+            start: edgeStart + t.space3,
+            end: edgeEnd + t.space3,
             child: Column(key: _top, mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [banner, ?then]),
           ),
-          if (!_following) PositionedDirectional(start: t.space3, bottom: _barHeight + t.space3, child: recenterButton),
-          Positioned(left: 0, right: 0, bottom: 0, child: KeyedSubtree(key: _bar, child: bar)),
+          if (_topHeight > 0 && (statusPill != null || widget.actions.isNotEmpty))
+            PositionedDirectional(top: _topHeight + t.space2, start: edgeStart + t.space3, end: edgeEnd + t.space3, child: under),
+          if (!_following) PositionedDirectional(start: edgeStart + t.space3, bottom: _barHeight + t.space3, child: recenterButton),
+          PositionedDirectional(start: ins.start, end: ins.end, bottom: ins.bottom, child: KeyedSubtree(key: _bar, child: bar)),
         ]);
       }),
     );

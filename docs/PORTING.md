@@ -231,6 +231,23 @@ transitions its rotation on the rotor's curve; Flutter draws it turned back by t
 compass sits in the zoom buttons' stack (a Leaflet control in their corner on the web). (6) `UiMapRoute.opacity`
 replaced a CSS rule keyed on a route id so Flutter could match the dimmed way behind.
 
+**0.47.1. Navigation view gaps (Dhirumi apps).** (1) Actions: the web takes `button[uiNavAction]` children by
+content projection (the host is the native button, so `label` lands on it as aria-label; a host aria-label on a
+wrapper would not), Flutter takes `actions: List<Widget>`, normally `UiNavAction`; both draw 48 px / dp round opaque
+buttons 12 apart. Below the banner sits a three-column block: the inline start (48 wide) kept free for the map's
+compass, the status pill centred in the middle, the stack at the inline end; it is not part of the measured banner,
+so the follow point doesn't move when a status appears. Recenter stays at the bottom start. (2) Insets and safe
+area: each edge uses the larger of the app's inset and the safe area (the side safe area is the larger of left and
+right on both sides, as `ui-fab` does), so an app bar that already includes the status bar is not counted twice;
+the bar sits on the bottom inset and pads only the safe area the inset doesn't cover. The map gets the app's start
+/ end insets (the compass keeps clear of a side rail); its top / bottom stay the follow point's. The web measures
+again when the insets change (moving the banner doesn't resize it, so no ResizeObserver call). (3) Maneuver words
+go through `uiNavWord` (lower case, `_`/`-` to spaces). (4) Web only: the banner, tab, Recenter and action icons
+reset `--ui-color-icon` and colour `hugeicons-icon` with `currentColor` at (0,2,1), beating a theme tint and an
+app's `.x hugeicons-icon` rule without !important; Flutter's `UiIcon` already took an explicit colour. (5)
+`bottomOffset` on `ui-fab` / `UiFabHost`, eased (Flutter `AnimatedPositionedDirectional`). Tooltips: the web action
+sets `title`; Flutter has no tooltip on it (the name is in semantics).
+
 **0.46.2. Route draw-in.** Both libs animate the route geometry itself rather than a dash offset: each frame
 draws `uiMapRoutePartial(points, ease(t))` (the first fraction of the route by haversine length, ending on an
 interpolated point), so the line grows correctly while the map pans or zooms mid-draw (a dash offset would be

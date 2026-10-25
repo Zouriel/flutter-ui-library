@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
@@ -103,9 +104,23 @@ class NavDriveDemoState extends State<NavDriveDemo> {
   Timer? _timer;
   int _speed = 2;
   bool _glass = false;
+  // 0.47.1: the app's buttons, the status and an app bar (insets).
+  bool _muted = false, _appBar = false;
+  String? _status;
   double _along = 0, _off = 0;
   int _clock = DateTime.now().millisecondsSinceEpoch;
   final _events = <String>[];
+  // The steps, kept per language: a new list on every build would start a new tracker each frame
+  // (the view treats a new steps list as a reroute), repeating the announcements and never going off route.
+  List<UiNavStep>? _steps;
+  bool? _stepsDv;
+  List<UiNavStep> _stepsFor(bool dv) {
+    if (_steps == null || _stepsDv != dv) {
+      _steps = navDemoSteps(navDemoRoute, dv: dv);
+      _stepsDv = dv;
+    }
+    return _steps!;
+  }
 
   @override
   void initState() {
@@ -150,6 +165,7 @@ class NavDriveDemoState extends State<NavDriveDemo> {
       _along = 0;
       _off = 0;
       _events.clear();
+      _status = null;
       // A new list: a new tracker (as after a reroute).
       _route = List.of(navDemoRoute);
       _pos = null;
@@ -174,9 +190,10 @@ class NavDriveDemoState extends State<NavDriveDemo> {
             height: 680,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(context.uiTheme.radius(t.radius)),
-              child: UiMapNavigation(
+              child: Stack(children: [
+                Positioned.fill(child: UiMapNavigation(
                 route: _route,
-                steps: navDemoSteps(navDemoRoute, dv: dv),
+                steps: _stepsFor(dv),
                 position: _pos,
                 glass: _glass,
                 destinationLabel: 'Lily Magu',
@@ -185,13 +202,48 @@ class NavDriveDemoState extends State<NavDriveDemo> {
                 tileProvider: widget.tileProvider,
                 userAgentPackageName: 'com.zouriel.ui.showcase',
                 onAnnounce: (e) => _log('announce (${e.reason.name}${e.threshold != null ? ' ${e.threshold!.round()} m' : ''}): ${e.step.instruction}'),
-                onOffRoute: (e) => _log('offRoute, ${e.distanceMeters.round()} m off'),
+                onOffRoute: (e) {
+                  _log('offRoute, ${e.distanceMeters.round()} m off');
+                  setState(() => _status = dv ? 'އަލުން މަގު ހޯދަނީ…' : 'Rerouting…');
+                },
+                // Back on the route: the Rerouting… status goes (the demo has no real reroute).
+                onProgress: (s) {
+                  if (_status != null && !s.offRoute && s.distanceFromRoute < 40) setState(() => _status = null);
+                },
+                status: _status,
+                insets: EdgeInsetsDirectional.only(top: _appBar ? 48 : 0),
+                actions: [
+                  UiNavAction(
+                    icon: _muted ? HugeIcons.strokeRoundedVolumeOff : HugeIcons.strokeRoundedVolumeHigh,
+                    label: _muted ? 'Unmute' : 'Mute',
+                    pressed: _muted,
+                    onPressed: () => setState(() => _muted = !_muted),
+                  ),
+                  UiNavAction(icon: HugeIcons.strokeRoundedAlert02, label: 'SOS', tone: UiNavActionTone.danger, onPressed: () => _log('SOS pressed')),
+                ],
                 onArrived: () => _log('arrived'),
                 onEnd: () {
                   stop();
                   _log('end');
                 },
-              ),
+              )),
+                if (_appBar)
+                  Positioned(
+                    key: const ValueKey('nav-demo-appbar'),
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 48,
+                    child: ExcludeSemantics(
+                      child: Container(
+                        alignment: AlignmentDirectional.centerStart,
+                        padding: EdgeInsets.symmetric(horizontal: t.space4),
+                        decoration: BoxDecoration(color: t.surfaceRaised, border: Border(bottom: BorderSide(color: t.border))),
+                        child: Text('App bar (insets.top 48)', style: context.uiText.label.copyWith(color: t.text)),
+                      ),
+                    ),
+                  ),
+              ]),
             ),
           ),
         ),
@@ -213,6 +265,13 @@ class NavDriveDemoState extends State<NavDriveDemo> {
           options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
           value: _glass,
           onChanged: (v) => setState(() => _glass = v),
+        ),
+        UiSegmented<bool>(
+          label: 'App bar (demo)',
+          size: UiSize.sm,
+          options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
+          value: _appBar,
+          onChanged: (v) => setState(() => _appBar = v),
         ),
       ]),
       for (final e in _events) Text(e, style: context.uiText.caption),
