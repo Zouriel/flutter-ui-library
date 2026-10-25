@@ -92,7 +92,7 @@ class UiCheckboxGroup<T> extends StatelessWidget {
     this.label,
     this.direction = Axis.vertical,
     this.selectAll = false,
-    this.selectAllLabel = 'Select all',
+    this.selectAllLabel,
   });
 
   final List<UiCheckboxOption<T>> options;
@@ -105,7 +105,8 @@ class UiCheckboxGroup<T> extends StatelessWidget {
   final String? label;
   final Axis direction;
   final bool selectAll;
-  final String selectAllLabel;
+  /// [UiStrings.selectAll] when null.
+  final String? selectAllLabel;
 
   List<UiCheckboxOption<T>> get _togglable => options.where((o) => !o.disabled).toList();
   bool get _allSelected => _togglable.isNotEmpty && _togglable.every((o) => value.contains(o.value));
@@ -151,7 +152,7 @@ class UiCheckboxGroup<T> extends StatelessWidget {
         child: UiCheckbox(
           value: _allSelected ? true : _someSelected ? null : false,
           onChanged: enabled ? (_) => _toggleAll() : null,
-          child: Text(selectAllLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(selectAllLabel ?? context.uiStrings.selectAll, style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       );
     }

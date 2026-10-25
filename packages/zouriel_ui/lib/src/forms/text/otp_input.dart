@@ -30,7 +30,7 @@ class UiOtpInput extends StatefulWidget {
     this.invalid = false,
     this.enabled = true,
     this.autofocus = false,
-    this.semanticLabel = 'One-time code',
+    this.semanticLabel,
   });
 
   final String? value;
@@ -44,7 +44,8 @@ class UiOtpInput extends StatefulWidget {
   final bool autofocus;
 
   /// Name of the group of cells.
-  final String semanticLabel;
+  /// The group's name; [UiStrings.otpLabel] when null.
+  final String? semanticLabel;
 
   /// How many cells of [value] are filled (holes and missing cells don't count).
   static int filledCount(String? value, int length) {
@@ -213,13 +214,13 @@ class _UiOtpInputState extends State<UiOtpInput> {
       _focusCell(i - 1);
       return KeyEventResult.handled;
     }
-    final rtl = Directionality.of(context) == TextDirection.rtl;
+    // The cells always run left to right (see build), so the arrows are physical.
     if (k == LogicalKeyboardKey.arrowLeft) {
-      _focusCell(rtl ? i + 1 : i - 1);
+      _focusCell(i - 1);
       return KeyEventResult.handled;
     }
     if (k == LogicalKeyboardKey.arrowRight) {
-      _focusCell(rtl ? i - 1 : i + 1);
+      _focusCell(i + 1);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -230,7 +231,7 @@ class _UiOtpInputState extends State<UiOtpInput> {
     final t = context.ui;
     final invalid = uiFieldInvalid(context, widget.invalid);
     final style = context.uiText.code.copyWith(fontSize: t.fontSizeLg, color: t.text, height: 1.2);
-    final group = UiFieldScope.maybeOf(context)?.label ?? widget.semanticLabel;
+    final group = UiFieldScope.maybeOf(context)?.label ?? widget.semanticLabel ?? context.uiStrings.otpLabel;
     // The web cell is md wide and lg tall; on phones 48dp wide so each one is a full target. In a
     // narrow space the gaps close up first, then the cells shrink.
     final preferred = uiTouchPlatform(context) && t.sizeMd < uiMinTouchTarget ? uiMinTouchTarget : t.sizeMd;
@@ -247,7 +248,11 @@ class _UiOtpInputState extends State<UiOtpInput> {
           container: true,
           label: group,
           explicitChildNodes: true,
-          child: Row(
+          // A code reads left to right in every language: the cells keep that order in RTL apps (0.46.0),
+          // as the web's dir="ltr" group does.
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
             mainAxisSize: MainAxisSize.min,
             spacing: gap,
             children: [
@@ -261,7 +266,7 @@ class _UiOtpInputState extends State<UiOtpInput> {
                     enabled: widget.enabled,
                     child: UiFieldScope(
                       // Each cell is named on its own, not by the field label (that names the group).
-                      label: 'Digit ${i + 1}',
+                      label: uiFormatString(context.uiStrings.otpDigit, {'n': i + 1}),
                       child: UiTextEditor(
                         controller: _cells[i],
                         focusNode: _nodes[i],
@@ -275,12 +280,13 @@ class _UiOtpInputState extends State<UiOtpInput> {
                         onKeyEvent: (_, e) => _onKey(i, e),
                         selectAllOnFocus: true,
                         autofocus: widget.autofocus && i == 0,
-                        semanticLabel: 'Digit ${i + 1}',
+                        semanticLabel: uiFormatString(context.uiStrings.otpDigit, {'n': i + 1}),
                       ),
                     ),
                   ),
                 ),
             ],
+          ),
           ),
         );
       },

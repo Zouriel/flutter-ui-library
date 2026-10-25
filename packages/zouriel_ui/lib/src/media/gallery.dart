@@ -54,7 +54,7 @@ class UiGallery extends StatelessWidget {
           UiInteractive(
             onTap: () => open(context, images, i, label: label),
             padTouchTarget: false,
-            semanticLabel: images[i].alt ?? 'Open image',
+            semanticLabel: images[i].alt ?? context.uiStrings.openImage,
             excludeChildSemantics: true,
             builder: (context, s) => AspectRatio(
               aspectRatio: 1,

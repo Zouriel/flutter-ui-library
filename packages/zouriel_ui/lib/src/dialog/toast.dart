@@ -16,7 +16,33 @@ import 'snackbar.dart';
 enum UiToastTone { info, success, warning, danger }
 
 /// Where toasts stack, the web `UiToastPosition`: a corner, or centred on the top or bottom edge.
-enum UiToastPosition { topRight, topLeft, topCenter, bottomRight, bottomLeft, bottomCenter }
+/// Left and right are physical; the start / end corners (0.46.0) follow the text direction
+/// ([bottomEnd], the default, is the bottom right in left-to-right text and the bottom left in
+/// right-to-left).
+enum UiToastPosition {
+  topRight,
+  topLeft,
+  topCenter,
+  bottomRight,
+  bottomLeft,
+  bottomCenter,
+  topStart,
+  topEnd,
+  bottomStart,
+  bottomEnd;
+
+  /// The physical position for [direction]: the start / end corners become left or right.
+  UiToastPosition resolve(TextDirection direction) {
+    final rtl = direction == TextDirection.rtl;
+    return switch (this) {
+      topStart => rtl ? topRight : topLeft,
+      topEnd => rtl ? topLeft : topRight,
+      bottomStart => rtl ? bottomRight : bottomLeft,
+      bottomEnd => rtl ? bottomLeft : bottomRight,
+      _ => this,
+    };
+  }
+}
 
 /// One button in a toast, e.g. Undo. Running it dismisses the toast.
 @immutable
@@ -160,7 +186,7 @@ class _UiToastScope extends InheritedWidget {
 /// [textStyle] (0.44.2) is merged over every toast's text, as on the text fields: an app font,
 /// e.g. `TextStyle(fontFamilyFallback: ['Faruma'])` so a Dhivehi name doesn't come out as boxes.
 class UiToastHost extends StatefulWidget {
-  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomRight, this.snackbar, this.textStyle, this.child});
+  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomEnd, this.snackbar, this.textStyle, this.child});
 
   final UiToastController controller;
   final UiToastPosition position;
@@ -210,7 +236,7 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
   void _clearSnackbar() {
     if (!mounted) return;
     final bar = _snackbar?.area.value;
-    final pos = widget.position;
+    final pos = widget.position.resolve(Directionality.of(context));
     final bottom = pos == UiToastPosition.bottomLeft || pos == UiToastPosition.bottomRight || pos == UiToastPosition.bottomCenter;
     final box = _stack.currentContext?.findRenderObject() as RenderBox?;
     var lift = 0.0;
@@ -295,15 +321,15 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final pos = widget.position;
+    final pos = widget.position.resolve(Directionality.of(context));
     final top = pos == UiToastPosition.topLeft || pos == UiToastPosition.topRight || pos == UiToastPosition.topCenter;
     final alignment = switch (pos) {
       UiToastPosition.topRight => Alignment.topRight,
       UiToastPosition.topLeft => Alignment.topLeft,
       UiToastPosition.topCenter => Alignment.topCenter,
-      UiToastPosition.bottomRight => Alignment.bottomRight,
       UiToastPosition.bottomLeft => Alignment.bottomLeft,
       UiToastPosition.bottomCenter => Alignment.bottomCenter,
+      _ => Alignment.bottomRight,
     };
     // The edge each toast slides from: its own side, or the top/bottom edge when centred.
     final from = switch (pos) {

@@ -531,7 +531,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     final handle = UiInteractive(
       focusNode: _handle,
       onTap: _stepFromHandle,
-      semanticLabel: _index >= last ? 'Make smaller' : 'Make larger',
+      semanticLabel: _index >= last ? context.uiStrings.sheetSmaller : context.uiStrings.sheetLarger,
       excludeChildSemantics: true,
       padTouchTarget: false,
       pressScale: false,

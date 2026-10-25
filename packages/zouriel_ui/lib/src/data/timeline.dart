@@ -63,8 +63,8 @@ class UiTimeline extends StatelessWidget {
               role: SemanticsRole.listItem,
               // The web's aria-current="step": Flutter has no such flag, so the state is read out.
               hint: switch (items[i].state) {
-                UiTimelineItemState.current => 'Current step',
-                UiTimelineItemState.upcoming => 'Upcoming',
+                UiTimelineItemState.current => context.uiStrings.currentStep,
+                UiTimelineItemState.upcoming => context.uiStrings.upcoming,
                 _ => null,
               },
               child: IntrinsicHeight(

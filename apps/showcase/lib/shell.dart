@@ -34,8 +34,11 @@ const densityOptions = [
 /// The showcase frame: a top bar (menu, title, theme picker) over the current page. On a wide
 /// screen the page list stays open on the left.
 class ShowcaseShell extends StatefulWidget {
-  const ShowcaseShell({super.key, required this.controller});
+  const ShowcaseShell({super.key, required this.controller, this.rtl});
   final UiThemeController controller;
+
+  /// The RTL · Dhivehi switch (0.46.0); the bar's toggle flips it and the library's words.
+  final ValueNotifier<bool>? rtl;
 
   @override
   State<ShowcaseShell> createState() => _ShowcaseShellState();
@@ -74,7 +77,7 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
 
     final bar = Container(
       height: 52 + padding.top,
-      padding: EdgeInsets.only(top: padding.top, left: t.space2, right: t.space2),
+      padding: EdgeInsetsDirectional.only(top: padding.top, start: t.space2, end: t.space2),
       decoration: BoxDecoration(color: t.bg, border: Border(bottom: BorderSide(color: t.border))),
       child: Row(spacing: t.space2, children: [
         if (!wide)
@@ -84,6 +87,7 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
             onPressed: () => _menuOpen.value = true,
           ),
         Expanded(child: wide ? const SizedBox() : Text(_page.label, style: context.uiText.label.copyWith(fontSize: t.fontSizeMd), maxLines: 1, overflow: TextOverflow.ellipsis)),
+        if (widget.rtl != null) _RtlToggle(controller: widget.controller, rtl: widget.rtl!),
         _ThemeButton(controller: widget.controller),
       ]),
     );
@@ -116,6 +120,30 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
         builder: (context, open, _) => _Drawer(open: open, onClose: () => _menuOpen.value = false, child: _Menu(current: _page, onPick: _go)),
       ),
     ]);
+  }
+}
+
+/// The bar's RTL · Dhivehi switch (0.46.0): every page mirrored, with the library's Dhivehi words
+/// ([UiStrings.dv]), so each component can be checked the way the Dhirumi apps show it.
+class _RtlToggle extends StatelessWidget {
+  const _RtlToggle({required this.controller, required this.rtl});
+  final UiThemeController controller;
+  final ValueNotifier<bool> rtl;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: rtl,
+      builder: (context, on, _) => UiToggleButton(
+        label: 'RTL · ދިވެހި',
+        pressed: on,
+        size: UiSize.sm,
+        onChanged: (v) {
+          controller.setStrings(v ? UiStrings.dv : const UiStrings());
+          rtl.value = v;
+        },
+      ),
+    );
   }
 }
 
@@ -153,12 +181,12 @@ class _Drawer extends StatelessWidget {
             child: AnimatedOpacity(opacity: open ? 1 : 0, duration: dur, child: ColoredBox(color: t.overlay)),
           ),
         ),
-        AnimatedPositioned(
+        AnimatedPositionedDirectional(
           duration: dur,
           curve: t.easeStandard,
           top: 0,
           bottom: 0,
-          left: open ? 0 : -300,
+          start: open ? 0 : -300,
           width: 300,
           child: PopScope(
             canPop: !open,
@@ -167,7 +195,7 @@ class _Drawer extends StatelessWidget {
             },
             child: Container(
               decoration: BoxDecoration(color: t.surface, boxShadow: open ? t.shadow3 : const []),
-              child: SafeArea(right: false, child: child),
+              child: SafeArea(right: Directionality.of(context) == TextDirection.rtl, left: Directionality.of(context) == TextDirection.ltr, child: child),
             ),
           ),
         ),
@@ -193,10 +221,10 @@ class _Menu extends StatelessWidget {
       child: ListView(
         padding: EdgeInsets.symmetric(vertical: t.space4, horizontal: t.space3),
         children: [
-          Padding(padding: EdgeInsets.only(left: t.space2, bottom: t.space4), child: const _Brand()),
+          Padding(padding: EdgeInsetsDirectional.only(start: t.space2, bottom: t.space4), child: const _Brand()),
           for (final g in groups.entries) ...[
             Padding(
-              padding: EdgeInsets.fromLTRB(t.space2, t.space3, 0, t.space1),
+              padding: EdgeInsetsDirectional.fromSTEB(t.space2, t.space3, 0, t.space1),
               child: Text(g.key.toUpperCase(), style: context.uiText.code.copyWith(fontSize: 11, letterSpacing: 11 * 0.2, color: t.textMuted)),
             ),
             for (final p in g.value) _MenuItem(page: p, selected: p.id == current.id, onTap: () => onPick(p)),

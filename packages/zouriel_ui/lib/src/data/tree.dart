@@ -292,10 +292,10 @@ class _TreeRow extends StatelessWidget {
                   child: kids
                       ? Center(
                           child: AnimatedRotation(
-                            turns: open ? 0.25 : 0,
+                            turns: open ? (Directionality.of(context) == TextDirection.rtl ? -0.25 : 0.25) : 0,
                             duration: context.uiAnimate ? t.motionFast : Duration.zero,
                             curve: t.easeStandard,
-                            child: UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, color: t.textMuted, strokeWidth: 2),
+                            child: UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, color: t.textMuted, strokeWidth: 2, matchTextDirection: true),
                           ),
                         )
                       : null,

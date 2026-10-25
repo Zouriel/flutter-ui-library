@@ -602,7 +602,7 @@ class UiWindowState extends State<UiWindow> with SingleTickerProviderStateMixin 
               onTap: _toggleMax,
             ),
           ],
-          _ChromeButton(icon: HugeIcons.strokeRoundedCancel01, label: 'Close', danger: true, onTap: _close),
+          _ChromeButton(icon: HugeIcons.strokeRoundedCancel01, label: context.uiStrings.close, danger: true, onTap: _close),
         ]),
       ]),
     );

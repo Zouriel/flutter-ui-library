@@ -14,10 +14,10 @@ import '../core/fonts.dart';
 TextStyle? uiFontPreviewStyle(BuildContext context, String? family, {String? package}) {
   final f = family?.trim() ?? '';
   if (f.isEmpty) return null;
-  final base = context.uiText.body.fontFamily;
+  final body = context.uiText.body;
   return TextStyle(
     fontFamily: package == null || package.isEmpty ? f : 'packages/$package/$f',
-    fontFamilyFallback: [?base],
+    fontFamilyFallback: [?body.fontFamily, ...?body.fontFamilyFallback],
   );
 }
 
@@ -46,7 +46,7 @@ class UiListboxPanel extends StatefulWidget {
     this.maxHeight = 240,
     this.multiselect = false,
     this.semanticLabel,
-    this.emptyText = 'No results',
+    this.emptyText,
   });
 
   final List<UiListboxItem> items;
@@ -57,7 +57,8 @@ class UiListboxPanel extends StatefulWidget {
   final double maxHeight;
   final bool multiselect;
   final String? semanticLabel;
-  final String emptyText;
+  /// [UiStrings.noResults] when null.
+  final String? emptyText;
 
   @override
   State<UiListboxPanel> createState() => _UiListboxPanelState();
@@ -178,7 +179,7 @@ class _UiListboxPanelState extends State<UiListboxPanel> {
         child: widget.items.isEmpty
             ? Padding(
                 padding: EdgeInsets.all(t.space3),
-                child: Text(widget.emptyText, style: ty.caption.copyWith(height: 1.35)),
+                child: Text(widget.emptyText ?? context.uiStrings.noResults, style: ty.caption.copyWith(height: 1.35)),
               )
             : ClipRRect(
                 borderRadius: BorderRadius.circular(theme.radius()),

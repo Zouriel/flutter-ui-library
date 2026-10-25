@@ -33,7 +33,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
   final UiToastController _toasts = UiToastController();
   final UiSnackbarController _snacks = UiSnackbarController();
   final OverlayPortalController _toastLayer = OverlayPortalController();
-  UiToastPosition _toastPos = UiToastPosition.bottomRight;
+  UiToastPosition _toastPos = UiToastPosition.bottomEnd;
   String _menuChoice = 'nothing yet';
   String _contextChoice = 'nothing yet';
   String _modalResult = 'not opened';
@@ -297,7 +297,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
               label: 'Chats (fixed header and footer)',
               onPressed: () => showUiDrawer<void>(
                 context: context,
-                side: Directionality.of(context) == TextDirection.rtl ? UiDrawerSide.right : UiDrawerSide.left,
+                side: UiDrawerSide.start,
                 title: 'Chats',
                 headerBuilder: (context) => UiButton(label: 'New chat', block: true, icon: const UiIcon(HugeIcons.strokeRoundedAdd01), onPressed: () => Navigator.pop(context)),
                 bodyBuilder: (context, controller) => ListView.builder(
@@ -350,7 +350,7 @@ showUiDrawer<void>(
             ApiRow('bodyBuilder', 'UiScrollBodyBuilder?', '(context, ScrollController) → a body that scrolls itself, such as a paging ListView; pad it with UiDrawer.bodyPadding(context). (0.41)'),
             ApiRow('headerBuilder / footerBuilder', 'WidgetBuilder?', 'Fixed above / below the body (the web [drawer-header] / [drawer-footer]); only the body scrolls. Hairline under the header / over the footer while the body is scrolled out of sight on that side. (0.41)'),
             ApiRow('UiDrawer.header / footer / bodyBuilder', 'Widget? / UiScrollBodyBuilder?', 'The same on the widget; UiDrawerPeek has headerBuilder / footerBuilder.'),
-            ApiRow('side', 'UiDrawerSide', 'left, right, top, bottom.', def: 'right'),
+            ApiRow('side', 'UiDrawerSide', 'left, right, top, bottom; start / end (0.46.0) follow the text direction: start is the left in LTR and the right in RTL, and the drawer slides in from there.', def: 'right'),
             ApiRow('title', 'String?', 'Header title, also the accessible name. Without it there is no header or close button.'),
             ApiRow('closeOnBackdrop / closeOnEscape', 'bool', 'As for the modal.', def: 'true'),
             ApiRow('glass / radius', 'bool?', 'Frosted surface / rounded inner corners; default to UiConfig.'),
@@ -558,7 +558,7 @@ toasts.show('Hi', duration: Duration.zero); // stays until dismissed
 toasts.show('Layer deleted', action: UiToastAction(label: 'Undo', run: undo));''',
           api: const [
             ApiRow('host: controller', 'UiToastController', 'The queue it shows.'),
-            ApiRow('host: position', 'UiToastPosition', 'topRight, topLeft, topCenter, bottomRight, bottomLeft, bottomCenter. Toasts slide in from that side.', def: 'bottomRight'),
+            ApiRow('host: position', 'UiToastPosition', 'topRight, topLeft, topCenter, bottomRight, bottomLeft, bottomCenter, and (0.46.0) topStart, topEnd, bottomStart, bottomEnd, which follow the text direction. Toasts slide in from that side.', def: 'bottomEnd'),
             ApiRow('host: child', 'Widget?', 'What the toasts float over. Without it the host is just the toast layer.'),
             ApiRow('host: textStyle', 'TextStyle?', "Merged over every toast's title, message and action label, kept as given: an app font, e.g. TextStyle(fontFamilyFallback: ['Faruma']) so a Dhivehi name never shows as boxes (0.44.2).", def: 'null'),
           ],

@@ -49,10 +49,11 @@ class UiAlert extends StatelessWidget {
         child: Container(
         decoration: BoxDecoration(
           color: t.surface,
-          border: Border(
-            left: BorderSide(color: c, width: 3),
+          // The tone edge is on the start side: the right in RTL.
+          border: BorderDirectional(
+            start: BorderSide(color: c, width: 3),
             top: BorderSide(color: t.border),
-            right: BorderSide(color: t.border),
+            end: BorderSide(color: t.border),
             bottom: BorderSide(color: t.border),
           ),
         ),
@@ -106,13 +107,15 @@ class UiAlert extends StatelessWidget {
 
 /// `ui-progress-bar`: determinate when [value] (0–100) is set, otherwise indeterminate.
 class UiProgressBar extends StatefulWidget {
-  const UiProgressBar({super.key, this.value, this.tone = UiStatus.primary, this.label = 'Progress'});
+  const UiProgressBar({super.key, this.value, this.tone = UiStatus.primary, this.label});
 
   final double? value;
 
   /// Fill colour. Neutral uses the muted text colour, which keeps 3:1 against the track.
   final UiStatus tone;
-  final String label;
+
+  /// The name read out; [UiStrings.progress] when null.
+  final String? label;
 
   @override
   State<UiProgressBar> createState() => _UiProgressBarState();
@@ -155,7 +158,7 @@ class _UiProgressBarState extends State<UiProgressBar> with SingleTickerProvider
     final fill = widget.tone == UiStatus.neutral ? t.progressNeutral : widget.tone.color(t);
     final v = widget.value?.clamp(0, 100).toDouble();
     return Semantics(
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.progress,
       value: v == null ? null : '${v.round()}%',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(t.radiusPill),

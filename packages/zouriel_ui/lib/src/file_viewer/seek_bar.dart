@@ -22,7 +22,7 @@ class UiSeekBar extends StatefulWidget {
     this.trackColor,
     this.bufferColor,
     this.fillColor,
-    this.label = 'Seek',
+    this.label,
   });
 
   final Duration position;
@@ -35,7 +35,8 @@ class UiSeekBar extends StatefulWidget {
 
   /// Colours; the defaults are the themed track and primary fill.
   final Color? trackColor, bufferColor, fillColor;
-  final String label;
+  /// [UiStrings.seek] when null.
+  final String? label;
 
   @override
   State<UiSeekBar> createState() => _UiSeekBarState();
@@ -76,7 +77,7 @@ class _UiSeekBarState extends State<UiSeekBar> {
 
     return Semantics(
       slider: true,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.seek,
       value: '${uiFormatMediaTime(widget.position)} of $total',
       increasedValue: '${uiFormatMediaTime(widget.position + widget.step > widget.duration ? widget.duration : widget.position + widget.step)} of $total',
       decreasedValue: '${uiFormatMediaTime(widget.position - widget.step < Duration.zero ? Duration.zero : widget.position - widget.step)} of $total',

@@ -148,7 +148,7 @@ class _UiVideoPlayerState extends State<UiVideoPlayer> with _PlayerHost<UiVideoP
     final ratio = v.isInitialized && v.aspectRatio > 0 ? v.aspectRatio : 16 / 9;
 
     final stage = Semantics(
-      label: 'Video',
+      label: context.uiStrings.video,
       onTap: togglePlay,
       child: GestureDetector(
         onTap: togglePlay,
@@ -209,7 +209,7 @@ class _Controls extends StatelessWidget {
       child: Row(spacing: uiTouchPlatform(context) ? 0 : t.space1, children: [
         UiIconButton(
           icon: UiIcon(v.isPlaying ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay),
-          label: v.isPlaying ? 'Pause' : 'Play',
+          label: v.isPlaying ? context.uiStrings.pause : context.uiStrings.play,
           size: UiSize.sm,
           onPressed: ready ? host.togglePlay : null,
         ),
@@ -394,7 +394,7 @@ class _UiAudioPlayerState extends State<UiAudioPlayer> with _PlayerHost<UiAudioP
           final controls = Row(spacing: t.space2, children: [
             UiIconButton(
               icon: UiIcon(v.isPlaying ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay),
-              label: v.isPlaying ? 'Pause' : 'Play',
+              label: v.isPlaying ? context.uiStrings.pause : context.uiStrings.play,
               round: true,
               variant: UiButtonVariant.primary,
               onPressed: ready ? togglePlay : null,

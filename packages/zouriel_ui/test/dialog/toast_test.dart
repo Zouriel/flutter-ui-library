@@ -126,9 +126,10 @@ void main() {
         final r = tester.getRect(_toast.last);
         expect(r.width, 380 - 32);
         switch (p) {
-          case UiToastPosition.topRight || UiToastPosition.bottomRight:
+          // Left to right here: start is the left, end the right.
+          case UiToastPosition.topRight || UiToastPosition.bottomRight || UiToastPosition.topEnd || UiToastPosition.bottomEnd:
             expect(r.right, 390 - 16);
-          case UiToastPosition.topLeft || UiToastPosition.bottomLeft:
+          case UiToastPosition.topLeft || UiToastPosition.bottomLeft || UiToastPosition.topStart || UiToastPosition.bottomStart:
             expect(r.left, 16);
           case UiToastPosition.topCenter || UiToastPosition.bottomCenter:
             expect(r.center.dx, 195);

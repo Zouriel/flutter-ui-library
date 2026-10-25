@@ -161,10 +161,10 @@ class _Chevron extends StatelessWidget {
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : const []),
             child: Center(
               child: AnimatedRotation(
-                turns: open ? 0.25 : 0,
+                turns: open ? (Directionality.of(context) == TextDirection.rtl ? -0.25 : 0.25) : 0,
                 duration: context.uiAnimate ? t.motionFast : Duration.zero,
                 curve: t.easeStandard,
-                child: UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, strokeWidth: 2, color: s.hovered ? t.text : t.textMuted),
+                child: UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, strokeWidth: 2, matchTextDirection: true, color: s.hovered ? t.text : t.textMuted),
               ),
             ),
           ),

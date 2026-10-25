@@ -32,14 +32,15 @@ class UiSegmentedOption<T> {
 /// On phones each option's touch area is 48dp tall (and at least 48 wide) while the track keeps its
 /// compact look.
 class UiSegmented<T> extends StatefulWidget {
-  const UiSegmented({super.key, required this.options, required this.value, required this.onChanged, this.label = 'Options', this.size = UiSize.md});
+  const UiSegmented({super.key, required this.options, required this.value, required this.onChanged, this.label, this.size = UiSize.md});
 
   final List<UiSegmentedOption<T>> options;
   final T? value;
   final ValueChanged<T>? onChanged;
 
   /// The group's accessible name.
-  final String label;
+  /// The group's name; [UiStrings.options] when null.
+  final String? label;
   final UiSize size;
 
   @override
@@ -116,7 +117,7 @@ class _UiSegmentedState<T> extends State<UiSegmented<T>> with UiRovingFocus<UiSe
     return Semantics(
       container: true,
       role: SemanticsRole.radioGroup,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.options,
       explicitChildNodes: true,
       child: rovingKeys(onKey: _onKey, child: fitted),
     );

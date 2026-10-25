@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 
+import 'strings.dart';
 import 'tokens.dart';
+
+export 'strings.dart';
 
 export 'tokens.dart' show UiGradientSpec, UiRingShadow, UiThemeName, UiTokens, uiThemeTokens, uiCompactDensityTokens, UiCompactDensity;
 
@@ -48,6 +51,7 @@ class UiConfig {
     this.fontFamily,
     this.strings = const UiStrings(),
     this.density = UiDensity.comfortable,
+    this.fontFamilyFallback,
   });
 
   /// Frosted, translucent surfaces on components that support them (navbar, bottom nav, cards).
@@ -69,97 +73,30 @@ class UiConfig {
   /// screen width; with a bare [UiTheme], pass [UiThemeData.new]'s `compact`.
   final UiDensity density;
 
-  UiConfig copyWith({bool? glass, bool? radius, bool? animations, String? fontFamily, UiStrings? strings, UiDensity? density}) => UiConfig(
+  /// Fonts for the characters the theme's font lacks (0.46.0), the app's own families, e.g.
+  /// `['Faruma', 'Noto Sans Thaana']` so Thaana draws in MV Faruma while Latin keeps the theme font.
+  /// Added to every library text style (buttons, inputs, toasts, dialogs, tabs, chips…). On the web
+  /// the app puts the same fonts in `--ui-font-default` (`provideUiConfig({ defaultFont })`).
+  final List<String>? fontFamilyFallback;
+
+  UiConfig copyWith({
+    bool? glass,
+    bool? radius,
+    bool? animations,
+    String? fontFamily,
+    UiStrings? strings,
+    UiDensity? density,
+    List<String>? fontFamilyFallback,
+  }) =>
+      UiConfig(
         glass: glass ?? this.glass,
         radius: radius ?? this.radius,
         animations: animations ?? this.animations,
         fontFamily: fontFamily ?? this.fontFamily,
         strings: strings ?? this.strings,
         density: density ?? this.density,
+        fontFamilyFallback: fontFamilyFallback ?? this.fontFamilyFallback,
       );
-}
-
-/// The library's own words: names of icon-only buttons and a few default labels (the web
-/// `UiStrings`, same keys). English by default; give the app's language with
-/// `UiConfig(strings: UiStrings(close: 'ބަންދުކުރޭ', …))` (the rest stay English). Read them with
-/// `context.uiStrings`. Text from the app (titles, labels, items) is never here.
-@immutable
-class UiStrings {
-  const UiStrings({
-    this.close = 'Close',
-    this.dismiss = 'Dismiss',
-    this.clear = 'Clear',
-    this.clearAll = 'Clear all',
-    this.clearSearch = 'Clear search',
-    this.previousPage = 'Previous page',
-    this.nextPage = 'Next page',
-    this.previousMonth = 'Previous month',
-    this.nextMonth = 'Next month',
-    this.chooseDate = 'Choose a date',
-    this.moreActions = 'More actions',
-    this.uploadLabel = 'Tap to upload',
-    this.uploadHint = 'or drag & drop',
-    this.holdHint = 'Press and hold to confirm',
-    this.confirmTitle = 'Are you sure?',
-    this.confirm = 'Confirm',
-    this.cancel = 'Cancel',
-    this.zoomIn = 'Zoom in',
-    this.zoomOut = 'Zoom out',
-    this.placePinAtCentre = 'Place the pin at the centre',
-    this.mapLocate = 'Show my location',
-    this.mapLocationOff = 'Location is off',
-    this.mapYourLocation = 'Your location',
-    this.mapOpen = 'Open map',
-    this.mapSearchArea = 'Search area',
-    this.mapRadiusMeters = '{n} m',
-    this.mapRadiusKilometers = '{n} km',
-    this.googleSignIn = 'Sign in with Google',
-    this.googleSignUp = 'Sign up with Google',
-    this.googleContinue = 'Continue with Google',
-    this.googleSignInShort = 'Sign in',
-    this.sidebarToggle = 'Toggle navigation',
-    this.sidebarClose = 'Close navigation',
-    this.sidebarLabel = 'Navigation',
-  });
-
-  /// Close buttons of modal, drawer, bottom sheet, lightbox.
-  final String close;
-
-  /// Dismiss buttons of toast, alert, hint.
-  final String dismiss;
-  final String clear, clearAll, clearSearch;
-  final String previousPage, nextPage, previousMonth, nextMonth, chooseDate;
-
-  /// The split button's menu button.
-  final String moreActions;
-
-  /// File upload: the action (in bold; "Tap" on a phone, where the web says "Click") and what
-  /// follows it when drops are enabled.
-  final String uploadLabel, uploadHint;
-
-  /// Hold button: what holding does (read with the button), and its confirm dialog.
-  final String holdHint, confirmTitle, confirm, cancel;
-
-  /// Map: the zoom buttons, and placing the pin at the centre (keyboard / screen reader).
-  final String zoomIn, zoomOut, placePinAtCentre;
-
-  /// Map: the "my location" button, its off state (location off or denied), and the "you are here" dot.
-  final String mapLocate, mapLocationOff, mapYourLocation;
-
-  /// Map preview (0.43.0): the still map's one button, which opens the full map.
-  final String mapOpen;
-
-  /// Map search area (0.44.0): the radius handle's name, and the radius in metres and kilometres
-  /// (`{n}` is the number, see `uiMapFormatRadius`).
-  final String mapSearchArea, mapRadiusMeters, mapRadiusKilometers;
-
-  /// Google sign-in button: Google's approved wordings (translations must keep the meaning:
-  /// signing in to this app with a Google account, not creating one).
-  final String googleSignIn, googleSignUp, googleContinue, googleSignInShort;
-
-  /// Sidebar layout: the menu button, the drawer's close control (the backdrop, for screen
-  /// readers) and the drawer's name.
-  final String sidebarToggle, sidebarClose, sidebarLabel;
 }
 
 /// The type scale from the web `ui-text` variants, built from a theme's tokens.
@@ -179,17 +116,19 @@ class UiTypography {
     required this.quote,
   });
 
-  factory UiTypography.from(UiTokens t, {String? fontFamily}) {
+  factory UiTypography.from(UiTokens t, {String? fontFamily, List<String>? fontFamilyFallback}) {
     final family = fontFamily ?? t.fontDefault ?? uiDefaultFamily;
+    // The bundled families are named with their package prefix rather than through `package:`, which
+    // would prefix the app's own fallback fonts too ('Faruma' -> 'packages/zouriel_ui/Faruma').
     final base = TextStyle(
-      fontFamily: family,
-      package: uiFontPackage,
+      fontFamily: 'packages/$uiFontPackage/$family',
+      fontFamilyFallback: fontFamilyFallback,
       color: t.text,
       fontSize: t.fontSizeMd,
       height: 1.35,
       decoration: TextDecoration.none,
     );
-    final display = base.copyWith(fontFamily: t.fontDisplay ?? family, package: uiFontPackage);
+    final display = base.copyWith(fontFamily: 'packages/$uiFontPackage/${t.fontDisplay ?? family}');
     TextStyle sized(TextStyle s, double size, FontWeight w, {double height = 1.35, double tracking = 0}) =>
         s.copyWith(fontSize: size, fontWeight: w, height: height, letterSpacing: tracking * size);
     return UiTypography(
@@ -204,8 +143,7 @@ class UiTypography {
       caption: base.copyWith(fontSize: t.fontSizeSm, color: t.textMuted),
       label: base.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w600),
       code: base.copyWith(
-        fontFamily: t.fontMono ?? uiDefaultMonoFamily,
-        package: uiFontPackage,
+        fontFamily: 'packages/$uiFontPackage/${t.fontMono ?? uiDefaultMonoFamily}',
         fontSize: t.fontSizeMd * 0.88,
       ),
       quote: base.copyWith(color: t.textSecondary, height: 1.45, fontStyle: FontStyle.italic),
@@ -231,7 +169,7 @@ class UiThemeData {
       baseTokens: base,
       config: config,
       compact: isCompact,
-      typography: UiTypography.from(drawn, fontFamily: config.fontFamily),
+      typography: UiTypography.from(drawn, fontFamily: config.fontFamily, fontFamilyFallback: config.fontFamilyFallback),
     );
   }
 
@@ -277,16 +215,19 @@ class UiThemeData {
 
   /// For animated theme changes: tokens and type interpolate; the name switches half-way.
   static UiThemeData lerp(UiThemeData a, UiThemeData b, double t) {
-    if (t <= 0) return a;
     if (t >= 1) return b;
+    if (t <= 0) {
+      return identical(a.config.strings, b.config.strings) ? a : UiThemeData._raw(name: a.name, tokens: a.tokens, baseTokens: a.baseTokens, config: a.config.copyWith(strings: b.config.strings), compact: a.compact, typography: a.typography);
+    }
     final tokens = a.tokens.lerp(b.tokens, t);
     return UiThemeData._raw(
       name: t < 0.5 ? a.name : b.name,
       tokens: tokens,
       baseTokens: a.baseTokens.lerp(b.baseTokens, t),
-      config: t < 0.5 ? a.config : b.config,
+      // Words switch at once (a language toggle), the rest of the config half-way.
+      config: t < 0.5 ? a.config.copyWith(strings: b.config.strings) : b.config,
       compact: t < 0.5 ? a.compact : b.compact,
-      typography: UiTypography.from(tokens, fontFamily: (t < 0.5 ? a.config : b.config).fontFamily),
+      typography: UiTypography.from(tokens, fontFamily: (t < 0.5 ? a.config : b.config).fontFamily, fontFamilyFallback: (t < 0.5 ? a.config : b.config).fontFamilyFallback),
     );
   }
 
@@ -348,6 +289,10 @@ class _UiThemeDataTween extends Tween<UiThemeData> {
   _UiThemeDataTween({super.begin});
   @override
   UiThemeData lerp(double t) => UiThemeData.lerp(begin!, end!, t);
+
+  // Tween.transform returns begin untouched at 0; lerp gives it the new words already.
+  @override
+  UiThemeData transform(double t) => lerp(t);
 }
 
 class _AnimatedUiThemeState extends AnimatedWidgetBaseState<AnimatedUiTheme> {
@@ -435,6 +380,11 @@ class UiThemeController extends ChangeNotifier {
     _config = config;
     notifyListeners();
   }
+
+  /// Switches the library's built-in words at runtime (0.46.0), e.g. `setStrings(UiStrings.dv)` for a
+  /// Dhivehi toggle: everything reading `context.uiStrings` rebuilds (the web
+  /// `UiStringsService.set`).
+  void setStrings(UiStrings strings) => setConfig(_config.copyWith(strings: strings));
 
   /// Flips between the Winter dark and light themes (from any other theme it goes to dark).
   void toggle() => set(_theme == UiThemeName.dark ? UiThemeName.light : UiThemeName.dark);

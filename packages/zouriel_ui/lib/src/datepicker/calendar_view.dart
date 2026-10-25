@@ -333,8 +333,8 @@ class UiCalendarViewState extends State<UiCalendarView> {
 
     final (prevLabel, nextLabel) = switch (_mode) {
       _Mode.days => (context.uiStrings.previousMonth, context.uiStrings.nextMonth),
-      _Mode.months => ('Previous year', 'Next year'),
-      _Mode.years => ('Previous years', 'Next years'),
+      _Mode.months => (context.uiStrings.previousYear, context.uiStrings.nextYear),
+      _Mode.years => (context.uiStrings.previousYears, context.uiStrings.nextYears),
     };
 
     Widget nav(String label, int delta) => UiInteractive(
@@ -378,10 +378,10 @@ class UiCalendarViewState extends State<UiCalendarView> {
 
     final heading = switch (_mode) {
       _Mode.days => Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
-          headingButton(months[_month], _showMonths, 'Choose month, ${months[_month]}'),
-          headingButton('$_year', _showYears, 'Choose year, $_year'),
+          headingButton(months[_month], _showMonths, uiFormatString(context.uiStrings.chooseMonth, {'label': months[_month]})),
+          headingButton('$_year', _showYears, uiFormatString(context.uiStrings.chooseYear, {'label': _year})),
         ]),
-      _Mode.months => headingButton('$_year', _showYears, 'Choose year, $_year'),
+      _Mode.months => headingButton('$_year', _showYears, uiFormatString(context.uiStrings.chooseYear, {'label': _year})),
       _Mode.years => Semantics(liveRegion: true, child: Text(yearRange, style: small.copyWith(fontWeight: FontWeight.w600))),
     };
 
@@ -398,7 +398,7 @@ class UiCalendarViewState extends State<UiCalendarView> {
         body = _grid(
           focusNode: _monthFocus,
           onKey: _onMonthKey,
-          label: 'Months of $_year',
+          label: uiFormatString(context.uiStrings.monthsOf, {'n': _year}),
           cells: [
             for (var m = 0; m < 12; m++)
               _GridCell(
@@ -417,7 +417,7 @@ class UiCalendarViewState extends State<UiCalendarView> {
         body = _grid(
           focusNode: _yearFocus,
           onKey: _onYearKey,
-          label: 'Years $yearRange',
+          label: uiFormatString(context.uiStrings.yearsRange, {'n': yearRange}),
           cells: [
             for (var y = pageStart; y < pageStart + 12; y++)
               _GridCell(text: '$y', label: '$y', selected: y == _year, tab: y == _gridYear, onTap: () => _pickYear(y)),
@@ -496,8 +496,9 @@ class UiCalendarViewState extends State<UiCalendarView> {
   Widget _days(BuildContext context, double cell, Color hoverFill, TextStyle small) {
     final theme = context.uiTheme;
     final t = theme.tokens;
-    final weekdays = uiWeekdayNames(context);
-    final lead = DateTime(_year, _month + 1, 1).weekday % 7;
+    // Columns start on the locale's (or UiStrings') first weekday (0.46.0).
+    final weekdays = uiWeekdayColumns(context);
+    final lead = (DateTime(_year, _month + 1, 1).weekday % 7 - uiFirstDayOfWeek(context) + 7) % 7;
     final count = uiDaysInMonth(_year, _month);
     final todayIso = uiIsoDate(uiToday());
     final tab = _tabDay;
@@ -530,7 +531,7 @@ class UiCalendarViewState extends State<UiCalendarView> {
         builder: (hovered) => Semantics(
           button: true,
           label: label,
-          hint: today ? 'Today' : null,
+          hint: today ? context.uiStrings.today : null,
           selected: selected || inRange,
           enabled: canPick,
           onTap: canPick ? () => _pick(iso) : null,

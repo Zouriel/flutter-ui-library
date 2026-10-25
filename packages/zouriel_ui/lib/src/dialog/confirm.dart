@@ -12,10 +12,10 @@ import 'route.dart';
 /// Escape, the backdrop or the back button), like the web where `(cancel)` fires only for Cancel.
 Future<bool?> showUiConfirm({
   required BuildContext context,
-  String title = 'Are you sure?',
+  String? title,
   String message = '',
-  String confirmLabel = 'Confirm',
-  String cancelLabel = 'Cancel',
+  String? confirmLabel,
+  String? cancelLabel,
   bool destructive = false,
   bool useRootNavigator = true,
 }) {
@@ -23,7 +23,7 @@ Future<bool?> showUiConfirm({
     context,
     transitions: uiScaleTransition,
     builder: (context) => UiConfirmDialog(
-      title: title,
+      title: title ?? context.uiStrings.confirmTitle,
       message: message,
       confirmLabel: confirmLabel,
       cancelLabel: cancelLabel,
@@ -42,33 +42,34 @@ class UiConfirmDialog extends StatelessWidget {
     super.key,
     required this.onConfirm,
     required this.onCancel,
-    this.title = 'Are you sure?',
+    this.title,
     this.message = '',
-    this.confirmLabel = 'Confirm',
-    this.cancelLabel = 'Cancel',
+    this.confirmLabel,
+    this.cancelLabel,
     this.destructive = false,
   });
 
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
-  final String title;
+  /// [UiStrings.confirmTitle], [UiStrings.confirm] and [UiStrings.cancel] when null.
+  final String? title;
   final String message;
-  final String confirmLabel;
-  final String cancelLabel;
+  final String? confirmLabel;
+  final String? cancelLabel;
   final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final cancel = UiButton(label: cancelLabel, variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: onCancel);
+    final cancel = UiButton(label: cancelLabel ?? context.uiStrings.cancel, variant: UiButtonVariant.outline, size: UiSize.sm, onPressed: onCancel);
     final confirm = UiButton(
-      label: confirmLabel,
+      label: confirmLabel ?? context.uiStrings.confirm,
       variant: destructive ? UiButtonVariant.destructive : UiButtonVariant.primary,
       size: UiSize.sm,
       onPressed: onConfirm,
     );
     return UiModal(
-      title: title,
+      title: title ?? context.uiStrings.confirmTitle,
       size: UiModalSize.sm,
       footer: destructive
           ? Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [cancel, confirm])

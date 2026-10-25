@@ -86,10 +86,10 @@ class UiChip extends StatelessWidget {
     final rounded = radius ?? theme.config.radius;
     final style = context.uiText.body.copyWith(fontSize: t.fontSizeSm, color: t.text, height: 1.35);
     final removable = onRemove != null;
-    // The 16px remove circle sits 4px from the chip's right edge.
+    // The 16px remove circle sits 4px from the chip's end edge (the left in RTL).
     final chip = Container(
       height: t.sizeSm,
-      padding: EdgeInsets.only(left: t.space3, right: removable ? t.space1 : t.space3),
+      padding: EdgeInsetsDirectional.only(start: t.space3, end: removable ? t.space1 : t.space3),
       decoration: BoxDecoration(
         color: toned ? c.withValues(alpha: 0.22) : t.surfaceRaised,
         border: Border.all(color: toned ? c : t.border),
@@ -142,7 +142,7 @@ class _ChipRemove extends StatelessWidget {
     final t = context.ui;
     return UiInteractive(
       onTap: onTap,
-      semanticLabel: 'Remove $label',
+      semanticLabel: uiFormatString(context.uiStrings.remove, {'label': label}),
       excludeChildSemantics: true,
       pressScale: false,
       padTouchTarget: false,
@@ -278,8 +278,8 @@ class UiAvatarGroup extends StatelessWidget {
       width: dim + (items.length - 1) * (dim - overlap),
       child: Stack(children: [
         for (var i = 0; i < items.length; i++)
-          Positioned(
-            left: i * (dim - overlap),
+          PositionedDirectional(
+            start: i * (dim - overlap),
             // A ring in the background colour separates the overlapping circles.
             child: DecoratedBox(
               decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [BoxShadow(color: t.bg, spreadRadius: 2)]),

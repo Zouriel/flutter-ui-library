@@ -14,8 +14,8 @@ class UiMeter extends StatelessWidget {
     this.dangerAt,
     this.label,
     this.valueText,
-    this.warnText = 'Getting large',
-    this.dangerText = 'Over the limit',
+    this.warnText,
+    this.dangerText,
   });
 
   final double value;
@@ -26,8 +26,9 @@ class UiMeter extends StatelessWidget {
 
   /// How the value is written, e.g. "212 KB of 800 KB". Defaults to "value / max".
   final String? valueText;
-  final String warnText;
-  final String dangerText;
+  /// [UiStrings.meterWarn] / [UiStrings.meterDanger] when null.
+  final String? warnText;
+  final String? dangerText;
 
   /// The current level: success, warning or danger.
   UiMeterLevel get level {
@@ -44,7 +45,7 @@ class UiMeter extends StatelessWidget {
     final ty = context.uiText;
     final lvl = level;
     final tone = switch (lvl) { UiMeterLevel.ok => t.success, UiMeterLevel.warning => t.warning, UiMeterLevel.danger => t.danger };
-    final status = switch (lvl) { UiMeterLevel.ok => null, UiMeterLevel.warning => warnText, UiMeterLevel.danger => dangerText };
+    final status = switch (lvl) { UiMeterLevel.ok => null, UiMeterLevel.warning => warnText ?? context.uiStrings.meterWarn, UiMeterLevel.danger => dangerText ?? context.uiStrings.meterDanger };
     final shown = valueText ?? '${_num(value)} / ${_num(max)}';
     final m = max <= 0 ? 1 : max;
     final pct = (value / m).clamp(0.0, 1.0);
@@ -53,7 +54,7 @@ class UiMeter extends StatelessWidget {
 
     return Semantics(
       container: true,
-      label: label ?? 'Meter',
+      label: label ?? context.uiStrings.meter,
       value: status == null ? shown : '$shown, $status',
       child: ExcludeSemantics(
         child: ConstrainedBox(
@@ -93,8 +94,8 @@ class UiMeter extends StatelessWidget {
                           decoration: BoxDecoration(color: tone, borderRadius: BorderRadius.circular(t.radiusPill)),
                         ),
                         if (warnAt != null)
-                          Positioned(
-                            left: (box.maxWidth * (warnAt! / m).clamp(0.0, 1.0) - 1).clamp(0.0, box.maxWidth - 2),
+                          PositionedDirectional(
+                            start: (box.maxWidth * (warnAt! / m).clamp(0.0, 1.0) - 1).clamp(0.0, box.maxWidth - 2),
                             top: 0,
                             bottom: 0,
                             width: 2,

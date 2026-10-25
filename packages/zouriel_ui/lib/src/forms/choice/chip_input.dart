@@ -22,7 +22,7 @@ class UiChipInput extends StatefulWidget {
     super.key,
     required this.value,
     required this.onChanged,
-    this.placeholder = 'Add tag…',
+    this.placeholder,
     this.label,
     this.invalid = false,
     this.radius,
@@ -31,7 +31,9 @@ class UiChipInput extends StatefulWidget {
 
   final List<String> value;
   final ValueChanged<List<String>>? onChanged;
-  final String placeholder;
+
+  /// [UiStrings.addTag] when null.
+  final String? placeholder;
 
   /// Accessible name for the text field when no visible label names it.
   final String? label;
@@ -153,7 +155,7 @@ class _UiChipInputState extends State<UiChipInput> {
                     : t.focusRing,
           ),
           child: LayoutBuilder(builder: (context, c) {
-            final measure = TextPainter(text: TextSpan(text: _typed.isEmpty ? (showPlaceholder ? widget.placeholder : '') : _typed, style: style), textDirection: Directionality.of(context), maxLines: 1)
+            final measure = TextPainter(text: TextSpan(text: _typed.isEmpty ? (showPlaceholder ? (widget.placeholder ?? context.uiStrings.addTag) : '') : _typed, style: style), textDirection: Directionality.of(context), maxLines: 1)
               ..layout();
             final entryW = (measure.width + t.space2 * 2 + 4).clamp(80.0, c.maxWidth);
             measure.dispose();
@@ -172,7 +174,7 @@ class _UiChipInputState extends State<UiChipInput> {
                       alignment: AlignmentDirectional.centerStart,
                       children: [
                         if (showPlaceholder)
-                          IgnorePointer(child: ExcludeSemantics(child: Text(widget.placeholder, maxLines: 1, style: style.copyWith(color: t.textMuted)))),
+                          IgnorePointer(child: ExcludeSemantics(child: Text(widget.placeholder ?? context.uiStrings.addTag, maxLines: 1, style: style.copyWith(color: t.textMuted)))),
                         UiBareInput(
                           controller: _ctrl,
                           focusNode: _focus,

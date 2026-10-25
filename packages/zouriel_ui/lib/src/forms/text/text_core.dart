@@ -558,22 +558,22 @@ class _HandlePainter extends CustomPainter {
   bool shouldRepaint(_HandlePainter old) => old.color != color;
 }
 
-String _menuLabel(ContextMenuButtonItem item) => item.label ?? switch (item.type) {
-      ContextMenuButtonType.cut => 'Cut',
-      ContextMenuButtonType.copy => 'Copy',
-      ContextMenuButtonType.paste => 'Paste',
-      ContextMenuButtonType.selectAll => 'Select all',
-      ContextMenuButtonType.delete => 'Delete',
-      ContextMenuButtonType.lookUp => 'Look up',
-      ContextMenuButtonType.searchWeb => 'Search',
-      ContextMenuButtonType.share => 'Share',
-      ContextMenuButtonType.liveTextInput => 'Scan text',
+String _menuLabel(BuildContext context, ContextMenuButtonItem item) => item.label ?? switch (item.type) {
+      ContextMenuButtonType.cut => context.uiStrings.cut,
+      ContextMenuButtonType.copy => context.uiStrings.copy,
+      ContextMenuButtonType.paste => context.uiStrings.paste,
+      ContextMenuButtonType.selectAll => context.uiStrings.selectAll,
+      ContextMenuButtonType.delete => context.uiStrings.delete,
+      ContextMenuButtonType.lookUp => context.uiStrings.lookUp,
+      ContextMenuButtonType.searchWeb => context.uiStrings.searchWeb,
+      ContextMenuButtonType.share => context.uiStrings.share,
+      ContextMenuButtonType.liveTextInput => context.uiStrings.scanText,
       ContextMenuButtonType.custom => '',
     };
 
 /// The copy / cut / paste / select-all menu shown over a selection, as a raised themed bar.
 Widget uiTextContextMenu(BuildContext context, EditableTextState state) {
-  final items = state.contextMenuButtonItems.where((i) => _menuLabel(i).isNotEmpty).toList();
+  final items = state.contextMenuButtonItems.where((i) => _menuLabel(context, i).isNotEmpty).toList();
   if (items.isEmpty) return const SizedBox.shrink();
   return UiTextContextMenu(anchors: state.contextMenuAnchors, items: items);
 }
@@ -606,7 +606,7 @@ class UiTextContextMenu extends StatelessWidget {
           for (final item in items)
             UiInteractive(
               onTap: item.onPressed,
-              semanticLabel: _menuLabel(item),
+              semanticLabel: _menuLabel(context, item),
               excludeChildSemantics: true,
               builder: (context, s) => Container(
                 height: uiTouchPlatform(context) ? 40 : t.sizeMd,
@@ -617,7 +617,7 @@ class UiTextContextMenu extends StatelessWidget {
                   borderRadius: BorderRadius.circular(context.uiTheme.radius(t.radiusXs)),
                   boxShadow: s.focused ? t.focusRing : const [],
                 ),
-                child: Text(_menuLabel(item), style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500)),
+                child: Text(_menuLabel(context, item), style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500)),
               ),
             ),
         ],

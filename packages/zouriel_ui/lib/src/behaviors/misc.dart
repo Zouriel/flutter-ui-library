@@ -195,7 +195,7 @@ class _RipplePainter extends CustomPainter {
 /// once focused, the arrow keys: 8px, Shift 32px) reports the new offset through [onChanged],
 /// clamped to [bounds] when given. Pair with [UiResizeHandle] for resizable panels.
 class UiDragMove extends StatefulWidget {
-  const UiDragMove({super.key, required this.child, required this.offset, required this.onChanged, this.bounds, this.label = 'Move', this.onDragEnd});
+  const UiDragMove({super.key, required this.child, required this.offset, required this.onChanged, this.bounds, this.label, this.onDragEnd});
 
   final Widget child;
   final Offset offset;
@@ -205,7 +205,8 @@ class UiDragMove extends StatefulWidget {
   final Rect? bounds;
 
   /// Accessible name for the move handle.
-  final String label;
+  /// [UiStrings.move] when null.
+  final String? label;
   final ValueChanged<Offset>? onDragEnd;
 
   @override
@@ -245,8 +246,8 @@ class _UiDragMoveState extends State<UiDragMove> {
     return Transform.translate(
       offset: widget.offset,
       child: Semantics(
-        label: widget.label,
-        hint: 'Drag, or use the arrow keys',
+        label: widget.label ?? context.uiStrings.move,
+        hint: context.uiStrings.dragHint,
         child: FocusableActionDetector(
           mouseCursor: SystemMouseCursors.move,
           onShowFocusHighlight: (v) => setState(() => _focus = v),

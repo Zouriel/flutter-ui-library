@@ -956,7 +956,7 @@ class _UiSequencerState extends State<UiSequencer> {
                 final step = widget.length * widget.keyStep;
                 return Semantics(
                   slider: true,
-                  label: 'Playhead',
+                  label: context.uiStrings.playhead,
                   value: _playhead.round().toString(),
                   increasedValue: math.min(widget.length, _playhead + step).round().toString(),
                   decreasedValue: math.max(0, _playhead - step).round().toString(),

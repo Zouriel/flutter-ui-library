@@ -588,7 +588,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
             transformAlignment: Alignment.center,
             child: media(),
           ),
-          if (_loading) Center(child: UiSpinner(size: 34, strokeWidth: 2, color: onScrim, label: 'Loading')),
+          if (_loading) Center(child: UiSpinner(size: 34, strokeWidth: 2, color: onScrim)),
           // The one control that is not chrome: a paused clip says so in the middle of itself.
           if (_isVideo && !_playing && !_loading) Center(child: _BigPlay(onTap: _togglePlay)),
         ]),
@@ -617,7 +617,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
             if (_zoomed) _Glass(key: const ValueKey('zoom'), label: '${(_zoom * 100).round()}% · Fit', semanticLabel: 'Reset zoom', onTap: _resetView),
             for (final a in visibleActions)
               _Glass(key: ValueKey('action:${a.id}'), label: a.label, danger: a.danger, onTap: () => widget.onAction?.call(a.id, item!, widget.index)),
-            _Glass(key: const ValueKey('close'), icon: HugeIcons.strokeRoundedCancel01, semanticLabel: 'Close', onTap: _close),
+            _Glass(key: const ValueKey('close'), icon: HugeIcons.strokeRoundedCancel01, semanticLabel: context.uiStrings.close, onTap: _close),
           ]),
         ]),
       );
@@ -629,7 +629,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
           if (_isVideo && cv != null)
             Row(spacing: t.space2, children: [
-              _Glass(icon: _playing ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay, semanticLabel: _playing ? 'Pause' : 'Play', onTap: _togglePlay),
+              _Glass(icon: _playing ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay, semanticLabel: _playing ? context.uiStrings.pause : context.uiStrings.play, onTap: _togglePlay),
               _time(context, cv.position),
               Expanded(
                 child: UiSeekBar(
@@ -648,7 +648,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
               ),
               _time(context, cv.duration),
               _Glass(icon: cv.volume == 0 ? HugeIcons.strokeRoundedVolumeMute01 : HugeIcons.strokeRoundedVolumeHigh, semanticLabel: cv.volume == 0 ? 'Unmute' : 'Mute', onTap: _toggleMute),
-              _Glass(rate: cv.playbackSpeed, semanticLabel: 'Playback speed', onTap: _cycleRate),
+              _Glass(rate: cv.playbackSpeed, semanticLabel: context.uiStrings.playbackSpeed, onTap: _cycleRate),
             ]),
           if (count > 1)
             SizedBox(
@@ -705,8 +705,8 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
                 stage,
                 // Pointer-fine only: on a phone the same move is the swipe.
                 if (count > 1 && !touch && wide && _chrome) ...[
-                  Positioned(left: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowLeft01, semanticLabel: 'Previous', size: 48, onTap: _hasPrevious ? () => _step(-1) : null))),
-                  Positioned(right: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowRight01, semanticLabel: 'Next', size: 48, onTap: _hasNext ? () => _step(1) : null))),
+                  PositionedDirectional(start: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowLeft01, semanticLabel: context.uiStrings.previous, size: 48, onTap: _hasPrevious ? () => _step(-1) : null))),
+                  PositionedDirectional(end: t.space4, top: 0, bottom: 0, child: Center(child: _Glass(icon: HugeIcons.strokeRoundedArrowRight01, semanticLabel: context.uiStrings.next, size: 48, onTap: _hasNext ? () => _step(1) : null))),
                 ],
               ]),
             ),
@@ -818,7 +818,7 @@ class _Glass extends StatelessWidget {
                     ? uiRateLabel(rate!, context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
                     : label != null
                     ? Text(label!, style: context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
-                    : UiIcon(icon!, size: size > 40 ? 22 : 19, strokeWidth: 1.9, color: fg),
+                    : UiIcon(icon!, size: size > 40 ? 22 : 19, strokeWidth: 1.9, color: fg, matchTextDirection: identical(icon, HugeIcons.strokeRoundedArrowLeft01) || identical(icon, HugeIcons.strokeRoundedArrowRight01)),
               ),
               ),
             ),
@@ -838,7 +838,7 @@ class _BigPlay extends StatelessWidget {
     final t = context.ui;
     return UiInteractive(
       onTap: onTap,
-      semanticLabel: 'Play',
+      semanticLabel: context.uiStrings.play,
       excludeChildSemantics: true,
       builder: (context, s) => ClipOval(
         child: BackdropFilter(

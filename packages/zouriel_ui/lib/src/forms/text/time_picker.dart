@@ -173,7 +173,7 @@ class _UiTimePickerState extends State<UiTimePicker> {
       pressScale: false,
       padTouchTarget: false,
       semanticLabel: name,
-      semanticHint: 'Opens a time picker',
+      semanticHint: context.uiStrings.opensTimePicker,
       shortcuts: const {SingleActivator(LogicalKeyboardKey.arrowDown): ActivateIntent()},
       builder: (context, s) => Semantics(
         value: widget.value ?? '',
@@ -206,7 +206,7 @@ class _UiTimePickerState extends State<UiTimePicker> {
         onKeyEvent: _onPanelKey,
         child: Semantics(
           explicitChildNodes: true,
-          label: 'Choose a time',
+          label: context.uiStrings.chooseTime,
           child: Container(
             padding: EdgeInsets.all(t.space1),
             decoration: BoxDecoration(
@@ -218,7 +218,7 @@ class _UiTimePickerState extends State<UiTimePicker> {
             child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
               for (var c = 0; c < (_seconds ? 3 : 2); c++)
                 _TimeColumn(
-                  label: const ['Hours', 'Minutes', 'Seconds'][c],
+                  label: [context.uiStrings.hours, context.uiStrings.minutes, context.uiStrings.seconds][c],
                   values: _values(c),
                   selected: _parts?[c],
                   active: _panelFocus.hasFocus && c == _column,

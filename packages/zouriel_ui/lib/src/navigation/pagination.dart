@@ -30,13 +30,14 @@ List<int> uiPaginationItems(int page, int total, int siblings) {
 /// narrow screen it becomes "previous, Page 3 of 12, next". Buttons are 44px with a 48dp touch area on
 /// touch screens (26px with a mouse).
 class UiPagination extends StatelessWidget {
-  const UiPagination({super.key, required this.page, required this.total, this.onChanged, this.siblings = 1, this.label = 'Pagination'});
+  const UiPagination({super.key, required this.page, required this.total, this.onChanged, this.siblings = 1, this.label});
 
   final int page;
   final int total;
   final ValueChanged<int>? onChanged;
   final int siblings;
-  final String label;
+  /// [UiStrings.pagination] when null.
+  final String? label;
 
   void _go(int p) {
     final clamped = p.clamp(1, math.max(1, total)).toInt();
@@ -70,7 +71,7 @@ class UiPagination extends StatelessWidget {
       container: true,
       explicitChildNodes: true,
       role: SemanticsRole.navigation,
-      label: label,
+      label: label ?? context.uiStrings.pagination,
       child: LayoutBuilder(builder: (context, box) {
         var sib = siblings;
         var items = uiPaginationItems(page, total, sib);
@@ -78,14 +79,14 @@ class UiPagination extends StatelessWidget {
           items = uiPaginationItems(page, total, --sib);
         }
         final compact = box.maxWidth.isFinite && width(items) > box.maxWidth;
-        final prev = _PageButton(dim: dim, semanticLabel: context.uiStrings.previousPage, onTap: page > 1 ? () => _go(page - 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, size: 14, strokeWidth: 2));
-        final next = _PageButton(dim: dim, semanticLabel: context.uiStrings.nextPage, onTap: page < total ? () => _go(page + 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, strokeWidth: 2));
+        final prev = _PageButton(dim: dim, semanticLabel: context.uiStrings.previousPage, onTap: page > 1 ? () => _go(page - 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, size: 14, strokeWidth: 2, matchTextDirection: true));
+        final next = _PageButton(dim: dim, semanticLabel: context.uiStrings.nextPage, onTap: page < total ? () => _go(page + 1) : null, child: const UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, strokeWidth: 2, matchTextDirection: true));
         return Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
           prev,
           if (compact)
             Padding(
               padding: EdgeInsets.symmetric(horizontal: t.space2),
-              child: Semantics(liveRegion: true, child: Text('Page $page of $total', style: style.copyWith(color: t.text))),
+              child: Semantics(liveRegion: true, child: Text(uiFormatString(context.uiStrings.pageOf, {'n': page, 'total': total}), style: style.copyWith(color: t.text))),
             )
           else
             for (final n in items)
@@ -95,7 +96,7 @@ class UiPagination extends StatelessWidget {
                 _PageButton(
                   dim: dim,
                   active: n == page,
-                  semanticLabel: 'Page $n',
+                  semanticLabel: uiFormatString(context.uiStrings.page, {'n': n}),
                   onTap: () => _go(n),
                   child: Text('$n', style: style.copyWith(color: t.text, fontWeight: n == page ? FontWeight.w600 : FontWeight.w400)),
                 ),

@@ -20,7 +20,7 @@ class UiAnchorItem {
 /// viewport, below a fixed header of [offset] px, like the web version's observer band.
 /// [Axis.horizontal] lays the links out as a scrolling strip, for the top of a phone screen.
 class UiAnchorNav extends StatefulWidget {
-  const UiAnchorNav({super.key, required this.items, required this.controller, this.offset = 0, this.axis = Axis.vertical, this.label = 'On this page'});
+  const UiAnchorNav({super.key, required this.items, required this.controller, this.offset = 0, this.axis = Axis.vertical, this.label});
 
   final List<UiAnchorItem> items;
   final ScrollController controller;
@@ -28,7 +28,8 @@ class UiAnchorNav extends StatefulWidget {
   /// Height of anything covering the top of the scroll view (a header).
   final double offset;
   final Axis axis;
-  final String label;
+  /// [UiStrings.onThisPage] when null.
+  final String? label;
 
   @override
   State<UiAnchorNav> createState() => _UiAnchorNavState();
@@ -131,7 +132,7 @@ class _UiAnchorNavState extends State<UiAnchorNav> {
             PositionedDirectional(start: 0, top: 0, bottom: 0, width: 1, child: rule),
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: links),
           ]);
-    return Semantics(container: true, explicitChildNodes: true, role: SemanticsRole.navigation, label: widget.label, child: body);
+    return Semantics(container: true, explicitChildNodes: true, role: SemanticsRole.navigation, label: widget.label ?? context.uiStrings.onThisPage, child: body);
   }
 }
 

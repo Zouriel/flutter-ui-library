@@ -53,7 +53,7 @@ class UiDateRangePicker extends StatelessWidget {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final small = context.uiText.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()]);
-    String fmt(String? d) => d == null ? 'Not set' : uiFormatIsoDate(context, d, short: true);
+    String fmt(String? d) => d == null ? context.uiStrings.notSet : uiFormatIsoDate(context, d, short: true);
     return Opacity(
       opacity: enabled ? 1 : 0.5,
       child: Container(
@@ -77,11 +77,11 @@ class UiDateRangePicker extends StatelessWidget {
           SizedBox(height: t.space2),
           Semantics(
             liveRegion: true,
-            label: 'From ${fmt(value.start)} to ${fmt(value.end)}',
+            label: uiFormatString(context.uiStrings.dateRange, {'start': fmt(value.start), 'end': fmt(value.end)}),
             excludeSemantics: true,
             child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
               Text(value.start == null ? '—' : fmt(value.start), style: small),
-              UiIcon(HugeIcons.strokeRoundedArrowRight02, size: 12, color: t.textMuted),
+              UiIcon(HugeIcons.strokeRoundedArrowRight02, size: 12, color: t.textMuted, matchTextDirection: true),
               Text(value.end == null ? '—' : fmt(value.end), style: small),
             ]),
           ),

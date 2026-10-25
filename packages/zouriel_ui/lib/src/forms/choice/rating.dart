@@ -12,14 +12,15 @@ import 'roving.dart';
 ///
 /// Stars are 20px in 24px cells with a mouse, 28px in 48dp cells on phones.
 class UiRating extends StatefulWidget {
-  const UiRating({super.key, required this.value, required this.onChanged, this.max = 5, this.label = 'Rating'});
+  const UiRating({super.key, required this.value, required this.onChanged, this.max = 5, this.label});
 
   final int value;
   final ValueChanged<int>? onChanged;
   final int max;
 
   /// The group's accessible name.
-  final String label;
+  /// The name read out; [UiStrings.rating] when null.
+  final String? label;
 
   @override
   State<UiRating> createState() => _UiRatingState();
@@ -64,7 +65,7 @@ class _UiRatingState extends State<UiRating> with UiRovingFocus<UiRating> {
     return Semantics(
       container: true,
       role: SemanticsRole.radioGroup,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.rating,
       explicitChildNodes: true,
       child: rovingKeys(
         onKey: _onKey,

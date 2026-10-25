@@ -22,12 +22,13 @@ class UiBreadcrumb {
 /// the full path when tapped (the first crumb and the last two stay). Long labels are cut with an
 /// ellipsis.
 class UiBreadcrumbs extends StatefulWidget {
-  const UiBreadcrumbs({super.key, required this.items, this.onNavigate, this.separator = '/', this.label = 'Breadcrumb', this.collapse = true});
+  const UiBreadcrumbs({super.key, required this.items, this.onNavigate, this.separator = '/', this.label, this.collapse = true});
 
   final List<UiBreadcrumb> items;
   final ValueChanged<UiBreadcrumb>? onNavigate;
   final String separator;
-  final String label;
+  /// [UiStrings.breadcrumb] when null.
+  final String? label;
 
   /// Collapse the middle crumbs when the trail is wider than its space.
   final bool collapse;
@@ -87,7 +88,7 @@ class _UiBreadcrumbsState extends State<UiBreadcrumbs> {
       container: true,
       explicitChildNodes: true,
       role: SemanticsRole.navigation,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.breadcrumb,
       child: LayoutBuilder(builder: (context, box) {
         var shown = <UiBreadcrumb?>[...items]; // null = the "more" button
         if (widget.collapse && !_expanded && items.length > 3 && box.maxWidth.isFinite && _measure(context, items) > box.maxWidth) {
@@ -169,7 +170,7 @@ class _MoreCrumb extends StatelessWidget {
     final t = context.ui;
     return UiInteractive(
       onTap: onTap,
-      semanticLabel: 'Show $hidden more',
+      semanticLabel: uiFormatString(context.uiStrings.showMore, {'n': hidden}),
       excludeChildSemantics: true,
       pressScale: false,
       builder: (context, s) => AnimatedContainer(

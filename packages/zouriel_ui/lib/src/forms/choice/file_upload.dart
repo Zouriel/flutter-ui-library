@@ -211,7 +211,7 @@ class UiFileUploadState extends State<UiFileUpload> {
             padding: EdgeInsets.only(top: t.space2),
             child: Semantics(
               container: true,
-              label: 'Chosen files',
+              label: context.uiStrings.chosenFiles,
               explicitChildNodes: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

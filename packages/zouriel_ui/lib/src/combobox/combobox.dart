@@ -42,7 +42,7 @@ class UiCombobox extends StatefulWidget {
     required this.options,
     this.value,
     this.onChanged,
-    this.placeholder = 'Search…',
+    this.placeholder,
     this.label,
     this.size = UiSize.md,
     this.invalid = false,
@@ -58,7 +58,9 @@ class UiCombobox extends StatefulWidget {
   final List<UiComboboxOption> options;
   final String? value;
   final ValueChanged<String?>? onChanged;
-  final String placeholder;
+
+  /// [UiStrings.searchPlaceholder] when null.
+  final String? placeholder;
 
   /// Accessible name when no [UiFormField] label names it.
   final String? label;
@@ -277,7 +279,7 @@ class UiComboboxState extends State<UiCombobox> {
               controller: _query,
               focusNode: _focus,
               style: style,
-              placeholder: widget.placeholder,
+              placeholder: widget.placeholder ?? context.uiStrings.searchPlaceholder,
               enabled: widget.enabled,
               onChanged: _onText,
               onKeyEvent: _onKey,

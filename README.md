@@ -109,6 +109,25 @@ font, as `textStyle` does on the text fields (`TextStyle(fontFamilyFallback: ['F
 The web twin's map markers were drawn further down one after another; Flutter places each `Marker` on its
 own and never had it (a test now checks 60 dots against their points).
 
+**Right to left and Dhivehi (0.46.0):** `UiApp(textDirection:)` sets the app's direction (null follows the
+locale: `dv`, `ar`, `he`, `fa`, `ur` and the rest of `uiRtlLanguages` are RTL), above `UiApp.builder` too. Every
+component mirrors: start/end paddings and borders (alert and toast tone edge, list selected bar, chip remove
+button, badges on image-picker tiles and bottom-nav icons, avatar-group order, meter tick, stepper line),
+`UiDrawerSide.start`/`end` and `UiToastPosition.topStart`/`topEnd`/`bottomStart`/`bottomEnd` (the default is now
+`bottomEnd`, the same as `bottomRight` in LTR), carousel slides, swipe and arrows, splitter divider and arrow keys,
+tab arrow keys, and back/forward chevrons via `UiIcon(matchTextDirection: true)` (play, check, search icons
+don't). The map and the one-time-code boxes don't mirror. `UiStrings` now holds every built-in word (149
+keys, the web's keys plus a few Flutter-only ones) and the date names; `UiStrings.dv` is the complete Dhivehi
+set (Thaana, Dhivehi months and days, Sunday-first weeks, `{d} {month} {y}` dates), `copyWith` adjusts it, and
+`UiThemeController.setStrings(UiStrings.dv)` switches language at runtime, at once (not half-way through the
+theme animation). Placeholders are filled with `uiFormatString`. Calendars start on `UiStrings.firstDayOfWeek`
+or the locale's first day (`UiStrings.locale`, else the app locale; Sunday when unknown).
+`UiConfig(fontFamilyFallback: ['Faruma', 'Noto Sans Thaana'])` puts the app's Thaana font behind every library
+text style (bundled fonts are now named `packages/zouriel_ui/<family>` instead of through `package:`, so the
+fallback names stay as given). Constructor defaults that were English words (`UiSpinner.label`,
+`UiEmptyState.heading`, placeholders, `UiConfirmDialog` labels, …) are now nullable and fall back to
+`context.uiStrings`. The showcase's top bar has an RTL · ދިވެހި toggle.
+
 **Swipe strip taps (0.45.1):** a tap on an `edgeSwipeOnly` screen's back-swipe strip reaches what is under it
 (a header's Back arrow, the map); a horizontal drag from it still swipes back.
 

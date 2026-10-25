@@ -214,9 +214,10 @@ void main() {
         await tester.pumpAndSettle();
         final r = tester.getRect(find.byType(UiDialogScope));
         switch (side) {
-          case UiDrawerSide.left:
+          // Left to right here: start is the left, end the right.
+          case UiDrawerSide.left || UiDrawerSide.start:
             expect(r, const Rect.fromLTWH(0, 0, 351, 844));
-          case UiDrawerSide.right:
+          case UiDrawerSide.right || UiDrawerSide.end:
             expect(r, const Rect.fromLTWH(390 - 351, 0, 351, 844));
           case UiDrawerSide.top:
             expect(r, const Rect.fromLTWH(0, 0, 390, 320));

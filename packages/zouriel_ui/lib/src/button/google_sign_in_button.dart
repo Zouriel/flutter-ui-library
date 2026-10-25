@@ -129,7 +129,8 @@ class UiGoogleSignInButton extends StatelessWidget {
       // The library's bundled Roboto Medium (the guideline now names Google Sans, which the
       // library doesn't bundle), then the app's font for scripts Roboto lacks (Thaana, Arabic).
       fontFamily: 'packages/$uiFontPackage/Roboto',
-      fontFamilyFallback: [?body.fontFamily],
+      // UiConfig.fontFamilyFallback (0.46.0) follows, so a Dhivehi label draws in the app's Thaana font.
+      fontFamilyFallback: [?body.fontFamily, ...?body.fontFamilyFallback],
       fontSize: 14,
       height: 20 / 14,
       fontWeight: FontWeight.w500,

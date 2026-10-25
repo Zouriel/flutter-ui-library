@@ -23,7 +23,7 @@ class UiDatePicker extends StatefulWidget {
     super.key,
     this.value,
     this.onChanged,
-    this.placeholder = 'Select a date',
+    this.placeholder,
     this.size = UiSize.md,
     this.radius,
     this.min,
@@ -36,7 +36,9 @@ class UiDatePicker extends StatefulWidget {
 
   final String? value;
   final ValueChanged<String>? onChanged;
-  final String placeholder;
+
+  /// [UiStrings.datePlaceholder] when null.
+  final String? placeholder;
   final UiSize size;
   final bool? radius;
   final String? min;
@@ -117,7 +119,7 @@ class _UiDatePickerState extends State<UiDatePicker> {
       pressScale: false,
       padTouchTarget: false,
       semanticLabel: name,
-      semanticHint: 'Opens a calendar',
+      semanticHint: context.uiStrings.opensCalendar,
       shortcuts: const {SingleActivator(LogicalKeyboardKey.arrowDown): ActivateIntent()},
       builder: (context, s) => Semantics(
         value: shown ?? '',
@@ -133,7 +135,7 @@ class _UiDatePickerState extends State<UiDatePicker> {
           child: Row(spacing: t.space2, children: [
             Expanded(
               child: ExcludeSemantics(
-                child: Text(shown ?? widget.placeholder, maxLines: 1, overflow: TextOverflow.ellipsis, style: shown == null ? style.copyWith(color: t.textMuted) : style),
+                child: Text(shown ?? widget.placeholder ?? context.uiStrings.datePlaceholder, maxLines: 1, overflow: TextOverflow.ellipsis, style: shown == null ? style.copyWith(color: t.textMuted) : style),
               ),
             ),
             UiIcon(HugeIcons.strokeRoundedCalendar01, size: 16, color: t.textMuted),

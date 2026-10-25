@@ -11,8 +11,27 @@ import 'route.dart';
 
 export '../layout/pinned_edges.dart' show UiScrollBodyBuilder;
 
-/// The edge a drawer slides in from, the web `UiDrawerSide`. Left and right are physical sides.
-enum UiDrawerSide { left, right, top, bottom }
+/// The edge a drawer slides in from, the web `UiDrawerSide`. Left and right are physical sides;
+/// [start] and [end] (0.46.0) follow the text direction: [start] is the left in left-to-right text
+/// and the right in right-to-left (Dhivehi, Arabic), so a start drawer opens from the right there.
+enum UiDrawerSide {
+  left,
+  right,
+  top,
+  bottom,
+  start,
+  end;
+
+  /// The physical side for [direction]: [start] and [end] become [left] or [right].
+  UiDrawerSide resolve(TextDirection direction) => switch (this) {
+        start => direction == TextDirection.rtl ? right : left,
+        end => direction == TextDirection.rtl ? left : right,
+        _ => this,
+      };
+
+  /// Whether the drawer runs along a side edge (full height).
+  bool get isHorizontal => this != top && this != bottom;
+}
 
 /// Opens a [UiDrawer] on a [UiDialogRoute]; completes with what it is popped with.
 ///
@@ -67,12 +86,7 @@ Future<T?> showUiDrawer<T>({
 Widget uiSheetTransition(BuildContext context, Animation<double> animation, Widget child, UiDrawerSide side) {
   final t = context.ui;
   final route = UiDialogRoute.maybeOf(context);
-  final from = switch (side) {
-    UiDrawerSide.left => const Offset(-1, 0),
-    UiDrawerSide.right => const Offset(1, 0),
-    UiDrawerSide.top => const Offset(0, -1),
-    UiDrawerSide.bottom => const Offset(0, 1),
-  };
+  final from = _slideFrom(side.resolve(Directionality.of(context)));
   final curved = _DragAwareCurve(animation, route, t.easeDecelerate, t.easeAccelerate);
   return SlideTransition(
     position: Tween(begin: from, end: Offset.zero).animate(curved),
@@ -161,10 +175,12 @@ class UiDrawer extends StatelessWidget {
   final VoidCallback? onPointerEnter;
   final VoidCallback? onPointerExit;
 
-  bool get _horizontal => side == UiDrawerSide.left || side == UiDrawerSide.right;
+  bool get _horizontal => side.isHorizontal;
 
   @override
   Widget build(BuildContext context) {
+    // start / end become left / right here, so everything below is physical.
+    final side = this.side.resolve(Directionality.of(context));
     final theme = context.uiTheme;
     final t = theme.tokens;
     final mq = MediaQuery.of(context);
@@ -175,7 +191,7 @@ class UiDrawer extends StatelessWidget {
       UiDrawerSide.left => BorderRadius.only(topRight: rr, bottomRight: rr),
       UiDrawerSide.right => BorderRadius.only(topLeft: rr, bottomLeft: rr),
       UiDrawerSide.top => BorderRadius.only(bottomLeft: rr, bottomRight: rr),
-      UiDrawerSide.bottom => BorderRadius.only(topLeft: rr, topRight: rr),
+      _ => BorderRadius.only(topLeft: rr, topRight: rr),
     };
     // Keep content clear of the notch and the gesture bar on the edges the panel touches; a
     // full-height drawer also keeps its bottom (the footer) above the keyboard.
@@ -253,7 +269,7 @@ class UiDrawer extends StatelessWidget {
           UiDrawerSide.left => Alignment.centerLeft,
           UiDrawerSide.right => Alignment.centerRight,
           UiDrawerSide.top => Alignment.topCenter,
-          UiDrawerSide.bottom => Alignment.bottomCenter,
+          _ => Alignment.bottomCenter,
         },
         child: panel,
       ),
@@ -261,7 +277,15 @@ class UiDrawer extends StatelessWidget {
   }
 }
 
-/// Follows a drag toward [side] by moving the route's animation, then closes or settles back.
+/// Where a drawer on physical [side] slides in from.
+Offset _slideFrom(UiDrawerSide side) => switch (side) {
+      UiDrawerSide.left => const Offset(-1, 0),
+      UiDrawerSide.right => const Offset(1, 0),
+      UiDrawerSide.top => const Offset(0, -1),
+      _ => const Offset(0, 1),
+    };
+
+/// Follows a drag toward [side] (physical) by moving the route's animation, then closes or settles back.
 class _SwipeToClose extends StatelessWidget {
   const _SwipeToClose({required this.side, required this.extent, required this.child});
 
@@ -353,12 +377,7 @@ class _UiDrawerPeekState extends State<UiDrawerPeek> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final from = switch (widget.side) {
-      UiDrawerSide.left => const Offset(-1, 0),
-      UiDrawerSide.right => const Offset(1, 0),
-      UiDrawerSide.top => const Offset(0, -1),
-      UiDrawerSide.bottom => const Offset(0, 1),
-    };
+    final from = _slideFrom(widget.side.resolve(Directionality.of(context)));
     return OverlayPortal(
       controller: _portal,
       overlayChildBuilder: (context) => AnimatedBuilder(

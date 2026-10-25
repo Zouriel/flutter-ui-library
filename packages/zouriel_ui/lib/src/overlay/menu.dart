@@ -373,13 +373,14 @@ class _MenuItemTile extends StatelessWidget {
 /// The first item gets focus; Escape or choosing gives focus back to what had it before; a tap
 /// outside or scrolling closes it. Screen readers get it as the long-press action ("Show menu").
 class UiContextMenu extends StatefulWidget {
-  const UiContextMenu({super.key, required this.items, required this.onSelect, required this.child, this.enabled = true, this.semanticHint = 'Show menu'});
+  const UiContextMenu({super.key, required this.items, required this.onSelect, required this.child, this.enabled = true, this.semanticHint});
 
   final List<UiMenuItem> items;
   final ValueChanged<UiMenuItem> onSelect;
   final Widget child;
   final bool enabled;
-  final String semanticHint;
+  /// [UiStrings.showMenu] when null.
+  final String? semanticHint;
 
   @override
   State<UiContextMenu> createState() => _UiContextMenuState();
@@ -437,7 +438,7 @@ class _UiContextMenuState extends State<UiContextMenu> {
   Widget build(BuildContext context) {
     final child = Semantics(
       container: true,
-      onLongPressHint: widget.enabled ? widget.semanticHint : null,
+      onLongPressHint: widget.enabled ? widget.semanticHint ?? context.uiStrings.showMenu : null,
       onLongPress: widget.enabled ? _openCentered : null,
       child: CallbackShortcuts(
         bindings: {

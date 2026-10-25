@@ -164,7 +164,7 @@ class _UiFormFieldState<T> extends State<UiFormField<T>> {
   }
 
   String? _validate(T? v) {
-    if (widget.required && _empty(v)) return widget.requiredMessage ?? '${widget.label ?? 'This field'} is required';
+    if (widget.required && _empty(v)) return widget.requiredMessage ?? uiFormatString(context.uiStrings.fieldRequired, {'label': widget.label ?? context.uiStrings.thisField});
     return widget.validator?.call(v);
   }
 

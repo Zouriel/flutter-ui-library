@@ -36,7 +36,7 @@ class UiMenubarMenu {
 /// Enter or Space open a menu and focus its first item; inside a menu Up/Down, Home and End move,
 /// Escape closes it and returns focus to its top item, and Tab closes it.
 class UiMenubar extends StatefulWidget {
-  const UiMenubar({super.key, required this.menus, this.onSelect, this.breakpoint = 600, this.overflowLabel = 'Menu'});
+  const UiMenubar({super.key, required this.menus, this.onSelect, this.breakpoint = 600, this.overflowLabel});
 
   final List<UiMenubarMenu> menus;
   final ValueChanged<UiMenubarItem>? onSelect;
@@ -45,7 +45,8 @@ class UiMenubar extends StatefulWidget {
   final double breakpoint;
 
   /// Accessible name of the overflow button.
-  final String overflowLabel;
+  /// [UiStrings.menu] when null.
+  final String? overflowLabel;
 
   @override
   State<UiMenubar> createState() => _UiMenubarState();
@@ -185,7 +186,7 @@ class _UiMenubarState extends State<UiMenubar> {
       placement: UiPlacement.bottomEnd,
       onDismiss: () => _closeOverflow(refocus: false),
       panelBuilder: (context, anchor) => _MenuPanel(
-        label: widget.overflowLabel,
+        label: widget.overflowLabel ?? context.uiStrings.menu,
         entries: [
           for (final m in widget.menus) ...[
             _Entry.header(m.label),
@@ -206,7 +207,7 @@ class _UiMenubarState extends State<UiMenubar> {
           }
         },
         builder: (context, s) => Semantics(
-          label: widget.overflowLabel,
+          label: widget.overflowLabel ?? context.uiStrings.menu,
           expanded: _overflowOpen,
           child: ExcludeSemantics(
             child: AnimatedContainer(

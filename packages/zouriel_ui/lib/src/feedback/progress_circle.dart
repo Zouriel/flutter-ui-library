@@ -15,7 +15,7 @@ class UiProgressCircle extends StatefulWidget {
     this.size = 40,
     this.strokeWidth = 4,
     this.tone = UiStatus.primary,
-    this.label = 'Progress',
+    this.label,
     this.showValue = false,
     this.child,
   });
@@ -27,7 +27,9 @@ class UiProgressCircle extends StatefulWidget {
   final double size;
   final double strokeWidth;
   final UiStatus tone;
-  final String label;
+
+  /// The name read out; [UiStrings.progress] when null.
+  final String? label;
   final bool showValue;
 
   @override
@@ -90,7 +92,7 @@ class _UiProgressCircleState extends State<UiProgressCircle> with SingleTickerPr
       );
     }
     return Semantics(
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.progress,
       value: v == null ? null : '${v.round()}%',
       child: ExcludeSemantics(
         child: SizedBox.square(

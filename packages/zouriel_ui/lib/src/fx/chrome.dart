@@ -80,7 +80,7 @@ class _UiIntroLoaderState extends State<UiIntroLoader> with TickerProviderStateM
       ),
       child: Semantics(
         liveRegion: true,
-        label: 'Loading…',
+        label: context.uiStrings.loading,
         child: ColoredBox(
           color: t.bg,
           child: Center(
@@ -98,7 +98,7 @@ class _UiIntroLoaderState extends State<UiIntroLoader> with TickerProviderStateM
                       child: AnimatedBuilder(
                         animation: fill,
                         builder: (context, _) => FractionallySizedBox(
-                          alignment: Alignment.centerLeft,
+                          alignment: AlignmentDirectional.centerStart,
                           widthFactor: fill.value.clamp(0.0, 1.0),
                           child: DecoratedBox(decoration: BoxDecoration(gradient: t.gradientBrand.toGradient(), boxShadow: t.glowAmber)),
                         ),
@@ -165,7 +165,7 @@ class _UiScrollProgressState extends State<UiScrollProgress> {
               child: ValueListenableBuilder<double>(
                 valueListenable: _p,
                 builder: (context, v, _) => FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   widthFactor: v,
                   child: DecoratedBox(decoration: BoxDecoration(gradient: t.gradientBrand.toGradient(), boxShadow: t.glowAmber)),
                 ),
@@ -221,7 +221,7 @@ class UiSectionLabel extends StatelessWidget {
         Container(width: 16, height: 2, decoration: BoxDecoration(color: t.sectionLabelBracket, borderRadius: BorderRadius.circular(t.radiusPill))),
         if (index.isNotEmpty) Text(index.toUpperCase(), style: base.copyWith(color: t.primary, fontFeatures: const [FontFeature.tabularFigures()])),
         Text(label.toUpperCase(), style: base),
-        Padding(padding: EdgeInsets.only(left: t.space1), child: rule),
+        Padding(padding: EdgeInsetsDirectional.only(start: t.space1), child: rule),
       ]);
     }
     return Semantics(label: index.isEmpty ? label : '$index $label', child: ExcludeSemantics(child: row));

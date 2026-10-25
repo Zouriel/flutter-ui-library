@@ -433,7 +433,7 @@ class _UiPasswordInputState extends State<UiPasswordInput> with UiTextController
             ),
           ),
           UiFieldButton(
-            label: _reveal ? 'Hide password' : 'Show password',
+            label: _reveal ? context.uiStrings.hidePassword : context.uiStrings.showPassword,
             visual: math.min(t.sizeSm, h - 4),
             focusable: true,
             enabled: widget.enabled,
@@ -455,7 +455,7 @@ class UiSearchInput extends StatefulWidget {
     this.onChanged,
     this.controller,
     this.focusNode,
-    this.placeholder = 'Search…',
+    this.placeholder,
     this.label,
     this.size = UiSize.md,
     this.radius,
@@ -468,7 +468,8 @@ class UiSearchInput extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final TextEditingController? controller;
   final FocusNode? focusNode;
-  final String placeholder;
+  /// [UiStrings.searchPlaceholder] when null.
+  final String? placeholder;
 
   /// Accessible name when no [UiFormField] label names it (a toolbar search).
   final String? label;
@@ -528,7 +529,7 @@ class _UiSearchInputState extends State<UiSearchInput> with UiTextControllerMixi
               controller: controller,
               focusNode: focusNode,
               style: uiFieldTextStyle(context, widget.size),
-              placeholder: widget.placeholder,
+              placeholder: widget.placeholder ?? context.uiStrings.searchPlaceholder,
               enabled: widget.enabled,
               textInputAction: TextInputAction.search,
               onChanged: widget.onChanged,

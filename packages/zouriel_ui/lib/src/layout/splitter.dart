@@ -21,7 +21,7 @@ class UiSplitter extends StatefulWidget {
     this.ratio,
     this.initialRatio = 50,
     this.onRatioChanged,
-    this.label = 'Resize panes',
+    this.label,
   });
 
   final Widget first;
@@ -30,7 +30,8 @@ class UiSplitter extends StatefulWidget {
   final double? ratio;
   final double initialRatio;
   final ValueChanged<double>? onRatioChanged;
-  final String label;
+  /// [UiStrings.resizePanes] when null.
+  final String? label;
 
   static const double minRatio = 10, maxRatio = 90;
 
@@ -60,6 +61,9 @@ class _UiSplitterState extends State<UiSplitter> {
       final total = horizontal ? box.maxWidth : box.maxHeight;
       final firstSize = (total - 1) * _ratio / 100;
       final lit = _hover || _focus || _drag;
+      // Side by side, the first pane is at the start: the right in RTL, so the divider and the arrow
+      // keys mirror there.
+      final rtl = horizontal && Directionality.of(context) == TextDirection.rtl;
 
       void dragTo(Offset local) {
         final pos = horizontal ? local.dx : local.dy;
@@ -68,7 +72,7 @@ class _UiSplitterState extends State<UiSplitter> {
 
       final gutter = Semantics(
         slider: true,
-        label: widget.label,
+        label: widget.label ?? context.uiStrings.resizePanes,
         value: '${_ratio.round()}%',
         increasedValue: '${(_ratio + 2).clamp(10, 90).round()}%',
         decreasedValue: '${(_ratio - 2).clamp(10, 90).round()}%',
@@ -79,9 +83,9 @@ class _UiSplitterState extends State<UiSplitter> {
           onShowFocusHighlight: (v) => setState(() => _focus = v),
           onShowHoverHighlight: (v) => setState(() => _hover = v),
           shortcuts: {
-            const SingleActivator(LogicalKeyboardKey.arrowLeft): const _Nudge(-2),
+            SingleActivator(LogicalKeyboardKey.arrowLeft): _Nudge(rtl ? 2 : -2),
             const SingleActivator(LogicalKeyboardKey.arrowUp): const _Nudge(-2),
-            const SingleActivator(LogicalKeyboardKey.arrowRight): const _Nudge(2),
+            SingleActivator(LogicalKeyboardKey.arrowRight): _Nudge(rtl ? -2 : 2),
             const SingleActivator(LogicalKeyboardKey.arrowDown): const _Nudge(2),
           },
           actions: {_Nudge: CallbackAction<_Nudge>(onInvoke: (i) => _set(_ratio + i.by))},
@@ -95,9 +99,9 @@ class _UiSplitterState extends State<UiSplitter> {
       );
 
       // The grab area overlaps both panes by grab px either side of the 1px line.
-      final handle = Positioned(
-        left: horizontal ? firstSize - grab : 0,
-        right: horizontal ? null : 0,
+      final handle = PositionedDirectional(
+        start: horizontal ? firstSize - grab : 0,
+        end: horizontal ? null : 0,
         top: horizontal ? 0 : firstSize - grab,
         bottom: horizontal ? 0 : null,
         width: horizontal ? grab * 2 + 1 : null,
@@ -106,7 +110,7 @@ class _UiSplitterState extends State<UiSplitter> {
           behavior: HitTestBehavior.translucent,
           dragStartBehavior: DragStartBehavior.down,
           onHorizontalDragStart: horizontal ? (_) => setState(() => _drag = true) : null,
-          onHorizontalDragUpdate: horizontal ? (d) => dragTo(Offset(firstSize + d.localPosition.dx - grab, 0)) : null,
+          onHorizontalDragUpdate: horizontal ? (d) => dragTo(Offset(firstSize - grab + (rtl ? grab * 2 + 1 - d.localPosition.dx : d.localPosition.dx), 0)) : null,
           onHorizontalDragEnd: horizontal ? (_) => setState(() => _drag = false) : null,
           onVerticalDragStart: horizontal ? null : (_) => setState(() => _drag = true),
           onVerticalDragUpdate: horizontal ? null : (d) => dragTo(Offset(0, firstSize + d.localPosition.dy - grab)),
@@ -149,7 +153,7 @@ class UiResizeHandle extends StatefulWidget {
     this.max = 10000,
     this.snaps = const [],
     this.edge = UiResizeEdge.top,
-    this.label = 'Resize',
+    this.label,
     this.snapDistance = 28,
     this.onResizeEnd,
   });
@@ -159,7 +163,8 @@ class UiResizeHandle extends StatefulWidget {
   final double min, max;
   final List<double> snaps;
   final UiResizeEdge edge;
-  final String label;
+  /// [UiStrings.resize] when null.
+  final String? label;
   final double snapDistance;
   final ValueChanged<double>? onResizeEnd;
 
@@ -242,7 +247,7 @@ class _UiResizeHandleState extends State<UiResizeHandle> {
 
     return Semantics(
       slider: true,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.resize,
       value: '${widget.size.round()}',
       increasedValue: '${_clamp(widget.size + 16).round()}',
       decreasedValue: '${_clamp(widget.size - 16).round()}',

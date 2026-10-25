@@ -78,10 +78,11 @@ class _UiPanelSectionState extends State<UiPanelSection> {
         child: Row(spacing: t.space2, children: [
           if (widget.collapsible)
             AnimatedRotation(
-              turns: _isOpen ? 0.25 : 0,
+              // Points at the title (forward), then down when open; mirrored in RTL.
+              turns: _isOpen ? (Directionality.of(context) == TextDirection.rtl ? -0.25 : 0.25) : 0,
               duration: context.uiAnimate ? t.motionFast : Duration.zero,
               curve: t.easeStandard,
-              child: UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 12, color: t.textMuted),
+              child: UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 12, color: t.textMuted, matchTextDirection: true),
             ),
           Flexible(child: Text(widget.title.toUpperCase(), style: titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis)),
           if (widget.badge != null)
@@ -110,7 +111,7 @@ class _UiPanelSectionState extends State<UiPanelSection> {
         Row(children: [
           Expanded(child: head),
           if (widget.actions.isNotEmpty)
-            Padding(padding: EdgeInsets.only(right: t.space2), child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: widget.actions)),
+            Padding(padding: EdgeInsetsDirectional.only(end: t.space2), child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: widget.actions)),
         ]),
         if (_isOpen)
           Semantics(

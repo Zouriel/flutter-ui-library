@@ -374,7 +374,7 @@ class _Burger extends StatelessWidget {
     return UiInteractive(
       onTap: onTap,
       semanticLabel: label,
-      semanticHint: open ? 'Navigation open' : null,
+      semanticHint: open ? context.uiStrings.navigationOpen : null,
       builder: (context, s) => Semantics(
         expanded: open,
         child: AnimatedContainer(

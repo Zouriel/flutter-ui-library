@@ -26,7 +26,7 @@ class UiMultiSelect extends StatefulWidget {
     required this.options,
     this.value = const [],
     this.onChanged,
-    this.placeholder = 'Select…',
+    this.placeholder,
     this.label,
     this.size = UiSize.md,
     this.invalid = false,
@@ -39,7 +39,9 @@ class UiMultiSelect extends StatefulWidget {
   final List<UiComboboxOption> options;
   final List<String> value;
   final ValueChanged<List<String>>? onChanged;
-  final String placeholder;
+
+  /// [UiStrings.selectPlaceholder] when null.
+  final String? placeholder;
 
   /// Accessible name when no [UiFormField] label names it.
   final String? label;
@@ -239,7 +241,7 @@ class UiMultiSelectState extends State<UiMultiSelect> {
                               controller: _query,
                               focusNode: _focus,
                               style: uiFieldTextStyle(context, widget.size).copyWith(fontSize: fontSize),
-                              placeholder: widget.value.isEmpty ? widget.placeholder : null,
+                              placeholder: widget.value.isEmpty ? widget.placeholder ?? context.uiStrings.selectPlaceholder : null,
                               enabled: widget.enabled,
                               onChanged: _onText,
                               onKeyEvent: _onKey,
@@ -336,7 +338,7 @@ class _Chip extends StatelessWidget {
             child: UiInteractive(
               onTap: onRemove,
               enabled: enabled,
-              semanticLabel: 'Remove $label',
+              semanticLabel: uiFormatString(context.uiStrings.remove, {'label': label}),
               excludeChildSemantics: true,
               pressScale: false,
               padTouchTarget: false,

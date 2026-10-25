@@ -69,9 +69,9 @@ class UiListItem extends StatelessWidget {
           duration: context.uiAnimate ? t.motionFast : Duration.zero,
           curve: t.easeStandard,
           constraints: BoxConstraints(minHeight: interactive && uiTouchPlatform(context) ? uiMinTouchTarget : 0),
-          // The 2px left border is the selected bar (transparent otherwise); it is part of the padding.
-          padding: EdgeInsets.fromLTRB(t.space4 - 2, t.space2, t.space4, t.space2),
-          decoration: BoxDecoration(color: bg, border: Border(left: BorderSide(color: selected ? t.primary : t.primary.withValues(alpha: 0), width: 2))),
+          // The 2px start border is the selected bar (transparent otherwise); it is part of the padding.
+          padding: EdgeInsetsDirectional.fromSTEB(t.space4 - 2, t.space2, t.space4, t.space2),
+          decoration: BoxDecoration(color: bg, border: BorderDirectional(start: BorderSide(color: selected ? t.primary : t.primary.withValues(alpha: 0), width: 2))),
           foregroundDecoration: s.focused ? BoxDecoration(border: Border.all(color: t.borderFocus, width: 2)) : null,
           child: DefaultTextStyle.merge(
             style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35),

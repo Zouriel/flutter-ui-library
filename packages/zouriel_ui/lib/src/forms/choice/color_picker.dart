@@ -112,7 +112,7 @@ class _UiColorPickerState extends State<UiColorPicker> {
       child: UiInteractive(
         onTap: _enabled ? () => setState(_panel.toggle) : null,
         enabled: _enabled,
-        semanticLabel: 'Pick colour',
+        semanticLabel: context.uiStrings.pickColor,
         semanticHint: widget.value,
         excludeChildSemantics: true,
         builder: (context, s) => AnimatedOpacity(
@@ -153,7 +153,7 @@ class _UiColorPickerState extends State<UiColorPicker> {
           controller: _hex,
           focusNode: _hexFocus,
           enabled: _enabled,
-          semanticLabel: 'Hex colour',
+          semanticLabel: context.uiStrings.hexColor,
           style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, color: t.text),
           onChanged: _typed,
           onSubmitted: (_) => _hexFocus.unfocus(),
@@ -300,7 +300,7 @@ class _HsvPanelState extends State<_HsvPanel> {
           Semantics(
             container: true,
             slider: true,
-            label: 'Hue',
+            label: context.uiStrings.hue,
             value: '${_hsv.hue.round()}',
             increasedValue: '${((_hsv.hue + 10) % 360).round()}',
             decreasedValue: '${((_hsv.hue - 10) % 360).round()}',

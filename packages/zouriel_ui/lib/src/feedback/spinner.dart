@@ -7,12 +7,13 @@ import '../theme/theme.dart';
 /// `ui-spinner`: an indeterminate loading ring. Announced as "Loading" unless [label] says otherwise;
 /// set [decorative] when something nearby already announces the busy state.
 class UiSpinner extends StatefulWidget {
-  const UiSpinner({super.key, this.size = 16, this.strokeWidth = 2, this.color, this.label = 'Loading', this.decorative = false});
+  const UiSpinner({super.key, this.size = 16, this.strokeWidth = 2, this.color, this.label, this.decorative = false});
 
   final double size;
   final double strokeWidth;
   final Color? color;
-  final String label;
+  /// The name read out; [UiStrings.loading] when null.
+  final String? label;
   final bool decorative;
 
   @override
@@ -49,7 +50,7 @@ class _UiSpinnerState extends State<UiSpinner> with SingleTickerProviderStateMix
       ),
     );
     if (widget.decorative) return ExcludeSemantics(child: ring);
-    return Semantics(label: widget.label, liveRegion: true, child: ring);
+    return Semantics(label: widget.label ?? context.uiStrings.loading, liveRegion: true, child: ring);
   }
 }
 

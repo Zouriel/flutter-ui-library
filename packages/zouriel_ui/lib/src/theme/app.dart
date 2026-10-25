@@ -30,6 +30,7 @@ class UiApp extends StatefulWidget {
     this.navigatorObservers = const [],
     this.builder,
     this.locale,
+    this.textDirection,
     this.debugShowCheckedModeBanner = false,
   });
 
@@ -45,6 +46,12 @@ class UiApp extends StatefulWidget {
   final List<NavigatorObserver> navigatorObservers;
   final TransitionBuilder? builder;
   final Locale? locale;
+
+  /// The app's text direction (0.46.0). Null follows [locale]: right to left for Dhivehi (`dv`),
+  /// Arabic, Hebrew, Persian, Urdu and the other [uiRtlLanguages], else what the localizations say
+  /// (left to right by default). Switch it at runtime for a language toggle; every library widget
+  /// mirrors (start/end paddings, drawers, toasts, swipe-back from the right edge).
+  final TextDirection? textDirection;
   final bool debugShowCheckedModeBanner;
 
   @override
@@ -124,16 +131,28 @@ class _UiAppState extends State<UiApp> with WidgetsBindingObserver {
             );
             final builder = widget.builder;
             if (builder != null) content = builder(context, content);
-            return UiNavigatorScope(
+            Widget app = UiNavigatorScope(
               navigatorKey: _key,
               child: ScrollConfiguration(behavior: const UiScrollBehavior(), child: content),
             );
+            // Above the app's builder too, so what it places (a fab host) mirrors with the pages.
+            final dir = widget.textDirection ?? uiTextDirectionOf(widget.locale);
+            if (dir != null) app = Directionality(textDirection: dir, child: app);
+            return app;
           },
         );
       }),
     );
   }
 }
+
+/// Languages written right to left (0.46.0): Dhivehi, Arabic, Hebrew, Persian, Urdu, Pashto, Sindhi,
+/// Central Kurdish, Yiddish.
+const Set<String> uiRtlLanguages = {'dv', 'ar', 'he', 'iw', 'fa', 'ur', 'ps', 'sd', 'ckb', 'yi'};
+
+/// Right to left for a locale in [uiRtlLanguages], null (no opinion) otherwise.
+TextDirection? uiTextDirectionOf(Locale? locale) =>
+    locale != null && uiRtlLanguages.contains(locale.languageCode) ? TextDirection.rtl : null;
 
 /// Gives widgets above an app's Navigator (those placed by [UiApp.builder]) the app's navigator, so
 /// the library's dialogs open from there too (0.44.1). [UiApp] puts it in place.

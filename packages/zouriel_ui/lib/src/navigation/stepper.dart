@@ -144,8 +144,8 @@ class UiStepper extends StatelessWidget {
           Stack(children: [
             // The line to the next step runs down the marker column, beside any body.
             if (i < steps.length - 1)
-              Positioned(
-                left: _marker / 2 - 0.5,
+              PositionedDirectional(
+                start: _marker / 2 - 0.5,
                 top: _marker + t.space1,
                 bottom: t.space1,
                 child: Container(width: 1, color: i < active ? toneColor : t.border),
@@ -211,7 +211,7 @@ extension on UiStepper {
         height: vertical ? 8 - before - after : 1,
         margin: vertical
             ? EdgeInsets.only(top: 6 + before, bottom: 6 + after)
-            : EdgeInsets.only(left: 6 + before, right: 6 + after),
+            : EdgeInsetsDirectional.only(start: 6 + before, end: 6 + after),
         color: i < active ? toneColor : t.border,
       );
     }

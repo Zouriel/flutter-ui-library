@@ -112,6 +112,42 @@ class FoundationPage extends StatelessWidget {
           shapes: 'enum UiDensity { comfortable, compact, auto }',
         ),
         DocSection(
+          name: 'Right to left and Dhivehi',
+          widget: 'UiApp.textDirection · UiStrings.dv',
+          summary: 'Every component mirrors in right-to-left text (0.46.0): paddings, borders and badges use start and end, drawers on the start side and toasts at the end corner follow the direction, back and forward chevrons flip (play, check and search icons do not), carousels, tabs, sliders and splitters move and take arrow keys the RTL way, and swipe-back comes from the right edge. Maps and one-time-code boxes do not mirror. UiApp(textDirection:) sets the direction (null follows the locale: dv, ar, he, fa, ur are RTL). UiStrings.dv is every built-in word in Dhivehi, with Dhivehi month and day names; switch language at runtime with setStrings, and give the Thaana font with UiConfig.fontFamilyFallback. The RTL · ދިވެހި button in the top bar shows every page this way.',
+          demo: Builder(builder: (context) {
+            final s = context.ui;
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: s.space3, children: [
+              UiText(Directionality.of(context) == TextDirection.rtl ? 'Right to left, ${context.uiStrings.locale.isEmpty ? 'English' : 'Dhivehi'} words' : 'Left to right (use the RTL · ދިވެހި button)'),
+              const SizedBox(width: 360, child: UiAlert(message: 'The tone edge sits on the start side.')),
+              Wrap(spacing: s.space2, children: [UiChip(label: 'Malé', onRemove: () {}), UiChip(label: 'Hulhumalé', onRemove: () {})]),
+              UiPagination(page: 2, total: 5, onChanged: (_) {}),
+              const SizedBox(width: 340, child: UiSearchInput()),
+            ]);
+          }),
+          code: '''UiApp(
+  textDirection: dhivehi ? TextDirection.rtl : TextDirection.ltr,
+  controller: themes, // UiThemeController(config: UiConfig(fontFamilyFallback: ['Faruma', 'Noto Sans Thaana']))
+  home: ...,
+);
+
+// The language toggle:
+themes.setStrings(dhivehi ? UiStrings.dv : const UiStrings());
+
+// A few words of your own on top of the Dhivehi set:
+UiStrings.dv.copyWith(close: 'ނިންމާ');''',
+          api: const [
+            ApiRow('UiApp.textDirection', 'TextDirection?', 'The app\'s direction; null follows locale (uiRtlLanguages).', def: 'null'),
+            ApiRow('UiStrings.dv', 'UiStrings', 'Every built-in word in Dhivehi (Thaana), Dhivehi months and days, Sunday-first weeks, day-month-year dates.'),
+            ApiRow('UiThemeController.setStrings', 'void', 'Switches the words at runtime; everything reading context.uiStrings rebuilds at once.'),
+            ApiRow('UiStrings.copyWith', 'UiStrings', 'A copy with some words replaced.'),
+            ApiRow('uiFormatString', 'String', 'Fills {n}, {label}, … placeholders.'),
+            ApiRow('UiConfig.fontFamilyFallback', 'List<String>?', 'The app\'s fonts for glyphs the theme font lacks (Faruma for Thaana), on every library text.', def: 'null'),
+            ApiRow('UiIcon.matchTextDirection', 'bool', 'Mirror a direction icon in RTL.', def: 'false'),
+            ApiRow('date keys', 'UiStrings', 'locale, months, monthsShort, weekdays, weekdaysShort (Sunday first), firstDayOfWeek (0 Sunday; null from the locale), dateFormat, dateFormatShort, monthYearFormat ({d} {month} {y}).'),
+          ],
+        ),
+        DocSection(
           name: 'Library defaults',
           widget: 'UiConfig',
           summary: 'App-wide defaults, the twin of the web provideUiConfig. animations: false removes the library\'s motion; the Android "remove animations" setting does the same automatically.',
@@ -122,7 +158,8 @@ class FoundationPage extends StatelessWidget {
             ApiRow('animations', 'bool', 'Library motion.', def: 'true'),
             ApiRow('density', 'UiDensity', 'How big things are drawn (0.45.0); see Density.', def: 'comfortable'),
             ApiRow('fontFamily', 'String?', 'Overrides the theme font.'),
-            ApiRow('strings', 'UiStrings', 'The library\'s own words (the web provideUiStrings), English by default: close, dismiss, clear, clearAll, clearSearch, previousPage, nextPage, previousMonth, nextMonth, chooseDate, moreActions, uploadLabel, uploadHint, holdHint, confirmTitle, confirm, cancel, zoomIn, zoomOut, placePinAtCentre, mapLocate, mapLocationOff, mapYourLocation, mapOpen, googleSignIn, googleSignUp, googleContinue, googleSignInShort, sidebarToggle, sidebarClose, sidebarLabel. Read with context.uiStrings.', def: 'UiStrings()'),
+            ApiRow('fontFamilyFallback', 'List<String>?', 'App fonts for glyphs the theme font lacks (0.46.0), e.g. [\'Faruma\'] for Thaana.', def: 'null'),
+            ApiRow('strings', 'UiStrings', 'The library\'s own words (the web provideUiStrings), English by default: close, dismiss, clear, clearAll, clearSearch, previousPage, nextPage, previousMonth, nextMonth, chooseDate, moreActions, uploadLabel, uploadHint, holdHint, confirmTitle, confirm, cancel, zoomIn, zoomOut, placePinAtCentre, mapLocate, mapLocationOff, mapYourLocation, mapOpen, googleSignIn, googleSignUp, googleContinue, googleSignInShort, sidebarToggle, sidebarClose, sidebarLabel. 0.46.0 adds the rest (loading, previous/next, slides, viewers, pagination, OTP, remove, password, pickers, table, …) and the date names; UiStrings.dv is the full Dhivehi set. Read with context.uiStrings.', def: 'UiStrings()'),
           ],
         ),
       ],

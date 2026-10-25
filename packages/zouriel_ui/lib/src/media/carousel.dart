@@ -56,7 +56,7 @@ class UiCarousel extends StatefulWidget {
     this.overlay,
     this.aspectRatio = 16 / 9,
     this.maxHeight = 360,
-    this.label = 'Carousel',
+    this.label,
   });
 
   final List<UiCarouselSlide> slides;
@@ -77,7 +77,8 @@ class UiCarousel extends StatefulWidget {
   /// Width:height of the slides, capped at [maxHeight].
   final double aspectRatio;
   final double maxHeight;
-  final String label;
+  /// [UiStrings.carousel] when null.
+  final String? label;
 
   @override
   State<UiCarousel> createState() => _UiCarouselState();
@@ -147,9 +148,12 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  bool get _rtl => Directionality.of(context) == TextDirection.rtl;
+
   void _dragUpdate(DragUpdateDetails d) {
     if (_count < 2) return;
-    final dx = (_drag ?? 0) + d.primaryDelta!;
+    // Measured toward the start edge in RTL, so the next slide comes from the left there.
+    final dx = (_drag ?? 0) + (_rtl ? -d.primaryDelta! : d.primaryDelta!);
     _drag = dx;
     // Resistance past either end, so the edge is felt rather than hit.
     final atEdge = (dx > 0 && _index == 0) || (dx < 0 && _index == _count - 1);
@@ -189,7 +193,7 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
           for (var i = 0; i < _count; i++)
             if ((i - _pos.value).abs() < 1.5)
               Positioned(
-                left: (i - _pos.value) * w,
+                left: (i - _pos.value) * w * (_rtl ? -1 : 1),
                 top: 0,
                 width: w,
                 height: h,
@@ -210,7 +214,7 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
           onFocusChange: (f) => _focused = f,
           child: Semantics(
             container: true,
-            label: widget.label,
+            label: widget.label ?? context.uiStrings.carousel,
             value: _count == 0 ? null : 'Slide ${_index + 1} of $_count',
             increasedValue: _index < _count - 1 ? 'Slide ${_index + 2} of $_count' : null,
             decreasedValue: _index > 0 ? 'Slide $_index of $_count' : null,
@@ -238,8 +242,8 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
                         Positioned.fill(child: track),
                         if (widget.overlay != null) Positioned.fill(child: widget.overlay!),
                         if (_count > 1 && widget.arrows && !touch) ...[
-                          Positioned(left: t.space2, top: 0, bottom: 0, child: Center(child: _Arrow(icon: HugeIcons.strokeRoundedArrowLeft01, label: 'Previous slide', onTap: _prev))),
-                          Positioned(right: t.space2, top: 0, bottom: 0, child: Center(child: _Arrow(icon: HugeIcons.strokeRoundedArrowRight01, label: 'Next slide', onTap: _next))),
+                          PositionedDirectional(start: t.space2, top: 0, bottom: 0, child: Center(child: _Arrow(icon: HugeIcons.strokeRoundedArrowLeft01, label: context.uiStrings.previousSlide, onTap: _prev))),
+                          PositionedDirectional(end: t.space2, top: 0, bottom: 0, child: Center(child: _Arrow(icon: HugeIcons.strokeRoundedArrowRight01, label: context.uiStrings.nextSlide, onTap: _next))),
                         ],
                         if (_count > 1 && widget.dots)
                           Positioned(
@@ -247,7 +251,7 @@ class _UiCarouselState extends State<UiCarousel> with SingleTickerProviderStateM
                             right: 0,
                             bottom: 0,
                             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              for (var i = 0; i < _count; i++) _Dot(active: i == _index, label: 'Go to slide ${i + 1}', width: dotW, height: dotH, onTap: () => _go(i)),
+                              for (var i = 0; i < _count; i++) _Dot(active: i == _index, label: uiFormatString(context.uiStrings.goToSlide, {'n': i + 1}), width: dotW, height: dotH, onTap: () => _go(i)),
                             ]),
                           ),
                       ]),
@@ -327,7 +331,7 @@ class _Arrow extends StatelessWidget {
           color: t.mediaScrim.withValues(alpha: s.hovered || s.pressed ? 0.65 : 0.45),
           boxShadow: uiFocusRing(t, show: s.focused),
         ),
-        child: Center(child: UiIcon(icon, size: 20, color: t.mediaOnScrim)),
+        child: Center(child: UiIcon(icon, size: 20, color: t.mediaOnScrim, matchTextDirection: true)),
       ),
     );
   }

@@ -178,7 +178,7 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
 
     {
       Widget btn(UiIconData icon, String label, VoidCallback? onTap) =>
-          UiIconButton(icon: UiIcon(icon), label: label, size: UiSize.sm, onPressed: onTap);
+          UiIconButton(icon: UiIcon(icon, matchTextDirection: true), label: label, size: UiSize.sm, onPressed: onTap);
       final bar = Container(
         padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),
         decoration: BoxDecoration(
@@ -188,7 +188,7 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
         child: Row(
           spacing: touch ? 0 : t.space1,
           children: [
-            btn(HugeIcons.strokeRoundedArrowLeft01, 'Previous page', page != null && _page > 1 ? () => _go(_page - 1, pages) : null),
+            btn(HugeIcons.strokeRoundedArrowLeft01, context.uiStrings.previousPage, page != null && _page > 1 ? () => _go(_page - 1, pages) : null),
             Semantics(
               liveRegion: true,
               label: pages == 0 ? null : 'Page $_page of $pages',
@@ -199,11 +199,11 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
                 ),
               ),
             ),
-            btn(HugeIcons.strokeRoundedArrowRight01, 'Next page', page != null && _page < pages ? () => _go(_page + 1, pages) : null),
+            btn(HugeIcons.strokeRoundedArrowRight01, context.uiStrings.nextPage, page != null && _page < pages ? () => _go(_page + 1, pages) : null),
             const Spacer(),
             btn(
               HugeIcons.strokeRoundedMinusSign,
-              'Zoom out',
+              context.uiStrings.zoomOut,
               page != null && _scale > UiPdfViewer.minScale + 0.001 ? () => _zoomBy(-0.2, _stage) : null,
             ),
             ConstrainedBox(
@@ -212,7 +212,7 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
             ),
             btn(
               HugeIcons.strokeRoundedPlusSign,
-              'Zoom in',
+              context.uiStrings.zoomIn,
               page != null && _scale < UiPdfViewer.maxScale - 0.001 ? () => _zoomBy(0.2, _stage) : null,
             ),
           ],
@@ -312,7 +312,7 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
 
       if (widget.fill) {
         final overlay = uiViewerOverlayBar(context, [
-          btn(HugeIcons.strokeRoundedArrowLeft01, 'Previous page', page != null && _page > 1 ? () => _go(_page - 1, pages) : null),
+          btn(HugeIcons.strokeRoundedArrowLeft01, context.uiStrings.previousPage, page != null && _page > 1 ? () => _go(_page - 1, pages) : null),
           Semantics(
             liveRegion: true,
             label: pages == 0 ? null : 'Page $_page of $pages',
@@ -323,15 +323,15 @@ class _UiPdfViewerState extends State<UiPdfViewer> {
               ),
             ),
           ),
-          btn(HugeIcons.strokeRoundedArrowRight01, 'Next page', page != null && _page < pages ? () => _go(_page + 1, pages) : null),
+          btn(HugeIcons.strokeRoundedArrowRight01, context.uiStrings.nextPage, page != null && _page < pages ? () => _go(_page + 1, pages) : null),
           SizedBox(width: t.space2),
-          btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', page != null && _scale > UiPdfViewer.minScale + 0.001 ? () => _zoomBy(-0.2, _stage) : null),
+          btn(HugeIcons.strokeRoundedMinusSign, context.uiStrings.zoomOut, page != null && _scale > UiPdfViewer.minScale + 0.001 ? () => _zoomBy(-0.2, _stage) : null),
           ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 42),
             child: Text('${(_scale * 100).round()}%', textAlign: TextAlign.center, style: mono),
           ),
-          btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', page != null && _scale < UiPdfViewer.maxScale - 0.001 ? () => _zoomBy(0.2, _stage) : null),
-          UiButton(label: 'Fit', semanticLabel: 'Fit page', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => _view.value = Matrix4.identity()),
+          btn(HugeIcons.strokeRoundedPlusSign, context.uiStrings.zoomIn, page != null && _scale < UiPdfViewer.maxScale - 0.001 ? () => _zoomBy(0.2, _stage) : null),
+          UiButton(label: context.uiStrings.fit, semanticLabel: context.uiStrings.fitPage, variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => _view.value = Matrix4.identity()),
         ], touch: touch);
         return Stack(children: [
           Positioned.fill(

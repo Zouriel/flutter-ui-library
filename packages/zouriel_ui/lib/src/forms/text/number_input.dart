@@ -338,8 +338,8 @@ class _UiNumberInputState extends State<UiNumberInput> {
             ),
           if (widget.steppers) ...[
             // Side by side, not stacked: two stacked buttons in a 30px field would each be 14px tall.
-            stepper('Decrease ${name ?? 'value'}', HugeIcons.strokeRoundedArrowDown01, -widget.step, first: true),
-            stepper('Increase ${name ?? 'value'}', HugeIcons.strokeRoundedArrowUp01, widget.step, first: false),
+            stepper(uiFormatString(context.uiStrings.decrease, {'label': name ?? ''}).trim(), HugeIcons.strokeRoundedArrowDown01, -widget.step, first: true),
+            stepper(uiFormatString(context.uiStrings.increase, {'label': name ?? ''}).trim(), HugeIcons.strokeRoundedArrowUp01, widget.step, first: false),
           ],
         ]),
       ),

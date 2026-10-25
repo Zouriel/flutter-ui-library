@@ -14,11 +14,13 @@ import 'text_core.dart';
 /// otherwise). Tapping it, or Enter/Space, opens a field with the text selected; Enter or leaving
 /// the field commits, Escape cancels.
 class UiEditableText extends StatefulWidget {
-  const UiEditableText({super.key, required this.value, this.onChanged, this.placeholder = 'Empty', this.enabled = true, this.semanticLabel, this.style});
+  const UiEditableText({super.key, required this.value, this.onChanged, this.placeholder, this.enabled = true, this.semanticLabel, this.style});
 
   final String value;
   final ValueChanged<String>? onChanged;
-  final String placeholder;
+
+  /// [UiStrings.empty] when null.
+  final String? placeholder;
   final bool enabled;
 
   /// Accessible name, e.g. "Board name"; announced with the current text.
@@ -121,6 +123,7 @@ class _UiEditableTextState extends State<UiEditableText> {
 
     final touch = uiTouchPlatform(context);
     final empty = widget.value.isEmpty;
+    final placeholder = widget.placeholder ?? context.uiStrings.empty;
     // Inline: it hugs its text at the start of the line, even in a stretching column.
     return Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: UiInteractive(
       onTap: _edit,
@@ -128,7 +131,7 @@ class _UiEditableTextState extends State<UiEditableText> {
       focusNode: _viewFocus,
       cursor: SystemMouseCursors.text,
       pressScale: false,
-      semanticLabel: label == null ? null : '$label: ${empty ? widget.placeholder : widget.value}',
+      semanticLabel: label == null ? null : '$label: ${empty ? placeholder : widget.value}',
       semanticHint: 'Edit',
       excludeChildSemantics: label != null,
       builder: (context, s) => AnimatedContainer(
@@ -140,7 +143,7 @@ class _UiEditableTextState extends State<UiEditableText> {
           boxShadow: s.focused ? t.focusRing : const [],
         ),
         child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-          Flexible(child: Text(empty ? widget.placeholder : widget.value, style: empty ? style.copyWith(color: t.textMuted) : style)),
+          Flexible(child: Text(empty ? placeholder : widget.value, style: empty ? style.copyWith(color: t.textMuted) : style)),
           // Touch has no hover, so the edit affordance is always shown there.
           AnimatedOpacity(
             opacity: touch || s.hovered || s.focused ? 1 : 0,

@@ -29,14 +29,15 @@ class UiTab {
 /// and select (wrapping, skipping disabled tabs), Home/End jump to the ends. When every tab is
 /// [UiTab.iconOnly] they share the strip evenly.
 class UiTabs extends StatefulWidget {
-  const UiTabs({super.key, required this.tabs, this.selectedIndex = 0, this.onChanged, this.label = 'Tabs'});
+  const UiTabs({super.key, required this.tabs, this.selectedIndex = 0, this.onChanged, this.label});
 
   final List<UiTab> tabs;
   final int selectedIndex;
   final ValueChanged<int>? onChanged;
 
   /// Accessible name of the tab strip.
-  final String label;
+  /// The tab list's name; [UiStrings.tabs] when null.
+  final String? label;
 
   @override
   State<UiTabs> createState() => _UiTabsState();
@@ -92,10 +93,12 @@ class _UiTabsState extends State<UiTabs> {
     final k = e.logicalKey;
     int next;
     int step;
-    if (k == LogicalKeyboardKey.arrowRight) {
+    // The tab row runs from the start edge, so in RTL ArrowLeft is the next tab.
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    if (k == (rtl ? LogicalKeyboardKey.arrowLeft : LogicalKeyboardKey.arrowRight)) {
       next = (i + 1) % count;
       step = 1;
-    } else if (k == LogicalKeyboardKey.arrowLeft) {
+    } else if (k == (rtl ? LogicalKeyboardKey.arrowRight : LogicalKeyboardKey.arrowLeft)) {
       next = (i - 1 + count) % count;
       step = -1;
     } else if (k == LogicalKeyboardKey.home) {
@@ -142,7 +145,7 @@ class _UiTabsState extends State<UiTabs> {
       container: true,
       explicitChildNodes: true,
       role: SemanticsRole.tabBar,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.tabs,
       child: even
           ? Row(spacing: t.space1, children: [for (final w in tabs) Expanded(child: w)])
           : Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: tabs),

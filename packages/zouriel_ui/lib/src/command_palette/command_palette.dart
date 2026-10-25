@@ -55,7 +55,7 @@ Future<UiCommand?> showUiCommandPalette({
   required BuildContext context,
   required List<UiCommand> commands,
   ValueChanged<UiCommand>? onRun,
-  String placeholder = 'Type a command or search…',
+  String? placeholder,
   double fullScreenBelow = 600,
   bool? glass,
   bool? radius,
@@ -101,7 +101,7 @@ class UiCommandPalette extends StatefulWidget {
     required this.commands,
     required this.onRun,
     required this.onClose,
-    this.placeholder = 'Type a command or search…',
+    this.placeholder,
     this.fullScreen = false,
     this.glass,
     this.radius,
@@ -110,7 +110,8 @@ class UiCommandPalette extends StatefulWidget {
   final List<UiCommand> commands;
   final ValueChanged<UiCommand> onRun;
   final VoidCallback onClose;
-  final String placeholder;
+  /// [UiStrings.commandPlaceholder] when null.
+  final String? placeholder;
   final bool fullScreen;
   final bool? glass;
   final bool? radius;
@@ -204,7 +205,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
     final field = _SearchField(
       controller: _query,
       focusNode: _field,
-      placeholder: widget.placeholder,
+      placeholder: widget.placeholder ?? context.uiStrings.commandPlaceholder,
       onKey: _onKey,
       onSubmitted: () {
         final f = _filtered;
@@ -214,7 +215,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
     final list = items.isEmpty
         ? Padding(
             padding: EdgeInsets.all(t.space4),
-            child: Text('No results', textAlign: TextAlign.center, style: theme.typography.body.copyWith(color: t.textMuted, fontSize: t.fontSizeSm)),
+            child: Text(context.uiStrings.noResults, textAlign: TextAlign.center, style: theme.typography.body.copyWith(color: t.textMuted, fontSize: t.fontSizeSm)),
           )
         : ListView.builder(
             controller: _list,
@@ -236,7 +237,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: _field.hasFocus && FocusManager.instance.highlightMode == FocusHighlightMode.traditional ? t.borderFocus : t.border))),
       padding: EdgeInsetsDirectional.only(start: full ? t.space1 : t.space4, end: t.space4),
       child: Row(children: [
-        if (full) UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedArrowLeft01), label: 'Close', size: UiSize.lg, onPressed: widget.onClose),
+        if (full) UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, matchTextDirection: true), label: context.uiStrings.close, size: UiSize.lg, onPressed: widget.onClose),
         Expanded(child: field),
       ]),
     );
@@ -244,7 +245,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
     if (full) {
       final mq = MediaQuery.of(context);
       return UiDialogScope(
-        label: 'Command palette',
+        label: context.uiStrings.commandPalette,
         autofocus: false,
         onClose: widget.onClose,
         child: ColoredBox(
@@ -287,7 +288,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
         padding: EdgeInsets.only(top: size.height * 0.12),
         child: SizedBox(
           width: math.min(560, size.width * 0.92),
-          child: UiDialogScope(label: 'Command palette', autofocus: false, onClose: widget.onClose, child: panel),
+          child: UiDialogScope(label: context.uiStrings.commandPalette, autofocus: false, onClose: widget.onClose, child: panel),
         ),
       ),
     );

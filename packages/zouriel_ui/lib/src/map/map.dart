@@ -339,13 +339,13 @@ class UiMap extends StatefulWidget {
     this.pin,
     this.onPinChanged,
     this.pinMode = false,
-    this.pinLabel = 'Chosen location',
+    this.pinLabel,
     this.pinDraggable = true,
     this.tileHeaders,
     this.tileUrl = uiMapOsmTiles,
     this.attribution = '© OpenStreetMap contributors',
     this.onAttributionTap,
-    this.semanticLabel = 'Map',
+    this.semanticLabel,
     this.userAgentPackageName = 'com.zouriel.ui',
     this.tileProvider,
     this.pulse,
@@ -451,7 +451,8 @@ class UiMap extends StatefulWidget {
 
   /// A tap on the map moves the pin there.
   final bool pinMode;
-  final String pinLabel;
+  /// [UiStrings.mapChosenLocation] when null.
+  final String? pinLabel;
 
   /// Whether the pin can be dragged; false shows a fixed location with the pin's look.
   final bool pinDraggable;
@@ -463,7 +464,9 @@ class UiMap extends StatefulWidget {
 
   /// Open the attribution's source (e.g. the OSM copyright page with url_launcher).
   final VoidCallback? onAttributionTap;
-  final String semanticLabel;
+
+  /// [UiStrings.mapLabel] when null.
+  final String? semanticLabel;
   final String userAgentPackageName;
   final TileProvider? tileProvider;
 
@@ -849,7 +852,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
               height: 48,
               alignment: Alignment.topCenter,
               child: _Pin(
-                label: widget.pinLabel,
+                label: widget.pinLabel ?? context.uiStrings.mapChosenLocation,
                 draggable: widget.pinDraggable,
                 onDrag: (global) {
                   final box = _box.currentContext?.findRenderObject() as RenderBox?;
@@ -908,7 +911,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
 
     return Semantics(
       container: true,
-      label: widget.semanticLabel,
+      label: widget.semanticLabel ?? context.uiStrings.mapLabel,
       customSemanticsActions: widget.pinMode ? {CustomSemanticsAction(label: context.uiStrings.placePinAtCentre): _placeAtCentre} : null,
       // Not focusable itself: flutter_map's own surface takes focus (and the arrow keys); Enter
       // bubbles up to here. A second focusable node would split the map in two for screen readers,

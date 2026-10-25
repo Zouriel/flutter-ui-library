@@ -313,9 +313,9 @@ class _UiImageViewerState extends State<UiImageViewer> {
       },
       child: Semantics(
         image: true,
-        label: widget.alt.isEmpty ? 'Image' : widget.alt,
+        label: widget.alt.isEmpty ? context.uiStrings.image : widget.alt,
         value: pct,
-        hint: 'Double tap to zoom',
+        hint: context.uiStrings.doubleTapToZoom,
         child: DecoratedBox(
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(boxShadow: uiFocusRing(t, show: _focus)),
@@ -325,19 +325,19 @@ class _UiImageViewerState extends State<UiImageViewer> {
     );
 
     Widget btn(UiIconData icon, String label, VoidCallback? onTap) =>
-        UiIconButton(icon: UiIcon(icon), label: label, size: UiSize.sm, onPressed: onTap);
+        UiIconButton(icon: UiIcon(icon, matchTextDirection: true), label: label, size: UiSize.sm, onPressed: onTap);
 
     if (widget.fill) {
       final overlay = uiViewerOverlayBar(context, [
-        if (_navigable) btn(HugeIcons.strokeRoundedArrowLeft01, 'Previous image', widget.hasPrevious ? widget.onPrevious : null),
-        btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', _zoom <= _minZoom ? null : () => _setZoom(_zoom - 0.25)),
+        if (_navigable) btn(HugeIcons.strokeRoundedArrowLeft01, context.uiStrings.previousImage, widget.hasPrevious ? widget.onPrevious : null),
+        btn(HugeIcons.strokeRoundedMinusSign, context.uiStrings.zoomOut, _zoom <= _minZoom ? null : () => _setZoom(_zoom - 0.25)),
         ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 42),
           child: Text(pct, textAlign: TextAlign.center, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
         ),
-        btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', _zoom >= _maxZoom ? null : () => _setZoom(_zoom + 0.25)),
-        UiButton(label: 'Fit', semanticLabel: 'Reset view', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _reset),
-        if (_navigable) btn(HugeIcons.strokeRoundedArrowRight01, 'Next image', widget.hasNext ? widget.onNext : null),
+        btn(HugeIcons.strokeRoundedPlusSign, context.uiStrings.zoomIn, _zoom >= _maxZoom ? null : () => _setZoom(_zoom + 0.25)),
+        UiButton(label: context.uiStrings.fit, semanticLabel: context.uiStrings.resetView, variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _reset),
+        if (_navigable) btn(HugeIcons.strokeRoundedArrowRight01, context.uiStrings.nextImage, widget.hasNext ? widget.onNext : null),
       ], touch: touch);
       return LayoutBuilder(builder: (context, box) {
         final h = box.maxHeight.isFinite ? box.maxHeight : maxH;
@@ -360,17 +360,17 @@ class _UiImageViewerState extends State<UiImageViewer> {
       padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: t.space1),
       decoration: BoxDecoration(color: t.surfaceRaised, border: Border(top: BorderSide(color: t.border))),
       child: Row(spacing: touch ? 0 : t.space1, children: [
-        if (_navigable) btn(HugeIcons.strokeRoundedArrowLeft01, 'Previous image', widget.hasPrevious ? widget.onPrevious : null),
+        if (_navigable) btn(HugeIcons.strokeRoundedArrowLeft01, context.uiStrings.previousImage, widget.hasPrevious ? widget.onPrevious : null),
         const Spacer(),
-        btn(HugeIcons.strokeRoundedMinusSign, 'Zoom out', _zoom <= _minZoom ? null : () => _setZoom(_zoom - 0.25)),
+        btn(HugeIcons.strokeRoundedMinusSign, context.uiStrings.zoomOut, _zoom <= _minZoom ? null : () => _setZoom(_zoom - 0.25)),
         ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 42),
           child: Text(pct, textAlign: TextAlign.center, style: context.uiText.code.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textMuted, fontFeatures: const [FontFeature.tabularFigures()])),
         ),
-        btn(HugeIcons.strokeRoundedPlusSign, 'Zoom in', _zoom >= _maxZoom ? null : () => _setZoom(_zoom + 0.25)),
-        UiButton(label: 'Fit', semanticLabel: 'Reset view', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _reset),
+        btn(HugeIcons.strokeRoundedPlusSign, context.uiStrings.zoomIn, _zoom >= _maxZoom ? null : () => _setZoom(_zoom + 0.25)),
+        UiButton(label: context.uiStrings.fit, semanticLabel: context.uiStrings.resetView, variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: _reset),
         const Spacer(),
-        if (_navigable) btn(HugeIcons.strokeRoundedArrowRight01, 'Next image', widget.hasNext ? widget.onNext : null),
+        if (_navigable) btn(HugeIcons.strokeRoundedArrowRight01, context.uiStrings.nextImage, widget.hasNext ? widget.onNext : null),
       ]),
     );
 

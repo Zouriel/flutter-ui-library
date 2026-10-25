@@ -93,7 +93,7 @@ class UiTable<T> extends StatefulWidget {
     required this.data,
     this.selectable = false,
     this.actions = const [],
-    this.emptyText = 'No data',
+    this.emptyText,
     this.radius,
     this.onSelectionChanged,
   });
@@ -102,7 +102,8 @@ class UiTable<T> extends StatefulWidget {
   final List<T> data;
   final bool selectable;
   final List<UiRowAction<T>> actions;
-  final String emptyText;
+  /// [UiStrings.noData] when null.
+  final String? emptyText;
   final bool? radius;
   final ValueChanged<List<T>>? onSelectionChanged;
 
@@ -200,7 +201,7 @@ class _UiTableState<T> extends State<UiTable<T>> {
           Semantics(
             container: true,
             role: SemanticsRole.columnHeader,
-            child: Padding(padding: EdgeInsets.symmetric(horizontal: t.space3), child: _Check(checked: all, mixed: some, label: 'Select all rows', onChanged: widget.data.isEmpty ? null : _toggleAll)),
+            child: Padding(padding: EdgeInsets.symmetric(horizontal: t.space3), child: _Check(checked: all, mixed: some, label: context.uiStrings.selectAllRows, onChanged: widget.data.isEmpty ? null : _toggleAll)),
           ),
         for (final col in widget.columns)
           Semantics(
@@ -218,7 +219,7 @@ class _UiTableState<T> extends State<UiTable<T>> {
             ),
           ),
         // Named by its semantics, with no visible text.
-        if (hasActions) Semantics(container: true, role: SemanticsRole.columnHeader, label: 'Actions', child: const SizedBox.shrink()),
+        if (hasActions) Semantics(container: true, role: SemanticsRole.columnHeader, label: context.uiStrings.actions, child: const SizedBox.shrink()),
       ],
     );
 
@@ -232,7 +233,7 @@ class _UiTableState<T> extends State<UiTable<T>> {
             if (widget.selectable)
               hoverable(i, Padding(
                 padding: EdgeInsets.symmetric(horizontal: t.space3),
-                child: _Check(checked: current.contains(rows[i]), label: 'Select row ${i + 1}', onChanged: (_) => _toggleRow(rows[i])),
+                child: _Check(checked: current.contains(rows[i]), label: uiFormatString(context.uiStrings.selectRow, {'n': i + 1}), onChanged: (_) => _toggleRow(rows[i])),
               )),
             for (final col in widget.columns)
               hoverable(i, Padding(
@@ -286,7 +287,7 @@ class _UiTableState<T> extends State<UiTable<T>> {
                 decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
                 child: Padding(
                   padding: EdgeInsets.all(t.space6),
-                  child: Text(widget.emptyText, textAlign: TextAlign.center, style: body.copyWith(color: t.textMuted)),
+                  child: Text(widget.emptyText ?? context.uiStrings.noData, textAlign: TextAlign.center, style: body.copyWith(color: t.textMuted)),
                 ),
               ),
             ]);

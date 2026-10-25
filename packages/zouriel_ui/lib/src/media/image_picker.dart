@@ -94,7 +94,7 @@ class UiImagePicker extends StatelessWidget {
         ],
       ),
       if (loading)
-        Padding(padding: EdgeInsets.all(t.space3), child: const Center(child: UiSpinner(label: 'Loading…')))
+        Padding(padding: EdgeInsets.all(t.space3), child: const Center(child: UiSpinner()))
       else if (items.isEmpty && emptyText.isNotEmpty)
         Padding(
           padding: EdgeInsets.all(t.space3),
@@ -180,9 +180,9 @@ class _CellState extends State<_Cell> {
                 child: Stack(fit: StackFit.expand, children: [
                   Opacity(opacity: reason ? 0.45 : 1, child: Padding(padding: EdgeInsets.all(t.space2), child: content)),
                   if (item.badge != null)
-                    Positioned(
+                    PositionedDirectional(
                       top: t.space1,
-                      right: t.space1,
+                      end: t.space1,
                       child: Container(
                         padding: EdgeInsets.symmetric(horizontal: t.space1),
                         decoration: BoxDecoration(color: t.primary, borderRadius: BorderRadius.circular(t.radiusPill)),
@@ -204,7 +204,7 @@ class _CellState extends State<_Cell> {
                   if (widget.busy)
                     ColoredBox(
                       color: t.surface.withValues(alpha: 0.6),
-                      child: Center(child: UiSpinner(label: 'Adding ${item.label}', color: t.text)),
+                      child: Center(child: UiSpinner(label: uiFormatString(context.uiStrings.adding, {'label': item.label}), color: t.text)),
                     ),
                 ]),
               ),

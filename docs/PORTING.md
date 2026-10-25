@@ -187,6 +187,25 @@ each was ~16px lower than the last; now `absolute`, lifted 12px (half the 24px b
 the point, hit area recentred. flutter_map positions each `Marker` independently (centred), so Flutter only
 gained a test.
 
+**0.46.0. RTL completeness and built-in Dhivehi.** Decisions: (1) Direction comes from `Directionality`;
+`UiApp.textDirection` (null = from the locale's language) wraps the whole app including `builder`, because
+WidgetsApp's default localizations are always LTR and `dv` has no Flutter localizations. (2) `start`/`end` were
+added to `UiDrawerSide` and `UiToastPosition` with `resolve(TextDirection)`; widgets resolve once and keep their
+physical code. Adding enum values breaks exhaustive `switch`es in apps (the library's own and two tests were
+updated). (3) `UiStrings` moved to `theme/strings.dart`, generated from the shared key table (same keys as the
+web `UiStrings`, plus Flutter-only `today`, `notSet`, `chooseMonth`, `chooseYear`, `opensCalendar`,
+`opensTimePicker`, `hours/minutes/seconds`, text-selection menu words, `fieldRequired`/`thisField`,
+`sheetSmaller/Larger`, `navigationOpen`, `currentStep`, `upcoming`, `openImage`, `image`, `meter`, `chosenFiles`,
+`slider`; reported to the web side). It has `==`, `copyWith` and `toMap`. (4) Words switch at once: the theme
+tween's `transform` and `lerp` take the new strings at t = 0 (Tween.transform returns `begin` untouched at 0).
+(5) `intl` has no Dhivehi, so names come from `UiStrings.months`/`weekdays` and formats from `dateFormat`
+patterns; the first weekday comes from `UiStrings.firstDayOfWeek` or `intl` date symbols. (6) Typography names
+bundled families with their `packages/zouriel_ui/` prefix instead of `package:`, so `UiConfig.fontFamilyFallback`
+isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as the web group's `dir="ltr"`.
+(8) Not moved to UiStrings: form builder, workflow and canvas/sequencer editor text, window chrome
+(Restore/Minimize/Maximize), file-viewer extras (Copy/Copied, Mute, Full screen, Media viewer, Current folder),
+tree-table Expand/Collapse, anchor picker point names, side nav and choice grid default names.
+
 **0.45.2. Queued Leaflet events after teardown.** The web map can unmount while Leaflet is finishing an
 animated pan; its queued `moveend` used to read the cleared map field and throw. The listener now checks
 that its map instance is still current, and `visibleCenter()` safely returns null after teardown. Flutter's

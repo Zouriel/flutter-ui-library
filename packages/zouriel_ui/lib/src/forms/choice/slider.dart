@@ -27,7 +27,7 @@ class UiSlider extends StatefulWidget {
     this.min = 0,
     this.max = 100,
     this.step = 1,
-    this.label = 'Slider',
+    this.label,
     this.showValue = true,
     this.format,
     this.focusNode,
@@ -45,7 +45,8 @@ class UiSlider extends StatefulWidget {
   final double step;
 
   /// Accessible name.
-  final String label;
+  /// The name read out; [UiStrings.slider] when null.
+  final String? label;
   final bool showValue;
 
   /// Formats the shown and announced value; defaults to the step's precision.
@@ -218,7 +219,7 @@ class _UiSliderState extends State<UiSlider> {
     return Semantics(
       container: true,
       slider: true,
-      label: widget.label,
+      label: widget.label ?? context.uiStrings.slider,
       value: shown,
       increasedValue: _fmt(_snap(_value + widget.step)),
       decreasedValue: _fmt(_snap(_value - widget.step)),

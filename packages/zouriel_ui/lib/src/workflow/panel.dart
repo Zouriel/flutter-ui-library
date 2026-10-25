@@ -718,7 +718,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       for (final st in path.steps) UiStep(label: st.label),
       if (path.steps.isEmpty && r != null) UiStep(label: widget.title.isEmpty ? 'Workflow' : widget.title),
     ];
-    final edge = _edge;
+    final edge = _edge.resolve(Directionality.of(context));
     final vertical = edge != UiDrawerSide.bottom;
     final rr = Radius.circular(t.radiusLg);
     final now = path.steps.isEmpty ? null : path.steps[path.active].label;
@@ -746,7 +746,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
             borderRadius: switch (edge) {
               UiDrawerSide.left => BorderRadius.only(topRight: rr, bottomRight: rr),
               UiDrawerSide.bottom || UiDrawerSide.top => BorderRadius.only(topLeft: rr, topRight: rr),
-              UiDrawerSide.right => BorderRadius.only(topLeft: rr, bottomLeft: rr),
+              _ => BorderRadius.only(topLeft: rr, bottomLeft: rr),
             },
             boxShadow: [...t.shadow2, if (s.focused) ...t.focusRing],
           ),
@@ -764,7 +764,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       alignment: switch (edge) {
         UiDrawerSide.left => Alignment.centerLeft,
         UiDrawerSide.bottom || UiDrawerSide.top => Alignment.bottomCenter,
-        UiDrawerSide.right => Alignment.centerRight,
+        _ => Alignment.centerRight,
       },
       child: SafeArea(
         left: edge == UiDrawerSide.left,

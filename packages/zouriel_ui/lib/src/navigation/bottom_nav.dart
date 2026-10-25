@@ -125,9 +125,9 @@ class _BottomNavTile extends StatelessWidget {
                 Stack(clipBehavior: Clip.none, children: [
                   UiIcon(item.icon!, size: iconSize, color: active ? fg : (t.icon ?? fg)),
                   if (item.badge != null)
-                    Positioned(
+                    PositionedDirectional(
                       top: -6,
-                      right: -10,
+                      end: -10,
                       child: Container(
                         constraints: const BoxConstraints(minWidth: 16),
                         height: 16,

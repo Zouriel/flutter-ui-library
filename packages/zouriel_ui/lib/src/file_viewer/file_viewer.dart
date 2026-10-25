@@ -107,9 +107,9 @@ class UiFileViewer extends StatelessWidget {
               child: Column(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
                 UiIcon(HugeIcons.strokeRoundedFile01, size: 40, strokeWidth: 1.6, color: t.textMuted),
                 Text(name ?? UiFileSources.nameOf(src), textAlign: TextAlign.center, style: context.uiText.body),
-                Text('Preview not available for this file type.', textAlign: TextAlign.center, style: context.uiText.caption),
+                Text(context.uiStrings.previewUnavailable, textAlign: TextAlign.center, style: context.uiText.caption),
                 if (onOpenExternally != null)
-                  UiButton(label: 'Open', icon: const UiIcon(HugeIcons.strokeRoundedDownload01), variant: UiButtonVariant.link, size: UiSize.sm, onPressed: onOpenExternally),
+                  UiButton(label: context.uiStrings.open, icon: const UiIcon(HugeIcons.strokeRoundedDownload01), variant: UiButtonVariant.link, size: UiSize.sm, onPressed: onOpenExternally),
               ]),
             ),
           ),
@@ -192,7 +192,7 @@ class _UiFileExplorerState extends State<UiFileExplorer> {
       decoration: BoxDecoration(color: t.surfaceRaised, border: Border(bottom: BorderSide(color: t.border))),
       child: Semantics(
         container: true,
-        label: 'Path',
+        label: context.uiStrings.path,
         explicitChildNodes: true,
         child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: t.space1, children: [
           for (var i = 0; i < crumbs.length; i++) ...[
@@ -208,7 +208,7 @@ class _UiFileExplorerState extends State<UiFileExplorer> {
     );
 
     final list = entries.isEmpty
-        ? Padding(padding: EdgeInsets.all(t.space4), child: Text('Empty folder', textAlign: TextAlign.center, style: context.uiText.caption))
+        ? Padding(padding: EdgeInsets.all(t.space4), child: Text(context.uiStrings.emptyFolder, textAlign: TextAlign.center, style: context.uiText.caption))
         : ListView(
             shrinkWrap: true,
             padding: EdgeInsets.all(t.space1),
@@ -302,7 +302,7 @@ class _Row extends StatelessWidget {
         child: Row(spacing: t.space2, children: [
           UiIcon(node.isDir ? HugeIcons.strokeRoundedFolder01 : UiFileViewer.iconFor(node.type), size: 16, strokeWidth: 1.6, color: t.textMuted),
           Expanded(child: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontSize: t.fontSizeSm))),
-          if (node.isDir) UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, color: t.textMuted),
+          if (node.isDir) UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, color: t.textMuted, matchTextDirection: true),
         ]),
       ),
     );

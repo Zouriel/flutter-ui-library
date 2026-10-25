@@ -42,7 +42,7 @@ mixin _TextSource<W extends StatefulWidget> on State<W> {
     final t = context.ui;
     if (_content != null) return null;
     if (loading) {
-      return Semantics(liveRegion: true, child: Padding(padding: EdgeInsets.all(t.space4), child: Text('Loading…', style: context.uiText.body.copyWith(color: t.textMuted))));
+      return Semantics(liveRegion: true, child: Padding(padding: EdgeInsets.all(t.space4), child: Text(context.uiStrings.loading, style: context.uiText.body.copyWith(color: t.textMuted))));
     }
     if (error != null) {
       return Semantics(liveRegion: true, child: Padding(padding: EdgeInsets.all(t.space4), child: Text(error!, style: context.uiText.body.copyWith(color: t.danger))));
