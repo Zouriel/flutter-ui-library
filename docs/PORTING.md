@@ -207,6 +207,30 @@ isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as 
 (Restore/Minimize/Maximize), file-viewer extras (Copy/Copied, Mute, Full screen, Media viewer, Current folder),
 tree-table Expand/Collapse, anchor picker point names, side nav and choice grid default names.
 
+**0.47.0. Map navigation mode and turning the map.** (1) Logic: `UiNavTracker` is the same algorithm in
+both libs (local equirectangular metres around the route's first point; snapping only at or past the last place
+less 50 m, so a road that doubles back doesn't pull the person back; maneuvers placed on the route in order; the
+step is the last maneuver behind; time left is the current step's share plus the steps after it). The specs share
+the made-up 1 km drive and assert the same numbers. Announce thresholds already passed when a maneuver becomes the
+next one are marked done (the step announcement covers them). (2) Rotation: Flutter has it in flutter_map
+(`camera.rotation = -bearing`, layers turned by `MobileLayerTransformer`, markers counter-rotated with
+`MarkerLayer(rotate: true)`). Leaflet 1.9 has none; leaflet-rotate (0.2.8, last published 2023) needs a global `L`
+and patches Leaflet's prototypes for every map on the page, so the web turns its own map pane: it is moved into a
+CSS-turned wrapper about the middle of the visible part; `map.mouseEventToContainerPoint` (instance) turns pointer
+positions back, so taps, the wheel, pinches and double-clicks land under the finger; the drag's `predrag` turns
+the delta back; the tile layer's `_getTiledPixelBounds` (instance) and the SVG renderers' padding cover the turned
+corners; markers, the pin and the area handle get the counter-turn appended to Leaflet's translate (about their
+anchor). The area layers on Flutter now use unturned layer pixels (`projectAtZoom - pixelOrigin`): with the old
+`latLngToScreenOffset` inside `MobileLayerTransformer` a turned map would turn them twice. (3) Gestures: the same
+race in both, a 15 degree twist vs a 10% zoom vs a 30 px pan, whichever first (flutter_map's
+`enableMultiFingerGestureRace`, its zoom threshold in zoom levels: log2 1.1; on the web our own race beside
+Leaflet's touch zoom, which keeps the point under the fingers in place while the map turns). Without the race
+flutter_map turns on any twist, so `rotatable: false` keeps the old options. Web desktop: Alt + drag (Shift + drag
+is Leaflet's box zoom). (4) The arrow puck eases with the map's turn: the web updates the marker in place and
+transitions its rotation on the rotor's curve; Flutter draws it turned back by the turn still to come. (5) The
+compass sits in the zoom buttons' stack (a Leaflet control in their corner on the web). (6) `UiMapRoute.opacity`
+replaced a CSS rule keyed on a route id so Flutter could match the dimmed way behind.
+
 **0.46.2. Route draw-in.** Both libs animate the route geometry itself rather than a dash offset: each frame
 draws `uiMapRoutePartial(points, ease(t))` (the first fraction of the route by haversine length, ending on an
 interpolated point), so the line grows correctly while the map pans or zooms mid-draw (a dash offset would be

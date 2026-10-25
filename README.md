@@ -141,6 +141,18 @@ line laid out as in LTR; a Text child keeps its own direction (Thaana right to l
 once for the app with `UiConfig(chatMineSide: UiChatBubbleSide.right)`. The default, `end` (the inline end, so the
 left in RTL), is unchanged.
 
+**Navigation and turning the map (0.47.0):** `UiMapNavigation` is a turn-by-turn view (the map follows the
+person heading-up, the way behind dimmed, an arrow puck, a banner with the next maneuver's arrow, "in 80 m", the
+instruction and street, the maneuver after it small, and the time / distance left, arrival time and End). The app
+feeds the OSRM route, steps (its own localized instructions) and positions; `UiNavTracker` (pure) works out the
+step and distances and calls `onAnnounce` (start, each new maneuver, 200 m and 30 m before it), `onOffRoute` (5 s
+over 40 m off) and `onArrived` (20 m). Maneuver icons (`uiNavIcons`) cover turns, slight / sharp, U-turns,
+roundabout exits, forks, merges, depart and arrive, never mirrored in RTL. `UiMap` gains `bearing`, `rotatable`
+(two-finger turn past 15 degrees before a 10% zoom or 30 px pan), a compass under the zoom buttons while turned
+("Reset to north"), `rotateTo`, `onBearingChanged`, `onUserMove`, `zoomButtons`, `UiMapUserLocation.heading`
+(arrow puck) and `UiMapRoute.opacity`; markers, the pin and labels stay upright. New strings `nav*` and
+`mapResetNorth` (en + dv).
+
 **Route draw-in (0.46.2):** a route that appears in `UiMap(routes:)`, or gets new points, grows along its path
 from start to end (casing and line together, ease-out, 250..900 ms by length: `uiMapRouteDrawDuration`), then
 sits as before; `fitPoints` is unchanged. Rebuilding with the same id and points doesn't replay it.

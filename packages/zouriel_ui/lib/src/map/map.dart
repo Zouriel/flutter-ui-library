@@ -99,16 +99,20 @@ class UiMapPulse {
 /// `UiMapUserLocation`). [accuracy] is in metres, drawn as a soft halo of that radius.
 @immutable
 class UiMapUserLocation {
-  const UiMapUserLocation(this.lat, this.lng, {this.accuracy});
+  const UiMapUserLocation(this.lat, this.lng, {this.accuracy, this.heading});
   final double lat;
   final double lng;
   final double? accuracy;
 
-  @override
-  bool operator ==(Object other) => other is UiMapUserLocation && other.lat == lat && other.lng == lng && other.accuracy == accuracy;
+  /// The direction of travel, degrees clockwise from north (0.47.0): the dot becomes an arrow
+  /// pointing that way on the map (it turns with a turned map). Null: the round dot.
+  final double? heading;
 
   @override
-  int get hashCode => Object.hash(lat, lng, accuracy);
+  bool operator ==(Object other) => other is UiMapUserLocation && other.lat == lat && other.lng == lng && other.accuracy == accuracy && other.heading == heading;
+
+  @override
+  int get hashCode => Object.hash(lat, lng, accuracy, heading);
 }
 
 /// The smallest and largest the accuracy halo is drawn, in px across.
@@ -131,7 +135,7 @@ enum UiMapRouteTone { primary, muted, success, warning, danger }
 /// the app; without it the route is not read out.
 @immutable
 class UiMapRoute {
-  const UiMapRoute({required this.id, required this.points, this.tone = UiMapRouteTone.primary, this.semanticLabel, this.animate = true});
+  const UiMapRoute({required this.id, required this.points, this.tone = UiMapRouteTone.primary, this.semanticLabel, this.animate = true, this.opacity = 1});
   final String id;
   final List<UiLatLng> points;
   final UiMapRouteTone tone;
@@ -140,6 +144,10 @@ class UiMapRoute {
   /// Draw it in from start to end when it appears or its points change (0.46.2); true by default.
   /// False draws it at once. Never animated under reduced motion or on a preview.
   final bool animate;
+
+  /// The line's opacity over its casing, 0..1 (0.47.0); 1 by default. A navigation view draws the
+  /// way behind at 0.6.
+  final double opacity;
 }
 
 /// An app's own button on the map (0.42.1, the web `UiMapControl`), drawn in the same stack and
@@ -261,6 +269,23 @@ List<UiLatLng> uiMapRoutePartial(List<UiLatLng> points, double fraction) {
     out.add(b);
   }
   return out;
+}
+
+/// Two-finger rotation (0.47.0, the web `UI_MAP_ROTATE_THRESHOLD`): the twist, in degrees, that turns
+/// the map if it comes before a 10% pinch zoom or a 30 px pan.
+const double uiMapRotateThreshold = 15;
+
+/// A pinch that changes the fingers' distance by this much (10%) first is a zoom: no turning.
+const double uiMapPinchZoomThreshold = 0.1;
+
+/// Fingers whose middle moves this far (px) first are a pan: no turning.
+const double uiMapPinchMoveThreshold = 30;
+
+/// Whether a bearing is away from north by more than half a degree: the compass shows (the web
+/// `uiMapIsTurned`).
+bool uiMapIsTurned(double bearing) {
+  final b = (bearing % 360 + 360) % 360;
+  return math.min(b, 360 - b) > 0.5;
 }
 
 /// The closest [UiMapState.fitPoints] zooms by default, and the zoom it shows a single point at.
@@ -437,7 +462,37 @@ class UiMap extends StatefulWidget {
     this.onAreaChanging,
     this.onAreaChanged,
     this.areaLabel,
+    this.bearing = 0,
+    this.zoomButtons = true,
+    this.onUserMove,
+    this.rotatable = true,
+    this.compass = true,
+    this.onBearingChanged,
   });
+
+  /// The person can turn the map (0.47.0): a two-finger twist past [uiMapRotateThreshold] degrees
+  /// before the pinch zooms 10% or pans 30 px (flutter_map's gesture race; once turning, the pinch
+  /// zooms and pans with it).
+  final bool rotatable;
+
+  /// A compass button under the zoom buttons while the map is turned from north; it turns it back (0.47.0).
+  final bool compass;
+
+  /// The person turned the map, or pressed the compass (0.47.0): the new bearing, when the turn ends.
+  final ValueChanged<double>? onBearingChanged;
+
+  /// The compass direction at the top of the map, degrees clockwise from north (0.47.0): 0 is north
+  /// up; a heading turns the map heading-up. The map turns about the middle of the visible part,
+  /// eased unless animations are off (reduced motion) or it is a [preview]; markers, the pin and
+  /// the area handle stay upright.
+  final double bearing;
+
+  /// The zoom buttons (0.47.0); false hides them (pinch, double tap, the wheel and keys still zoom).
+  final bool zoomButtons;
+
+  /// The person moved the map themselves (0.47.0): a drag, pinch, fling, double tap, the wheel or
+  /// keys; not the zoom buttons, and never a move from the app.
+  final VoidCallback? onUserMove;
 
   /// A search area (0.44.0): a circle in metres, with a radius handle when editable.
   final UiMapArea? area;
@@ -559,6 +614,12 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
 
   /// The inset shift the view is laid out for.
   Offset _shift = Offset.zero;
+
+  /// The map's turn (0.47.0): eased from [_turnFrom] to [_turnTo] (unwrapped, so 359 to 1 turns 2
+  /// degrees), [_turnNow] the bearing shown.
+  late final AnimationController _turn = AnimationController(vsync: this)..addListener(_onTurn);
+  double _turnFrom = 0, _turnTo = 0, _turnNow = 0;
+  Curve _turnCurve = Curves.linear;
   final GlobalKey _box = GlobalKey();
 
   /// fitPoints' move: from one camera to another.
@@ -594,6 +655,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     final next = uiMapInsetShift(widget.viewInsets, Directionality.of(context));
     if (next != _shift) _shiftTo(next, animate: uiFxMotion(context) == UiFxMotion.full);
     if (!_ready) return;
+    if (oldWidget.bearing != widget.bearing) _turnTowards(widget.bearing, animate: !widget.preview && uiFxMotion(context) == UiFxMotion.full);
     if (oldWidget.area != widget.area) _areaKept = null;
     if (oldWidget.center != widget.center || oldWidget.zoom != widget.zoom) {
       final c = _visibleCenter(_controller.camera);
@@ -606,6 +668,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _turn.dispose();
     _fly.dispose();
     _pan.dispose();
     _controller.dispose();
@@ -613,7 +676,72 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
   }
 
   /// The point in the middle of the part of the map between the insets.
-  LatLng _visibleCenter(MapCamera c) => _shift == Offset.zero ? c.center : c.unprojectAtZoom(c.projectAtZoom(c.center) + _shift);
+  LatLng _visibleCenter(MapCamera c) => _pointAt(c, _shift);
+
+  /// The point [s] px (on screen) from the map's own centre, on a turned map too.
+  LatLng _pointAt(MapCamera c, Offset s) {
+    if (s == Offset.zero) return c.center;
+    final p = c.projectAtZoom(c.center);
+    if (c.rotation == 0) return c.unprojectAtZoom(p + s);
+    return c.unprojectAtZoom(c.rotatePoint(p, p + s));
+  }
+
+  /// The bearing the map is turning to (0.47.0).
+  double get bearingTarget => _turnTo;
+
+  /// The bearing shown, degrees clockwise from north in 0..360 (0.47.0).
+  double get currentBearing => (_turnNow % 360 + 360) % 360;
+
+  /// Turns the map so [bearing] is up (0.47.0), eased unless animations are off; for an app that
+  /// needs the turn back after the person turned it (a navigation view's Recenter), since
+  /// [UiMap.bearing] only acts when it changes.
+  void rotateTo(double bearing) => _turnTowards(bearing, animate: !widget.preview && uiFxMotion(context) == UiFxMotion.full);
+
+  /// The compass: north up again, and [UiMap.onBearingChanged] 0.
+  void _resetNorth() {
+    rotateTo(0);
+    widget.onBearingChanged?.call(0);
+  }
+
+  /// The person turned the map with their fingers (or keys): take the camera's turn as ours.
+  void _takeCameraTurn(MapCamera c) {
+    final b = -c.rotation;
+    final delta = (((b - _turnTo) % 360) + 540) % 360 - 180;
+    _turn.stop();
+    _turnFrom = _turnTo = _turnNow = _turnTo + delta;
+    setState(() {});
+  }
+
+  /// Turns the map so [bearing] is up, the shorter way round, about the middle of the visible part.
+  void _turnTowards(double bearing, {required bool animate}) {
+    final target = bearing.isFinite ? bearing : 0.0;
+    final delta = (((target - _turnTo) % 360) + 540) % 360 - 180;
+    final to = _turnTo + delta;
+    _turn.stop();
+    if (!animate || !_ready) {
+      _turnFrom = _turnTo = to;
+      _setTurn(to);
+      return;
+    }
+    final t = context.ui;
+    _turnFrom = _turnNow;
+    _turnTo = to;
+    _turnCurve = t.easeStandard;
+    _turn
+      ..duration = t.motionSlow
+      ..forward(from: 0);
+  }
+
+  void _onTurn() => _setTurn(_turnFrom + (_turnTo - _turnFrom) * _turnCurve.transform(_turn.value));
+
+  void _setTurn(double b) {
+    _turnNow = b;
+    if (!_ready) return;
+    final point = _visibleCenter(_controller.camera);
+    _controller.rotate(-b);
+    _controller.move(point, _controller.camera.zoom, offset: _shift);
+    if (mounted) setState(() {});
+  }
 
   /// Lays the view out for a new inset shift: the point in the middle of the old visible part pans
   /// to the middle of the new one (the map's own centre moves by the difference). While a fit owns
@@ -631,7 +759,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     // A pan already on its way keeps its point, from where it has got to.
     final running = _pan.isAnimating;
     final from = running ? Offset.lerp(_panFrom, _panTo, _panCurve.transform(_pan.value))! : old;
-    final point = running ? _panPoint : (old == Offset.zero ? c.center : c.unprojectAtZoom(c.projectAtZoom(c.center) + old));
+    final point = running ? _panPoint : _pointAt(c, old);
     _pan.stop();
     if (!animate) {
       _controller.move(point, c.zoom, offset: next);
@@ -663,6 +791,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     _ready = true;
     // Built centred on the middle of the whole map: centre the input in the visible part instead.
     if (_shift != Offset.zero) _controller.move(widget.center._ll, widget.zoom, offset: _shift);
+    if (widget.bearing != 0) _turnTowards(widget.bearing, animate: false);
     // A fit asked for before the map was ready (fitPoints / fitArea on opening) runs now, without animating.
     final f = _fit;
     if (f != null) {
@@ -809,6 +938,16 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
 
   void _onEvent(MapEvent e) {
     if (e.source == MapEventSource.mapController) return;
+    // The person moved the map themselves (0.47.0).
+    if (!widget.preview &&
+        (e is MapEventMoveStart || e is MapEventRotateStart || e is MapEventDoubleTapZoomStart || e is MapEventScrollWheelZoom || (e.source == MapEventSource.keyboard && e is MapEventMove))) {
+      widget.onUserMove?.call();
+    }
+    if (e is MapEventRotate) _takeCameraTurn(e.camera);
+    if (e is MapEventRotateEnd) {
+      _takeCameraTurn(e.camera);
+      widget.onBearingChanged?.call(currentBearing);
+    }
     // The person moves the map (drag, pinch, fling, double tap, wheel, keys): it is theirs now.
     if ((e is MapEventWithMove && e is! MapEventNonRotatedSizeChange) || e is MapEventMoveStart || e is MapEventDoubleTapZoomStart || e is MapEventRotateStart) {
       if (_fit != null || _fly.isAnimating || _pan.isAnimating) _release();
@@ -856,9 +995,20 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
         // A preview takes no gestures or keys at all: it is a picture under one button.
         interactionOptions: widget.preview
             ? const InteractionOptions(flags: InteractiveFlag.none, keyboardOptions: KeyboardOptions.disabled())
-            : InteractionOptions(
-                flags: motion == UiFxMotion.full ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.all & ~InteractiveFlag.rotate & ~InteractiveFlag.flingAnimation,
-              ),
+            : widget.rotatable
+                // Turning (0.47.0): the first of a 15 degree twist, a 10% zoom (log2 1.1 zoom levels)
+                // or a 30 px pan wins the gesture; a turn carries the zoom and pan with it.
+                ? InteractionOptions(
+                    flags: motion == UiFxMotion.full ? InteractiveFlag.all : InteractiveFlag.all & ~InteractiveFlag.flingAnimation,
+                    enableMultiFingerGestureRace: true,
+                    rotationThreshold: uiMapRotateThreshold,
+                    rotationWinGestures: MultiFingerGesture.rotate | MultiFingerGesture.pinchZoom | MultiFingerGesture.pinchMove,
+                    pinchZoomThreshold: math.log(1 + uiMapPinchZoomThreshold) / math.ln2,
+                    pinchMoveThreshold: uiMapPinchMoveThreshold,
+                  )
+                : InteractionOptions(
+                    flags: motion == UiFxMotion.full ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.all & ~InteractiveFlag.rotate & ~InteractiveFlag.flingAnimation,
+                  ),
       ),
       children: [
         TileLayer(
@@ -888,8 +1038,11 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
             ),
           ]),
         // The "you are here" dot: above the pulse, below the markers and the pin.
-        if (user != null) _UserLayer(location: user),
-        MarkerLayer(markers: [
+        // Its arrow is turned back by the part of the map's turn still to come, so it eases with the
+        // turn instead of jumping ahead of it (0.47.0).
+        if (user != null) _UserLayer(location: user, turnLag: _turnTo - _turnNow),
+        // Upright on a turned map (0.47.0).
+        MarkerLayer(rotate: true, markers: [
           // The selected marker last, so it is drawn on top of the others.
           for (final m in [...widget.markers.where((m) => m.id != selected), ...widget.markers.where((m) => m.id == selected)])
             Marker(
@@ -913,7 +1066,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
             ),
         ]),
         if (pin != null)
-          MarkerLayer(markers: [
+          MarkerLayer(rotate: true, markers: [
             Marker(
               point: pin._ll,
               width: 48,
@@ -956,9 +1109,14 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
     // and washed out over a light street map). On touch their 48dp targets touch, so the visible
     // squares keep the web's 4px gap.
     final slop = UiMapLocateButton.touchSlop(context);
+    // The compass (0.47.0): under the zoom buttons (in their place without them) while turned.
+    final showCompass = widget.compass && !preview && uiMapIsTurned(_turnNow);
     final zoom = Column(mainAxisSize: MainAxisSize.min, spacing: math.max(0, t.space1 - 2 * slop), children: [
-      UiMapZoomButton(icon: HugeIcons.strokeRoundedAdd01, label: context.uiStrings.zoomIn, onPressed: () => _zoomBy(1)),
-      UiMapZoomButton(icon: HugeIcons.strokeRoundedMinusSign, label: context.uiStrings.zoomOut, onPressed: () => _zoomBy(-1)),
+      if (widget.zoomButtons) ...[
+        UiMapZoomButton(icon: HugeIcons.strokeRoundedAdd01, label: context.uiStrings.zoomIn, onPressed: () => _zoomBy(1)),
+        UiMapZoomButton(icon: HugeIcons.strokeRoundedMinusSign, label: context.uiStrings.zoomOut, onPressed: () => _zoomBy(-1)),
+      ],
+      if (showCompass) UiMapCompassButton(key: const ValueKey('ui-map-compass'), bearing: _turnNow, label: context.uiStrings.mapResetNorth, onPressed: _resetNorth),
     ]);
     // The credits are English ("© MapTiler © OpenStreetMap contributors"): set them LTR in their own
     // run so an RTL layout doesn't move the © signs; only the corner they sit in is mirrored.
@@ -1014,7 +1172,7 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
                 ),
               ),
               // The controls sit inside the part the insets leave visible (none on a preview).
-              if (!preview)
+              if (!preview && (widget.zoomButtons || showCompass))
                 AnimatedPositionedDirectional(
                   duration: context.uiAnimate ? t.motionBase : Duration.zero,
                   curve: t.easeStandard,
@@ -1241,6 +1399,57 @@ class UiMapZoomButton extends StatelessWidget {
   }
 }
 
+/// The map's compass (0.47.0, the web `.ui-map-compass`): the zoom buttons' square, with a needle
+/// pointing north (north half in the danger tone, south half muted); a tap turns the map north up.
+class UiMapCompassButton extends StatelessWidget {
+  const UiMapCompassButton({super.key, required this.bearing, required this.label, this.onPressed});
+
+  /// The map's bearing: the needle is turned back by it, so it points north.
+  final double bearing;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final dim = uiTouchPlatform(context) ? t.sizeTouch : t.sizeLg;
+    return UiInteractive(
+      onTap: onPressed,
+      semanticLabel: label,
+      excludeChildSemantics: true,
+      builder: (context, s) => AnimatedContainer(
+        duration: context.uiAnimate ? t.motionFast : Duration.zero,
+        width: dim,
+        height: dim,
+        decoration: uiMapControlDecoration(context, s, shape: BoxShape.rectangle),
+        child: Center(
+          child: Transform.rotate(
+            key: const ValueKey('ui-map-compass-needle'),
+            angle: -bearing * math.pi / 180,
+            child: CustomPaint(size: const Size.square(22), painter: _NeedlePainter(north: t.danger, south: t.textMuted)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The web's needle: `M12 3L15.5 12H8.5Z` (north) over `M12 21L8.5 12H15.5Z` (south) on a 24 grid.
+class _NeedlePainter extends CustomPainter {
+  const _NeedlePainter({required this.north, required this.south});
+  final Color north, south;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.width / 24;
+    canvas.drawPath(Path()..moveTo(12 * k, 3 * k)..lineTo(15.5 * k, 12 * k)..lineTo(8.5 * k, 12 * k)..close(), Paint()..color = north);
+    canvas.drawPath(Path()..moveTo(12 * k, 21 * k)..lineTo(8.5 * k, 12 * k)..lineTo(15.5 * k, 12 * k)..close(), Paint()..color = south);
+  }
+
+  @override
+  bool shouldRepaint(_NeedlePainter old) => old.north != north || old.south != south;
+}
+
 /// The surface every map control is drawn on (the locate and zoom buttons): opaque raised surface
 /// (the hover colour while hovered or pressed), the border and shadow2, plus the focus ring.
 BoxDecoration uiMapControlDecoration(BuildContext context, UiStates s, {BoxShape shape = BoxShape.circle}) {
@@ -1371,7 +1580,8 @@ class _RouteLayerState extends State<_RouteLayer> with TickerProviderStateMixin 
       final color = uiMapRouteColor(t, r.tone);
       return Polyline<String>(
         points: [for (final p in pts) p._ll],
-        color: color.withValues(alpha: color.a * opacity),
+        // The line at the route's own opacity over its casing (0.47.0), both faded when leaving.
+        color: color.withValues(alpha: color.a * opacity * r.opacity.clamp(0.0, 1.0)),
         strokeWidth: w.line,
         // flutter_map draws the border as a stroke strokeWidth + borderStrokeWidth wide.
         borderStrokeWidth: w.casing - w.line,
@@ -1398,13 +1608,17 @@ class _RouteLayerState extends State<_RouteLayer> with TickerProviderStateMixin 
 
 /// The "you are here" layer: a geo-anchored marker whose halo follows the zoom.
 class _UserLayer extends StatelessWidget {
-  const _UserLayer({required this.location});
+  const _UserLayer({required this.location, this.turnLag = 0});
   final UiMapUserLocation location;
+
+  /// Degrees of the map's turn still to come.
+  final double turnLag;
 
   @override
   Widget build(BuildContext context) {
     final halo = uiMapAccuracyPx(location.accuracy, location.lat, MapCamera.of(context).zoom);
-    final box = math.max(halo, 16.0);
+    final h = location.heading;
+    final box = math.max(halo, h == null ? 16.0 : 28.0);
     return MarkerLayer(markers: [
       Marker(
         point: LatLng(location.lat, location.lng),
@@ -1412,7 +1626,7 @@ class _UserLayer extends StatelessWidget {
         height: box,
         // Not a target: its halo can be 240 px across, and a tap there still places the pin / is a map tap.
         child: IgnorePointer(
-          child: Semantics(container: true, image: true, label: context.uiStrings.mapYourLocation, child: UiMapUserDot(halo: halo)),
+          child: Semantics(container: true, image: true, label: context.uiStrings.mapYourLocation, child: UiMapUserDot(halo: halo, heading: h == null ? null : h - turnLag)),
         ),
       ),
     ]);
@@ -1422,8 +1636,11 @@ class _UserLayer extends StatelessWidget {
 /// The "you are here" dot (exported for tests and goldens): 16px in the location blue with a 3px
 /// white ring and a shadow, over a soft halo [halo] px across (none at 0).
 class UiMapUserDot extends StatelessWidget {
-  const UiMapUserDot({super.key, this.halo = 0});
+  const UiMapUserDot({super.key, this.halo = 0, this.heading});
   final double halo;
+
+  /// With a heading (0.47.0): a 28px puck with an arrow turned to it, instead of the 16px dot.
+  final double? heading;
 
   @override
   Widget build(BuildContext context) {
@@ -1439,13 +1656,55 @@ class UiMapUserDot extends StatelessWidget {
             border: Border.all(color: t.location.withValues(alpha: 0.40)),
           ),
         ),
-      Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: t.location, border: Border.all(color: t.locationRing, width: 3), boxShadow: t.shadow2),
-      ),
+      if (heading == null)
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: t.location, border: Border.all(color: t.locationRing, width: 3), boxShadow: t.shadow2),
+        )
+      else
+        Transform.rotate(
+          key: const ValueKey('ui-map-user-puck'),
+          angle: heading! * math.pi / 180,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: t.location, border: Border.all(color: t.locationRing, width: 3), boxShadow: t.shadow2),
+            alignment: Alignment.center,
+            child: CustomPaint(size: const Size.square(18), painter: _PuckArrowPainter(t.locationRing)),
+          ),
+        ),
     ]);
   }
+}
+
+/// The puck's arrow, the web's `M12 3.5L18.5 19.5L12 15.6L5.5 19.5Z` on a 24 grid.
+class _PuckArrowPainter extends CustomPainter {
+  const _PuckArrowPainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.width / 24;
+    final path = Path()
+      ..moveTo(12 * k, 3.5 * k)
+      ..lineTo(18.5 * k, 19.5 * k)
+      ..lineTo(12 * k, 15.6 * k)
+      ..lineTo(5.5 * k, 19.5 * k)
+      ..close();
+    canvas.drawPath(path, Paint()..color = color);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5 * k
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PuckArrowPainter old) => old.color != color;
 }
 
 class _MarkerChip extends StatelessWidget {

@@ -4,6 +4,7 @@ import 'package:zouriel_ui/map.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
+import 'nav_demo.dart';
 
 /// The map: markers with a floating card, and the pin for choosing a place.
 class MapPage extends StatefulWidget {
@@ -51,6 +52,11 @@ class _MapPageState extends State<MapPage> {
     UiLatLng(4.17773, 73.51224), UiLatLng(4.17785, 73.51146), UiLatLng(4.1769, 73.51136), UiLatLng(4.1771, 73.50974), UiLatLng(4.17284, 73.50825),
     UiLatLng(4.17311, 73.50751), UiLatLng(4.1732, 73.50755), UiLatLng(4.17344, 73.50696), UiLatLng(4.17388, 73.50715), UiLatLng(4.17387, 73.50721),
   ];
+
+  // Turning the map (0.47.0).
+  final _turnMap = GlobalKey<UiMapState>();
+  bool _rotatable = true;
+  double _bearing = 0;
 
   // Preview (0.43.0): the still map in a list, and whether it is one (the runtime switch).
   bool _preview = true;
@@ -543,6 +549,104 @@ mapKey.currentState!.fitArea();''',
             ApiRow('UiBottomSheet.glass · UiFloatingPanel.glass', 'bool', 'See-through surface over the map (0.41.2); how see-through is glassStrength. Fields and buttons stay solid. Solid under MediaQuery.highContrast (Flutter has no reduce-transparency setting).', def: 'false · UiConfig.glass'),
             ApiRow('glassStrength', 'UiGlassStrength', 'How see-through glass is (0.41.3). clear: a 12% tint over a light blur, squeezed into the theme\'s glassClearFloor..glassClearCeiling and saturated, so a map in the theme\'s brightness plainly shows through with text, muted text, primary and status colours AA (icons 3:1) over it. frosted: the 0.41.2 recipe, 60% over a heavy blur and glassSheetFloor..glassSheetCeiling, AA over anything, pure white and black included.', def: 'clear'),
             ApiRow('UiBottomSheetState.persistent', 'bool', 'True when the smallest snap is above 0, as here: Back and Escape collapse it to that snap, and from there Back leaves the page.'),
+          ],
+        ),
+        DocSection(
+          name: 'Turning the map',
+          widget: 'UiMap rotatable · compass · bearing · rotateTo()',
+          summary: 'rotatable (0.47.0, on by default) lets the person turn the map with two fingers. A pinch decides what it is in its first moments: a 15 degree twist turns the map (and it keeps zooming and panning with the fingers), while a 10% zoom or a 30 px pan that comes first makes it a zoom or pan, and no small twist turns the map by accident. While the map is turned away from north, a compass button sits under the zoom buttons in their style (48dp targets, following viewInsets, the inline start); its needle points north and a tap eases the map back north up (Reset to north, in UiStrings). Markers, the pin, the label chips and the area handle stay upright; routes, dots and the you-are-here arrow turn with the map; the attribution stays put. onBearingChanged reports the bearing when a turn ends (or the compass is pressed), onUserMove that the person moved the map. bearing turns it from the app (heading-up navigation), and rotateTo turns it back after the person turned it.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            SizedBox(
+              height: 360,
+              child: UiMap(
+                key: _turnMap,
+                zoom: 16,
+                center: const UiLatLng(4.1755, 73.5093),
+                markers: const [UiMapMarker(id: 'a', lat: 4.1762, lng: 73.5098, label: 'Lily Magu, Hiyaa Tower 4', tone: UiStatus.danger), UiMapMarker(id: 'b', lat: 4.1748, lng: 73.5081, label: 'Faruma clinic')],
+                routes: const [UiMapRoute(id: 'r', points: _routePoints, animate: false)],
+                rotatable: _rotatable,
+                onBearingChanged: (b) => setState(() => _bearing = b),
+                tileUrl: _tileLight.isEmpty ? uiMapOsmTiles : _tileLight,
+                tileUrlDark: _tileDark.isEmpty ? null : _tileDark,
+                userAgentPackageName: 'com.zouriel.ui.showcase',
+                semanticLabel: 'A map you can turn',
+              ),
+            ),
+            Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              UiButton(label: 'Turn to 45°', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() {
+                _bearing = 45;
+                _turnMap.currentState?.rotateTo(45);
+              })),
+              UiSegmented<bool>(
+                label: 'Rotatable (demo)',
+                size: UiSize.sm,
+                options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
+                value: _rotatable,
+                onChanged: (v) => setState(() => _rotatable = v),
+              ),
+              Text('Bearing ${_bearing.round()}°', style: context.uiText.caption),
+            ]),
+          ]),
+          code: '''UiMap(
+  key: mapKey,
+  markers: places,
+  rotatable: true, // the default: two fingers turn it past 15 degrees
+  onBearingChanged: (b) => setState(() => bearing = b),
+)
+mapKey.currentState!.rotateTo(0); // north up from code''',
+          api: const [
+            ApiRow('rotatable', 'bool', 'Two fingers turn the map (0.47.0): the first of a 15 degree twist, a 10% zoom or a 30 px pan wins the gesture.', def: 'true'),
+            ApiRow('compass', 'bool', 'The compass button under the zoom buttons while turned; a tap eases north up.', def: 'true'),
+            ApiRow('bearing', 'double', 'The compass direction at the top, degrees clockwise from north; turns the map when it changes.', def: '0'),
+            ApiRow('zoomButtons', 'bool', 'The zoom buttons; pinch, double tap, the wheel and keys still zoom.', def: 'true'),
+            ApiRow('onBearingChanged', 'ValueChanged<double>?', 'The bearing when the person ends a turn, or presses the compass (0).'),
+            ApiRow('onUserMove', 'VoidCallback?', 'The person moved the map: drag, pinch, turn, fling, double tap, wheel, keys.'),
+            ApiRow('UiMapState.rotateTo(bearing) / currentBearing', 'void / double', 'Turn the map from code (eased unless reduced motion); the bearing shown.'),
+            ApiRow('UiMapUserLocation.heading', 'double?', 'The dot becomes an arrow puck pointing that way, turning with the map.'),
+            ApiRow('UiStrings.mapResetNorth', 'String', 'The compass\'s name.', def: "'Reset to north'"),
+          ],
+        ),
+        DocSection(
+          name: 'Navigation',
+          widget: 'UiMapNavigation · UiNavTracker',
+          summary: 'UiMapNavigation (0.47.0) is a turn-by-turn view, like a car\'s navigation, for the nurse driving to a patient. The app gives it the route\'s geometry, its steps (OSRM\'s steps: maneuver type, modifier, location and exit, distance and duration, and the instruction already in the app\'s language) and the live position; the view reads no GPS itself. The map follows the person and turns heading-up (flat, no tilt), the route ahead in the primary tone and the part already driven dimmed, with an arrow for the person. The banner shows the next maneuver: a big arrow for its type (turns, slight and sharp, U-turns, roundabouts with the exit number, forks, merges, depart, arrive), the distance to it (in 80 m), the instruction and the street, with the maneuver after it in a small tab. The bar shows the time and distance left, the arrival time and End. The logic is UiNavTracker, pure and testable: it snaps each position to the route, works out the step, the distance to the next maneuver and what is left, and calls onAnnounce at the start, on each new maneuver ahead and at 200 m and 30 m before it (each once, for the app to speak), onOffRoute after 5 s more than 40 m off the route (reroute: give a new route and steps) and onArrived within 20 m of the end. A drag, pinch or two-finger turn stops the following and shows Recenter (and the compass). With animations off the map turns at once. In right-to-left text the banner and bar mirror; the arrows never do. glass frosts the banner and bar. Play the drive; Wander off leaves the road to show onOffRoute.',
+          demo: NavDriveDemo(tileUrl: _tileLight.isEmpty ? null : _tileLight, tileUrlDark: _tileDark.isEmpty ? null : _tileDark),
+          code: '''UiMapNavigation(
+  route: route, // OSRM geometry, [lng, lat] swapped to UiLatLng
+  steps: [
+    for (final s in osrm.steps)
+      UiNavStep(
+        maneuver: UiNavManeuver(type: s.maneuver.type, modifier: s.maneuver.modifier, exit: s.maneuver.exit,
+            location: UiLatLng(s.maneuver.location[1], s.maneuver.location[0]), drivingSide: s.drivingSide),
+        distanceMeters: s.distance, durationSeconds: s.duration, instruction: s.instruction, streetName: s.name),
+  ],
+  position: position, // from the app's geolocation stream: UiNavPosition(lat, lng, heading:, speed:, accuracy:, timestamp:)
+  destinationLabel: 'Lily Magu',
+  onAnnounce: (e) => tts.speak(e.step.instruction),
+  onOffRoute: (_) => reroute(),
+  onArrived: arrive,
+  onEnd: stop,
+)''',
+          api: const [
+            ApiRow('route / steps', 'List<UiLatLng> / List<UiNavStep>', 'The geometry and OSRM steps (UiNavManeuver type, modifier, location, bearingAfter, exit, drivingSide; distanceMeters, durationSeconds, instruction, streetName). A new list (a reroute) starts a new tracker.'),
+            ApiRow('position', 'UiNavPosition?', 'The live position: lat, lng, heading, speed, accuracy, timestamp.'),
+            ApiRow('options', 'UiNavOptions', 'offRouteMeters (40, or the accuracy if bigger), offRouteSeconds (5), arriveMeters (20), announceMeters ([200, 30]).'),
+            ApiRow('zoom / destinationLabel / formatTime / glass', '—', 'The follow zoom (17), the destination marker\'s label, the arrival time format (24-hour), frosted banner and bar.'),
+            ApiRow('onAnnounce / onOffRoute / onArrived / onProgress / onEnd', 'callbacks', 'Speak the step; reroute; at the destination; every state; End pressed. Called after the frame that takes the position.'),
+            ApiRow('UiMapNavigationState.recenter()', 'void', 'Follows the person again at zoom, heading-up.'),
+            ApiRow('UiNavTracker(route, steps, options:)', 'class', 'update(position) returns UiNavState: snapped, display, distanceFromRoute, traveledMeters, stepIndex, next, nextNext, distanceToManeuver, remainingMeters, remainingSeconds, bearing, offRoute, arrived, events (UiNavAnnounce, UiNavOffRoute, UiNavArrived); also split and pointAt.'),
+            ApiRow('uiNavFormatDistance / uiNavFormatDuration / uiNavFormatClock', 'String', '"80 m", "150 m", "2.4 km"; "3 min", "1 h 5 min"; "14:05". Words from the nav strings (Dhivehi in UiStrings.dv).'),
+            ApiRow('UiMapRoute.opacity', 'double', 'The line\'s opacity over its casing (0.47.0); the way behind is 0.6.', def: '1'),
+          ],
+        ),
+        DocSection(
+          name: 'Maneuver icons',
+          widget: 'uiNavIcons · uiNavIcon() · uiNavIconKind()',
+          summary: 'The banner\'s arrows (0.47.0), one drawing per maneuver kind, in the library\'s line style on a 24px grid (hugeicons has no maneuver set: no roundabout exits, slight or sharp turns). uiNavIconKind picks the kind from OSRM\'s type and modifier: roundabouts and rotaries by their exit\'s direction, forks and merges by side, ramps as slight turns, everything else by its modifier; a U-turn bends left where traffic keeps right and right where it keeps left (drivingSide). The road not taken at a fork or merge is faint. They are never mirrored in right-to-left text. The same data draws them on the web.',
+          demo: const NavIconGallery(),
+          api: const [
+            ApiRow('uiNavIconKind(maneuver)', 'UiNavIconKind', 'The drawing for an OSRM type + modifier (+ drivingSide for U-turns); webName is the web\'s name.'),
+            ApiRow('uiNavIcon(maneuver) / uiNavIcons', 'UiIconData / Map', 'The drawing itself, for UiIcon; every drawing by kind.'),
           ],
         ),
       ],

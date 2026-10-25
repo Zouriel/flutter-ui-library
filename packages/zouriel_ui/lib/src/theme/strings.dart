@@ -135,6 +135,19 @@ class UiStrings {
     this.mapShowBoth = 'Show both',
     this.mapLabel = 'Map',
     this.mapChosenLocation = 'Chosen location',
+    this.mapResetNorth = 'Reset to north',
+    this.navLabel = 'Navigation',
+    this.navIn = 'in {distance}',
+    this.navThen = 'Then',
+    this.navArrive = 'Arrive',
+    this.navRecenter = 'Recenter',
+    this.navEnd = 'End',
+    this.navMinutes = '{min} min',
+    this.navHours = '{h} h',
+    this.navHoursMinutes = '{h} h {min} min',
+    this.navMeters = '{n} m',
+    this.navKilometers = '{n} km',
+    this.navSummary = '{time} left, {distance}, arrive at {clock}',
     this.adding = 'Adding {label}',
     this.today = 'Today',
     this.notSet = 'Not set',
@@ -300,6 +313,19 @@ class UiStrings {
     mapShowBoth: 'ދެބައިވެސް ދައްކާ',
     mapLabel: 'މެޕް',
     mapChosenLocation: 'ހޮވި ތަން',
+    mapResetNorth: 'އުތުރު މައްޗަށް ގެންނާ',
+    navLabel: 'މަގު ދެއްކުން',
+    navIn: '{distance} ދުރުން',
+    navThen: 'ދެން',
+    navArrive: 'ވާސިލުވުން',
+    navRecenter: 'މެދަށް ގެންނާ',
+    navEnd: 'ނިންމާ',
+    navMinutes: '{min} މިނެޓު',
+    navHours: '{h} ގަޑިއިރު',
+    navHoursMinutes: '{h} ގަޑިއިރު {min} މިނެޓު',
+    navMeters: '{n} މީޓަރު',
+    navKilometers: '{n} ކިލޯމީޓަރު',
+    navSummary: '{time} ބާކީ، {distance}، {clock} ގައި ވާސިލުވާނެ',
     adding: '{label} އިތުރުކުރަނީ',
     today: 'މިއަދު',
     notSet: 'ކަނޑައަޅާފައެއް ނެތް',
@@ -698,6 +724,45 @@ class UiStrings {
   /// Map pin default name.
   final String mapChosenLocation;
 
+  /// The map's compass button, which turns it back to north up (0.47.0).
+  final String mapResetNorth;
+
+  /// Navigation view's name (0.47.0).
+  final String navLabel;
+
+  /// Distance to the next maneuver (`{distance}`, e.g. "80 m").
+  final String navIn;
+
+  /// Before the maneuver after next.
+  final String navThen;
+
+  /// The arrive step's heading when it has no instruction.
+  final String navArrive;
+
+  /// Button that brings the map back to following the person.
+  final String navRecenter;
+
+  /// Button that ends navigation.
+  final String navEnd;
+
+  /// Time left under an hour (`{min}`).
+  final String navMinutes;
+
+  /// Time left in whole hours (`{h}`).
+  final String navHours;
+
+  /// Time left over an hour (`{h}`, `{min}`).
+  final String navHoursMinutes;
+
+  /// A distance in metres (`{n}`).
+  final String navMeters;
+
+  /// A distance in kilometres (`{n}`).
+  final String navKilometers;
+
+  /// The bottom bar for screen readers (`{time}`, `{distance}`, `{clock}`).
+  final String navSummary;
+
   /// Image picker busy tile ({label}).
   final String adding;
 
@@ -927,6 +992,19 @@ class UiStrings {
     String? mapShowBoth,
     String? mapLabel,
     String? mapChosenLocation,
+    String? mapResetNorth,
+    String? navLabel,
+    String? navIn,
+    String? navThen,
+    String? navArrive,
+    String? navRecenter,
+    String? navEnd,
+    String? navMinutes,
+    String? navHours,
+    String? navHoursMinutes,
+    String? navMeters,
+    String? navKilometers,
+    String? navSummary,
     String? adding,
     String? today,
     String? notSet,
@@ -1087,6 +1165,19 @@ class UiStrings {
         mapShowBoth: mapShowBoth ?? this.mapShowBoth,
         mapLabel: mapLabel ?? this.mapLabel,
         mapChosenLocation: mapChosenLocation ?? this.mapChosenLocation,
+        mapResetNorth: mapResetNorth ?? this.mapResetNorth,
+        navLabel: navLabel ?? this.navLabel,
+        navIn: navIn ?? this.navIn,
+        navThen: navThen ?? this.navThen,
+        navArrive: navArrive ?? this.navArrive,
+        navRecenter: navRecenter ?? this.navRecenter,
+        navEnd: navEnd ?? this.navEnd,
+        navMinutes: navMinutes ?? this.navMinutes,
+        navHours: navHours ?? this.navHours,
+        navHoursMinutes: navHoursMinutes ?? this.navHoursMinutes,
+        navMeters: navMeters ?? this.navMeters,
+        navKilometers: navKilometers ?? this.navKilometers,
+        navSummary: navSummary ?? this.navSummary,
         adding: adding ?? this.adding,
         today: today ?? this.today,
         notSet: notSet ?? this.notSet,
@@ -1249,6 +1340,19 @@ class UiStrings {
         'mapShowBoth': mapShowBoth,
         'mapLabel': mapLabel,
         'mapChosenLocation': mapChosenLocation,
+        'mapResetNorth': mapResetNorth,
+        'navLabel': navLabel,
+        'navIn': navIn,
+        'navThen': navThen,
+        'navArrive': navArrive,
+        'navRecenter': navRecenter,
+        'navEnd': navEnd,
+        'navMinutes': navMinutes,
+        'navHours': navHours,
+        'navHoursMinutes': navHoursMinutes,
+        'navMeters': navMeters,
+        'navKilometers': navKilometers,
+        'navSummary': navSummary,
         'adding': adding,
         'today': today,
         'notSet': notSet,

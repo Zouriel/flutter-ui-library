@@ -107,7 +107,8 @@ class UiMapAreaLayer extends StatelessWidget {
     final t = context.ui;
     final cam = MapCamera.of(context);
     final color = area.tone == UiStatus.neutral ? t.textMuted : area.tone.color(t);
-    final c = cam.latLngToScreenOffset(LatLng(area.center.lat, area.center.lng));
+    // In the layer's own (unturned) pixels: MobileLayerTransformer turns the layer with the map (0.47.0).
+    final c = cam.projectAtZoom(LatLng(area.center.lat, area.center.lng)) - cam.pixelOrigin;
     final r = uiMapAreaRadiusPx(radius, area.center.lat, cam.zoom);
     return IgnorePointer(
       child: ExcludeSemantics(
@@ -177,7 +178,8 @@ class UiMapAreaHandleLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cam = MapCamera.of(context);
-    final c = cam.latLngToScreenOffset(LatLng(area.center.lat, area.center.lng));
+    // In the layer's own (unturned) pixels: MobileLayerTransformer turns the layer with the map (0.47.0).
+    final c = cam.projectAtZoom(LatLng(area.center.lat, area.center.lng)) - cam.pixelOrigin;
     final r = uiMapAreaRadiusPx(radius, area.center.lat, cam.zoom);
     final at = c + Offset(rtl ? -r : r, 0);
     const box = uiMinTouchTargetArea;
@@ -188,7 +190,10 @@ class UiMapAreaHandleLayer extends StatelessWidget {
           top: at.dy - box / 2,
           width: box,
           height: box,
-          child: UiMapAreaHandle(
+          // Upright on a turned map (0.47.0).
+          child: Transform.rotate(
+            angle: -cam.rotationRad,
+            child: UiMapAreaHandle(
             key: const ValueKey('ui-map-area-handle'),
             area: area,
             radius: radius,
@@ -198,6 +203,7 @@ class UiMapAreaHandleLayer extends StatelessWidget {
             onDrag: onDrag,
             onDragEnd: onDragEnd,
             onStep: onStep,
+          ),
           ),
         ),
       ]),
