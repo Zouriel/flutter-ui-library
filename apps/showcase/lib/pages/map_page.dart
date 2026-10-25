@@ -42,6 +42,9 @@ class _MapPageState extends State<MapPage> {
   final _routeMap = GlobalKey<UiMapState>();
   UiMapRouteTone _tone = UiMapRouteTone.primary;
   bool _showRoute = true;
+  // Draw it again bumps the route id: the old line fades and the new one draws in (0.46.2).
+  int _drawRun = 0;
+  bool _animateRoute = true;
   static const _routeStart = UiMapUserLocation(4.17682, 73.5121, accuracy: 20);
   static const _routePoints = [
     UiLatLng(4.17682, 73.5121), UiLatLng(4.17678, 73.51237), UiLatLng(4.17708, 73.51244), UiLatLng(4.17709, 73.51223), UiLatLng(4.17716, 73.51216),
@@ -252,14 +255,14 @@ UiMap(
         DocSection(
           name: 'Routes',
           widget: 'UiMap routes · UiMapState.fitPoints',
-          summary: 'routes draws lines along the road, from OSRM say: each one a line in its tone over a casing, round-capped, 5 over 9px close in and thinner zoomed out. They sit above the tiles and below the pulse, the you-are-here dot, the markers and the pin, so the dots stay on top. A new list redraws the lines on the same map, and an empty one removes them. Each tone is a theme token (mapRoutePrimary, Muted, Success, Warning, Danger over mapRouteCasing) checked at 3:1 against MapTiler\'s streets-v2 and dataviz tiles in the theme\'s own brightness. semanticLabel is the route\'s one name for screen readers, such as Route, 1.3 km. fitPoints shows every point you give it (the nurse, the patient, the route) inside the part of the map viewInsets leave visible, with 24 to spare, at a whole zoom no closer than 17; one point is centred there at 17. It animates unless reduced motion. This map uses the tile URLs pasted under Styled tiles. Marker labels size to their text, up to 320 or the map\'s width less 32, and wrap to a second line before the ellipsis; the zoom buttons share the locate button\'s raised surface and shadow. Near the map\'s edge a label flips to the other side of its dot rather than run off (0.42.1; in RTL it starts on the left). A fit owns the camera (0.42.1): if viewInsets change while it animates or after it, say a sheet grows as the route appears, the fit is worked out again for the new insets, until the person or the app moves the map. controls (0.42.1) adds the app\'s own round buttons in the locate button\'s stack and style, above it at the bottom-end of the visible part; the one here, Show the whole route, calls fitPoints.',
+          summary: 'routes draws lines along the road, from OSRM say: each one a line in its tone over a casing, round-capped, 5 over 9px close in and thinner zoomed out. They sit above the tiles and below the pulse, the you-are-here dot, the markers and the pin, so the dots stay on top. A new list redraws the lines on the same map, and an empty one removes them. Each tone is a theme token (mapRoutePrimary, Muted, Success, Warning, Danger over mapRouteCasing) checked at 3:1 against MapTiler\'s streets-v2 and dataviz tiles in the theme\'s own brightness. semanticLabel is the route\'s one name for screen readers, such as Route, 1.3 km. fitPoints shows every point you give it (the nurse, the patient, the route) inside the part of the map viewInsets leave visible, with 24 to spare, at a whole zoom no closer than 17; one point is centred there at 17. It animates unless reduced motion. A route draws in (0.46.2): when it appears, or its points change, the casing and line grow together from its start to its end, easing out over 250 to 900 ms by length (uiMapRouteDrawDuration: 450 ms for 1 km), while a fitPoints straight after moves the map as before. The same points again (a rebuild with the same id and geometry) don\'t replay it. Set animate: false on a route to draw it at once; under reduced motion, and on a preview, routes are always drawn at once. A removed route fades out over 150 ms. Try Draw it again (a new route id), Remove the route, or the Draw-in switch. This map uses the tile URLs pasted under Styled tiles. Marker labels size to their text, up to 320 or the map\'s width less 32, and wrap to a second line before the ellipsis; the zoom buttons share the locate button\'s raised surface and shadow. Near the map\'s edge a label flips to the other side of its dot rather than run off (0.42.1; in RTL it starts on the left). A fit owns the camera (0.42.1): if viewInsets change while it animates or after it, say a sheet grows as the route appears, the fit is worked out again for the new insets, until the person or the app moves the map. controls (0.42.1) adds the app\'s own round buttons in the locate button\'s stack and style, above it at the bottom-end of the visible part; the one here, Show the whole route, calls fitPoints.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             SizedBox(
               height: 360,
               child: UiMap(
                 key: _routeMap,
                 zoom: 15,
-                routes: _showRoute ? [UiMapRoute(id: 'to-patient', points: _routePoints, tone: _tone, semanticLabel: 'Route, 1.3 km')] : const [],
+                routes: _showRoute ? [UiMapRoute(id: 'to-patient-$_drawRun', points: _routePoints, tone: _tone, semanticLabel: 'Route, 1.3 km', animate: _animateRoute)] : const [],
                 userLocation: _routeStart,
                 markers: const [UiMapMarker(id: 'patient', lat: 4.17387, lng: 73.50721, label: 'Lily Magu, Hiyaa Tower 4, Hulhumale', tone: UiStatus.danger)],
                 locateControl: true,
@@ -290,6 +293,22 @@ UiMap(
               UiButton(label: 'Fit the route', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _routeMap.currentState?.fitPoints(_routePoints)),
               UiButton(label: 'Fit one point', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => _routeMap.currentState?.fitPoints(const [UiLatLng(4.17682, 73.5121)])),
               UiButton(label: _showRoute ? 'Remove the route' : 'Show the route', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _showRoute = !_showRoute)),
+              UiButton(
+                label: 'Draw it again',
+                size: UiSize.sm,
+                variant: UiButtonVariant.outline,
+                onPressed: () => setState(() {
+                  _showRoute = true;
+                  _drawRun++;
+                }),
+              ),
+              UiSegmented<bool>(
+                label: 'Draw-in (demo)',
+                size: UiSize.sm,
+                options: const [UiSegmentedOption(value: true, label: 'On'), UiSegmentedOption(value: false, label: 'Off')],
+                value: _animateRoute,
+                onChanged: (v) => setState(() => _animateRoute = v),
+              ),
             ]),
           ]),
           code: '''UiMap(
@@ -312,11 +331,16 @@ UiMap(
 )
 
 // The moment she accepts: fetch the road route (OSRM GeoJSON is [lng, lat]: swap it) and show it all.
-mapKey.currentState!.fitPoints([me, patient, ...route.points]); // inside the part between the insets''',
+mapKey.currentState!.fitPoints([me, patient, ...route.points]); // inside the part between the insets
+// The route draws in from the nurse to the patient (0.46.2); animate: false on a route skips it.''',
           api: const [
             ApiRow('routes', 'List<UiMapRoute>', 'Lines along the road: id, points (UiLatLng), tone, semanticLabel. Under the pulse, dot, markers and pin; redrawn on the same map; empty removes them.', def: 'const []'),
             ApiRow('UiMapRoute.tone', 'UiMapRouteTone', 'primary, muted, success, warning, danger: the theme\'s mapRoute* colour over mapRouteCasing (uiMapRouteColor).', def: 'primary'),
             ApiRow('UiMapRoute.semanticLabel', 'String?', 'The route\'s one accessible name ("Route, 1.3 km"); without it the line is not read out.'),
+            ApiRow('UiMapRoute.animate', 'bool', 'Draw it in from start to end when it appears or its points change (0.46.2), ease-out over uiMapRouteDrawDuration. False draws it at once; reduced motion and preview always do. The same id and points again never replay it.', def: 'true'),
+            ApiRow('uiMapRouteDrawDuration(metres)', 'Duration', 'The draw-in time for a route length (0.46.2): 450 ms for 1 km, +150 ms per doubling, within 250..900 ms.'),
+            ApiRow('uiMapRouteLength(points) / uiMapRoutePartial(points, fraction)', 'double / List<UiLatLng>', 'A route\'s length in metres, and its first fraction by length (0.46.2): what the draw-in shows each frame.'),
+            ApiRow('uiMapRouteFade', 'Duration', 'How long a removed route fades out (0.46.2); at once under reduced motion.', def: '150 ms'),
             ApiRow('UiMapState.fitPoints(points, {padding, maxZoom, animate})', 'void', 'Every point inside the visible part (between viewInsets) plus padding (24), at a whole zoom up to maxZoom (17); one point is centred at maxZoom. Animated unless animate is false or reduced motion. Called before the map is ready (straight after it is built), it is held and runs once it is, without animating (0.44.2).'),
             ApiRow('uiMapFitView(points, size, area, {maxZoom})', 'UiMapView?', 'The view fitPoints moves to (the map\'s own centre and zoom), for tests or a first view.'),
             ApiRow('uiMapRouteWidth(zoom)', '({double line, double casing})', 'The widths at a zoom: 5 over 9 from zoom 14, down to 60% at zoom 10.'),

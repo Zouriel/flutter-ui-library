@@ -1,6 +1,7 @@
 import 'dart:convert' show base64Decode;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -130,11 +131,15 @@ enum UiMapRouteTone { primary, muted, success, warning, danger }
 /// the app; without it the route is not read out.
 @immutable
 class UiMapRoute {
-  const UiMapRoute({required this.id, required this.points, this.tone = UiMapRouteTone.primary, this.semanticLabel});
+  const UiMapRoute({required this.id, required this.points, this.tone = UiMapRouteTone.primary, this.semanticLabel, this.animate = true});
   final String id;
   final List<UiLatLng> points;
   final UiMapRouteTone tone;
   final String? semanticLabel;
+
+  /// Draw it in from start to end when it appears or its points change (0.46.2); true by default.
+  /// False draws it at once. Never animated under reduced motion or on a preview.
+  final bool animate;
 }
 
 /// An app's own button on the map (0.42.1, the web `UiMapControl`), drawn in the same stack and
@@ -200,6 +205,62 @@ Color uiMapRouteColor(UiTokens t, UiMapRouteTone tone) => switch (tone) {
 ({double line, double casing}) uiMapRouteWidth(double zoom) {
   final k = (0.6 + 0.1 * (zoom - 10)).clamp(0.6, 1.0);
   return (line: 5 * k, casing: 9 * k);
+}
+
+/// How long a removed route takes to fade out (0.46.2, the web `UI_MAP_ROUTE_FADE_MS`).
+const Duration uiMapRouteFade = Duration(milliseconds: 150);
+
+double _metresBetween(UiLatLng a, UiLatLng b) {
+  const r = math.pi / 180;
+  final dLat = (b.lat - a.lat) * r;
+  final dLng = (b.lng - a.lng) * r;
+  final h = math.pow(math.sin(dLat / 2), 2) + math.cos(a.lat * r) * math.cos(b.lat * r) * math.pow(math.sin(dLng / 2), 2);
+  return 2 * uiMapEarthRadius * math.asin(math.min(1, math.sqrt(h)));
+}
+
+/// A route's length along its points, in metres (0.46.2, the web `uiMapRouteLength`).
+double uiMapRouteLength(List<UiLatLng> points) {
+  var total = 0.0;
+  for (var i = 1; i < points.length; i++) {
+    total += _metresBetween(points[i - 1], points[i]);
+  }
+  return total;
+}
+
+/// How long a route of [metres] takes to draw in (0.46.2, the web `uiMapRouteDrawMs`): 450 ms for
+/// 1 km, 150 ms more each time the length doubles, kept within 250..900 ms.
+Duration uiMapRouteDrawDuration(double metres) {
+  final km = math.max(1e-6, metres / 1000);
+  final ms = (450 + 150 * math.log(km) / math.ln2).clamp(250, 900);
+  return Duration(milliseconds: ms.round());
+}
+
+/// The draw-in's ease-out (cubic) for linear progress [t] in 0..1 (0.46.2, the web `uiMapRouteEase`).
+double uiMapRouteEase(double t) {
+  final c = t.clamp(0.0, 1.0);
+  return 1 - math.pow(1 - c, 3).toDouble();
+}
+
+/// The first [fraction] (0..1) of a route by length (0.46.2, the web `uiMapRoutePartial`): the
+/// points up to there and one interpolated point where it ends. 0 gives the start point twice (a
+/// dot, with the round caps); 1 (or more) all the points.
+List<UiLatLng> uiMapRoutePartial(List<UiLatLng> points, double fraction) {
+  if (points.length < 2 || fraction >= 1) return List.of(points);
+  final want = math.max(0.0, fraction) * uiMapRouteLength(points);
+  final out = <UiLatLng>[points.first];
+  var done = 0.0;
+  for (var i = 1; i < points.length; i++) {
+    final a = points[i - 1], b = points[i];
+    final seg = _metresBetween(a, b);
+    if (done + seg >= want) {
+      final k = seg > 0 ? (want - done) / seg : 0.0;
+      out.add(UiLatLng(a.lat + (b.lat - a.lat) * k, a.lng + (b.lng - a.lng) * k));
+      return out;
+    }
+    done += seg;
+    out.add(b);
+  }
+  return out;
 }
 
 /// The closest [UiMapState.fitPoints] zooms by default, and the zoom it shows a single point at.
@@ -295,6 +356,12 @@ const String uiMapOsmTiles = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 ///   joins, 5 over 9px (thinner when zoomed out), above the tiles and below the pulse, dot, markers
 ///   and pin. A new list redraws the lines on the same map; an empty one removes them. Each route's
 ///   [UiMapRoute.semanticLabel] is its one name for screen readers ("Route, 1.2 km").
+///   A route that appears, or gets new points, draws in from its start to its end (0.46.2): the
+///   casing and line grow along the path together, ease-out over 250..900 ms by length
+///   ([uiMapRouteDrawDuration]), while the map moves as it would (a [UiMapState.fitPoints] straight
+///   after runs as before). The same points again don't replay it. [UiMapRoute.animate] false,
+///   reduced motion or [preview] draw it at once. A removed route fades out over 150 ms (at once
+///   under reduced motion).
 /// - [UiMapState.fitPoints] (0.42.0): shows every point inside the visible part (between
 ///   [viewInsets]) plus padding, at a whole zoom up to maxZoom (17); one point is centred there at
 ///   maxZoom. Animated unless reduced motion.
@@ -808,7 +875,8 @@ class UiMapState extends State<UiMap> with TickerProviderStateMixin {
         // The search area: over the tiles, under everything else, never hit.
         if (area != null) UiMapAreaLayer(area: area, radius: areaRadius!),
         // Routes: over the tiles, under the pulse, the dot, the markers and the pin.
-        if (widget.routes.isNotEmpty) _RouteLayer(routes: widget.routes),
+        // Always there (empty draws nothing), so a removed last route can still fade out.
+        _RouteLayer(routes: widget.routes, animate: !preview && uiFxMotion(context) == UiFxMotion.full),
         // The pulse: geo-anchored like a marker, under the markers and pin, never hit or read out.
         if (widget.pulse case final p? when p.active)
           MarkerLayer(markers: [
@@ -1187,31 +1255,141 @@ BoxDecoration uiMapControlDecoration(BuildContext context, UiStates s, {BoxShape
 }
 
 /// The route lines: each a casing with the tone's line over it, widths following the zoom. Never
-/// hit; named once per route when the app gives a name.
-class _RouteLayer extends StatelessWidget {
-  const _RouteLayer({required this.routes});
+/// hit; named once per route when the app gives a name. New routes, and new points for one, draw in
+/// along their path when [animate] (0.46.2); removed ones fade out.
+class _RouteLayer extends StatefulWidget {
+  const _RouteLayer({required this.routes, required this.animate});
   final List<UiMapRoute> routes;
+
+  /// Motion is on and the map is not a preview.
+  final bool animate;
+
+  @override
+  State<_RouteLayer> createState() => _RouteLayerState();
+}
+
+/// A drawn route: the points it shows and its draw-in (null once whole, or when drawn at once).
+class _RouteDraw {
+  _RouteDraw(this.points);
+  List<UiLatLng> points;
+  AnimationController? draw;
+}
+
+class _RouteLayerState extends State<_RouteLayer> with TickerProviderStateMixin {
+  final _drawn = <String, _RouteDraw>{};
+
+  /// Removed routes fading out, by id: the route as it was and its fade.
+  final _leaving = <String, ({UiMapRoute route, List<UiLatLng> points, AnimationController fade})>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _sync(const []);
+  }
+
+  @override
+  void didUpdateWidget(_RouteLayer old) {
+    super.didUpdateWidget(old);
+    _sync(old.routes);
+  }
+
+  void _sync(List<UiMapRoute> old) {
+    final seen = <String>{};
+    for (final r in widget.routes) {
+      if (r.points.length < 2 || !seen.add(r.id)) continue;
+      final animate = widget.animate && r.animate;
+      // Coming back while it fades out: the old line goes now, the new one draws.
+      _leaving.remove(r.id)?.fade.dispose();
+      final d = _drawn[r.id];
+      if (d == null || !listEquals(d.points, r.points)) {
+        final next = d ?? (_drawn[r.id] = _RouteDraw(r.points));
+        next.points = r.points;
+        next.draw?.dispose();
+        next.draw = null;
+        if (animate) {
+          next.draw = AnimationController(vsync: this, duration: uiMapRouteDrawDuration(uiMapRouteLength(r.points)))
+            ..addListener(_tick)
+            ..addStatusListener((s) {
+              if (s == AnimationStatus.completed) _finish(r.id);
+            })
+            ..forward();
+        }
+      } else if (d.draw != null && !animate) {
+        // Same points, but the draw-in is off now: finish it at once.
+        d.draw!.dispose();
+        d.draw = null;
+      }
+    }
+    final gone = [for (final id in _drawn.keys) if (!seen.contains(id)) id];
+    for (final id in gone) {
+      final d = _drawn.remove(id)!;
+      d.draw?.dispose();
+      final route = [...old, ...widget.routes].lastWhere((r) => r.id == id, orElse: () => UiMapRoute(id: id, points: d.points));
+      if (!widget.animate) continue;
+      final fade = AnimationController(vsync: this, duration: uiMapRouteFade)..addListener(_tick);
+      fade.addStatusListener((s) {
+        if (s != AnimationStatus.completed) return;
+        if (_leaving[id]?.fade == fade) {
+          _leaving.remove(id);
+          fade.dispose();
+          if (mounted) setState(() {});
+        }
+      });
+      _leaving[id] = (route: route, points: d.points, fade: fade);
+      fade.forward();
+    }
+  }
+
+  void _tick() {
+    if (mounted) setState(() {});
+  }
+
+  void _finish(String id) {
+    final d = _drawn[id];
+    if (d == null || d.draw == null) return;
+    d.draw!.dispose();
+    d.draw = null;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final d in _drawn.values) {
+      d.draw?.dispose();
+    }
+    for (final l in _leaving.values) {
+      l.fade.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
     final w = uiMapRouteWidth(MapCamera.of(context).zoom);
+    Polyline<String> line(UiMapRoute r, List<UiLatLng> pts, double opacity) {
+      final color = uiMapRouteColor(t, r.tone);
+      return Polyline<String>(
+        points: [for (final p in pts) p._ll],
+        color: color.withValues(alpha: color.a * opacity),
+        strokeWidth: w.line,
+        // flutter_map draws the border as a stroke strokeWidth + borderStrokeWidth wide.
+        borderStrokeWidth: w.casing - w.line,
+        borderColor: t.mapRouteCasing.withValues(alpha: t.mapRouteCasing.a * opacity),
+        strokeCap: StrokeCap.round,
+        strokeJoin: StrokeJoin.round,
+        hitValue: r.id,
+      );
+    }
+
     final lines = [
-      for (final r in routes)
-        if (r.points.length >= 2)
-          Polyline<String>(
-            points: [for (final p in r.points) p._ll],
-            color: uiMapRouteColor(t, r.tone),
-            strokeWidth: w.line,
-            // flutter_map draws the border as a stroke strokeWidth + borderStrokeWidth wide.
-            borderStrokeWidth: w.casing - w.line,
-            borderColor: t.mapRouteCasing,
-            strokeCap: StrokeCap.round,
-            strokeJoin: StrokeJoin.round,
-            hitValue: r.id,
-          ),
+      for (final l in _leaving.values) line(l.route, l.points, 1 - Curves.easeOut.transform(l.fade.value)),
+      for (final r in widget.routes)
+        if (_drawn[r.id] case final d? when r.points.length >= 2)
+          line(r, d.draw == null ? d.points : uiMapRoutePartial(d.points, uiMapRouteEase(d.draw!.value)), 1),
     ];
-    final names = [for (final r in routes) if (r.points.length >= 2 && r.semanticLabel != null) r.semanticLabel!];
+    if (lines.isEmpty) return const SizedBox.shrink();
+    final names = [for (final r in widget.routes) if (r.points.length >= 2 && r.semanticLabel != null) r.semanticLabel!];
     final layer = IgnorePointer(child: PolylineLayer<String>(polylines: lines, simplificationTolerance: 0));
     if (names.isEmpty) return ExcludeSemantics(child: layer);
     return Semantics(container: true, image: true, label: names.join(', '), child: ExcludeSemantics(child: layer));

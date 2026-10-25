@@ -135,6 +135,11 @@ fallback names stay as given). Constructor defaults that were English words (`Ui
 during an animated move. Flutter's `UiMap` already keeps its `MapController` within widget state and
 disposes it with that state, so this web-specific fix requires no Flutter implementation change.
 
+**Route draw-in (0.46.2):** a route that appears in `UiMap(routes:)`, or gets new points, grows along its path
+from start to end (casing and line together, ease-out, 250..900 ms by length: `uiMapRouteDrawDuration`), then
+sits as before; `fitPoints` is unchanged. Rebuilding with the same id and points doesn't replay it.
+`UiMapRoute(animate: false)`, reduced motion or `preview` draw it at once. A removed route fades out over 150 ms.
+
 **RTL fixes (0.46.1):** a `UiBadge` in right-to-left text, or with a Thaana label, drops its fixed 16px line
 (body line height) and adds 1px below, growing only as far as the text needs, so Thaana's marks below the line are no
 longer clipped (Latin badges keep 20px). Tests now cover two behaviours the web twin had to fix and Flutter

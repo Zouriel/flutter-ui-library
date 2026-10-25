@@ -207,6 +207,18 @@ isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as 
 (Restore/Minimize/Maximize), file-viewer extras (Copy/Copied, Mute, Full screen, Media viewer, Current folder),
 tree-table Expand/Collapse, anchor picker point names, side nav and choice grid default names.
 
+**0.46.2. Route draw-in.** Both libs animate the route geometry itself rather than a dash offset: each frame
+draws `uiMapRoutePartial(points, ease(t))` (the first fraction of the route by haversine length, ending on an
+interpolated point), so the line grows correctly while the map pans or zooms mid-draw (a dash offset would be
+in screen px and break on every zoom redraw). Same maths and numbers in both (`uiMapRouteDrawMs` /
+`uiMapRouteDrawDuration`, `uiMapRouteEase`, `uiMapRouteLength`). Web: requestAnimationFrame outside the Angular
+zone, `setLatLngs` on the existing casing and line; removal adds `.ui-map-route-leaving` (a 150 ms CSS fade) and
+removes the layers on a timer. Flutter: `_RouteLayer` became stateful with an `AnimationController` per drawing
+route and one per fading route (alpha on the line and casing colours); it is always in the layer list now so a
+removed last route can fade. "No animation" is the same test as `fitPoints` on each side: web reduced motion
+or preview; Flutter `uiFxMotion != full` (config animations off or reduced motion) or preview. Replays are keyed
+on id plus exact geometry (web: a string of the coordinates; Flutter: `listEquals` on `UiLatLng`).
+
 **0.46.1. RTL fixes from the Dhirumi web app.** (1) Web: an empty `dir="auto"` field resolved to LTR, so a
 Thaana placeholder sat on the left of an RTL page; the field now leaves `dir` off its native control until it has
 text. Flutter's `UiFieldDirection` already fell back to the ambient `Directionality` for text with no strong
