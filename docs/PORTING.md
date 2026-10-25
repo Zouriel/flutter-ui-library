@@ -207,6 +207,19 @@ isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as 
 (Restore/Minimize/Maximize), file-viewer extras (Copy/Copied, Mute, Full screen, Media viewer, Current folder),
 tree-table Expand/Collapse, anchor picker point names, side nav and choice grid default names.
 
+**0.46.1. RTL fixes from the Dhirumi web app.** (1) Web: an empty `dir="auto"` field resolved to LTR, so a
+Thaana placeholder sat on the left of an RTL page; the field now leaves `dir` off its native control until it has
+text. Flutter's `UiFieldDirection` already fell back to the ambient `Directionality` for text with no strong
+character, so only tests were added (hint `RenderParagraph` x in both directions). (2) Web: a model write of `''`
+straight after typing could be skipped by the `[value]` binding; the CVA now syncs the native value when they
+differ. `syncControlledValue` already compares with `controller.text`, so Flutter only gained tests. (3) Both:
+`UiBadge`'s fixed 16px line clipped Thaana's below-line marks (Flutter clips at the paragraph box; the web
+overflowed the pill). In RTL the badge drops the fixed line (web: `line-height: normal`; Flutter: the body height 1.45, since
+`copyWith` can't unset `height`) and adds 1px below, with 20px as a minimum; both are measured by ink tests.
+Flutter also does this for a Thaana label in LTR (it can read the label); the web keys on `:lang(dv)` /
+`:dir(rtl)` because CSS can't see the script, so a Thaana badge in an English page needs `lang="dv"`. Chips
+(26px, 1.35 line height) measured with room to spare and are unchanged.
+
 **0.45.2. Queued Leaflet events after teardown.** The web map can unmount while Leaflet is finishing an
 animated pan; its queued `moveend` used to read the cleared map field and throw. The listener now checks
 that its map instance is still current, and `visibleCenter()` safely returns null after teardown. Flutter's

@@ -135,6 +135,12 @@ fallback names stay as given). Constructor defaults that were English words (`Ui
 during an animated move. Flutter's `UiMap` already keeps its `MapController` within widget state and
 disposes it with that state, so this web-specific fix requires no Flutter implementation change.
 
+**RTL fixes (0.46.1):** a `UiBadge` in right-to-left text, or with a Thaana label, drops its fixed 16px line
+(body line height) and adds 1px below, growing only as far as the text needs, so Thaana's marks below the line are no
+longer clipped (Latin badges keep 20px). Tests now cover two behaviours the web twin had to fix and Flutter
+already had: an empty auto-direction `UiInput`/`UiTextarea` shows its placeholder at the start of an RTL page,
+and setting `value` to `''` straight after typing clears the field.
+
 **Compact density (0.45.0):** `UiConfig(density: UiDensity.comfortable | compact | auto)`, the web
 `provideUiConfig({ density })`. Compact makes things smaller, not tighter: `fontSizeSm/Md/Lg` 12/14/16 (from
 13/15/18), the `UiTypography` headings (new tokens `fontSizeH1/H2/H3/H5/H6`) about 10% smaller, `sizeSm/Md/Lg`

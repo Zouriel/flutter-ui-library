@@ -7,6 +7,9 @@ import '../core/interactive.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
 
+/// Thaana letters and marks.
+final RegExp _thaanaText = RegExp('[\u0780-\u07BF]');
+
 /// `ui-badge`: a small status or count label. [dot] draws an 8px dot with no text.
 class UiBadge extends StatelessWidget {
   const UiBadge({super.key, this.label, this.tone = UiStatus.neutral, this.dot = false, this.semanticLabel})
@@ -35,9 +38,16 @@ class UiBadge extends StatelessWidget {
         ),
       );
     }
+    // Thaana (0.46.1): its marks below the line hang lower than Latin descenders, and the fixed 16px
+    // line clipped them. In right-to-left text, or for a Thaana label, the pill takes the body line
+    // height (1.45, spread by the fonts' own ascent and descent, the Thaana fallback's included) and 1px
+    // more below, growing only as far as the text needs; Latin keeps 20px (compact 20, from 18). The web
+    // does the same under :lang(dv) / :dir(rtl), with line-height: normal.
+    final thaana = Directionality.of(context) == TextDirection.rtl || _thaanaText.hasMatch(label!);
     return Container(
-      height: 20 * t.densityScale,
-      padding: EdgeInsets.symmetric(horizontal: t.space2),
+      height: thaana ? null : 20 * t.densityScale,
+      constraints: thaana ? BoxConstraints(minHeight: 20 * t.densityScale) : null,
+      padding: thaana ? EdgeInsets.fromLTRB(t.space2, 0, t.space2, 1) : EdgeInsets.symmetric(horizontal: t.space2),
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(t.radiusPill),
@@ -46,13 +56,14 @@ class UiBadge extends StatelessWidget {
       // Hug the text: Container(alignment:) would stretch to the full available width.
       child: Align(
         widthFactor: 1,
+        heightFactor: thaana ? 1 : null,
         child: Text(
         label!,
         maxLines: 1,
         style: context.uiText.body.copyWith(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          height: 16 / 11,
+          height: thaana ? 1.45 : 16 / 11,
           color: fg,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
