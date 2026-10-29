@@ -36,7 +36,9 @@ const double _flick = 450;
 /// The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. On a
 /// phone, focusing a text field inside raises it to its tallest snap ([expandOnFocus]), once per
 /// field: typing, the keyboard opening and focus coming straight back to the same field don't raise
-/// it again. While the keyboard is up the sheet rests on top of it.
+/// it again. While the keyboard is up the sheet rests on top of it. A focused field inside is kept in
+/// view (0.47.3): when it takes focus, when the keyboard moves and when the sheet settles on a snap,
+/// the body scrolls so the field sits clear of the [footer], the keyboard and the sheet's top edge.
 ///
 /// When [snaps] changes (an app that sizes them to the space the keyboard leaves) and [snap] didn't,
 /// the sheet stays at the snap nearest the height it rested at and reports it with [onSnapChanged];
@@ -172,6 +174,12 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   static const Duration refocusWindow = Duration(milliseconds: 600);
   bool _wasModal = false;
 
+  /// The footer bar, for keeping a focused field clear of it.
+  final GlobalKey _footerBar = GlobalKey(debugLabel: 'UiBottomSheet footer');
+  double _lastKeyboard = 0;
+  bool _revealQueued = false;
+  int _revealTries = 0;
+
   /// The header's and the footer's laid-out heights, measured after layout (0 until then).
   double _headerH = 0, _footerH = 0;
 
@@ -206,6 +214,8 @@ class UiBottomSheetState extends State<UiBottomSheet> {
         _moving--;
       }
       _report();
+      // The room changed (the keyboard, a rotation): the field's place moved with it.
+      if (_inside(FocusManager.instance.primaryFocus)) _revealSoon();
     });
   }
   double get _max => _snaps.reduce(math.max);
@@ -236,6 +246,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     super.initState();
     _sheet.addListener(_onSize);
     FocusManager.instance.addListener(_onFocus);
+    _sheet.addListener(_onSheetMoved);
   }
 
   @override
@@ -269,6 +280,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_onFocus);
+    _sheet.removeListener(_onSheetMoved);
     _refocus?.cancel();
     _sheet.dispose();
     _scope.dispose();
@@ -294,11 +306,74 @@ class UiBottomSheetState extends State<UiBottomSheet> {
       return;
     }
     // A text field inside, on a touch screen: rise to the tallest snap, once per field.
-    if (widget.expandOnFocus && uiTouchPlatform(context) && f.context?.findAncestorWidgetOfExactType<EditableText>() != null) {
+    final field = f.context?.findAncestorWidgetOfExactType<EditableText>() != null;
+    if (field) _revealSoon();
+    if (widget.expandOnFocus && uiTouchPlatform(context) && field) {
       if (f == _expandedFor && _refocus != null) return;
       _expandedFor = f;
       final top = _snaps.length - 1;
       if (_snap != top) _goTo(top);
+    }
+  }
+
+  /// The sheet changed height on its own (a snap, the keyboard's room): keep a focused field in view.
+  /// Not while a finger is on it.
+  void _onSheetMoved() {
+    if (_pointers == 0 && !_headerDrag && _inside(FocusManager.instance.primaryFocus)) _revealSoon();
+  }
+
+  /// Keeps the focused field inside in view after the next frame (once per frame).
+  void _revealSoon() {
+    if (_revealQueued) return;
+    _revealQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _revealQueued = false;
+      _reveal();
+    });
+    SchedulerBinding.instance.ensureVisualUpdate();
+  }
+
+  /// Scrolls the body so the focused field inside sits between the sheet's visible top and the
+  /// footer (or the keyboard, or the screen's bottom), with a little room. The body's own viewport is
+  /// laid out at the sheet's tallest and runs on under the footer, so the platform's own
+  /// "show the caret" counts a field behind the footer as visible: this measures what can be seen.
+  void _reveal() {
+    final f = FocusManager.instance.primaryFocus;
+    if (!mounted || !_inside(f) || _pointers > 0) return;
+    final ctx = f!.context;
+    if (ctx == null || ctx.findAncestorWidgetOfExactType<EditableText>() == null) return;
+    final box = ctx.findRenderObject();
+    final scrollable = Scrollable.maybeOf(ctx);
+    final view = scrollable?.context.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize || view is! RenderBox || !view.hasSize) return;
+    final pos = scrollable!.position;
+    final mq = MediaQuery.of(context);
+    final top = view.localToGlobal(Offset.zero).dy;
+    var bottom = math.min(top + view.size.height, mq.size.height - mq.viewInsets.bottom);
+    final bar = _footerBar.currentContext?.findRenderObject();
+    if (bar is RenderBox && bar.attached && bar.hasSize) bottom = math.min(bottom, bar.localToGlobal(Offset.zero).dy);
+    final at = box.localToGlobal(Offset.zero).dy;
+    final room = context.ui.space3;
+    var delta = 0.0;
+    if (at + box.size.height + room > bottom) delta = at + box.size.height + room - bottom;
+    // A field taller than the gap shows its top.
+    if (at - delta - room < top) delta = at - room - top;
+    if (delta.abs() < 0.5) return;
+    final target = (pos.pixels + delta).clamp(pos.minScrollExtent, pos.maxScrollExtent).toDouble();
+    // An animated scroll is cancelled by the keyboard's own caret reveal, so a cancelled one is
+    // checked again; a few tries at most.
+    if (context.uiAnimate && _revealTries < 3) {
+      _revealTries++;
+      pos.animateTo(target, duration: context.ui.motionFast, curve: context.ui.easeStandard).whenComplete(() {
+        if (mounted && (pos.pixels - target).abs() > 0.5) {
+          _revealSoon();
+        } else {
+          _revealTries = 0;
+        }
+      });
+    } else {
+      _revealTries = 0;
+      pos.jumpTo(target);
     }
   }
 
@@ -317,7 +392,10 @@ class UiBottomSheetState extends State<UiBottomSheet> {
       final done = context.uiAnimate
           ? _sheet.animateTo(_snaps[i], duration: context.ui.motionBase, curve: context.ui.easeStandard)
           : Future<void>.sync(() => _sheet.jumpTo(_snaps[i]));
-      done.whenComplete(() => _moving--);
+      done.whenComplete(() {
+        _moving--;
+        if (mounted && _snaps[_snap.clamp(0, _snaps.length - 1)] > 0) _revealSoon();
+      });
     }
     _report();
   }
@@ -422,6 +500,10 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     final mq = MediaQuery.of(context);
     final keyboard = mq.viewInsets.bottom;
     _bottom = keyboard > 0 ? keyboard : widget.offset;
+    if (keyboard != _lastKeyboard) {
+      _lastKeyboard = keyboard;
+      _revealSoon();
+    }
     _queueReport();
     final modal = _modal;
     _scope.traversalEdgeBehavior = modal ? TraversalEdgeBehavior.closedLoop : TraversalEdgeBehavior.parentScope;
@@ -648,6 +730,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     // On glass the footer is always frosted (0.44.2): the body scrolls under it, so clear glass would
     // show its text through the buttons.
     Widget bar = Container(
+      key: _footerBar,
       decoration: BoxDecoration(
         color: _glass ? uiGlassSheetTint(t, strength: UiGlassStrength.frosted) : t.surface,
         border: Border(top: BorderSide(color: _glass ? t.glassBorder : t.borderSubtle)),

@@ -141,6 +141,13 @@ line laid out as in LTR; a Text child keeps its own direction (Thaana right to l
 once for the app with `UiConfig(chatMineSide: UiChatBubbleSide.right)`. The default, `end` (the inline end, so the
 left in RTL), is unchanged.
 
+**A focused field stays clear of a sheet's footer (0.47.3):** `UiBottomSheet` scrolls its body so a focused field
+inside sits between the sheet's visible top and its `footer` (or the keyboard, or the screen's bottom), when the field
+takes focus, when the keyboard moves and when the sheet settles on a snap. The body's viewport is laid out at the
+sheet's tallest and runs on under the footer, so the platform's own caret reveal counted a field behind the footer as
+visible (Dhirumi's Find a nurse: "Contact phone" sat under the "Find a nurse" bar while she typed). The web sheet has
+done this since 0.44.2 (its scroll box ends at the footer's top).
+
 **Navigation action hold and status wrapping (0.47.2):** `UiNavAction(hold: true)` (2 s, `uiNavHoldDuration`) or
 `holdDuration:` calls `onPressed` only when held to the end, on `UiHoldActivator` (as `UiHoldButton` and a holding
 `UiFab`): a ring in the button's ink fills clockwise round its edge (`UiNavHoldRingPainter`); letting go or sliding
