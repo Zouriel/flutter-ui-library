@@ -31,6 +31,24 @@ void main() {
 
   setUp(() => events = []);
 
+  testWidgets('a very long strip of thumbnails leaves the photo on screen, the same as the Angular viewer', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final img = await testImage(tester, w: 200, h: 150, seed: 1);
+    items = [for (var i = 0; i < 322; i++) UiMediaItem.image(img, alt: 'Photo $i')];
+    await pumpUi(tester, Builder(builder: (context) => UiButton(label: 'Open', onPressed: () => UiMediaLightbox.show(context, items: items, label: 'Party'))));
+    await tester.tap(find.text('Open'));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    final photo = tester.getRect(find.bySemanticsLabel('Photo 0').first);
+    expect(photo.left, greaterThanOrEqualTo(0));
+    expect(photo.right, lessThanOrEqualTo(390));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   /// Three real photographs, decoded before use.
   Future<void> photos(WidgetTester tester) async {
     final imgs = [for (var i = 0; i < 3; i++) await testImage(tester, w: 200, h: 150, seed: i)];
