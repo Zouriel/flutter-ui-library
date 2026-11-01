@@ -232,10 +232,9 @@ class UiMultiSelectState extends State<UiMultiSelect> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       for (final v in widget.value) _Chip(label: _labelOf(v), height: rowH, enabled: widget.enabled, onRemove: () => _toggle(v)),
-                      ConstrainedBox(
-                        constraints: BoxConstraints(minWidth: 80, minHeight: rowH),
-                        child: IntrinsicWidth(
-                          child: Padding(
+                      // Empty, the field takes the row, or its placeholder would be cut to the width of no text.
+                      Builder(builder: (context) {
+                        final field = Padding(
                             padding: EdgeInsets.symmetric(horizontal: t.space2),
                             child: UiTextEditor(
                               controller: _query,
@@ -248,9 +247,12 @@ class UiMultiSelectState extends State<UiMultiSelect> {
                               semanticLabel: name,
                               onTap: _openPanel,
                             ),
-                          ),
-                        ),
-                      ),
+                          );
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(minWidth: 80, minHeight: rowH),
+                          child: widget.value.isEmpty ? SizedBox(width: double.infinity, child: field) : IntrinsicWidth(child: field),
+                        );
+                      }),
                     ],
                   ),
                 ),
