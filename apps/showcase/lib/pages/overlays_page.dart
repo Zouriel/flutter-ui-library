@@ -361,7 +361,7 @@ showUiDrawer<void>(
         DocSection(
           name: 'Confirm dialog',
           widget: 'showUiConfirm · UiConfirmDialog',
-          summary: 'A yes/no prompt on a small modal, so it traps and returns focus the same way. It completes with true for the confirm button, false for Cancel, and null when dismissed another way (Escape, the backdrop, the close button, back). Normally both buttons sit right-aligned; with destructive the confirm button turns red and Cancel moves to the far left, away from it.',
+          summary: 'A yes/no prompt on a small modal, so it traps and returns focus the same way. It completes with true for the confirm button, false for Cancel, and null when dismissed another way (Escape, the backdrop, the close button, back). Normally both buttons sit right-aligned; with destructive the confirm button turns red and Cancel moves to the far left, away from it. Labels too long for one line stack the buttons.',
           demo: row([
             UiButton(
               label: 'Publish',
@@ -379,6 +379,14 @@ showUiDrawer<void>(
                 if (!mounted) return;
                 setState(() => _confirmResult = '$ok');
                 if (ok ?? false) _toasts.warning('Deleted');
+              },
+            ),
+            UiButton(
+              label: 'Long labels',
+              variant: UiButtonVariant.outline,
+              onPressed: () async {
+                final ok = await showUiConfirm(context: context, title: 'Delete this event?', message: 'On a phone the buttons stack.', confirmLabel: 'Delete this event for good', cancelLabel: 'Keep this event for now', destructive: true);
+                if (mounted) setState(() => _confirmResult = '$ok');
               },
             ),
             note('Answer: $_confirmResult'),

@@ -36,7 +36,8 @@ Future<bool?> showUiConfirm({
 
 /// `ui-confirm-dialog`: a confirm/cancel prompt on a small [UiModal], so it traps and returns
 /// focus the same way. Both buttons normally sit right-aligned; with [destructive] the confirm
-/// button turns red and Cancel moves to the far left, away from it. Open it with [showUiConfirm].
+/// button turns red and Cancel moves to the far left, away from it. Labels too long for one line
+/// stack the buttons. Open it with [showUiConfirm].
 class UiConfirmDialog extends StatelessWidget {
   const UiConfirmDialog({
     super.key,
@@ -71,9 +72,10 @@ class UiConfirmDialog extends StatelessWidget {
     return UiModal(
       title: title ?? context.uiStrings.confirmTitle,
       size: UiModalSize.sm,
+      // Labels too long for one line stack the buttons rather than overflow, as the web's flex-wrap does.
       footer: destructive
-          ? Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [cancel, confirm])
-          : Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [cancel, confirm]),
+          ? SizedBox(width: double.infinity, child: Wrap(alignment: WrapAlignment.spaceBetween, spacing: t.space2, runSpacing: t.space2, children: [cancel, confirm]))
+          : Wrap(alignment: WrapAlignment.end, spacing: t.space2, runSpacing: t.space2, children: [cancel, confirm]),
       child: Text(message, style: context.uiText.body.copyWith(color: t.textMuted, fontSize: t.fontSizeSm, height: 1.35)),
     );
   }

@@ -303,6 +303,38 @@ void main() {
       expect(c2.left, closeTo(panel.left + 16 + 1, 1));
       expect(d.right, closeTo(panel.right - 16 - 1, 1));
     });
+
+    testWidgets('labels too long for one line stack the buttons instead of overflowing', (tester) async {
+      for (final destructive in [true, false]) {
+        late BuildContext ctx;
+        await _page(tester, (context) => ctx = context, size: const Size(360, 640));
+        await tester.tap(find.text('Open'));
+        showUiConfirm(context: ctx, message: 'x', confirmLabel: 'Delete this event for good', cancelLabel: 'Keep this event for now', destructive: destructive);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'overflowed, destructive: $destructive');
+        final panel = tester.getRect(find.byType(UiDialogScope));
+        final cancel = tester.getRect(find.ancestor(of: find.text('Keep this event for now'), matching: find.byType(AnimatedContainer)).first);
+        final ok = tester.getRect(find.ancestor(of: find.text('Delete this event for good'), matching: find.byType(AnimatedContainer)).first);
+        expect(ok.top, greaterThanOrEqualTo(cancel.bottom), reason: 'the two lines');
+        expect(ok.left, greaterThanOrEqualTo(panel.left));
+        expect(ok.right, lessThanOrEqualTo(panel.right));
+        expect(ok.bottom, lessThanOrEqualTo(panel.bottom));
+        Navigator.pop(ctx);
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('a label that just fits stays on one line at 360dp', (tester) async {
+      late BuildContext ctx;
+      await _page(tester, (context) => ctx = context, size: const Size(360, 640));
+      await tester.tap(find.text('Open'));
+      showUiConfirm(context: ctx, message: 'x', confirmLabel: 'Delete for good', destructive: true);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final cancel = tester.getRect(find.ancestor(of: find.text('Cancel'), matching: find.byType(AnimatedContainer)).first);
+      final ok = tester.getRect(find.ancestor(of: find.text('Delete for good'), matching: find.byType(AnimatedContainer)).first);
+      expect(ok.center.dy, closeTo(cancel.center.dy, 1));
+    });
   });
 
   testWidgets('golden: modal with footer, destructive confirm', (tester) async {
