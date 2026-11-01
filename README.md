@@ -141,6 +141,10 @@ line laid out as in LTR; a Text child keeps its own direction (Thaana right to l
 once for the app with `UiConfig(chatMineSide: UiChatBubbleSide.right)`. The default, `end` (the inline end, so the
 left in RTL), is unchanged.
 
+**Pinch steps (0.47.6):** `UiPinch` reports a two-finger pinch as steps, for a photo grid that changes its column
+count: `onPinchIn` at 0.8 times the baseline distance, `onPinchOut` at 1.25 times, then the current distance is the
+new baseline. It reads raw pointers and never joins the gesture arena, so one finger still scrolls.
+
 **A focused field stays clear of a sheet's footer (0.47.3):** `UiBottomSheet` scrolls its body so a focused field
 inside sits between the sheet's visible top and its `footer` (or the keyboard, or the screen's bottom), when the field
 takes focus, when the keyboard moves and when the sheet settles on a snap. The body's viewport is laid out at the

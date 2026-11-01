@@ -207,6 +207,17 @@ isn't prefixed too. (7) OTP cells are forced LTR (codes read left to right), as 
 (Restore/Minimize/Maximize), file-viewer extras (Copy/Copied, Mute, Full screen, Media viewer, Current folder),
 tree-table Expand/Collapse, anchor picker point names, side nav and choice grid default names.
 
+**0.47.6. Pinch steps.** The same thresholds and rules on both sides: baseline, 1.25x out, 0.8x in, the
+current distance becomes the new baseline, a third finger is ignored, a change of the measured pair starts a
+fresh baseline. The web reads touch events and cancels `touchmove` while two fingers are on the host (a browser
+would zoom the page); Flutter reads raw pointers through a `Listener`, where nothing needs cancelling. Only the web
+follows each finger's own element, because a browser stops bubbling a touch's events once that element leaves the
+document; a Flutter `Listener` keeps receiving a pointer it was hit-tested for. Only Flutter needs a global pointer
+route after the first finger: a scroll view that has taken that finger ignores pointers for everything inside it,
+so a second finger is never hit-tested to a `UiPinch` inside it; the route takes nothing from the arena. A scroll view
+around or inside `UiPinch` may still move while two fingers are down, as Flutter scroll views do; the steps measure
+screen positions, so they are unaffected.
+
 **0.47.0. Map navigation mode and turning the map.** (1) Logic: `UiNavTracker` is the same algorithm in
 both libs (local equirectangular metres around the route's first point; snapping only at or past the last place
 less 50 m, so a road that doubles back doesn't pull the person back; maneuvers placed on the route in order; the

@@ -13,6 +13,7 @@ class BehaviorsPage extends StatefulWidget {
 
 class _BehaviorsPageState extends State<BehaviorsPage> {
   int _tab = 0;
+  int _pinchColumns = 3;
   final List<int> _rows = List.generate(20, (i) => i + 1);
   bool _loading = false;
   bool _visible = false;
@@ -48,7 +49,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
     return DocPage(
       eyebrow: 'Motion',
       title: 'Behaviors',
-      lead: 'Swipe, infinite scroll, virtual list, intersect, copy, resize observer, ripple and drag helpers. Where Flutter already does the job these are thin wrappers that keep the web names and rules.',
+      lead: 'Swipe, pinch, infinite scroll, virtual list, intersect, copy, resize observer, ripple and drag helpers. Where Flutter already does the job these are thin wrappers that keep the web names and rules.',
       children: [
         DocSection(
           name: 'Swipe',
@@ -74,6 +75,40 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
             ApiRow('mouse', 'bool', 'Count mouse drags too.', def: 'false'),
           ],
           shapes: 'UiGestures.isSwipe(dx, dy, ms, width)  // the shared thresholds\nUiGestures.resist(dx, width, blocked: true)\nUiGestures.clampOffset(offset, content, stage, zoom)',
+        ),
+        DocSection(
+          name: 'Pinch',
+          widget: 'UiPinch',
+          summary: 'Reports a two-finger pinch as steps, not a scale, for a photo grid that changes its column count. The distance between the fingers is the baseline: at 1.25 times it onPinchOut fires, at 0.8 times it onPinchIn fires, and the current distance becomes the new baseline, so one long pinch can take several steps. A third finger is ignored. It reads raw pointers and never takes a drag from anything, so one finger still scrolls.',
+          demo: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+              UiText('$_pinchColumns ${_pinchColumns == 1 ? 'column' : 'columns'}. Pinch with two fingers.', variant: UiTextVariant.caption),
+              UiPinch(
+                onPinchIn: () => setState(() => _pinchColumns = (_pinchColumns + 1).clamp(2, 6)),
+                onPinchOut: () => setState(() => _pinchColumns = (_pinchColumns - 1).clamp(2, 6)),
+                child: LayoutBuilder(builder: (context, c) {
+                  final size = (c.maxWidth - t.space1 * (_pinchColumns - 1)) / _pinchColumns;
+                  return Wrap(spacing: t.space1, runSpacing: t.space1, children: [
+                    for (var n = 1; n <= 12; n++)
+                      Container(
+                        width: size,
+                        height: size,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: t.surface, border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+                        child: UiText('$n', variant: UiTextVariant.caption),
+                      ),
+                  ]);
+                }),
+              ),
+            ]),
+          ),
+          code: 'UiPinch(\n  onPinchIn: () => setColumns(columns + 1),\n  onPinchOut: () => setColumns(columns - 1),\n  child: grid,\n)',
+          api: const [
+            ApiRow('onPinchIn', 'VoidCallback?', 'The fingers moved together, to 0.8 times the baseline.'),
+            ApiRow('onPinchOut', 'VoidCallback?', 'The fingers moved apart, to 1.25 times the baseline.'),
+            ApiRow('enabled', 'bool', 'Turn it off without unmounting.', def: 'true'),
+          ],
         ),
         DocSection(
           name: 'Infinite scroll',

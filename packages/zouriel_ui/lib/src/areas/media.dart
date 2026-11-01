@@ -10,6 +10,7 @@ export '../layout/swipe_screens.dart';
 export '../behaviors/gestures.dart';
 export '../behaviors/intersect.dart';
 export '../behaviors/misc.dart';
+export '../behaviors/pinch.dart';
 export '../behaviors/scrolling.dart';
 export '../behaviors/swipe.dart';
 export '../media/carousel.dart';
