@@ -10,9 +10,24 @@ enum UiSize { sm, md, lg, xl }
 /// Status tones shared by badges, chips and progress (the web `UiStatus`).
 enum UiStatus { neutral, primary, success, warning, danger }
 
+/// A premium tier on [UiBadge] (the web `UiBadgeTier`): not a status, so it stays out of [UiStatus]
+/// and everything that switches on it.
+enum UiBadgeTier { gold, platinum }
+
 extension UiSizeTokens on UiSize {
   /// Control height for this size: 26 / 30 / 38 / 56.
   double height(UiTokens t) => switch (this) { UiSize.sm => t.sizeSm, UiSize.md => t.sizeMd, UiSize.lg => t.sizeLg, UiSize.xl => t.sizeXl };
+}
+
+extension UiBadgeTierColors on UiBadgeTier {
+  /// The metal's sheen (`--ui-gradient-tier-*`).
+  UiGradientSpec gradient(UiTokens t) => switch (this) { UiBadgeTier.gold => t.gradientTierGold, UiBadgeTier.platinum => t.gradientTierPlatinum };
+
+  /// Text on the metal.
+  Color contrast(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldContrast, UiBadgeTier.platinum => t.tierPlatinumContrast };
+
+  /// The darker edge that keeps the pill visible on a white page.
+  Color border(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldBorder, UiBadgeTier.platinum => t.tierPlatinumBorder };
 }
 
 extension UiStatusColors on UiStatus {

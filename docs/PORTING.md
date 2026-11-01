@@ -875,3 +875,12 @@ filled, selected, danger and toned ones keep their foreground. `UiThemeControlle
 7. FX and tablet extras.
 
 Progress is tracked by ticking `docs/inventory.md`.
+
+## Badge tiers (0.47.8)
+
+`UiBadge(tier: UiBadgeTier.gold | platinum)` is the web's `tier="gold" | "platinum"`. It is a separate
+input rather than two more `UiStatus` values: a tier isn't a status, and `UiStatus` is switched on
+exhaustively by chips, progress and apps. The metals are tokens (`--ui-tier-*`, `--ui-gradient-tier-*`)
+set once for every theme. The sheen runs at 90deg because `UiGradientSpec.toGradient` maps angles through
+alignment space, which only equals the CSS angle on a square or straight across.
+

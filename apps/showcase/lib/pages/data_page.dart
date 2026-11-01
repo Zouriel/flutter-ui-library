@@ -56,7 +56,7 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Badge',
           widget: 'UiBadge',
-          summary: 'A small status or count label. Neutral is outlined; the other tones are solid. dot draws an 8px dot with no text; give it a semanticLabel. In right-to-left text or with a Thaana label (0.46.1) the pill grows to fit the marks below the line.',
+          summary: 'A small status or count label. Neutral is outlined; the other tones are solid. tier makes it the metal of a premium tier, gold or platinum, the same in every theme. dot draws an 8px dot with no text; give it a semanticLabel. In right-to-left text or with a Thaana label (0.46.1) the pill grows to fit the marks below the line.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
             Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: const [
               UiBadge(label: 'Neutral'),
@@ -65,6 +65,10 @@ class _DataPageState extends State<DataPage> {
               UiBadge(label: 'Pending', tone: UiStatus.warning),
               UiBadge(label: '3', tone: UiStatus.danger),
               UiBadge(dot: true, tone: UiStatus.success, semanticLabel: 'Online'),
+              UiBadge(label: 'Gold pass', tier: UiBadgeTier.gold),
+              UiBadge(label: 'Platinum pass', tier: UiBadgeTier.platinum),
+              UiBadge(dot: true, tier: UiBadgeTier.gold, semanticLabel: 'Gold'),
+              UiBadge(dot: true, tier: UiBadgeTier.platinum, semanticLabel: 'Platinum'),
             ]),
             // 0.46.1: Thaana's marks below the line stay inside the pill.
             Directionality(
@@ -78,10 +82,11 @@ class _DataPageState extends State<DataPage> {
               ]),
             ),
           ]),
-          code: "UiBadge(label: 'Active', tone: UiStatus.success)\nUiBadge(dot: true, tone: UiStatus.success, semanticLabel: 'Online')",
+          code: "UiBadge(label: 'Active', tone: UiStatus.success)\nUiBadge(dot: true, tone: UiStatus.success, semanticLabel: 'Online')\nUiBadge(label: 'Gold pass', tier: UiBadgeTier.gold)\nUiBadge(label: 'Platinum pass', tier: UiBadgeTier.platinum)",
           api: const [
             ApiRow('label', 'String?', 'Text; required unless dot.'),
             ApiRow('tone', 'UiStatus', 'neutral, primary, success, warning, danger.', def: 'neutral'),
+            ApiRow('tier', 'UiBadgeTier?', 'A premium tier: warm gold or cool platinum, the same in every theme (AA in all of them; a darker edge keeps it visible on a white page). Wins over tone.', def: 'null'),
             ApiRow('dot', 'bool', '8px dot, no text.', def: 'false'),
           ],
         ),

@@ -12,11 +12,14 @@ final RegExp _thaanaText = RegExp('[\u0780-\u07BF]');
 
 /// `ui-badge`: a small status or count label. [dot] draws an 8px dot with no text.
 class UiBadge extends StatelessWidget {
-  const UiBadge({super.key, this.label, this.tone = UiStatus.neutral, this.dot = false, this.semanticLabel})
+  const UiBadge({super.key, this.label, this.tone = UiStatus.neutral, this.tier, this.dot = false, this.semanticLabel})
       : assert(dot || label != null, 'A badge needs a label unless it is a dot.');
 
   final String? label;
   final UiStatus tone;
+
+  /// A premium tier's metal: gold or platinum, the same in every theme. Wins over [tone].
+  final UiBadgeTier? tier;
   final bool dot;
 
   /// Accessible text for a dot badge (e.g. "Online").
@@ -27,14 +30,17 @@ class UiBadge extends StatelessWidget {
     final t = context.ui;
     final solid = tone != UiStatus.neutral;
     final fill = solid ? tone.color(t) : t.surfaceRaised;
-    final fg = solid ? tone.contrast(t) : t.text;
+    final metal = tier;
+    final fg = metal != null ? metal.contrast(t) : (solid ? tone.contrast(t) : t.text);
     if (dot) {
       return Semantics(
         label: semanticLabel,
         child: Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(color: solid ? fill : t.textMuted, shape: BoxShape.circle),
+          decoration: metal != null
+              ? BoxDecoration(gradient: metal.gradient(t).toGradient(), border: Border.all(color: metal.border(t)), shape: BoxShape.circle)
+              : BoxDecoration(color: solid ? fill : t.textMuted, shape: BoxShape.circle),
         ),
       );
     }
@@ -49,9 +55,10 @@ class UiBadge extends StatelessWidget {
       constraints: thaana ? BoxConstraints(minHeight: 20 * t.densityScale) : null,
       padding: thaana ? EdgeInsets.fromLTRB(t.space2, 0, t.space2, 1) : EdgeInsets.symmetric(horizontal: t.space2),
       decoration: BoxDecoration(
-        color: fill,
+        color: metal != null ? null : fill,
+        gradient: metal?.gradient(t).toGradient(),
         borderRadius: BorderRadius.circular(t.radiusPill),
-        border: Border.all(color: solid ? const Color(0x00000000) : t.border),
+        border: Border.all(color: metal != null ? metal.border(t) : (solid ? const Color(0x00000000) : t.border)),
       ),
       // Hug the text: Container(alignment:) would stretch to the full available width.
       child: Align(
