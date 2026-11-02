@@ -17,6 +17,8 @@ class _ButtonsPageState extends State<ButtonsPage> {
   int _held = 0;
   bool _googleBusy = false;
   int _googleTaps = 0;
+  bool _appleBusy = false;
+  int _appleTaps = 0;
   String? _view = 'week';
   String? _align = 'left';
   bool _bold = true, _italic = false;
@@ -182,6 +184,59 @@ UiGoogleSignInButton(
             ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
           ],
           shapes: 'enum UiGoogleButtonText { signIn, signUp, continueWith, signInShort }\nenum UiGoogleButtonTheme { auto, light, dark, neutral }\nenum UiGoogleButtonShape { rectangular, pill }',
+        ),
+        DocSection(
+          name: 'Sign in with Apple',
+          widget: 'UiAppleSignInButton',
+          summary: 'Apple\'s sign-in button, drawn to the Human Interface Guidelines: the Apple logo and Apple\'s wording, black, white or white with a black outline, logo and words centred together. auto is white on a dark theme and black otherwise. 40 high like the Google button, so the two line up and Apple\'s is never the smaller one (App Review asks for it to be at least as prominent as other sign-in options). The words are the system font on iOS and macOS (San Francisco) and the bundled Roboto elsewhere, 17 medium. It only draws the button: pair it with the sign_in_with_apple package (send a SHA-256 of a nonce you keep, then send the identity token, the raw nonce and the authorization code to your API). loading swaps the logo for a spinner at the same width and ignores taps. The words come from UiStrings (appleSignIn, appleContinue, appleSignUp). The web twin is ui-apple-button.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            UiAppleSignInButton(
+              loading: _appleBusy,
+              onPressed: () async {
+                setState(() => _appleBusy = true);
+                await Future<void>.delayed(const Duration(seconds: 1));
+                if (!mounted) return;
+                setState(() {
+                  _appleBusy = false;
+                  _appleTaps++;
+                });
+              },
+            ),
+            Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+              UiAppleSignInButton(onPressed: () {}, theme: UiAppleButtonTheme.black, shape: UiAppleButtonShape.pill, text: UiAppleButtonText.continueWith),
+              UiAppleSignInButton(onPressed: () {}, theme: UiAppleButtonTheme.white, text: UiAppleButtonText.signUp),
+              UiAppleSignInButton(onPressed: () {}, theme: UiAppleButtonTheme.whiteOutline),
+              const UiAppleSignInButton(onPressed: null),
+            ]),
+            UiAppleSignInButton(onPressed: () {}, expand: true, text: UiAppleButtonText.continueWith),
+            UiGoogleSignInButton(onPressed: () {}, expand: true, text: UiGoogleButtonText.continueWith),
+            UiText('Signed in (pretend) $_appleTaps times', variant: UiTextVariant.caption),
+          ]),
+          code: '''// pubspec: sign_in_with_apple and crypto (the library depends on neither)
+UiAppleSignInButton(
+  text: UiAppleButtonText.continueWith,
+  loading: busy,
+  onPressed: () async {
+    final raw = randomNonce();
+    final credential = await SignInWithApple.getAppleIDCredential(
+      scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      nonce: sha256.convert(utf8.encode(raw)).toString(),
+    );
+    // send credential.identityToken, raw, credential.authorizationCode
+    // and (first sign-in only) credential.givenName / familyName to your API
+  },
+)''',
+          api: const [
+            ApiRow('onPressed', 'VoidCallback?', 'Start the app\'s sign-in. Null disables the button.'),
+            ApiRow('text', 'UiAppleButtonText', 'signIn, continueWith, signUp.', def: 'signIn'),
+            ApiRow('theme', 'UiAppleButtonTheme', 'auto (white on a dark UiApp theme, else black), black, white, whiteOutline.', def: 'auto'),
+            ApiRow('shape', 'UiAppleButtonShape', 'rectangular (6px corners) or pill.', def: 'rectangular'),
+            ApiRow('loading', 'bool', 'Spinner in place of the logo, same width, taps ignored, announced as busy.', def: 'false'),
+            ApiRow('expand', 'bool', 'Full width; logo and words stay centred together.', def: 'false'),
+            ApiRow('semanticLabel', 'String?', 'Accessible name override.', def: 'the words'),
+            ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
+          ],
+          shapes: 'enum UiAppleButtonText { signIn, continueWith, signUp }\nenum UiAppleButtonTheme { auto, black, white, whiteOutline }\nenum UiAppleButtonShape { rectangular, pill }',
         ),
         DocSection(
           name: 'Icon button',

@@ -47,6 +47,9 @@ class UiStrings {
     this.googleSignUp = 'Sign up with Google',
     this.googleContinue = 'Continue with Google',
     this.googleSignInShort = 'Sign in',
+    this.appleSignIn = 'Sign in with Apple',
+    this.appleSignUp = 'Sign up with Apple',
+    this.appleContinue = 'Continue with Apple',
     this.sidebarToggle = 'Toggle navigation',
     this.sidebarClose = 'Close navigation',
     this.sidebarLabel = 'Navigation',
@@ -227,6 +230,9 @@ class UiStrings {
     googleSignUp: 'ގޫގުލްއިން ސައިން އަޕް ކުރޭ',
     googleContinue: 'ގޫގުލްއިން ކުރިއަށް',
     googleSignInShort: 'ސައިން އިން',
+    appleSignIn: 'އެޕަލްއިން ސައިން އިން ކުރޭ',
+    appleSignUp: 'އެޕަލްއިން ސައިން އަޕް ކުރޭ',
+    appleContinue: 'އެޕަލްއިން ކުރިއަށް',
     sidebarToggle: 'މެނޫ',
     sidebarClose: 'މެނޫ ބަންދުކުރޭ',
     sidebarLabel: 'ނެވިގޭޝަން',
@@ -463,6 +469,15 @@ class UiStrings {
 
   /// Google sign-in button, icon-and-short form.
   final String googleSignInShort;
+
+  /// Sign in with Apple button wording (Apple allows only its own wordings: keep the meaning).
+  final String appleSignIn;
+
+  /// Sign in with Apple button wording.
+  final String appleSignUp;
+
+  /// Sign in with Apple button wording.
+  final String appleContinue;
 
   /// Sidebar layout: the menu button.
   final String sidebarToggle;
@@ -914,6 +929,9 @@ class UiStrings {
     String? googleSignUp,
     String? googleContinue,
     String? googleSignInShort,
+    String? appleSignIn,
+    String? appleSignUp,
+    String? appleContinue,
     String? sidebarToggle,
     String? sidebarClose,
     String? sidebarLabel,
@@ -1089,6 +1107,9 @@ class UiStrings {
         googleSignUp: googleSignUp ?? this.googleSignUp,
         googleContinue: googleContinue ?? this.googleContinue,
         googleSignInShort: googleSignInShort ?? this.googleSignInShort,
+        appleSignIn: appleSignIn ?? this.appleSignIn,
+        appleSignUp: appleSignUp ?? this.appleSignUp,
+        appleContinue: appleContinue ?? this.appleContinue,
         sidebarToggle: sidebarToggle ?? this.sidebarToggle,
         sidebarClose: sidebarClose ?? this.sidebarClose,
         sidebarLabel: sidebarLabel ?? this.sidebarLabel,
@@ -1266,6 +1287,9 @@ class UiStrings {
         'googleSignUp': googleSignUp,
         'googleContinue': googleContinue,
         'googleSignInShort': googleSignInShort,
+        'appleSignIn': appleSignIn,
+        'appleSignUp': appleSignUp,
+        'appleContinue': appleContinue,
         'sidebarToggle': sidebarToggle,
         'sidebarClose': sidebarClose,
         'sidebarLabel': sidebarLabel,

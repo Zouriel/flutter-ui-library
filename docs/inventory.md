@@ -1715,6 +1715,14 @@ File: `google-sign-in/src/google-button.ts` (entry point `@zouriel/ui/google-sig
 - Outputs: `pressed` (Flutter `onPressed`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiAppleButton (component, `ui-apple-button`) (0.48)
+File: `google-sign-in/src/apple-button.ts` (entry point `@zouriel/ui/google-sign-in`)  
+"Sign in with Apple" drawn to Apple's Human Interface Guidelines (Apple logo, black/white/whiteOutline, rectangular/pill, 40 high like the Google button, logo and words centred together). Flutter: `UiAppleSignInButton`, paired with the `sign_in_with_apple` package by the app.  
+- Inputs: `text` (signIn | continueWith | signUp); `theme` (auto | black | white | whiteOutline); `shape` (rectangular | pill); `loading`; `expand`; `disabled` (Flutter: `onPressed` null); `ariaLabel` (Flutter `semanticLabel`)
+- Outputs: `pressed` (Flutter `onPressed`)
+- Flutter extras: `UiAppleLogo`, `UiAppleBrand`, `uiAppleLogoPath` (the path both libraries draw)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiGoogleSignIn (component, `ui-google-sign-in`) (0.36, web only)
 File: `google-sign-in/src/google-sign-in.ts`  
 Wraps Google Identity Services' own rendered button and emits the ID token (`credential`). Web only: on the web GIS is the only secret-free way to get an ID token; a Flutter app gets it from `google_sign_in` (`authenticate()` → `idToken`, `serverClientId` = the web client ID) behind `UiGoogleSignInButton`.  

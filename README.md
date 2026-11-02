@@ -62,6 +62,14 @@ sign anyone in: add the `google_sign_in` package to the app, call
 `googleSignUp`, `googleContinue`, `googleSignInShort`) are in `UiStrings`. Its text is the bundled
 Roboto Medium (Google's guideline now uses Google Sans, which the library doesn't ship).
 
+**Sign in with Apple (0.48):** `UiAppleSignInButton` draws Apple's button to the Human Interface
+Guidelines (black, white, white with an outline, or `auto`: white on a dark theme; rectangular or
+pill; `loading`; `expand`, with logo and words centred together). It is 40 high like the Google
+button, in the system font on iOS and macOS. The library doesn't sign anyone in: use the
+`sign_in_with_apple` package, ask Apple with the SHA-256 of a nonce you keep, and send the identity
+token, the raw nonce and the authorization code to your API. The words (`appleSignIn`,
+`appleContinue`, `appleSignUp`) are in `UiStrings`.
+
 **App shell and feature card (0.37):** `UiSidebarLayout` puts the sidebar on the start side (the
 right in right-to-left text, sliding in from the right) and takes its words from `UiStrings`
 (`sidebarToggle`, `sidebarClose`, `sidebarLabel`). For an app with its own top bar, `bar: false`

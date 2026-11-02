@@ -142,6 +142,17 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.48.0 additions.** `UiAppleSignInButton` (web `ui-apple-button`) draws Sign in with Apple's
+button to Apple's Human Interface Guidelines: black, white or white with a 1px black outline
+(`UiAppleBrand`, the second file `style_contract_test` lets use literal colours), Apple logo and
+words centred together, 16 padding, 6px corners or a pill. It is 40 high, the same as the Google
+button rather than Apple's 44 default, so the two line up when stacked and Apple's is never the
+smaller (App Review guideline 4.8). The logo is the drawing from the MIT-licensed
+`sign_in_with_apple` package, written as one SVG path in a 25x31 box (`uiAppleLogoPath`), the same
+path the web twin uses; a small parser draws it (M, C and Z only). Words: 17 medium, in the system
+font on iOS and macOS ('CupertinoSystemText', San Francisco), the bundled Roboto elsewhere; the web
+asks for -apple-system first. `auto` is white on a dark theme, black otherwise.
+
 **0.36.0 additions.** `UiGoogleSignInButton` (web `ui-google-button`) draws Google's sign-in
 button to https://developers.google.com/identity/branding-guidelines: the colours are Google's
 (`UiGoogleBrand`), the one file `style_contract_test` lets use literal colours; 40 high, 12 before
