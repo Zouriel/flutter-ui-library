@@ -59,7 +59,7 @@ class _PlansPageState extends State<PlansPage> {
         DocSection(
           name: 'Plan card',
           widget: 'UiPlanCard, UiPlanGrid',
-          summary: 'One plan: name, price (already formatted) with its period, an optional note and tagline, and a check list of features. tier adds a slim strip of the tier metal on top and a small tier dot by the name; the card stays on the theme surface. highlight puts a ribbon on the top edge and a stronger border; use it on one card at most. current shows a "Your plan" badge; the caller decides the action. action sits at the bottom and lines up across cards; fineprint is small muted text under it. Screen readers get a group named by the plan and the price as one phrase ("MVR 499 per event"). UiPlanGrid shows one column under 600px, two under 912px, at most three, with equal-height cards.',
+          summary: 'One plan: name, price (already formatted) with its period, an optional note and tagline, and a check list of features. tier adds a slim strip of the tier metal on top and a small tier dot by the name; the card stays on the theme surface. highlight puts a ribbon on the top edge and a stronger border; use it on one card at most. current shows a "Your plan" badge; the caller decides the action. action sits at the bottom; fineprint is small muted text under it. Buttons in a row line up when the cards in it have the same slots, so give every card fine print or none. Screen readers get a group named by the plan and the price as one phrase ("MVR 499 per event"). UiPlanGrid shows one column under 600px, two under 912px, at most three, with equal-height cards.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
             UiPlanGrid(children: [
               UiPlanCard(
@@ -69,6 +69,7 @@ class _PlansPageState extends State<PlansPage> {
                 features: const ['1 GB of photos and videos', 'Guest uploads', 'Design your own invitation'],
                 current: true,
                 action: UiButton(label: 'Your plan', variant: UiButtonVariant.outline, block: true, onPressed: null),
+                fineprint: const Text('Free for every event'),
               ),
               UiPlanCard(
                 name: 'Gold pass',

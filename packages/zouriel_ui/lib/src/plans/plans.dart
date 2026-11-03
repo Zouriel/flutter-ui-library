@@ -89,7 +89,7 @@ class UiPlanCard extends StatelessWidget {
             Flexible(
               child: Semantics(
                 header: true,
-                child: Text(name, style: text.body.copyWith(fontSize: 18, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
+                child: Text(name, style: text.body.copyWith(fontSize: 18 * t.fontScale, fontWeight: FontWeight.w600, height: 1.3, color: t.text)),
               ),
             ),
             if (metal != null) ExcludeSemantics(child: UiBadge(dot: true, tier: metal)),
@@ -98,7 +98,7 @@ class UiPlanCard extends StatelessWidget {
         ),
         if (tagline != null) ...[
           SizedBox(height: t.space1),
-          Text(tagline!, style: text.body.copyWith(fontSize: 13, height: 1.4, color: t.textSecondary)),
+          Text(tagline!, style: text.body.copyWith(fontSize: 13 * t.fontScale, height: 1.4, color: t.textSecondary)),
         ],
         SizedBox(height: t.space4),
         Semantics(
@@ -109,14 +109,14 @@ class UiPlanCard extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             spacing: t.space1,
             children: [
-              Text(price, style: text.body.copyWith(fontSize: 28, fontWeight: FontWeight.w700, height: 1.15, color: t.text, letterSpacing: t.trackingTight * 28, fontFeatures: const [FontFeature.tabularFigures()])),
-              if (period != null) Flexible(child: Text(period!, style: text.body.copyWith(fontSize: 13, height: 1.4, color: t.textSecondary))),
+              Text(price, style: text.body.copyWith(fontSize: 28 * t.fontScale, fontWeight: FontWeight.w700, height: 1.15, color: t.text, letterSpacing: t.trackingTight * 28 * t.fontScale, fontFeatures: const [FontFeature.tabularFigures()])),
+              if (period != null) Flexible(child: Text(period!, style: text.body.copyWith(fontSize: 13 * t.fontScale, height: 1.4, color: t.textSecondary))),
             ],
           ),
         ),
         if (note != null) ...[
           SizedBox(height: t.space1),
-          Text(note!, style: text.body.copyWith(fontSize: 13, height: 1.4, color: t.textMuted)),
+          Text(note!, style: text.body.copyWith(fontSize: 13 * t.fontScale, height: 1.4, color: t.textMuted)),
         ],
         if (features.isNotEmpty) ...[
           SizedBox(height: t.space4),
@@ -133,7 +133,7 @@ class UiPlanCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 2),
                       child: ExcludeSemantics(child: UiIcon(HugeIcons.strokeRoundedTick02, size: 16, color: t.success)),
                     ),
-                    Expanded(child: Text(f, style: text.body.copyWith(fontSize: 14, height: 1.45, color: t.text))),
+                    Expanded(child: Text(f, style: text.body.copyWith(fontSize: 14 * t.fontScale, height: 1.45, color: t.text))),
                   ],
                 ),
             ],
@@ -411,7 +411,7 @@ class _UiPlanCompareState extends State<UiPlanCompare> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: t.space2,
                   children: [
-                    Text(p.name, textAlign: TextAlign.center, style: text.body.copyWith(fontSize: 14, fontWeight: FontWeight.w600, height: 1.35, color: t.text)),
+                    Text(p.name, textAlign: TextAlign.center, style: text.body.copyWith(fontSize: 14 * t.fontScale, fontWeight: FontWeight.w600, height: 1.35, color: t.text)),
                     Container(
                       key: ValueKey('ui-plan-compare-bar-${p.key}'),
                       height: 3,
@@ -435,7 +435,7 @@ class _UiPlanCompareState extends State<UiPlanCompare> {
         if (v == null || v == false || (v is String && v.isEmpty)) {
           return Semantics(label: widget.notIncludedLabel, excludeSemantics: true, child: UiIcon(HugeIcons.strokeRoundedMinusSign, size: 16, color: t.textMuted));
         }
-        return Text('$v', textAlign: TextAlign.center, style: text.body.copyWith(fontSize: 14, height: 1.45, color: t.text));
+        return Text('$v', textAlign: TextAlign.center, style: text.body.copyWith(fontSize: 14 * t.fontScale, height: 1.45, color: t.text));
       }
 
       final body = [
@@ -445,7 +445,7 @@ class _UiPlanCompareState extends State<UiPlanCompare> {
               width: labelW,
               color: t.surface,
               align: AlignmentDirectional.centerStart,
-              child: Text(r.label, style: text.body.copyWith(fontSize: 14, fontWeight: FontWeight.w500, height: 1.45, color: t.text)),
+              child: Text(r.label, style: text.body.copyWith(fontSize: 14 * t.fontScale, fontWeight: FontWeight.w500, height: 1.45, color: t.text)),
             ),
             [
               for (final p in widget.plans)
