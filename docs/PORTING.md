@@ -142,6 +142,21 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.54.0.** `UiMasonryGrid` (web `ui-masonry-grid`) and `UiPinch.onPinch` (`UiPinchStep { apart,
+focal }`, focal = the fingers' midpoint in global coordinates; fires just before onPinchIn/Out). The
+layout is the pure `uiMasonryLayout(width, ratios, columns, gap)` (plus `uiMasonryHeight`), the same
+numbers as the web's and checked against the same fixture. Flutter renders it with one custom
+multi-child RenderBox: each animation frame only re-lays out (no rebuild), and a tile whose size
+didn't change returns from layout at once, so ~1,500 tiles stay cheap. Tiles glide from where they
+are shown (mid-animation included) to the new layout, laid out at the in-between size (no scale
+transform). After a pinch the enclosing vertical Scrollable is corrected so the same fractional
+point of the tile under the fingers stays under them vertically (the tile changes column, so the
+horizontal can't be kept); the correction is applied with `ScrollPosition.correctBy` during the
+grid's own layout, the way slivers correct a viewport, so it lands in the same frame and nothing is
+notified mid-build. The new extent is estimated as the old max plus the grid's growth. Tiles whose
+start and end are both more than one screen outside the viewport jump. `context.uiAnimate` false
+changes at once (the scroll correction still happens).
+
 **0.53.0.** The lightbox's top bar never overflows. Its actions used to sit in a Wrap inside a Row
 (Flutter) / a `flex: none` row (web), so they had unbounded width and overflowed a phone (three pills
 by 27px at 360). `UiMediaAction` gains an optional `icon` (Flutter `Widget?`, as `UiSelectionAction`;

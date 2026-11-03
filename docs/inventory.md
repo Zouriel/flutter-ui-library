@@ -109,9 +109,9 @@ File: `behaviors/src/slide-transition.ts`
 
 ### UiPinch (directive, `[uiPinch]`) (0.47.6)
 File: `behaviors/src/pinch.ts`  
-`uiPinch` — reports a two-finger pinch as steps, for a photo grid that changes its column count: out at 1.25x the baseline distance, in at 0.8x, then the current distance is the new baseline. Flutter: `UiPinch(child:, onPinchIn:, onPinchOut:, enabled:)`.  
+`uiPinch` — reports a two-finger pinch as steps, for a photo grid that changes its column count: out at 1.25x the baseline distance, in at 0.8x, then the current distance is the new baseline. Flutter: `UiPinch(child:, onPinchIn:, onPinchOut:, onPinch:, enabled:)`.  
 - Inputs: `uiPinchDisabled` = false
-- Outputs: `uiPinchIn`: void; `uiPinchOut`: void
+- Outputs: `uiPinchIn`: void; `uiPinchOut`: void; `uiPinch`: UiPinchStep (0.54.0)
 - [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (n/a: no visuals of its own)  - [x] showcase
 
 ### UiSwipe (directive, `[uiSwipe]`)
@@ -1282,6 +1282,14 @@ File: `media/src/gallery.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiGalleryImage` (gallery.ts)
+### UiMasonryGrid (component, `ui-masonry-grid`) (0.54.0)
+File: `media/src/masonry-grid.ts`  
+`ui-masonry-grid` — columns of different heights, each item keeping its shape (`uiMasonryLayout`), that glides between column counts; a pinch asks for one fewer/more column and keeps the picture under the fingers in place.  
+- Inputs: `itemCount`; `ratioOf`; `columns`; `itemKey`; `gap` = 4; `minColumns` = 1; `maxColumns` = 5; `pinchable` = true; `duration` = 280ms; `curve` = easeOutCubic
+- Outputs: the new column count asked for by a pinch (Flutter `onColumnsChanged`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- function `uiMasonryLayout`, `uiMasonryHeight`
 ### UiPosterGrid (component, `ui-poster-grid`)
 File: `media/src/poster-grid.ts`  
 `ui-poster-grid` — a grid of same-shape picture tiles, 2/3/4/5 columns by the grid's own width (544/992/1280), with each poster's details (a `uiPosterDetails` template; Flutter `UiPoster.details`) over the bottom of its picture on a compact scrim, link tiles (`href`, `handleClicks`; web only), a gradient fallback, and an optional dot (`mark`) named for screen readers.  

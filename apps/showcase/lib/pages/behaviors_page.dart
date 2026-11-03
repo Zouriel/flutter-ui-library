@@ -107,6 +107,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
           api: const [
             ApiRow('onPinchIn', 'VoidCallback?', 'The fingers moved together, to 0.8 times the baseline.'),
             ApiRow('onPinchOut', 'VoidCallback?', 'The fingers moved apart, to 1.25 times the baseline.'),
+            ApiRow('onPinch', 'ValueChanged<UiPinchStep>?', 'Every step, just before onPinchIn/Out: apart, and focal, the fingers\' midpoint in global coordinates (UiMasonryGrid zooms about it).'),
             ApiRow('enabled', 'bool', 'Turn it off without unmounting.', def: 'true'),
           ],
         ),

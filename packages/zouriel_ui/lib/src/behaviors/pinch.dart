@@ -5,12 +5,28 @@ import 'package:flutter/widgets.dart';
 const double _pinchOut = 1.25;
 const double _pinchIn = 0.8;
 
+/// One step of a [UiPinch]: which way the fingers went, and where they were when it fired.
+@immutable
+class UiPinchStep {
+  const UiPinchStep({required this.apart, required this.focal});
+
+  /// The fingers moved apart (zoom in); false when they moved together.
+  final bool apart;
+
+  /// The midpoint of the two fingers, in global coordinates, when the step fired.
+  final Offset focal;
+
+  @override
+  String toString() => 'UiPinchStep(apart: $apart, focal: $focal)';
+}
+
 /// `uiPinch`: a two-finger pinch reported as steps, not as a scale. For a photo grid that changes
 /// its column count, the way a phone's gallery does.
 ///
 /// The distance between the two fingers is taken as a baseline. Once it reaches 1.25 times that
 /// ([onPinchOut]) or falls to 0.8 times it ([onPinchIn]), one step fires and the current distance
-/// becomes the new baseline, so one long pinch can take several steps. A third finger is ignored;
+/// becomes the new baseline, so one long pinch can take several steps. [onPinch] fires just before
+/// either of them with the direction and the fingers' midpoint, for a grid that zooms about it. A third finger is ignored;
 /// when one of the two lifts while others remain, the next two carry on from a fresh baseline.
 /// Fewer than two fingers ends it.
 ///
@@ -24,7 +40,7 @@ const double _pinchIn = 0.8;
 /// to this widget. A global route only watches, so it takes nothing from the arena either. A finger
 /// landing within this widget's bounds then counts, whatever is drawn over that spot.
 class UiPinch extends StatefulWidget {
-  const UiPinch({super.key, required this.child, this.onPinchIn, this.onPinchOut, this.enabled = true});
+  const UiPinch({super.key, required this.child, this.onPinchIn, this.onPinchOut, this.onPinch, this.enabled = true});
 
   final Widget child;
 
@@ -33,6 +49,9 @@ class UiPinch extends StatefulWidget {
 
   /// The fingers moved apart.
   final VoidCallback? onPinchOut;
+
+  /// Every step, with its direction and focal point; fires right before [onPinchIn] / [onPinchOut].
+  final ValueChanged<UiPinchStep>? onPinch;
 
   /// Turns the gesture off without unmounting it.
   final bool enabled;
@@ -51,6 +70,12 @@ class _UiPinchState extends State<UiPinch> {
     if (_fingers.length < 2) return null;
     final pair = _fingers.values.take(2).toList();
     return (pair[0] - pair[1]).distance;
+  }
+
+  /// The midpoint of the two oldest fingers (only called with two).
+  Offset get _focal {
+    final pair = _fingers.values.take(2).toList();
+    return (pair[0] + pair[1]) / 2;
   }
 
   bool _inPair(int pointer) => _fingers.keys.take(2).contains(pointer);
@@ -108,9 +133,11 @@ class _UiPinchState extends State<UiPinch> {
       _baseline = distance;
     } else if (distance >= _baseline * _pinchOut) {
       _baseline = distance;
+      widget.onPinch?.call(UiPinchStep(apart: true, focal: _focal));
       widget.onPinchOut?.call();
     } else if (distance <= _baseline * _pinchIn) {
       _baseline = distance;
+      widget.onPinch?.call(UiPinchStep(apart: false, focal: _focal));
       widget.onPinchIn?.call();
     }
   }

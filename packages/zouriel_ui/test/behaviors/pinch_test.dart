@@ -69,6 +69,32 @@ void main() {
     expect(got, ['out', 'out', 'in']);
   });
 
+  testWidgets('onPinch reports each step with its direction and the fingers\' midpoint, before onPinchIn/Out', (tester) async {
+    final steps = <UiPinchStep>[];
+    await pumpUi(
+      tester,
+      UiPinch(
+        onPinch: (s) {
+          steps.add(s);
+          got.add(s.apart ? 'step out' : 'step in');
+        },
+        onPinchIn: () => got.add('in'),
+        onPinchOut: () => got.add('out'),
+        child: const SizedBox(width: 390, height: 600),
+      ),
+    );
+    final f = await pinch(tester);
+    await to(f[1], 225);
+    expect(steps.single.apart, isTrue);
+    expect(steps.single.focal, const Offset(162.5, 300));
+    await to(f[0], 145); // 80 apart of 125: in, midpoint 185
+    expect(steps.last.apart, isFalse);
+    expect(steps.last.focal, const Offset(185, 300));
+    expect(got, ['step out', 'out', 'step in', 'in']);
+    await f[0].up();
+    await f[1].up();
+  });
+
   testWidgets('a step in also becomes the new baseline', (tester) async {
     await pumpUi(tester, host());
     final f = await pinch(tester);

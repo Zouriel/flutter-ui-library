@@ -119,7 +119,7 @@ class _MediaPageState extends State<MediaPage> {
     return DocPage(
       eyebrow: 'Components',
       title: 'Media',
-      lead: 'A carousel, a thumbnail gallery with a full-screen lightbox, an image picker and a phone frame.',
+      lead: 'A carousel, a thumbnail gallery with a full-screen lightbox, an image picker, a masonry grid that zooms between column counts and a phone frame.',
       children: [
         DocSection(
           name: 'Carousel',
@@ -295,6 +295,26 @@ class _MediaPageState extends State<MediaPage> {
           shapes: 'UiImagePickerItem({required String id, required ImageProvider image, required String label,\n  String? badge, bool disabled = false, String? hint})',
         ),
         DocSection(
+          name: 'Masonry grid',
+          widget: 'UiMasonryGrid',
+          summary: 'Columns of different heights, each item keeping its own shape, for a photo album. Items are dealt in order to the shortest column (the leftmost on a tie). The parent owns the column count: a two-finger pinch asks for one fewer (apart) or one more (together) through onColumnsChanged, within minColumns..maxColumns. On every change the tiles glide and resize from where they are to their new places, as a phone gallery zooms between grid sizes, and a change mid-glide carries on from where they are. After a pinch the scroll view moves so the picture under the fingers stays under them; a change from a button keeps the scroll where it is. Tiles far off screen jump straight to their place, and with animations off it changes at once. It is not a scroll view itself and builds every item, so put it in one. uiMasonryLayout(width, ratios, columns, gap) is the same layout as a plain function, identical to the web\'s.',
+          demo: const _MasonryDemo(),
+          code: 'SingleChildScrollView(\n  child: UiMasonryGrid(\n    itemCount: photos.length,\n    ratioOf: (i) => photos[i].height / photos[i].width,\n    itemKey: (i) => photos[i].id,\n    columns: columns,\n    onColumnsChanged: (c) => setState(() => columns = c),\n    itemBuilder: (context, i) => Image(image: photos[i].image, fit: BoxFit.cover),\n  ),\n)',
+          api: const [
+            ApiRow('itemCount', 'int', 'How many items.'),
+            ApiRow('ratioOf', 'double Function(int)', 'Height / width of an item; not finite or not above 0 counts as 1.'),
+            ApiRow('itemBuilder', 'Widget Function(BuildContext, int)', 'Fills a tile, laid out at exactly its size (use BoxFit.cover for pictures).'),
+            ApiRow('columns', 'int', 'The column count now shown (at least 1).'),
+            ApiRow('onColumnsChanged', 'ValueChanged<int>?', 'The pinch asks for a new count; set columns to it.'),
+            ApiRow('itemKey', 'Object Function(int)?', 'Stable identity per item, so tiles keep their state.', def: 'index'),
+            ApiRow('gap', 'double', 'Space between tiles.', def: '4'),
+            ApiRow('minColumns / maxColumns', 'int', 'The pinch stays within these.', def: '1 / 5'),
+            ApiRow('pinchable', 'bool', 'Answer a two-finger pinch.', def: 'true'),
+            ApiRow('duration / curve', 'Duration / Curve', 'The glide between layouts.', def: '280ms, easeOutCubic'),
+          ],
+          shapes: 'List<Rect> uiMasonryLayout(double width, List<double> ratios, int columns, double gap)\ndouble uiMasonryHeight(List<Rect> rects)  // the tallest column',
+        ),
+        DocSection(
           name: 'Device frame',
           widget: 'UiDeviceFrame',
           summary: 'A phone-shaped frame whose screen is exactly width × height logical px, scaled down to fit. The child lays out at true phone size (and sees a phone-sized MediaQuery) and is only scaled visually. onScale reports the scale, for overlays that must line up with the screen.',
@@ -328,6 +348,54 @@ class _MediaPageState extends State<MediaPage> {
   }
 }
 
+
+/// The masonry grid demo: 60 coloured tiles in a scroll box, pinch or pick a column count.
+class _MasonryDemo extends StatefulWidget {
+  const _MasonryDemo();
+
+  @override
+  State<_MasonryDemo> createState() => _MasonryDemoState();
+}
+
+class _MasonryDemoState extends State<_MasonryDemo> {
+  static const _shapes = [1.0, 1.5, 0.66, 1.25, 0.8, 1.33, 0.75];
+  int _columns = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+      UiSegmented<int>(
+        label: 'Columns',
+        options: [for (var c = 1; c <= 5; c++) UiSegmentedOption(value: c, label: '$c')],
+        value: _columns,
+        onChanged: (c) => setState(() => _columns = c),
+      ),
+      UiText('$_columns ${_columns == 1 ? 'column' : 'columns'}. Pinch with two fingers, or pick a count.', variant: UiTextVariant.caption),
+      Container(
+        height: 420,
+        decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(t.space1),
+          child: UiMasonryGrid(
+            itemCount: 60,
+            ratioOf: (i) => _shapes[(i * 5 + i ~/ 7) % _shapes.length],
+            columns: _columns,
+            onColumnsChanged: (c) => setState(() => _columns = c),
+            itemBuilder: (context, i) => DecoratedBox(
+              decoration: BoxDecoration(
+                color: HSVColor.fromAHSV(1, (i * 37) % 360, 0.45, 0.8).toColor(),
+                borderRadius: BorderRadius.circular(t.radiusSm),
+              ),
+              child: Center(child: Text('${i + 1}', style: context.uiText.caption.copyWith(color: const Color(0xFF111111)))),
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
+}
 
 /// The poster grid demo: tap a tile for the view with its details.
 class _PosterDemo extends StatefulWidget {
