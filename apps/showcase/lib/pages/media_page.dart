@@ -162,21 +162,22 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Poster grid',
           widget: 'UiPosterGrid',
-          summary: "Pictures and nothing else: every tile is the same shape (ratio), with 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A tile carries no text; its label is its semantic label. Without a picture, or when it fails to load, a tile shows a gradient of its colors (or the theme's primary and accent). The only signal on a tile is a small dot (mark), whose label screen readers hear with the name. It doesn't scroll, so put it in a scroll view. Pair it with UiPosterView to show the details.",
+          summary: "One grid of same-shape picture tiles (ratio): 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A poster's details are drawn on its tile over the bottom of the picture on a compact UiScrim that fades from clear to dark, so the words stay readable on any picture; keep them short and non-interactive, since the whole tile is the target. Without details a tile is the picture alone, named by its label. No picture, or one that fails to load, shows a gradient of its colors (or the theme's primary and accent). A small dot (mark) can flag a tile; screen readers hear its label. It doesn't scroll, so put it in a scroll view.",
           demo: const _PosterDemo(),
-          code: "UiPosterGrid(\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'))],\n  focus: UiPosterFocus.top,\n  onSelect: (i) => UiPosterView.show(context, label: 'Aisha and Ali', image: NetworkImage(url), builder: (context) => details),\n)",
+          code: "UiPosterGrid(\n  focus: UiPosterFocus.top,\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'),\n    details: Text('Aisha and Ali', maxLines: 1, overflow: TextOverflow.ellipsis))],\n  onSelect: (i) => openEvent(i),\n)",
           api: const [
             ApiRow('posters', 'List<UiPoster>', 'The tiles: picture, semantic label, fallback colours, optional dot.'),
             ApiRow('ratio', 'double', 'Width / height of every tile.', def: '0.75'),
             ApiRow('focus', 'UiPosterFocus', "Which part of a picture survives the crop; top keeps a poster's heading.", def: 'center'),
           ],
           callbacks: const [ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.')],
-          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark})\nUiPosterMark({required UiStatus tone, required String label})',
+          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details})\nUiPosterMark({required UiStatus tone, required String label})',
         ),
         DocSection(
           name: 'Poster view',
           widget: 'UiPosterView',
-          summary: 'One picture full-size, shown whole over a blurred copy of itself, with the child laid over its bottom on a UiScrim: the details and the buttons. Escape, back or the close button close it. Open it with UiPosterView.show; the demo is in Poster grid above.',
+          summary: 'One picture full-size, shown whole over a blurred copy of itself, with the child laid over its bottom on a UiScrim: the details and the buttons. Escape, back or the close button close it. Open it with UiPosterView.show.',
+          demo: const _PosterViewDemo(),
           api: const [
             ApiRow('label', 'String', 'The semantic label of the view and the picture.'),
             ApiRow('image', 'ImageProvider?', 'The picture.'),
@@ -277,9 +278,15 @@ class _MediaPageState extends State<MediaPage> {
 
 
 /// The poster grid demo: tap a tile for the view with its details.
-class _PosterDemo extends StatelessWidget {
+class _PosterDemo extends StatefulWidget {
   const _PosterDemo();
 
+  @override
+  State<_PosterDemo> createState() => _PosterDemoState();
+}
+
+class _PosterDemoState extends State<_PosterDemo> {
+  static const _when = ['Sat 12 Dec · Malé', 'Sun 20 Dec · Hulhumalé', 'Not finished', 'Fri 1 Jan · Addu', '12 guests', 'Tue 5 Jan'];
   static final _posters = [
     UiPoster(label: 'Aisha and Ali', image: DemoArt.palette[0], mark: const UiPosterMark(tone: UiStatus.primary, label: 'New')),
     UiPoster(label: 'Eid get-together', image: DemoArt.palette[1]),
@@ -288,26 +295,56 @@ class _PosterDemo extends StatelessWidget {
     const UiPoster(label: 'Office dinner'),
     UiPoster(label: 'Housewarming', image: DemoArt.palette[4]),
   ];
+  int _picked = 0;
 
   @override
   Widget build(BuildContext context) {
-    return UiPosterGrid(
-      posters: _posters,
-      focus: UiPosterFocus.top,
-      onSelect: (i) => UiPosterView.show<void>(
-        context,
-        label: _posters[i].label,
-        image: _posters[i].image,
-        colors: _posters[i].colors,
-        builder: (context) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(_posters[i].label, style: context.uiText.h3.copyWith(color: context.ui.mediaOnScrim)),
-          const Text('Saturday 12 December, 7 pm · Malé'),
-          SizedBox(height: context.ui.space2),
-          Wrap(spacing: context.ui.space2, runSpacing: context.ui.space2, children: [
+    final t = context.ui;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      UiPosterGrid(
+        focus: UiPosterFocus.top,
+        posters: [
+          for (var i = 0; i < _posters.length; i++)
+            UiPoster(
+              label: _posters[i].label,
+              image: _posters[i].image,
+              colors: _posters[i].colors,
+              mark: _posters[i].mark,
+              details: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(_posters[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(color: t.mediaOnScrim)),
+                Text(_when[i], maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.caption.copyWith(color: t.mediaOnScrim)),
+              ]),
+            ),
+        ],
+        onSelect: (i) => setState(() => _picked = i),
+      ),
+      SizedBox(height: t.space2),
+      Text('Last picked: ${_posters[_picked].label}', style: context.uiText.caption),
+    ]);
+  }
+}
+
+/// The poster view demo: one button that opens it.
+class _PosterViewDemo extends StatelessWidget {
+  const _PosterViewDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: UiButton(
+        label: 'Open the poster view',
+        onPressed: () => UiPosterView.show<void>(
+          context,
+          label: 'Aisha and Ali',
+          image: DemoArt.palette[0],
+          builder: (context) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text('Aisha and Ali', style: context.uiText.h3.copyWith(color: context.ui.mediaOnScrim)),
+            const Text('Saturday 12 December, 7 pm · Malé'),
+            SizedBox(height: context.ui.space2),
             UiButton(label: 'Open invitation', onPressed: () => Navigator.of(context).pop()),
-            UiButton(label: 'Photos', variant: UiButtonVariant.secondary, onPressed: () => Navigator.of(context).pop()),
           ]),
-        ]),
+        ),
       ),
     );
   }

@@ -91,6 +91,83 @@ void main() {
     });
   });
 
+  group('UiPosterGrid with details', () {
+    List<UiPoster> withDetails({ImageProvider? image}) => [
+          UiPoster(label: 'Aisha and Ali', image: image, mark: const UiPosterMark(tone: UiStatus.primary, label: 'New'), details: const Align(alignment: AlignmentDirectional.centerStart, child: Text('Aisha and Ali'))),
+          const UiPoster(label: 'Eid party', details: Text('Eid party')),
+        ];
+
+    testWidgets('draws each poster\'s details on its tile over a compact scrim; the words name the tile', (tester) async {
+      final handle = tester.ensureSemantics();
+      final picked = <int>[];
+      await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 390, child: UiPosterGrid(posters: withDetails(), onSelect: picked.add))));
+      final tiles = find.descendant(of: find.byType(UiPosterGrid), matching: find.byType(AspectRatio));
+      expect(find.descendant(of: tiles.at(0), matching: find.byWidgetPredicate((w) => w is UiScrim && w.compact)), findsOneWidget);
+      expect(find.descendant(of: tiles.at(0), matching: find.text('Aisha and Ali')), findsOneWidget);
+      // The details sit at the bottom of their own tile.
+      expect(tester.getRect(find.descendant(of: tiles.at(1), matching: find.byType(UiScrim))).bottom, closeTo(tester.getRect(tiles.at(1)).bottom, 0.5));
+      final node = tester.getSemantics(find.descendant(of: tiles.at(0), matching: find.byType(UiInteractive)).first);
+      final label = node.getSemanticsData().label;
+      expect(label, contains('Aisha and Ali'));
+      expect(label, contains('New'));
+      await tester.tap(tiles.at(1));
+      expect(picked, [1]);
+      handle.dispose();
+    });
+
+    testWidgets('a compact scrim reaches 60% at space8', (tester) async {
+      await pumpUi(tester, const SizedBox(width: 200, child: UiScrim(compact: true, child: SizedBox(height: 40))));
+      final p = tester.widget<CustomPaint>(find.descendant(of: find.byType(UiScrim), matching: find.byType(CustomPaint)).first).painter!;
+      final size = tester.getSize(find.byType(UiScrim));
+      final rec = ui.PictureRecorder();
+      p.paint(Canvas(rec), size);
+      late ByteData data;
+      await tester.runAsync(() async {
+        final img = await rec.endRecording().toImage(size.width.round(), size.height.round());
+        data = (await img.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      });
+      int alphaAt(double y) => data.getUint8(((y.round().clamp(0, size.height.round() - 1)) * size.width.round() + 10) * 4 + 3);
+      final t = tester.element(find.byType(UiScrim)).ui;
+      expect(alphaAt(t.space8), closeTo(0.6 * 255, 6));
+      expect(tester.getTopLeft(find.byType(SizedBox).last).dy - tester.getTopLeft(find.byType(UiScrim)).dy, t.space8);
+    });
+
+    testWidgets('tile details keep contrast over a white picture', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final white = await solid(tester, const Color(0xFFFFFFFF), w: 20, h: 20);
+      await tester.runAsync(() async {
+        await pumpUi(tester, const SizedBox());
+        await precacheImage(white, tester.element(find.byType(UiApp)));
+      });
+      await pumpUi(tester, SizedBox(width: 390, child: UiPosterGrid(posters: withDetails(image: white).take(1).toList(), onSelect: (_) {})));
+      await tester.pump();
+      try {
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('golden: tiles with details', (tester) async {
+      final pic = await solid(tester, const Color(0xFFF4E3C8));
+      await tester.runAsync(() async {
+        await pumpUi(tester, const SizedBox());
+        await precacheImage(pic, tester.element(find.byType(UiApp)));
+      });
+      Widget details(BuildContext c, String a, String b) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text(a, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.uiText.label.copyWith(color: c.ui.mediaOnScrim)),
+            Text(b, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.uiText.caption.copyWith(color: c.ui.mediaOnScrim)),
+          ]);
+      await expectThemedGolden(tester, 'poster_grid_details', (c) => Padding(
+            padding: const EdgeInsets.all(12),
+            child: UiPosterGrid(onSelect: (_) {}, posters: [
+              UiPoster(label: 'Aisha and Ali', image: pic, mark: const UiPosterMark(tone: UiStatus.primary, label: 'New'), details: details(c, 'Aisha and Ali', 'Sat 12 Dec 2026 · Going')),
+              UiPoster(label: 'Eid get-together with the whole family', details: details(c, 'Eid get-together with the whole family', '20 Dec 2026 · 12 guests')),
+            ]),
+          ), height: 330);
+    });
+  });
+
   group('UiPosterView', () {
     testWidgets('opens over everything with the details on a scrim; Escape and the close button close it', (tester) async {
       final handle = tester.ensureSemantics();

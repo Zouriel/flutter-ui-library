@@ -142,6 +142,14 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.50.0.** Details on the tiles (owner: the grid must show each event's details, not hide them
+behind an opened view). Web: a `ng-template[uiPosterDetails]` rendered on every tile inside a
+`ui-scrim` with `compact` (fade to 60% within `space8`, tighter padding); Flutter: `UiPoster.details`
+inside `UiScrim(compact: true)`. With details the tile is named by its words (no aria-label /
+semanticLabel), plus the mark's label. Web tiles can be links (`href`; `handleClicks` leaves plain
+clicks to `select` for router navigation, modified clicks open a new tab); Flutter has no link tiles,
+since a tap is the only way in. `ui-poster-view` stays for whoever wants an opened view.
+
 **0.49.0 additions.** `UiPosterGrid` (web `ui-poster-grid`), `UiPosterView` (`ui-poster-view`) and
 `UiScrim` (`ui-scrim`). The web grid steps its columns with container queries on its own width; the
 Flutter grid does the same with a LayoutBuilder (`UiPosterGrid.columnsFor`), and lays tiles out with

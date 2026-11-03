@@ -1270,8 +1270,8 @@ File: `media/src/gallery.ts`
 - interface `UiGalleryImage` (gallery.ts)
 ### UiPosterGrid (component, `ui-poster-grid`)
 File: `media/src/poster-grid.ts`  
-`ui-poster-grid` — a grid of pictures and nothing else: same-shape tiles, 2/3/4/5 columns by the grid's own width (544/992/1280), no text on a tile (its name is its accessible label), a gradient fallback, and an optional dot (`mark`) named for screen readers.  
-- Inputs: `posters`: UiPoster[] = []; `ratio` = 0.75; `focus`: 'top' | 'center' = 'center'
+`ui-poster-grid` — a grid of same-shape picture tiles, 2/3/4/5 columns by the grid's own width (544/992/1280), with each poster's details (a `uiPosterDetails` template; Flutter `UiPoster.details`) over the bottom of its picture on a compact scrim, link tiles (`href`, `handleClicks`; web only), a gradient fallback, and an optional dot (`mark`) named for screen readers.  
+- Inputs: `posters`: UiPoster[] = []; `ratio` = 0.75; `focus`: 'top' | 'center' = 'center'; `handleClicks` = false; content: `ng-template[uiPosterDetails]`
 - Outputs: `select`: number
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1285,7 +1285,7 @@ File: `media/src/poster-view.ts`
 
 ### UiScrim (component, `ui-scrim`)
 File: `media/src/poster-view.ts`  
-`ui-scrim` — a see-through layer fading from clear to the media scrim colour (60% before the content, 88% at the bottom) with on-scrim text.  
+`ui-scrim` — a see-through layer fading from clear to the media scrim colour (60% before the content, 88% at the bottom) with on-scrim text; `compact` sizes it for a tile (space8 fade).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiImagePicker (component, `ui-image-picker`)

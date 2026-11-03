@@ -24,17 +24,22 @@ class UiPosterMark {
 /// One tile of a [UiPosterGrid] (the web `UiPoster`).
 @immutable
 class UiPoster {
-  const UiPoster({required this.label, this.image, this.colors, this.mark});
+  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details});
 
   /// The picture. Without one (or when it fails to load) the tile shows [colors] as a gradient.
   final ImageProvider? image;
 
-  /// The tile's accessible name. Never drawn on it.
+  /// The tile's name: its semantic label, or read with [details] when there are details.
   final String label;
 
   /// Fallback gradient stops, e.g. a design's colours. Without them the theme's primary and accent.
   final List<Color>? colors;
   final UiPosterMark? mark;
+
+  /// Drawn on the tile over the bottom of its picture on a compact [UiScrim] (the web's
+  /// `uiPosterDetails` template). Keep it short (a title and a line or two, with ellipsis) and
+  /// non-interactive: the whole tile is the target.
+  final Widget? details;
 }
 
 /// Which part of a picture survives a poster's crop.
@@ -53,12 +58,14 @@ Gradient uiPosterFallback(BuildContext context, List<Color>? colors) {
   return LinearGradient(begin: const Alignment(-0.35, -1), end: const Alignment(0.35, 1), colors: stops);
 }
 
-/// `ui-poster-grid`: a grid of pictures and nothing else. Every tile is the same shape ([ratio],
-/// width / height), there are 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 (of
-/// the grid's own width), and a tile carries no text: its name is only its semantic label. A tile
-/// with no picture shows a gradient. The one signal allowed on a tile is a small dot ([UiPoster.mark]),
-/// named for screen readers. Tapping a tile calls [onSelect] with its index; what opens is the
-/// caller's (usually [UiPosterView.show] with the details). It doesn't scroll: put it in a scroll view.
+/// `ui-poster-grid`: a grid of same-shape picture tiles ([ratio], width / height): 2 columns on a
+/// phone, 3 from 544 wide, 4 from 992 and 5 from 1280 (of the grid's own width). A poster with
+/// [UiPoster.details] carries them over the bottom of its picture on a compact [UiScrim] that fades
+/// from clear to dark, so the words stay readable on any picture; without details a tile is the
+/// picture alone, named by its semantic label. A tile with no picture shows a gradient, and a small dot
+/// ([UiPoster.mark]) can flag it, named for screen readers. Tapping a tile calls [onSelect] with its
+/// index. It doesn't scroll: put it in a scroll view. (The web's `href` link tiles have no meaning
+/// here: a tap is the only way to open a tile.)
 class UiPosterGrid extends StatelessWidget {
   const UiPosterGrid({super.key, required this.posters, required this.onSelect, this.ratio = 0.75, this.focus = UiPosterFocus.center});
 
@@ -107,8 +114,9 @@ class _Tile extends StatelessWidget {
     return UiInteractive(
       onTap: onTap,
       padTouchTarget: false,
-      semanticLabel: mark == null ? poster.label : '${poster.label}, ${mark.label}',
-      excludeChildSemantics: true,
+      // With details the words name the tile (and the dot's meaning is read after them).
+      semanticLabel: poster.details != null ? null : mark == null ? poster.label : '${poster.label}, ${mark.label}',
+      excludeChildSemantics: poster.details == null,
       builder: (context, s) => AnimatedContainer(
         duration: context.uiAnimate ? t.motionBase : Duration.zero,
         decoration: BoxDecoration(
@@ -131,7 +139,20 @@ class _Tile extends StatelessWidget {
             else
               fallback,
             if (mark != null)
-              PositionedDirectional(top: t.space2, end: t.space2, child: UiPosterDot(tone: mark.tone)),
+              PositionedDirectional(top: t.space2, end: t.space2, child: ExcludeSemantics(child: UiPosterDot(tone: mark.tone))),
+            if (poster.details case final details?)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: UiScrim(
+                  compact: true,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                    details,
+                    if (mark != null) Semantics(label: mark.label, child: const SizedBox.shrink()),
+                  ]),
+                ),
+              ),
           ]),
         ),
       ),
@@ -167,25 +188,31 @@ class UiPosterDot extends StatelessWidget {
 
 /// `ui-scrim`: a see-through layer that fades from clear at its top to the media scrim colour at its
 /// bottom, with text and icons in the on-scrim colour. Lay it over a picture to put words on it: the
-/// fade has reached 60% before the content starts (after `space12`) and 88% at the bottom, so
-/// on-scrim text keeps at least 4.5:1 over any picture, white included.
+/// fade has reached 60% before the content starts (after `space12`, or `space8` when [compact]) and
+/// 88% at the bottom, so on-scrim text keeps at least 4.5:1 over any picture, white included.
 class UiScrim extends StatelessWidget {
-  const UiScrim({super.key, required this.child});
+  const UiScrim({super.key, required this.child, this.compact = false});
   final Widget child;
+
+  /// Sized for a grid tile: a `space8` fade and tighter padding, no width cap.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
+    final lead = compact ? t.space8 : t.space12;
+    final side = compact ? t.space2 : t.space4;
+    final maxWidth = compact ? double.infinity : 640.0;
     return CustomPaint(
-      painter: _ScrimPainter(color: t.mediaScrim, lead: t.space12),
+      painter: _ScrimPainter(color: t.mediaScrim, lead: lead),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(t.space4, t.space12, t.space4, t.space4),
+        padding: EdgeInsets.fromLTRB(side, lead, side, side),
         // As wide as there is room for, up to 640, centred: the web's max-width with margin auto.
         child: LayoutBuilder(builder: (context, box) => Align(
               alignment: Alignment.topCenter,
               heightFactor: 1,
               child: SizedBox(
-                width: box.maxWidth.isFinite ? (box.maxWidth < 640 ? box.maxWidth : 640) : 640,
+                width: box.maxWidth.isFinite ? (box.maxWidth < maxWidth ? box.maxWidth : maxWidth) : 640,
                 child: DefaultTextStyle.merge(
                   style: TextStyle(color: t.mediaOnScrim),
                   child: IconTheme.merge(data: IconThemeData(color: t.mediaOnScrim), child: child),
