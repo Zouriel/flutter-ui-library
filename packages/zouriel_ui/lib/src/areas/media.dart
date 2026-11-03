@@ -18,6 +18,7 @@ export '../media/device_frame.dart';
 export '../media/gallery.dart';
 export '../media/image_picker.dart';
 export '../media/poster_grid.dart';
+export '../media/selection.dart';
 export '../file_viewer/file_viewer.dart';
 export '../file_viewer/image_viewer.dart';
 export '../file_viewer/media_lightbox.dart';

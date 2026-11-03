@@ -142,6 +142,40 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.51.0 additions.** `UiSelectable` (web `ui-selectable`), `UiSelectionBar` (`ui-selection-bar`)
+and `UiTaskProgress` / `showUiTaskProgress` (`ui-task-progress` / `ui-task-progress-dialog`), for an
+album's long-press multi-select, share and save. Mapping:
+
+- `UiSelectable(onTap, onLongPress)` = `(tap)`, `(longPress)`; `semanticLabel` = `label`;
+  `borderRadius` (BorderRadius) = `borderRadius` (a CSS radius string). Flutter's long press is the
+  GestureDetector's (it takes the phone's touch slop from MediaQuery, so a scroll view wins any drag
+  and a scroll never selects) plus `HapticFeedback.selectionClick`; the web counts a 500ms hold itself,
+  cancelled by 10px of movement or any scroll, swallows the click that follows, suppresses the
+  contextmenu/callout (a touch contextmenu during the hold fires the long press at once) and calls
+  `navigator.vibrate(10)` where allowed. Keyboard: the web's context-menu key / Shift+F10 is the long
+  press; Flutter offers it as the semantics long-press action. Semantics: button + selected, and
+  checked/unchecked while selecting (web: role button, then checkbox with aria-checked). A selected
+  tile scales to 0.9 (`uiSelectableScale`) with a 3px primary outline and an 18% primary tint; the
+  mark is 24px: a 2px on-scrim ring over a 35% media scrim, or primary with a check.
+- `UiSelectionBar`: Flutter hides the toggle's sides when `onSelectAll` / `onClear` is null; the web
+  can't see whether an output is bound, so it has `canSelectAll` / `canClear` inputs (default true).
+  Outputs `selectAll`, `clear`, `cancel`, `action(id)`. `UiSelectionAction.icon` is a `Widget`
+  (`UiIcon(HugeIcons...)`, as UiButton takes) on Flutter and an `IconSvgObject` on the web. Both go
+  compact (icon buttons with the label as name and tooltip) when the labelled layout doesn't fit:
+  Flutter adds up the labels with TextPainter at UiButton sm's padding; the web lays an invisible
+  labelled copy out and compares it with its own width (ResizeObserver). Then the count shows the
+  number alone when "12 selected" doesn't fit (read out in full either way). The count is a live
+  region (`aria-live="polite"`). `danger` uses the destructive variant.
+- `UiTaskProgressController` (done, total, detail, update, cancel, close) maps to the web's inputs
+  `done`, `total`, `detail` and the two-way `stopping` (set by Cancel; Flutter: `cancelled`); the web
+  output `cancel` is Flutter's `controller.cancel()`. `showUiTaskProgress` (a UiDialogRoute, barrier
+  not dismissible, back/Escape cancel via PopScope and UiModal.onClose, closes itself on `close()`
+  even before it finished opening, from under a route pushed over it with `removeRoute`) is the web's
+  `ui-task-progress-dialog` with `[(open)]` (backdrop off, Escape cancels, the job sets `open` false).
+  The count line is drawn in the text colour, not muted: the contrast guideline misread thin muted
+  digits. New strings (both): `selectionCount`, `clearSelection`, `cancelSelection`, `taskCount`,
+  `taskStopping`, with Dhivehi.
+
 **0.50.0.** Details on the tiles (owner: the grid must show each event's details, not hide them
 behind an opened view). Web: a `ng-template[uiPosterDetails]` rendered on every tile inside a
 `ui-scrim` with `compact` (fade to 60% within `space8`, tighter padding); Flutter: `UiPoster.details`

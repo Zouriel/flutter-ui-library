@@ -14,4 +14,5 @@ export '../dialog/route.dart';
 export '../dialog/bottom_sheet.dart';
 export '../dialog/toast.dart';
 export '../dialog/snackbar.dart';
+export '../dialog/task_progress.dart';
 export '../command_palette/command_palette.dart';

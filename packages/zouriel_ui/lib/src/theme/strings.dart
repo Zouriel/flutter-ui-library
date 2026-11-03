@@ -183,6 +183,11 @@ class UiStrings {
     this.meter = 'Meter',
     this.chosenFiles = 'Chosen files',
     this.slider = 'Slider',
+    this.selectionCount = '{n} selected',
+    this.clearSelection = 'Clear',
+    this.cancelSelection = 'Cancel selection',
+    this.taskCount = '{done} of {total}',
+    this.taskStopping = 'Stopping…',
     this.locale = '',
     this.months = const [],
     this.monthsShort = const [],
@@ -366,6 +371,11 @@ class UiStrings {
     meter: 'މީޓަރު',
     chosenFiles: 'ހޮވި ފައިލްތައް',
     slider: 'ސްލައިޑަރު',
+    selectionCount: '{n} ހޮވިފައި',
+    clearSelection: 'ހޮވުން ފޮހެލާ',
+    cancelSelection: 'ހޮވުން ހުއްޓާލާ',
+    taskCount: '{total} އިން {done}',
+    taskStopping: 'ހުއްޓުވަނީ…',
     locale: 'dv',
     months: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
     monthsShort: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
@@ -878,6 +888,21 @@ class UiStrings {
   /// Slider default name.
   final String slider;
 
+  /// Selection bar (0.51.0): how many are selected.
+  final String selectionCount;
+
+  /// Selection bar: the toggle that unselects everything (it reads Select all until all are selected).
+  final String clearSelection;
+
+  /// Selection bar: the X that leaves selecting.
+  final String cancelSelection;
+
+  /// Task progress (0.51.0): how far a many-file job is.
+  final String taskCount;
+
+  /// Task progress: the Cancel button once pressed, until the job closes it.
+  final String taskStopping;
+
   /// The locale for date names and formats, e.g. 'dv'; empty uses the app's locale.
   final String locale;
 
@@ -1065,6 +1090,11 @@ class UiStrings {
     String? meter,
     String? chosenFiles,
     String? slider,
+    String? selectionCount,
+    String? clearSelection,
+    String? cancelSelection,
+    String? taskCount,
+    String? taskStopping,
     String? locale,
     List<String>? months,
     List<String>? monthsShort,
@@ -1243,6 +1273,11 @@ class UiStrings {
         meter: meter ?? this.meter,
         chosenFiles: chosenFiles ?? this.chosenFiles,
         slider: slider ?? this.slider,
+        selectionCount: selectionCount ?? this.selectionCount,
+        clearSelection: clearSelection ?? this.clearSelection,
+        cancelSelection: cancelSelection ?? this.cancelSelection,
+        taskCount: taskCount ?? this.taskCount,
+        taskStopping: taskStopping ?? this.taskStopping,
         locale: locale ?? this.locale,
         months: months ?? this.months,
         monthsShort: monthsShort ?? this.monthsShort,
@@ -1423,6 +1458,11 @@ class UiStrings {
         'meter': meter,
         'chosenFiles': chosenFiles,
         'slider': slider,
+        'selectionCount': selectionCount,
+        'clearSelection': clearSelection,
+        'cancelSelection': cancelSelection,
+        'taskCount': taskCount,
+        'taskStopping': taskStopping,
       };
 
   @override

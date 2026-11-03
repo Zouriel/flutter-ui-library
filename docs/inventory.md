@@ -408,6 +408,20 @@ File: `dialog/src/bottom-sheet.ts`
 - Methods: `close()`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiTaskProgress (component, `ui-task-progress`)
+File: `dialog/src/task-progress.ts`  
+`ui-task-progress` — progress for a many-file job: title, "12 of 40", detail, a 0-100 bar (sweeps while total is 0), Cancel that turns into Stopping.  
+- Inputs: `title` (required); `done` = 0; `total` = 0; `detail`: string | null; `cancelLabel`
+- Two-way: `stopping` = false
+- Outputs: `cancel`: void
+- [x] Flutter port (`UiTaskProgress` + `UiTaskProgressController`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiTaskProgressDialog (component, `ui-task-progress-dialog`)
+File: `dialog/src/task-progress.ts`  
+`ui-task-progress-dialog` — ui-task-progress in a small ui-modal: backdrop off, Escape cancels, closes when the job sets `open` false.  
+- Inputs: as ui-task-progress; Two-way: `open` = false, `stopping` = false; Outputs: `cancel`
+- [x] Flutter port (`showUiTaskProgress`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiConfirmDialog (component, `ui-confirm-dialog`)
 File: `dialog/src/confirm-dialog.ts`  
 `ui-confirm-dialog` — a focused confirm/cancel prompt built on `ui-modal`. Bind `[(open)]` and listen to `(confirm)` / `(cancel)`.  
@@ -1288,6 +1302,21 @@ File: `media/src/poster-view.ts`
 `ui-scrim` — a see-through layer fading from clear to the media scrim colour (60% before the content, 88% at the bottom) with on-scrim text; `compact` sizes it for a tile (space8 fade).  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiSelectable (component, `ui-selectable`)
+File: `media/src/selection.ts`  
+`ui-selectable` — wraps one grid tile for long-press multi-select like a phone gallery: tap / 500ms hold (cancelled by 10px or a scroll), a corner mark while selecting, a selected tile shrinks with a primary outline; button, or checkbox while selecting.  
+- Inputs: `selected` = false; `selecting` = false; `label`: string | null; `borderRadius`: string | null
+- Outputs: `tap`: void; `longPress`: void
+- [x] Flutter port (`UiSelectable`, `UiSelectionMark`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSelectionBar (component, `ui-selection-bar`)
+File: `media/src/selection.ts`  
+`ui-selection-bar` — the bar while selecting: Cancel, "N selected", Select all / Clear, actions; icon-only when the labels don't fit.  
+- Inputs: `count` = 0; `total`: number | null; `actions`: UiSelectionAction[] = []; `canSelectAll` = true; `canClear` = true
+- Outputs: `selectAll`; `clear`; `cancel`; `action`: string
+- [x] Flutter port (`UiSelectionBar`, `UiSelectionAction`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- interface `UiSelectionAction` (selection.ts); consts `UI_LONG_PRESS_MS`, `UI_LONG_PRESS_SLOP`
 ### UiImagePicker (component, `ui-image-picker`)
 File: `media/src/image-picker.ts`  
 `ui-image-picker` — a grid of image tiles to choose from: search results, stock art, uploads. Tap or Enter picks (`pick`). One tile can show as busy while its choice is being fetched. When `hasMore` is on, scrolling near the end asks for the next page (`more`) — there is no "Load more" button to reach for with a thumb. Thumbnails that fail to load show the label on a plain tile rather than a broken-image glyph. Tiles sit on a faint checkerboard so white or transparent art is visible. With `dragType` set, tiles can be dragged: the item's `id` is the drag data under that type.  

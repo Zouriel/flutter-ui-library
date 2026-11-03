@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
@@ -213,6 +214,57 @@ class _MediaPageState extends State<MediaPage> {
           api: const [ApiRow('child', 'Widget', 'The words; text and icons take the on-scrim colour.')],
         ),
         DocSection(
+          name: 'Selectable',
+          widget: 'UiSelectable',
+          summary: 'Wraps one grid tile for long-press multi-select, like a phone gallery. A tap calls onTap (the app opens the tile, or toggles it while selecting); a long press calls onLongPress with a light haptic, and only for a finger that stays put, so it works inside a scroll view and a scroll never selects. While selecting, a round mark sits in the top corner: an empty ring over a small scrim, or filled with the primary colour and a check, readable on white and black pictures. A selected tile shrinks a little (instantly under reduced motion) with a primary outline and tint. Screen readers hear the label and the selected state, checked or not while selecting, and get the long press as an action. In the demo: press and hold a photo, tap more, then Save to gallery for a fake job.',
+          demo: const _SelectDemo(),
+          code: "UiSelectable(\n  semanticLabel: 'Photo 3',\n  selected: picked.contains(3),\n  selecting: picked.isNotEmpty,\n  onTap: () => picked.isEmpty ? open(3) : toggle(3),\n  onLongPress: () => toggle(3),\n  child: Image(image: photo, fit: BoxFit.cover),\n)",
+          api: const [
+            ApiRow('child', 'Widget', 'The tile (a picture).'),
+            ApiRow('selected', 'bool', 'Whether this tile is selected.'),
+            ApiRow('selecting', 'bool', 'Selection mode: the marks show.'),
+            ApiRow('semanticLabel', 'String?', "The tile's name for screen readers."),
+            ApiRow('borderRadius', 'BorderRadius?', "The tile's corners; the theme's radius when null."),
+          ],
+          callbacks: const [
+            ApiRow('onTap', 'VoidCallback?', 'A tap (open, or toggle while selecting).'),
+            ApiRow('onLongPress', 'VoidCallback?', 'Press and hold (start selecting); comes with a selection-click haptic.'),
+          ],
+        ),
+        DocSection(
+          name: 'Selection bar',
+          widget: 'UiSelectionBar',
+          summary: 'The bar shown while selecting: Cancel (an X) at the start, "12 selected", a Select all toggle that reads Clear once count reaches total (each side hidden when its callback is null), then the actions. Actions are off while nothing is selected or when not enabled; danger draws the destructive style. When the labels don\'t all fit (a 360 phone with three actions) the toggle and the actions with an icon become icon buttons that keep their label for screen readers and as a tooltip, and the count falls back to the number alone, so nothing overflows at 320. Count changes are announced politely. The demo is in Selectable above.',
+          code: "UiSelectionBar(\n  count: picked.length,\n  total: photos.length,\n  onSelectAll: selectAll,\n  onClear: clear,\n  onCancel: clear,\n  actions: const [\n    UiSelectionAction(id: 'share', label: 'Share', icon: UiIcon(HugeIcons.strokeRoundedShare08)),\n    UiSelectionAction(id: 'delete', label: 'Delete', icon: UiIcon(HugeIcons.strokeRoundedDelete02), danger: true),\n  ],\n  onAction: (id) => run(id),\n)",
+          api: const [
+            ApiRow('count', 'int', 'How many are selected.'),
+            ApiRow('total', 'int?', 'Everything there is; at count == total the toggle reads Clear.'),
+            ApiRow('actions', 'List<UiSelectionAction>', 'The buttons at the end.', def: 'const []'),
+          ],
+          callbacks: const [
+            ApiRow('onCancel', 'VoidCallback', 'The X: leave selecting.'),
+            ApiRow('onSelectAll / onClear', 'VoidCallback?', 'The toggle; null hides that side.'),
+            ApiRow('onAction', 'ValueChanged<String>?', 'The id of the action pressed.'),
+          ],
+          shapes: 'UiSelectionAction({required String id, required String label, Widget? icon, bool danger = false, bool enabled = true})',
+        ),
+        DocSection(
+          name: 'Task progress',
+          widget: 'UiTaskProgress · showUiTaskProgress',
+          summary: 'Progress for a job over many files: the title, "12 of 40", a detail line (the file in hand) and a bar that fills as files finish (it sweeps while the total is 0). Cancel calls controller.cancel() and then reads Stopping, busy, until the job calls controller.close(). showUiTaskProgress opens it in a small dialog the backdrop can\'t close; back and Escape cancel, and it closes itself on close() (even one that came before it finished opening) and completes once closed.',
+          demo: const _TaskDemo(),
+          code: "final job = UiTaskProgressController(total: photos.length);\nshowUiTaskProgress(context: context, controller: job, title: 'Saving photos');\nfor (final p in photos) {\n  if (job.cancelled) break;\n  job.update(detail: p.name);\n  await save(p);\n  job.update(done: job.done + 1);\n}\njob.close();",
+          api: const [
+            ApiRow('controller', 'UiTaskProgressController', 'done, total, detail; update(), cancel(), close(); cancelled, closed.'),
+            ApiRow('title', 'String', 'What the job is; also names the bar and the dialog.'),
+            ApiRow('cancelLabel', 'String?', 'The Cancel button; UiStrings.cancel when null.'),
+          ],
+          callbacks: const [
+            ApiRow('showUiTaskProgress(context:, controller:, title:, cancelLabel:, useRootNavigator:)', 'Future<void>', 'Opens it in a dialog; completes when it has closed.'),
+          ],
+          shapes: 'UiTaskProgressController({int total = 0, int done = 0, String? detail})',
+        ),
+        DocSection(
           name: 'Image picker',
           widget: 'UiImagePicker',
           summary: 'A grid of tiles to choose from (search results, stock art). Each tile is a button named by its label. While busyId is set that tile shows a spinner and the others are disabled. With hasMore, scrolling within 240px of the end calls onMore, and again after a page loads if the end is still in view. Thumbnails that fail to load show the label; tiles sit on a faint checkerboard so white art shows. With draggable, a long press lifts a tile for a DragTarget.',
@@ -347,5 +399,110 @@ class _PosterViewDemo extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+
+/// Runs a fake many-file job in [showUiTaskProgress]: one "file" every 120ms, stopping on Cancel.
+Future<void> _fakeJob(BuildContext context, {required String title, required int count}) async {
+  final job = UiTaskProgressController(total: count);
+  final shown = showUiTaskProgress(context: context, controller: job, title: title);
+  for (var i = 0; i < count && !job.cancelled; i++) {
+    job.update(detail: 'IMG_${(1000 + i)}.jpg');
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    job.update(done: i + 1);
+  }
+  // Pretend stopping takes a moment, as finishing the file in hand would.
+  if (job.cancelled) await Future<void>.delayed(const Duration(milliseconds: 600));
+  job.close();
+  await shown;
+  job.dispose();
+}
+
+class _TaskDemo extends StatelessWidget {
+  const _TaskDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: UiButton(label: 'Save 40 photos', onPressed: () => _fakeJob(context, title: 'Saving photos', count: 40)),
+    );
+  }
+}
+
+/// A small album: press and hold to start selecting, tap to toggle, then act on the selection.
+class _SelectDemo extends StatefulWidget {
+  const _SelectDemo();
+
+  @override
+  State<_SelectDemo> createState() => _SelectDemoState();
+}
+
+class _SelectDemoState extends State<_SelectDemo> {
+  static const _count = 12;
+  final _picked = <int>{};
+  String _note = 'Press and hold a photo to start selecting.';
+
+  void _toggle(int i) => setState(() => _picked.contains(i) ? _picked.remove(i) : _picked.add(i));
+
+  Future<void> _act(String id) async {
+    final n = _picked.length;
+    if (id == 'save') {
+      await _fakeJob(context, title: 'Saving $n photos', count: n);
+    }
+    if (!mounted) return;
+    setState(() {
+      _note = switch (id) { 'share' => 'Shared $n photos.', 'save' => 'Saved $n photos.', _ => 'Deleted $n photos (not really).' };
+      _picked.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final selecting = _picked.isNotEmpty;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+      SizedBox(
+        height: 56,
+        child: selecting
+            ? DecoratedBox(
+                decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radius), border: Border.all(color: t.border)),
+                child: UiSelectionBar(
+                  count: _picked.length,
+                  total: _count,
+                  onSelectAll: () => setState(() => _picked.addAll(List.generate(_count, (i) => i))),
+                  onClear: () => setState(_picked.clear),
+                  onCancel: () => setState(_picked.clear),
+                  actions: const [
+                    UiSelectionAction(id: 'share', label: 'Share', icon: UiIcon(HugeIcons.strokeRoundedShare08)),
+                    UiSelectionAction(id: 'save', label: 'Save to gallery', icon: UiIcon(HugeIcons.strokeRoundedDownload04)),
+                    UiSelectionAction(id: 'delete', label: 'Delete', icon: UiIcon(HugeIcons.strokeRoundedDelete02), danger: true),
+                  ],
+                  onAction: _act,
+                ),
+              )
+            : Align(alignment: AlignmentDirectional.centerStart, child: UiText(_note, variant: UiTextVariant.caption)),
+      ),
+      LayoutBuilder(builder: (context, box) {
+        final columns = box.maxWidth >= 544 ? 4 : 3;
+        final size = (box.maxWidth - t.space1 * (columns - 1)) / columns;
+        return Wrap(spacing: t.space1, runSpacing: t.space1, children: [
+          for (var i = 0; i < _count; i++)
+            SizedBox(
+              width: size,
+              height: size,
+              child: UiSelectable(
+                semanticLabel: 'Photo ${i + 1}',
+                selected: _picked.contains(i),
+                selecting: selecting,
+                onTap: () => selecting ? _toggle(i) : setState(() => _note = 'Opened photo ${i + 1}.'),
+                onLongPress: () => _toggle(i),
+                child: Image(image: DemoArt.palette[i % DemoArt.palette.length], fit: BoxFit.cover, excludeFromSemantics: true),
+              ),
+            ),
+        ]);
+      }),
+    ]);
   }
 }
