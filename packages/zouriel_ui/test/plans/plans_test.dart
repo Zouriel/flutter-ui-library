@@ -65,6 +65,15 @@ void main() {
       expect(find.byType(UiIcon), findsNWidgets(_features.length));
     });
 
+    testWidgets('a long price and its period wrap on a narrow card instead of overflowing (as the web)', (tester) async {
+      await pumpUi(tester, Center(child: SizedBox(width: 240, child: UiPlanCard(name: 'Platinum pass', price: 'One payment', period: 'once, for one event', features: const ['10 GB']))));
+      expect(tester.takeException(), isNull, reason: 'no RenderFlex overflow');
+      final price = tester.getRect(find.text('One payment'));
+      final period = tester.getRect(find.text('once, for one event'));
+      expect(period.top, greaterThanOrEqualTo(price.bottom - 1), reason: 'the period drops under the price');
+      expect(period.right, lessThanOrEqualTo(tester.getRect(find.byType(UiPlanCard)).right));
+    });
+
     testWidgets('a group named by the plan, with the price read as one phrase', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, _card(tier: UiTier.gold));

@@ -104,13 +104,14 @@ class UiPlanCard extends StatelessWidget {
         Semantics(
           label: priceLabel,
           excludeSemantics: true,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+          // Wraps like the web's `flex-wrap: wrap`: a long price (or a store's, with its currency) and
+          // its period never push past a narrow card; the period drops under the price instead.
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
             spacing: t.space1,
             children: [
               Text(price, style: text.body.copyWith(fontSize: 28 * t.fontScale, fontWeight: FontWeight.w700, height: 1.15, color: t.text, letterSpacing: t.trackingTight * 28 * t.fontScale, fontFeatures: const [FontFeature.tabularFigures()])),
-              if (period != null) Flexible(child: Text(period!, style: text.body.copyWith(fontSize: 13 * t.fontScale, height: 1.4, color: t.textSecondary))),
+              if (period != null) Text(period!, style: text.body.copyWith(fontSize: 13 * t.fontScale, height: 1.4, color: t.textSecondary)),
             ],
           ),
         ),
