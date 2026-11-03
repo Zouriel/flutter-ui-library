@@ -18,7 +18,7 @@ class UiBadge extends StatelessWidget {
   final String? label;
   final UiStatus tone;
 
-  /// A premium tier's metal: gold or platinum, the same in every theme. Wins over [tone].
+  /// A premium tier's metal: gold, platinum or premium, the same in every theme. Wins over [tone].
   final UiBadgeTier? tier;
   final bool dot;
 

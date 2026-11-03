@@ -1472,6 +1472,25 @@ File: `pdf-viewer/src/pdf-viewer.ts`
 - [x] Flutter port  - [x] widget tests  - [ ] golden/visual check (PDFium does not load under flutter test; check on device)  - [x] showcase
 
 
+## plans
+
+### UiPlanCard (component, `ui-plan-card`)
+File: `plans/src/plan-card.ts`  
+`ui-plan-card` — one plan: name, price and period, note, tagline, feature check list, tier strip, highlight ribbon, current badge; `[plan-action]` and `[plan-fineprint]` slots.  
+- Inputs: `name`: string; `price`: string; `period`: string | null; `note`: string | null; `tagline`: string | null; `features`: string[]; `tier`: UiTier | null; `highlight`: string | null; `current` = false
+- [x] Flutter port (`UiPlanCard`, `action` / `fineprint`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiPlanGrid (component, `ui-plan-grid`)
+File: `plans/src/plan-grid.ts`  
+`ui-plan-grid` — plan cards in one to three equal-height columns.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiPlanCompare (component, `ui-plan-compare`)
+File: `plans/src/plan-compare.ts`  
+`ui-plan-compare` — a comparison table with tier-underlined headers, a highlighted column and a pinned first column when it scrolls.  
+- Inputs: `plans`: { key, name, tier }[]; `rows`: { label, values }[]; `highlight`: string
+- [x] Flutter port (`UiPlanCompare`, `UiPlanColumn`, `UiPlanRow`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ## progress
 
 ### UiMeter (component, `ui-meter`)

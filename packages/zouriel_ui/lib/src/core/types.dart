@@ -12,7 +12,11 @@ enum UiStatus { neutral, primary, success, warning, danger }
 
 /// A premium tier on [UiBadge] (the web `UiBadgeTier`): not a status, so it stays out of [UiStatus]
 /// and everything that switches on it.
-enum UiBadgeTier { gold, platinum }
+enum UiBadgeTier { gold, platinum, premium }
+
+/// A plan tier (the web `UiTier`): the same metals as [UiBadgeTier], for buttons, plan cards and the
+/// plan comparison as well as badges.
+typedef UiTier = UiBadgeTier;
 
 extension UiSizeTokens on UiSize {
   /// Control height for this size: 26 / 30 / 38 / 56.
@@ -21,13 +25,20 @@ extension UiSizeTokens on UiSize {
 
 extension UiBadgeTierColors on UiBadgeTier {
   /// The metal's sheen (`--ui-gradient-tier-*`).
-  UiGradientSpec gradient(UiTokens t) => switch (this) { UiBadgeTier.gold => t.gradientTierGold, UiBadgeTier.platinum => t.gradientTierPlatinum };
+  UiGradientSpec gradient(UiTokens t) => switch (this) { UiBadgeTier.gold => t.gradientTierGold, UiBadgeTier.platinum => t.gradientTierPlatinum, UiBadgeTier.premium => t.gradientTierPremium };
+
+  /// The metal's base colour, the ends of the sheen (`--ui-tier-*`).
+  Color base(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGold, UiBadgeTier.platinum => t.tierPlatinum, UiBadgeTier.premium => t.tierPremium };
+
+  /// The sheen's light middle stop (`--ui-tier-*-light`).
+  Color light(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldLight, UiBadgeTier.platinum => t.tierPlatinumLight, UiBadgeTier.premium => t.tierPremiumLight };
 
   /// Text on the metal.
-  Color contrast(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldContrast, UiBadgeTier.platinum => t.tierPlatinumContrast };
+  Color contrast(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldContrast, UiBadgeTier.platinum => t.tierPlatinumContrast, UiBadgeTier.premium => t.tierPremiumContrast };
 
-  /// The darker edge that keeps the pill visible on a white page.
-  Color border(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldBorder, UiBadgeTier.platinum => t.tierPlatinumBorder };
+  /// The edge that keeps the pill visible on any page (darker for gold and platinum, lighter for
+  /// premium); also a tier button's focus ring.
+  Color border(UiTokens t) => switch (this) { UiBadgeTier.gold => t.tierGoldBorder, UiBadgeTier.platinum => t.tierPlatinumBorder, UiBadgeTier.premium => t.tierPremiumBorder };
 }
 
 extension UiStatusColors on UiStatus {

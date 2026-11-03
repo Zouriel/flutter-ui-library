@@ -946,3 +946,22 @@ exhaustively by chips, progress and apps. The metals are tokens (`--ui-tier-*`, 
 set once for every theme. The sheen runs at 90deg because `UiGradientSpec.toGradient` maps angles through
 alignment space, which only equals the CSS angle on a square or straight across.
 
+## Plans: premium tier, tier buttons, plan card, grid and comparison
+
+`UiTier` is a typedef of `UiBadgeTier` (now `gold | platinum | premium`), the web's `UiTier` alias of
+`UiBadgeTier`. Premium is a violet metal (`--ui-tier-premium*`) with white text; its edge is the lighter
+violet so it stays 3:1 on dark pages (gold's and platinum's edges are darker). `UiButton(tier:)` is the
+web's `ui-button [tier]`: hover washes the sheen with 35% of the light stop, press with 45% of the base,
+so every state stays between the two AA-checked stops; the focus ring is the tier edge over a page-colour
+gap (`uiTierFocusRing`). Platinum's hover sweep is a CustomPainter band (the web animates a
+background layer), off when `context.uiAnimate` is false.
+
+`UiPlanCard` = `ui-plan-card`; the web's `[plan-action]` / `[plan-fineprint]` slots are `action` /
+`fineprint`. The highlight's second border pixel is a `foregroundDecoration` (the web's inset ring), so
+content doesn't move. `UiPlanGrid` = `ui-plan-grid`: the web uses CSS grid auto-fit with a 288px
+minimum (one column under 600, two under 912, three max); Flutter picks the same counts from the width
+and makes each row an `IntrinsicHeight` Row so cards share a height. `UiPlanCompare` = `ui-plan-compare`
+(`plans`/`rows`/`highlight` as `UiPlanColumn`/`UiPlanRow`); the web uses a `<table>` with a sticky first
+column, Flutter one horizontal scroll view whose rows are built in the opposite text direction with the
+label cell last (so it paints over the cells sliding under it) and translated by the scroll offset.
+

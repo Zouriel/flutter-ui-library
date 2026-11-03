@@ -72,6 +72,81 @@ _Look _look(UiButtonVariant v, UiTokens t, UiStates s) {
   }
 }
 
+/// A tier button's look (the web `ui-button [tier]`): the metal's sheen with its contrast label and
+/// edge. Hover washes the sheen with 35% of its light stop, pressed with 45% of its base; every colour
+/// between the two stops holds AA for the label, so neither state loses it.
+_Look _tierLook(UiTier tier, UiTokens t, UiStates s) {
+  final spec = tier.gradient(t);
+  final wash = s.pressed ? tier.base(t).withValues(alpha: 0.45) : s.hovered ? tier.light(t).withValues(alpha: 0.35) : null;
+  final g = wash == null ? spec : UiGradientSpec(angle: spec.angle, colors: [for (final c in spec.colors) Color.alphaBlend(wash, c)], stops: spec.stops);
+  return _Look(gradient: g.toGradient(), fg: tier.contrast(t), border: tier.border(t));
+}
+
+/// The tier button's focus ring: a 2px gap in the page colour, then 2px of the tier's edge.
+List<BoxShadow> uiTierFocusRing(UiTier tier, UiTokens t) => [UiRingShadow(color: tier.border(t), spread: 4), UiRingShadow(color: t.bg, spread: 2)];
+
+/// Platinum's hover sweep: a soft band of the light stop crossing the button once (exported for tests
+/// by its key, `ValueKey('ui-tier-sweep')`). Nothing when animations are off.
+class _TierSweep extends StatefulWidget {
+  const _TierSweep({super.key, required this.active, required this.color});
+  final bool active;
+  final Color color;
+  @override
+  State<_TierSweep> createState() => _TierSweepState();
+}
+
+class _TierSweepState extends State<_TierSweep> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this);
+
+  @override
+  void didUpdateWidget(_TierSweep old) {
+    super.didUpdateWidget(old);
+    if (widget.active && !old.active && context.uiAnimate) {
+      _c.duration = context.ui.motionSlow * 2;
+      _c.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: ExcludeSemantics(
+          child: CustomPaint(painter: _SweepPainter(_c, widget.color)),
+        ),
+      );
+}
+
+class _SweepPainter extends CustomPainter {
+  _SweepPainter(this.progress, this.color) : super(repaint: progress);
+  final AnimationController progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final v = progress.value;
+    if (!progress.isAnimating || v <= 0 || v >= 1) return;
+    final c = -0.3 + 1.6 * v;
+    double k(double x) => x.clamp(0.0, 1.0);
+    final clear = color.withValues(alpha: 0);
+    final g = LinearGradient(
+      begin: const Alignment(-1, -0.6),
+      end: const Alignment(1, 0.6),
+      colors: [clear, color.withValues(alpha: 0.85), clear],
+      stops: [k(c - 0.18), k(c), k(c + 0.18)],
+    );
+    final r = Offset.zero & size;
+    canvas.drawRect(r, Paint()..shader = g.createShader(r));
+  }
+
+  @override
+  bool shouldRepaint(_SweepPainter old) => old.color != color || old.progress != progress;
+}
+
 /// A count for a button or nav badge (0.44.0, the web `uiBadgeCount`): null for none (0 or less),
 /// "9+" past [max], else the number.
 String? uiBadgeCount(int n, {int max = 9}) => n <= 0 ? null : (n > max ? '$max+' : '$n');
@@ -150,7 +225,12 @@ class UiButton extends StatelessWidget {
     this.badge,
     this.badgeTone = UiBadgeTone.danger,
     this.badgeLabel,
+    this.tier,
   }) : assert(label != null || child != null || (icon != null && semanticLabel != null), 'Give the button a label, a child, or an icon and a semanticLabel.');
+
+  /// A plan tier's metal (the web `tier`): the tier's sheen, contrast label and edge, its own focus
+  /// ring, and for platinum a soft light sweep on hover. Wins over [variant].
+  final UiTier? tier;
 
   /// A count bubble at the top-end corner (0.44.0); null for none.
   final String? badge;
@@ -194,8 +274,9 @@ class UiButton extends StatelessWidget {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final rounded = radius ?? theme.config.radius;
-    final isLink = variant == UiButtonVariant.link;
-    final isBrand = variant == UiButtonVariant.brand;
+    final metal = tier;
+    final isLink = metal == null && variant == UiButtonVariant.link;
+    final isBrand = metal == null && variant == UiButtonVariant.brand;
     final fontSize = switch (size) { UiSize.sm => 13.0, UiSize.md => 14.0, UiSize.lg => 15.0, UiSize.xl => 17.0 };
     final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6, UiSize.xl => t.space8 };
     final r = !rounded ? 0.0 : isBrand ? t.radiusPill : size == UiSize.xl ? t.radiusLg : t.radius;
@@ -211,10 +292,10 @@ class UiButton extends StatelessWidget {
       // With a badge the name is built here, so the label isn't read twice.
       excludeChildSemantics: badge != null && (semanticLabel != null || label != null || loading),
       builder: (context, s) {
-        final look = _look(variant, t, s);
+        final look = metal != null ? _tierLook(metal, t, s) : _look(variant, t, s);
         final style = theme.typography.body.copyWith(
           fontSize: fontSize,
-          fontWeight: isBrand || size == UiSize.xl ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: isBrand || metal != null || size == UiSize.xl ? FontWeight.w600 : FontWeight.w500,
           letterSpacing: t.trackingTight * fontSize,
           height: 1.2,
           color: look.fg,
@@ -231,7 +312,7 @@ class UiButton extends StatelessWidget {
         final row = IconTheme.merge(
           // Icons follow the label on filled and link buttons; ghost and outline ones take the theme's
           // icon colour (the web's --ui-color-icon).
-          data: IconThemeData(color: _neutral(variant) ? (t.icon ?? look.fg) : look.fg, size: iconSize),
+          data: IconThemeData(color: metal == null && _neutral(variant) ? (t.icon ?? look.fg) : look.fg, size: iconSize),
           child: DefaultTextStyle(
             style: style,
             child: Row(
@@ -243,7 +324,8 @@ class UiButton extends StatelessWidget {
           ),
         );
 
-        final shadows = [...look.shadow, if (s.focused) ...t.focusRing];
+        final shadows = [...look.shadow, if (s.focused) ...(metal != null ? uiTierFocusRing(metal, t) : t.focusRing)];
+        final sweep = metal == UiTier.platinum;
         final brandWash = isBrand && (s.hovered || s.pressed);
         Widget box = AnimatedContainer(
           duration: context.uiAnimate ? t.motionBase : Duration.zero,
@@ -252,20 +334,32 @@ class UiButton extends StatelessWidget {
           height: isLink ? null : size.height(t),
           padding: EdgeInsets.symmetric(horizontal: isLink ? 0 : padding ?? padX),
           decoration: BoxDecoration(
-            color: glass && !isBrand && !isLink ? t.glassBg : look.fill,
+            color: glass && metal == null && !isBrand && !isLink ? t.glassBg : look.fill,
             gradient: look.gradient,
             borderRadius: shape,
             border: isBrand || isLink
                 ? null
-                : Border.all(color: glass ? t.glassBorder : (look.border ?? (look.fill == null && variant == UiButtonVariant.ghost ? const Color(0x00000000) : look.fill ?? t.border))),
+                : Border.all(color: glass && metal == null ? t.glassBorder : (look.border ?? (look.fill == null && variant == UiButtonVariant.ghost ? const Color(0x00000000) : look.fill ?? t.border))),
             boxShadow: shadows,
           ),
           foregroundDecoration: brandWash
               ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
               : null,
-          child: Center(widthFactor: 1, heightFactor: 1, child: row),
+          clipBehavior: sweep ? Clip.antiAlias : Clip.none,
+          child: sweep
+              ? Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+                  Positioned(
+                    left: -(padding ?? padX),
+                    right: -(padding ?? padX),
+                    top: 0,
+                    bottom: 0,
+                    child: _TierSweep(key: const ValueKey('ui-tier-sweep'), active: s.hovered && !s.disabled, color: metal!.light(t)),
+                  ),
+                  Center(widthFactor: 1, heightFactor: 1, child: row),
+                ])
+              : Center(widthFactor: 1, heightFactor: 1, child: row),
         );
-        if (glass && !isBrand && !isLink) {
+        if (glass && metal == null && !isBrand && !isLink) {
           box = ClipRRect(
             borderRadius: shape,
             child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: box),

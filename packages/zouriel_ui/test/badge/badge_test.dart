@@ -90,6 +90,20 @@ void main() {
       expect(textOf(tester, 'Platinum pass').color, t.tierPlatinumContrast);
     });
 
+    testWidgets('premium is a violet metal with light text, and UiTier names the same tiers', (tester) async {
+      await pumpUi(tester, const UiBadge(label: 'Premium', tier: UiTier.premium));
+      final t = tester.element(find.byType(UiBadge)).ui;
+      final d = decorationOf(tester);
+      expect((d.gradient! as LinearGradient).colors, t.gradientTierPremium.colors);
+      expect(t.gradientTierPremium.colors, [t.tierPremium, t.tierPremiumLight, t.tierPremium]);
+      expect((d.border! as Border).top.color, t.tierPremiumBorder);
+      expect(textOf(tester, 'Premium').color, t.tierPremiumContrast);
+      // Violet: blue over red over green; the label is the light side.
+      expect(t.tierPremium.b > t.tierPremium.r && t.tierPremium.r > t.tierPremium.g, isTrue);
+      expect(lum(t.tierPremiumContrast), greaterThan(lum(t.tierPremiumLight)));
+      expect(UiTier.values, [UiBadgeTier.gold, UiBadgeTier.platinum, UiBadgeTier.premium]);
+    });
+
     testWidgets('keeps the badge size and works as a dot', (tester) async {
       await pumpUi(tester, const UiBadge(label: 'Gold pass', tier: UiBadgeTier.gold));
       expect(tester.getSize(find.byType(UiBadge)).height, 20);
@@ -127,8 +141,10 @@ void main() {
     await expectThemedGolden(tester, 'badge_tier', height: 80, (context) => const Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
       UiBadge(label: 'Gold pass', tier: UiBadgeTier.gold),
       UiBadge(label: 'Platinum pass', tier: UiBadgeTier.platinum),
+      UiBadge(label: 'Premium', tier: UiBadgeTier.premium),
       UiBadge(dot: true, tier: UiBadgeTier.gold),
       UiBadge(dot: true, tier: UiBadgeTier.platinum),
+      UiBadge(dot: true, tier: UiBadgeTier.premium),
     ]));
   });
 
