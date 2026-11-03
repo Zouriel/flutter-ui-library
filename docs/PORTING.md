@@ -142,6 +142,14 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.54.1.** `UiSelectable`'s long press is one finger's gesture: two fingers resting still past the
+long-press time before a pinch spread used to start selection mode mid-pinch (found on a real
+two-finger pinch on the Android emulator). While a press is pending, a global pointer route (added on
+the tile's pointer down, removed when that finger lifts) cancels it when any other pointer goes down
+anywhere; and a press can't become a long press if another pointer was already down, known from a
+shared global route kept while any UiSelectable is mounted. A screen reader's long-press action has no
+pointer and still always fires. The web twin applies the same rule.
+
 **0.54.0.** `UiMasonryGrid` (web `ui-masonry-grid`) and `UiPinch.onPinch` (`UiPinchStep { apart,
 focal }`, focal = the fingers' midpoint in global coordinates; fires just before onPinchIn/Out). The
 layout is the pure `uiMasonryLayout(width, ratios, columns, gap)` (plus `uiMasonryHeight`), the same

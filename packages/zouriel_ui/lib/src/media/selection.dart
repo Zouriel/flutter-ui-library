@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -18,7 +19,9 @@ const double uiSelectableScale = 0.9;
 ///
 /// A tap calls [onTap] (the app decides: open the tile, or toggle it while [selecting]); a long press
 /// calls [onLongPress] with a light haptic. The long press only fires for a finger that stays put, so
-/// it works inside a scroll view: a finger that scrolls never selects.
+/// it works inside a scroll view: a finger that scrolls never selects. It is also one finger's
+/// gesture: any other pointer going down anywhere while it is pending cancels it, and it can't start
+/// while another pointer is already down, so two still fingers starting a pinch never select.
 ///
 /// While [selecting] a round mark sits in the top-start corner: an empty ring over a small scrim, or
 /// filled with the primary colour and a check when [selected], readable on white and black pictures
@@ -27,7 +30,7 @@ const double uiSelectableScale = 0.9;
 ///
 /// Screen readers hear [semanticLabel] and the selected state; while selecting it reads as checked or
 /// not checked. The long press is offered to them as an action too.
-class UiSelectable extends StatelessWidget {
+class UiSelectable extends StatefulWidget {
   const UiSelectable({
     super.key,
     required this.child,
@@ -53,19 +56,100 @@ class UiSelectable extends StatelessWidget {
   /// The tile's corners; the theme's radius when null.
   final BorderRadius? borderRadius;
 
+  @override
+  State<UiSelectable> createState() => _UiSelectableState();
+}
+
+/// Pointers down anywhere, known while at least one [UiSelectable] is mounted.
+class _PointersDown {
+  static final Set<int> down = {};
+  static int _users = 0;
+
+  static void retain() {
+    if (_users++ == 0) GestureBinding.instance.pointerRouter.addGlobalRoute(_route);
+  }
+
+  static void release() {
+    if (--_users == 0) {
+      GestureBinding.instance.pointerRouter.removeGlobalRoute(_route);
+      down.clear();
+    }
+  }
+
+  static void _route(PointerEvent e) {
+    if (e is PointerDownEvent) {
+      down.add(e.pointer);
+    } else if (e is PointerUpEvent || e is PointerCancelEvent) {
+      down.remove(e.pointer);
+    }
+  }
+}
+
+class _UiSelectableState extends State<UiSelectable> {
+  /// The finger whose long press is pending; null when none.
+  int? _pointer;
+
+  /// That press can no longer become a long press: another pointer was already down, or went down.
+  bool _spoiled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _PointersDown.retain();
+  }
+
+  @override
+  void dispose() {
+    _endPress();
+    _PointersDown.release();
+    super.dispose();
+  }
+
+  void _onDown(PointerDownEvent e) {
+    if (_pointer != null) return; // a second finger on this same tile: the route has seen it
+    _pointer = e.pointer;
+    // The global route hears this down after the hit-tested Listener, so this set holds only others.
+    _spoiled = _PointersDown.down.any((p) => p != e.pointer);
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_route);
+  }
+
+  /// Every pointer on the screen while a press is pending.
+  void _route(PointerEvent e) {
+    if (e.pointer == _pointer) {
+      if (e is PointerUpEvent || e is PointerCancelEvent) _endPress();
+    } else if (e is PointerDownEvent) {
+      _spoiled = true;
+    }
+  }
+
+  void _endPress() {
+    if (_pointer == null) return;
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_route);
+    _pointer = null;
+    _spoiled = false;
+  }
+
   void _longPress() {
+    // A long press from a screen reader has no pointer and always counts.
+    if (_pointer != null && _spoiled) return;
     unawaited(HapticFeedback.selectionClick());
-    onLongPress!();
+    widget.onLongPress!();
   }
 
   @override
   Widget build(BuildContext context) {
+    final widget = this.widget;
+    final child = widget.child, selected = widget.selected, selecting = widget.selecting;
+    final onTap = widget.onTap, onLongPress = widget.onLongPress, semanticLabel = widget.semanticLabel;
+    final borderRadius = widget.borderRadius;
     final t = context.ui;
     final animate = context.uiAnimate;
     final r = borderRadius ?? BorderRadius.circular(context.uiTheme.radius());
     final on = selecting && selected;
     final duration = animate ? t.motionBase : Duration.zero;
-    return UiInteractive(
+    return Listener(
+      onPointerDown: onLongPress == null ? null : _onDown,
+      child: UiInteractive(
       onTap: onTap,
       onLongPress: onLongPress == null ? null : _longPress,
       padTouchTarget: false,
@@ -101,6 +185,7 @@ class UiSelectable extends StatelessWidget {
               child: UiSelectionMark(selected: selected),
             ),
         ],
+      ),
       ),
     );
   }

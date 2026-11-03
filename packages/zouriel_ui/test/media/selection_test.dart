@@ -127,6 +127,52 @@ void main() {
       expect(longs, [7]);
     });
 
+    testWidgets('a second finger going down on another tile while a long press is pending cancels it (a pinch)', (tester) async {
+      phoneSlop(tester);
+      final longs = <int>[];
+      await pumpUi(tester, _Grid(onLong: longs.add));
+      final a = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey(1))), pointer: 71);
+      await tester.pump(const Duration(milliseconds: 100));
+      final b = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey(5))), pointer: 72);
+      await tester.pump(const Duration(milliseconds: 900)); // both held well past the long-press time
+      expect(longs, isEmpty);
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+      expect(longs, isEmpty);
+      expect(find.byType(UiSelectionMark), findsNothing, reason: 'no selection mode');
+
+      // And afterwards one finger long-presses again as usual.
+      await tester.longPress(find.byKey(const ValueKey(2)));
+      await tester.pumpAndSettle();
+      expect(longs, [2]);
+    });
+
+    testWidgets('a long press can not start while another finger is already down', (tester) async {
+      phoneSlop(tester);
+      final longs = <int>[];
+      await pumpUi(tester, _Grid(onLong: longs.add));
+      final a = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey(5))), pointer: 73);
+      // The second lands on tile 1 while the first is still down on tile 5.
+      await tester.pump(const Duration(milliseconds: 100));
+      final b = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey(1))), pointer: 74);
+      await tester.pump(const Duration(milliseconds: 900));
+      expect(longs, isEmpty, reason: 'neither the first finger\'s tile nor the second\'s');
+      await a.up();
+      await b.up();
+      await tester.pumpAndSettle();
+
+      // Also with the earlier finger off every tile (on the page outside the grid).
+      final c = await tester.startGesture(const Offset(200, 700), pointer: 75);
+      final d = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey(3))), pointer: 76);
+      await tester.pump(const Duration(milliseconds: 900));
+      expect(longs, isEmpty);
+      await c.up();
+      await d.up();
+      await tester.pumpAndSettle();
+      expect(longs, isEmpty);
+    });
+
     testWidgets('selected: shrinks with a primary outline and a filled mark with a check; unselected: an empty ring', (tester) async {
       Widget tile(bool selected, {bool reduce = false}) => MediaQuery(
             data: MediaQueryData(disableAnimations: reduce),
