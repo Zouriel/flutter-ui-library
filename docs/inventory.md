@@ -1268,6 +1268,26 @@ File: `media/src/gallery.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiGalleryImage` (gallery.ts)
+### UiPosterGrid (component, `ui-poster-grid`)
+File: `media/src/poster-grid.ts`  
+`ui-poster-grid` — a grid of pictures and nothing else: same-shape tiles, 2/3/4/5 columns by the grid's own width (544/992/1280), no text on a tile (its name is its accessible label), a gradient fallback, and an optional dot (`mark`) named for screen readers.  
+- Inputs: `posters`: UiPoster[] = []; `ratio` = 0.75; `focus`: 'top' | 'center' = 'center'
+- Outputs: `select`: number
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- interface `UiPoster`, `UiPosterMark` (poster-grid.ts); function `uiPosterFallback`
+### UiPosterView (component, `ui-poster-view`)
+File: `media/src/poster-view.ts`  
+`ui-poster-view` — one picture full-size over a blurred copy of itself, with projected details and buttons on a `ui-scrim` at the bottom; a modal dialog (Esc, close button, focus returns).  
+- Inputs: `open` (model) = false; `src`; `label` = ''; `colors`
+- Outputs: `closed`: void
+- [x] Flutter port (`UiPosterView` + `UiPosterView.show`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiScrim (component, `ui-scrim`)
+File: `media/src/poster-view.ts`  
+`ui-scrim` — a see-through layer fading from clear to the media scrim colour (60% before the content, 88% at the bottom) with on-scrim text.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiImagePicker (component, `ui-image-picker`)
 File: `media/src/image-picker.ts`  
 `ui-image-picker` — a grid of image tiles to choose from: search results, stock art, uploads. Tap or Enter picks (`pick`). One tile can show as busy while its choice is being fetched. When `hasMore` is on, scrolling near the end asks for the next page (`more`) — there is no "Load more" button to reach for with a thumb. Thumbnails that fail to load show the label on a plain tile rather than a broken-image glyph. Tiles sit on a faint checkerboard so white or transparent art is visible. With `dragType` set, tiles can be dragged: the item's `id` is the drag data under that type.  

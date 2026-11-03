@@ -142,6 +142,15 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.49.0 additions.** `UiPosterGrid` (web `ui-poster-grid`), `UiPosterView` (`ui-poster-view`) and
+`UiScrim` (`ui-scrim`). The web grid steps its columns with container queries on its own width; the
+Flutter grid does the same with a LayoutBuilder (`UiPosterGrid.columnsFor`), and lays tiles out with
+a Wrap, so it doesn't scroll by itself (as the web grid doesn't). The web view is a `position: fixed`
+dialog driven by an `open` model; Flutter's is a route pushed by `UiPosterView.show`, whose builder
+gets the route's context so buttons can pop it first. The scrim is painted (clear, 60% at `space12`,
+88% at the bottom), the same stops as the web's `linear-gradient`. Hover on a tile is a 2px
+border-strong ring on both sides (the style contract forbids a brightness filter on the web).
+
 **0.48.0 additions.** `UiAppleSignInButton` (web `ui-apple-button`) draws Sign in with Apple's
 button to Apple's Human Interface Guidelines: black, white or white with a 1px black outline
 (`UiAppleBrand`, the second file `style_contract_test` lets use literal colours), Apple logo and

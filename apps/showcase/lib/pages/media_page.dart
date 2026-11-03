@@ -160,6 +160,58 @@ class _MediaPageState extends State<MediaPage> {
           shapes: 'UiGalleryImage({required ImageProvider image, ImageProvider? thumb, String? alt})',
         ),
         DocSection(
+          name: 'Poster grid',
+          widget: 'UiPosterGrid',
+          summary: "Pictures and nothing else: every tile is the same shape (ratio), with 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A tile carries no text; its label is its semantic label. Without a picture, or when it fails to load, a tile shows a gradient of its colors (or the theme's primary and accent). The only signal on a tile is a small dot (mark), whose label screen readers hear with the name. It doesn't scroll, so put it in a scroll view. Pair it with UiPosterView to show the details.",
+          demo: const _PosterDemo(),
+          code: "UiPosterGrid(\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'))],\n  focus: UiPosterFocus.top,\n  onSelect: (i) => UiPosterView.show(context, label: 'Aisha and Ali', image: NetworkImage(url), builder: (context) => details),\n)",
+          api: const [
+            ApiRow('posters', 'List<UiPoster>', 'The tiles: picture, semantic label, fallback colours, optional dot.'),
+            ApiRow('ratio', 'double', 'Width / height of every tile.', def: '0.75'),
+            ApiRow('focus', 'UiPosterFocus', "Which part of a picture survives the crop; top keeps a poster's heading.", def: 'center'),
+          ],
+          callbacks: const [ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.')],
+          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark})\nUiPosterMark({required UiStatus tone, required String label})',
+        ),
+        DocSection(
+          name: 'Poster view',
+          widget: 'UiPosterView',
+          summary: 'One picture full-size, shown whole over a blurred copy of itself, with the child laid over its bottom on a UiScrim: the details and the buttons. Escape, back or the close button close it. Open it with UiPosterView.show; the demo is in Poster grid above.',
+          api: const [
+            ApiRow('label', 'String', 'The semantic label of the view and the picture.'),
+            ApiRow('image', 'ImageProvider?', 'The picture.'),
+            ApiRow('colors', 'List<Color>?', 'Fallback gradient when there is no picture, as on UiPosterGrid.'),
+            ApiRow('child', 'Widget', 'Details and buttons, laid over the bottom on a UiScrim.'),
+          ],
+          callbacks: const [
+            ApiRow('onClose', 'VoidCallback', 'Escape or the close button.'),
+            ApiRow('UiPosterView.show(context, label:, builder:, image:, colors:)', 'Future<T?>', 'Pushes the view as a route that fades in.'),
+          ],
+        ),
+        DocSection(
+          name: 'Scrim',
+          widget: 'UiScrim',
+          summary: 'A see-through layer that fades from clear at its top to the media scrim colour at its bottom, for putting words on a picture. The fade reaches 60% before the content starts and 88% at the bottom, so on-scrim text keeps at least 4.5:1 over any picture, white included.',
+          demo: SizedBox(
+            width: 320,
+            child: AspectRatio(
+              aspectRatio: 0.75,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(fit: StackFit.expand, children: [
+                  const Image(image: DemoArt(Color(0xFFFFFFFF), Color(0xFFCFE8FF), width: 300, height: 400, sun: -1), fit: BoxFit.cover),
+                  Positioned(left: 0, right: 0, bottom: 0, child: UiScrim(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Text('Aisha and Ali', style: context.uiText.h4.copyWith(color: context.ui.mediaOnScrim)),
+                    const Text('Over a white picture, still readable.'),
+                  ]))),
+                ]),
+              ),
+            ),
+          ),
+          code: 'Stack(children: [Image(...), Positioned(left: 0, right: 0, bottom: 0, child: UiScrim(child: details))])',
+          api: const [ApiRow('child', 'Widget', 'The words; text and icons take the on-scrim colour.')],
+        ),
+        DocSection(
           name: 'Image picker',
           widget: 'UiImagePicker',
           summary: 'A grid of tiles to choose from (search results, stock art). Each tile is a button named by its label. While busyId is set that tile shows a spinner and the others are disabled. With hasMore, scrolling within 240px of the end calls onMore, and again after a page loads if the end is still in view. Thumbnails that fail to load show the label; tiles sit on a faint checkerboard so white art shows. With draggable, a long press lifts a tile for a DragTarget.',
@@ -219,6 +271,44 @@ class _MediaPageState extends State<MediaPage> {
           ],
         ),
       ],
+    );
+  }
+}
+
+
+/// The poster grid demo: tap a tile for the view with its details.
+class _PosterDemo extends StatelessWidget {
+  const _PosterDemo();
+
+  static final _posters = [
+    UiPoster(label: 'Aisha and Ali', image: DemoArt.palette[0], mark: const UiPosterMark(tone: UiStatus.primary, label: 'New')),
+    UiPoster(label: 'Eid get-together', image: DemoArt.palette[1]),
+    const UiPoster(label: 'Hawwa turns 30', colors: [Color(0xFF5B2A86), Color(0xFFE5484D)], mark: UiPosterMark(tone: UiStatus.warning, label: 'Not finished')),
+    UiPoster(label: 'Graduation', image: DemoArt.palette[2]),
+    const UiPoster(label: 'Office dinner'),
+    UiPoster(label: 'Housewarming', image: DemoArt.palette[4]),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return UiPosterGrid(
+      posters: _posters,
+      focus: UiPosterFocus.top,
+      onSelect: (i) => UiPosterView.show<void>(
+        context,
+        label: _posters[i].label,
+        image: _posters[i].image,
+        colors: _posters[i].colors,
+        builder: (context) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(_posters[i].label, style: context.uiText.h3.copyWith(color: context.ui.mediaOnScrim)),
+          const Text('Saturday 12 December, 7 pm · Malé'),
+          SizedBox(height: context.ui.space2),
+          Wrap(spacing: context.ui.space2, runSpacing: context.ui.space2, children: [
+            UiButton(label: 'Open invitation', onPressed: () => Navigator.of(context).pop()),
+            UiButton(label: 'Photos', variant: UiButtonVariant.secondary, onPressed: () => Navigator.of(context).pop()),
+          ]),
+        ]),
+      ),
     );
   }
 }
