@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
@@ -150,7 +151,7 @@ class _FileViewerPageState extends State<FileViewerPage> {
         DocSection(
           name: 'Media lightbox',
           widget: 'UiMediaLightbox',
-          summary: 'Photographs and clips at full screen, edge to edge, with the chrome floating on top. It opens as a modal route: focus stays inside, back or Escape closes. Photos zoom (pinch, double tap) and pan; clips get themed controls and start themselves. Swipe between items, drag down to dismiss, tap the dark to close, tap a photo to hide the chrome; it fades away on its own while a clip plays. Keys: Left/Right step (Shift seeks), Space or k plays, j/l seek 10s, m mutes, 0 resets the zoom. Actions can apply to some items only.',
+          summary: 'Photographs and clips at full screen, edge to edge, with the chrome floating on top. It opens as a modal route: focus stays inside, back or Escape closes. Photos zoom (pinch, double tap) and pan; clips get themed controls and start themselves. Swipe between items, drag down to dismiss, tap the dark to close, tap a photo to hide the chrome; it fades away on its own while a clip plays. Keys: Left/Right step (Shift seeks), Space or k plays, j/l seek 10s, m mutes, 0 resets the zoom. Actions can apply to some items only. The top bar never overflows: the actions show as labelled pills when they fit beside the caption and close button, as icon buttons (named and tooltipped by their label, danger still red) when they don\'t, and the last ones move into a More menu when even the icons don\'t fit (try it on a phone).',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
             UiButton(
               label: 'Open the lightbox',
@@ -159,8 +160,10 @@ class _FileViewerPageState extends State<FileViewerPage> {
                 items: _lightboxItems,
                 label: 'Demo set',
                 actions: [
-                  const UiMediaAction(id: 'save', label: 'Save'),
-                  UiMediaAction(id: 'remove', label: 'Remove', danger: true, when: (item, i) => !item.isVideo),
+                  const UiMediaAction(id: 'save', label: 'Save', icon: UiIcon(HugeIcons.strokeRoundedDownload04)),
+                  const UiMediaAction(id: 'share', label: 'Share', icon: UiIcon(HugeIcons.strokeRoundedShare08)),
+                  const UiMediaAction(id: 'original', label: 'Download original', icon: UiIcon(HugeIcons.strokeRoundedImage01)),
+                  UiMediaAction(id: 'remove', label: 'Remove', icon: const UiIcon(HugeIcons.strokeRoundedDelete02), danger: true, when: (item, i) => !item.isVideo),
                 ],
                 onAction: (id, item, i) => setState(() => _log.add('$id item ${i + 1}')),
               ),
@@ -172,11 +175,11 @@ class _FileViewerPageState extends State<FileViewerPage> {
             ApiRow('items', 'List<UiMediaItem>', 'What there is.'),
             ApiRow('initialIndex', 'int', 'Where to start.', def: '0'),
             ApiRow('label', 'String', 'The set\'s title (when an item has no caption).'),
-            ApiRow('actions / onAction', 'List<UiMediaAction> / callback', 'Top-bar buttons and their presses.'),
+            ApiRow('actions / onAction', 'List<UiMediaAction> / callback', 'Top-bar buttons and their presses; labelled, icon-only or in a More menu by the room there is.'),
             ApiRow('onIndexChanged', 'ValueChanged<int>?', 'Every step.'),
           ],
           callbacks: const [ApiRow('UiMediaLightbox.show(...)', 'Future<int?>', 'Completes with the index it closed on.')],
-          shapes: 'UiMediaItem.image(ImageProvider image, {ImageProvider? thumb, String? alt, String? caption})\nUiMediaItem.video(String src, {ImageProvider? thumb, String? caption})\nUiMediaAction({required String id, required String label, bool danger = false,\n  bool Function(UiMediaItem item, int index)? when})',
+          shapes: 'UiMediaItem.image(ImageProvider image, {ImageProvider? thumb, String? alt, String? caption})\nUiMediaItem.video(String src, {ImageProvider? thumb, String? caption})\nUiMediaAction({required String id, required String label, Widget? icon, bool danger = false,\n  bool Function(UiMediaItem item, int index)? when})',
         ),
         DocSection(
           name: 'Video player',

@@ -142,6 +142,21 @@ Tinted colours: the fill is `lerp(lerp(surface, text, .04), tone, .08)` (neutral
 the same numbers through `color-mix` (premultiplied alpha, so translucent text-muted differs by a
 hair; both suites check AA in every theme).
 
+**0.53.0.** The lightbox's top bar never overflows. Its actions used to sit in a Wrap inside a Row
+(Flutter) / a `flex: none` row (web), so they had unbounded width and overflowed a phone (three pills
+by 27px at 360). `UiMediaAction` gains an optional `icon` (Flutter `Widget?`, as `UiSelectionAction`;
+web `IconSvgObject`). Both libraries run the same sums over the bar's width: the caption and counter
+keep 72px (+12 gap) when there are any; the close button (and the zoom chip, and on the web anything
+projected into `[lightbox-actions]`) is fixed; then (1) every action as a labelled pill if they all fit,
+else (2) every action with an icon as a round icon button (label = its semantics label / `aria-label`,
+and its tooltip: `UiTooltip` on Flutter, a `title` on the web because the web lightbox is a top-layer
+`<dialog>` that a CDK overlay tooltip would sit under), danger keeping the danger colour, else (3) the
+first actions that fit plus a More button (`UiStrings.moreActions`) whose menu holds the rest in order.
+Flutter's menu is the library's `UiMenu`; the web's is drawn inside the dialog for the same top-layer
+reason (role=menu, arrows/Home/End, Escape closes the menu before the viewer, Tab and an outside press
+close it; `href` actions stay links). Flutter lays round buttons out at their 48dp touch target, the
+web at 38px, so the switch points differ by a few pixels.
+
 **0.51.0 additions.** `UiSelectable` (web `ui-selectable`), `UiSelectionBar` (`ui-selection-bar`)
 and `UiTaskProgress` / `showUiTaskProgress` (`ui-task-progress` / `ui-task-progress-dialog`), for an
 album's long-press multi-select, share and save. Mapping:

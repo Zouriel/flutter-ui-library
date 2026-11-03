@@ -567,7 +567,7 @@ File: `file-viewer/src/media-lightbox.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiMediaItem` (media-lightbox.ts)
-- interface `UiMediaAction` (media-lightbox.ts)
+- interface `UiMediaAction` (media-lightbox.ts) — `icon` (0.53.0: Flutter `Widget?`, web `IconSvgObject`); the top bar fits its actions: labelled, icon-only, or the last ones in a More menu
 ### UiTextViewer (component, `ui-text-viewer`)
 File: `file-viewer/src/text-viewer.ts`  
 `ui-text-viewer` — displays plain text from a `content` string or a fetched `src` URL.  

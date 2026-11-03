@@ -10,6 +10,9 @@ import 'package:video_player/video_player.dart';
 import '../behaviors/gestures.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
+import '../overlay/anchored.dart';
+import '../overlay/menu.dart';
+import '../overlay/tooltip.dart';
 import '../feedback/spinner.dart';
 import '../theme/theme.dart';
 import 'image_viewer.dart' show uiFitContain;
@@ -45,10 +48,15 @@ class UiMediaItem {
 /// A button in the lightbox's top bar.
 @immutable
 class UiMediaAction {
-  const UiMediaAction({required this.id, required this.label, this.danger = false, this.when});
+  const UiMediaAction({required this.id, required this.label, this.icon, this.danger = false, this.when});
 
   final String id;
   final String label;
+
+  /// A `UiIcon(HugeIcons.…)` (0.53.0). When the labelled pills don't fit the top bar, an action with
+  /// an icon shrinks to an icon button (its label stays its name and tooltip); one without keeps its
+  /// label, and moves to the More menu first when even that doesn't fit.
+  final Widget? icon;
 
   /// Destructive actions are drawn in red.
   final bool danger;
@@ -599,7 +607,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
     final metaLine = (item?.caption?.isNotEmpty ?? false) ? item!.caption! : widget.label;
     final count = widget.items.length;
 
-    final top = Padding(
+    final top = LayoutBuilder(builder: (context, box) => Padding(
         padding: EdgeInsets.fromLTRB(t.space4, math.max(t.space3, pad.top), t.space4, t.space3),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
           Expanded(
@@ -613,14 +621,18 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
               ]),
             ),
           ),
-          Wrap(spacing: t.space2, runSpacing: t.space2, alignment: WrapAlignment.end, children: [
-            if (_zoomed) _Glass(key: const ValueKey('zoom'), label: '${(_zoom * 100).round()}% · Fit', semanticLabel: 'Reset zoom', onTap: _resetView),
-            for (final a in visibleActions)
-              _Glass(key: ValueKey('action:${a.id}'), label: a.label, danger: a.danger, onTap: () => widget.onAction?.call(a.id, item!, widget.index)),
-            _Glass(key: const ValueKey('close'), icon: HugeIcons.strokeRoundedCancel01, semanticLabel: context.uiStrings.close, onTap: _close),
-          ]),
+          // Bounded (0.53.0): the actions get only the room the meta line leaves them.
+          _TopActions(
+            width: box.maxWidth - t.space4 * 2,
+            hasMeta: metaLine.isNotEmpty || count > 1,
+            zoomLabel: _zoomed ? '${(_zoom * 100).round()}% · Fit' : null,
+            onResetZoom: _resetView,
+            actions: visibleActions,
+            onAction: (a) => widget.onAction?.call(a.id, item!, widget.index),
+            onClose: _close,
+          ),
         ]),
-      );
+      ));
 
     final c = _clip;
     final cv = c?.value;
@@ -769,8 +781,11 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
 /// The one glass treatment for everything floating over the picture: pills with a [label], circles
 /// with an [icon].
 class _Glass extends StatelessWidget {
-  const _Glass({super.key, this.icon, this.label, this.rate, this.semanticLabel, this.onTap, this.danger = false, this.size = 38});
+  const _Glass({super.key, this.icon, this.iconWidget, this.label, this.rate, this.semanticLabel, this.onTap, this.danger = false, this.size = 38});
   final UiIconData? icon;
+
+  /// An action's own icon widget (a [UiMediaAction.icon]), drawn like [icon].
+  final Widget? iconWidget;
   final String? label;
 
   /// A playback speed, drawn as a fixed-width label.
@@ -784,7 +799,7 @@ class _Glass extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     final fg = danger ? t.mediaDanger : t.mediaOnScrim;
-    final circle = icon != null && label == null && rate == null;
+    final circle = (icon != null || iconWidget != null) && label == null && rate == null;
     return UiInteractive(
       onTap: onTap,
       enabled: onTap != null,
@@ -818,6 +833,8 @@ class _Glass extends StatelessWidget {
                     ? uiRateLabel(rate!, context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
                     : label != null
                     ? Text(label!, style: context.uiText.caption.copyWith(color: fg, height: 1, fontFeatures: const [FontFeature.tabularFigures()]))
+                    : iconWidget != null
+                    ? IconTheme(data: IconThemeData(color: fg, size: size > 40 ? 22 : 19), child: iconWidget!)
                     : UiIcon(icon!, size: size > 40 ? 22 : 19, strokeWidth: 1.9, color: fg, matchTextDirection: identical(icon, HugeIcons.strokeRoundedArrowLeft01) || identical(icon, HugeIcons.strokeRoundedArrowRight01)),
               ),
               ),
@@ -825,6 +842,103 @@ class _Glass extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// How the top bar's actions fit their room (0.53.0, the web `ui-media-lightbox` does the same sums):
+/// every label as a pill when they all fit beside the meta line and the close button; else the
+/// actions with an icon as icon buttons; else the first ones that fit, and a More menu for the rest.
+/// Found in tests by the `fit:<name>` key on the row.
+enum _Fit { labelled, icons, menu }
+
+class _TopActions extends StatelessWidget {
+  const _TopActions({
+    required this.width,
+    required this.hasMeta,
+    required this.zoomLabel,
+    required this.onResetZoom,
+    required this.actions,
+    required this.onAction,
+    required this.onClose,
+  });
+
+  /// The whole bar's width (inside its padding).
+  final double width;
+
+  /// A caption or counter shares the bar, and keeps at least [metaMin] of it.
+  final bool hasMeta;
+  final String? zoomLabel;
+  final VoidCallback onResetZoom;
+  final List<UiMediaAction> actions;
+  final ValueChanged<UiMediaAction> onAction;
+  final VoidCallback onClose;
+
+  /// What the caption and "12 of 40" keep at least.
+  static const double metaMin = 72;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final touch = uiTouchPlatform(context);
+    // A round button lays out at its 48dp touch target on phones.
+    final iconW = touch ? uiMinTouchTarget : 38.0;
+    final gap = t.space2;
+    final style = context.uiText.caption.copyWith(height: 1, fontFeatures: const [FontFeature.tabularFigures()]);
+    final scaler = MediaQuery.textScalerOf(context);
+    double pill(String text) {
+      final tp = TextPainter(text: TextSpan(text: text, style: style), textDirection: TextDirection.ltr, textScaler: scaler, maxLines: 1)..layout();
+      final w = tp.width + t.space4 * 2 + 2;
+      tp.dispose();
+      return math.max(w.ceilToDouble(), touch ? uiMinTouchTarget : 0);
+    }
+
+    double row(Iterable<double> ws) => ws.fold(0.0, (sum, w) => sum + w + gap);
+    final room = width - (hasMeta ? metaMin + t.space3 : 0);
+    final fixed = iconW + (zoomLabel == null ? 0 : pill(zoomLabel!) + gap);
+    final compactW = [for (final a in actions) a.icon != null ? iconW : pill(a.label)];
+    var fit = _Fit.labelled;
+    var shown = actions.length;
+    if (fixed + row(actions.map((a) => pill(a.label))) > room) {
+      fit = _Fit.icons;
+      if (fixed + row(compactW) > room) {
+        fit = _Fit.menu;
+        shown = 0;
+        for (var k = actions.length - 1; k > 0; k--) {
+          if (fixed + row(compactW.take(k)) + iconW + gap <= room) {
+            shown = k;
+            break;
+          }
+        }
+      }
+    }
+    final rest = actions.sublist(shown);
+
+    Widget button(UiMediaAction a) {
+      if (fit == _Fit.labelled || a.icon == null) {
+        return _Glass(key: ValueKey('action:${a.id}'), label: a.label, danger: a.danger, onTap: () => onAction(a));
+      }
+      return UiTooltip(
+        message: a.label,
+        child: _Glass(key: ValueKey('action:${a.id}'), iconWidget: a.icon, semanticLabel: a.label, danger: a.danger, onTap: () => onAction(a)),
+      );
+    }
+
+    return KeyedSubtree(
+      key: ValueKey('fit:${fit.name}'),
+      child: Row(mainAxisSize: MainAxisSize.min, spacing: gap, children: [
+        if (zoomLabel != null) _Glass(key: const ValueKey('zoom'), label: zoomLabel, semanticLabel: 'Reset zoom', onTap: onResetZoom),
+        for (final a in actions.take(shown)) button(a),
+        if (rest.isNotEmpty)
+          UiMenu(
+            key: const ValueKey('more'),
+            placement: UiPlacement.bottomEnd,
+            items: [for (final a in rest) UiMenuItem(label: a.label, value: a.id, danger: a.danger)],
+            onSelect: (m) => onAction(rest.firstWhere((a) => a.id == m.value)),
+            builder: (context, toggle, open) => _Glass(icon: HugeIcons.strokeRoundedMoreHorizontal, semanticLabel: context.uiStrings.moreActions, onTap: toggle),
+          ),
+        _Glass(key: const ValueKey('close'), icon: HugeIcons.strokeRoundedCancel01, semanticLabel: context.uiStrings.close, onTap: onClose),
+      ]),
     );
   }
 }
