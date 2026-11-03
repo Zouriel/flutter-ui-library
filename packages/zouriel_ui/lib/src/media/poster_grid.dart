@@ -139,7 +139,8 @@ class _Tile extends StatelessWidget {
   }
 }
 
-/// The dot of a [UiPosterMark]: 10 across, ringed in the scrim colour so it shows on any picture.
+/// The dot of a [UiPosterMark]: 10 across, a light ring then a faint dark edge, so it shows on any
+/// picture, dark posters included.
 class UiPosterDot extends StatelessWidget {
   const UiPosterDot({super.key, required this.tone});
   final UiStatus tone;
@@ -158,7 +159,7 @@ class UiPosterDot extends StatelessWidget {
       decoration: BoxDecoration(
         color: fill,
         shape: BoxShape.circle,
-        boxShadow: [BoxShadow(color: t.mediaScrim.withValues(alpha: 0.55), spreadRadius: 2)],
+        boxShadow: [BoxShadow(color: t.mediaScrim.withValues(alpha: 0.35), spreadRadius: 3), BoxShadow(color: t.mediaOnScrim, spreadRadius: 2)],
       ),
     );
   }

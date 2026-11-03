@@ -41,6 +41,10 @@ void main() {
       expect(find.bySemanticsLabel('Eid party, Not finished'), findsOneWidget);
       expect(find.bySemanticsLabel('Birthday, New'), findsOneWidget);
       expect(find.byType(UiPosterDot), findsNWidgets(2));
+      // Ringed in the light on-scrim colour, so the dot shows on dark posters.
+      final dot = tester.widget<Container>(find.descendant(of: find.byType(UiPosterDot).first, matching: find.byType(Container)));
+      final shadows = (dot.decoration! as BoxDecoration).boxShadow!;
+      expect(shadows.any((s) => s.color == tester.element(find.byType(UiPosterGrid)).ui.mediaOnScrim && s.spreadRadius == 2), isTrue);
       await tester.tap(find.bySemanticsLabel('Birthday, New'));
       expect(picked, [2]);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
