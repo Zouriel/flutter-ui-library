@@ -20,6 +20,7 @@ export '../media/image_picker.dart';
 export '../media/masonry_grid.dart';
 export '../media/poster_grid.dart';
 export '../media/selection.dart';
+export '../media/like.dart';
 export '../file_viewer/file_viewer.dart';
 export '../file_viewer/image_viewer.dart';
 export '../file_viewer/media_lightbox.dart';

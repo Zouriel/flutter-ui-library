@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 import 'dart:ui' as ui;
 
@@ -230,6 +231,21 @@ class _MediaPageState extends State<MediaPage> {
             ApiRow('onTap', 'VoidCallback?', 'A tap (open, or toggle while selecting).'),
             ApiRow('onLongPress', 'VoidCallback?', 'Press and hold (start selecting); comes with a selection-click haptic.'),
           ],
+        ),
+        DocSection(
+          name: 'Likes',
+          widget: 'UiLikeCount',
+          summary: 'Hearts on photos. UiLikeCount is the small heart and number in a tile\'s corner: a dark see-through pill readable on any picture, nothing at all at 0, the heart filled when you liked it, big numbers shortened (1.2k), read as "Liked, 12 likes". It never takes a tap. Liking is a double tap: give UiSelectable an onDoubleTap and it reports the point, while a single tap waits 280ms for a second one before onTap (never while selecting); a press held right after a tap becomes a long press. UiHeartBurst sits over the media and play(offset) pops a big heart there (a fade only with animations off). UiLikeButton is the viewer\'s heart toggle with its count (tone surface on an ordinary background). Double tap a tile or the big photo, or use its heart.',
+          code: 'final burst = GlobalKey<UiHeartBurstState>();\nUiSelectable(\n  selected: false, selecting: false,\n  onTap: () => open(i),\n  onDoubleTap: (at) { like(i); burst.currentState!.play(at); },\n  child: Stack(fit: StackFit.expand, children: [\n    Image(image: photo),\n    UiHeartBurst(key: burst),\n    PositionedDirectional(start: 4, bottom: 4, child: UiLikeCount(count: likes, liked: mine)),\n  ]),\n)\nUiLikeButton(liked: mine, count: likes, onChanged: (v) => setLiked(i, v)',
+          api: const [
+            ApiRow('UiLikeCount count / liked / size', 'int / bool / UiLikeCountSize', 'Hearts; filled when liked; sm for tiles, md for cards. Nothing shows at 0 unless liked.'),
+            ApiRow('UiHeartBurst size', 'double', 'The heart, in logical pixels.', def: '88'),
+            ApiRow('UiHeartBurstState.play([Offset?])', 'method', 'Pops a heart at a point inside the box (the centre without one).'),
+            ApiRow('UiLikeButton liked / count / tone', 'bool / int / UiLikeButtonTone', 'State shown; the count hides at 0; media (white) or surface.'),
+            ApiRow('UiSelectable onDoubleTap', 'ValueChanged<Offset>?', 'Two taps within 280ms and 24px; while set, a single tap waits.'),
+          ],
+          callbacks: const [ApiRow('UiLikeButton onChanged', 'ValueChanged<bool>?', 'The new state; the count is yours to update.')],
+          demo: const _LikeDemo(),
         ),
         DocSection(
           name: 'Selection bar',
@@ -654,6 +670,94 @@ class _FilterDemoState extends State<_FilterDemo> {
             child: Text(it.video ? '${it.who}\n(video)' : it.who, textAlign: TextAlign.center, style: context.uiText.caption.copyWith(color: const Color(0xFFFFFFFF), fontWeight: FontWeight.w600)),
           ),
       ]),
+    ]);
+  }
+}
+
+
+/// Six tiles with counts and double tap, and a big photo with the viewer's heart.
+class _LikeDemo extends StatefulWidget {
+  const _LikeDemo();
+  @override
+  State<_LikeDemo> createState() => _LikeDemoState();
+}
+
+class _LikeDemoState extends State<_LikeDemo> {
+  final _counts = [0, 3, 1250, 0, 12, 1];
+  final _mine = List<bool>.filled(6, false);
+  final _bursts = List.generate(6, (_) => GlobalKey<UiHeartBurstState>());
+  final _big = GlobalKey<UiHeartBurstState>();
+  int _open = 0;
+
+  void _set(int i, bool liked) {
+    if (_mine[i] == liked) return;
+    setState(() {
+      _mine[i] = liked;
+      _counts[i] += liked ? 1 : -1;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
+      LayoutBuilder(builder: (context, box) {
+        final size = (math.min(box.maxWidth, 420) - t.space1 * 2) / 3;
+        return Wrap(spacing: t.space1, runSpacing: t.space1, children: [
+          for (var i = 0; i < 6; i++)
+            SizedBox(
+              width: size,
+              height: size,
+              child: UiSelectable(
+                semanticLabel: 'Liked demo ${i + 1}',
+                selected: false,
+                selecting: false,
+                onTap: () => setState(() => _open = i),
+                onDoubleTap: (at) {
+                  _set(i, !_mine[i]);
+                  _bursts[i].currentState!.play(at);
+                },
+                child: Stack(fit: StackFit.expand, children: [
+                  Image(image: DemoArt.palette[i % DemoArt.palette.length], fit: BoxFit.cover, excludeFromSemantics: true),
+                  UiHeartBurst(key: _bursts[i], size: 56),
+                  PositionedDirectional(start: t.space1, bottom: t.space1, child: UiLikeCount(count: _counts[i], liked: _mine[i])),
+                ]),
+              ),
+            ),
+        ]);
+      }),
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: AspectRatio(
+            aspectRatio: 4 / 3,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(t.radius),
+              child: Stack(fit: StackFit.expand, children: [
+                UiSelectable(
+                  semanticLabel: 'Liked demo ${_open + 1}, large',
+                  selected: false,
+                  selecting: false,
+                  onDoubleTap: (at) {
+                    _set(_open, !_mine[_open]);
+                    _big.currentState!.play(at);
+                  },
+                  child: Stack(fit: StackFit.expand, children: [
+                    Image(image: DemoArt.palette[_open % DemoArt.palette.length], fit: BoxFit.cover, excludeFromSemantics: true),
+                    UiHeartBurst(key: _big),
+                  ]),
+                ),
+                PositionedDirectional(
+                  end: t.space2,
+                  bottom: t.space2,
+                  child: UiLikeButton(liked: _mine[_open], count: _counts[_open], onChanged: (v) => _set(_open, v)),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
     ]);
   }
 }

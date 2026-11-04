@@ -38,6 +38,7 @@ class UiSelectable extends StatefulWidget {
     required this.selecting,
     this.onTap,
     this.onLongPress,
+    this.onDoubleTap,
     this.semanticLabel,
     this.borderRadius,
   });
@@ -49,6 +50,12 @@ class UiSelectable extends StatefulWidget {
   final bool selecting;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+
+  /// Two taps close together (like a photo), with the point inside the tile. While set, and not
+  /// [selecting], a tap waits [uiDoubleTapWindow] for a second one before [onTap] is called (the web's
+  /// `doubleTapEnabled` + `(doubleTap)`). Built on the same tap as [onTap] rather than a second
+  /// recognizer, so scrolling, pinching and the long press behave exactly as without it.
+  final ValueChanged<Offset>? onDoubleTap;
 
   /// The tile's name (a picture has no text of its own).
   final String? semanticLabel;
@@ -85,7 +92,67 @@ class _PointersDown {
   }
 }
 
+/// How long a tap waits for a second one when [UiSelectable.onDoubleTap] is set, and how far apart they may land.
+const Duration uiDoubleTapWindow = Duration(milliseconds: 280);
+const double uiDoubleTapSlop = 24;
+
 class _UiSelectableState extends State<UiSelectable> {
+  Offset? _downAt;
+  Timer? _pending;
+  Offset? _pendingAt;
+
+  /// A finger went down while a tap was waiting: it is held until that press ends (a second tap, a
+  /// long press, or a drag, which drops the first tap) instead of firing mid-press.
+  bool _awaitingSecond = false;
+
+  void _clearPending() {
+    _pending?.cancel();
+    _pending = null;
+    _pendingAt = null;
+    _awaitingSecond = false;
+  }
+
+  void _tap() {
+    final w = widget;
+    final onDouble = w.onDoubleTap;
+    if (onDouble == null || w.selecting) {
+      w.onTap?.call();
+      return;
+    }
+    final size = context.size;
+    final at = _downAt ?? (size == null ? Offset.zero : size.center(Offset.zero));
+    final prev = _pendingAt;
+    final waiting = _pending != null || _awaitingSecond;
+    if (waiting && prev != null && (at - prev).distance <= uiDoubleTapSlop) {
+      _clearPending();
+      onDouble(at);
+      return;
+    }
+    // A tap somewhere else first lets the earlier one through, then waits for its own second tap.
+    if (waiting) {
+      _clearPending();
+      w.onTap?.call();
+    }
+    _pendingAt = at;
+    _pending = Timer(uiDoubleTapWindow, () {
+      _pending = null;
+      _pendingAt = null;
+      if (mounted) widget.onTap?.call();
+    });
+  }
+
+  void _pointerDown(PointerDownEvent e) {
+    _downAt = e.localPosition;
+    if (_pending != null) {
+      _pending!.cancel();
+      _pending = null;
+      _awaitingSecond = true;
+    } else if (widget.onDoubleTap != null) {
+      _pendingAt = null;
+      _awaitingSecond = false;
+    }
+    if (widget.onLongPress != null) _onDown(e);
+  }
   /// The finger whose long press is pending; null when none.
   int? _pointer;
 
@@ -100,6 +167,7 @@ class _UiSelectableState extends State<UiSelectable> {
 
   @override
   void dispose() {
+    _clearPending();
     _endPress();
     _PointersDown.release();
     super.dispose();
@@ -132,6 +200,7 @@ class _UiSelectableState extends State<UiSelectable> {
   void _longPress() {
     // A long press from a screen reader has no pointer and always counts.
     if (_pointer != null && _spoiled) return;
+    _clearPending();
     unawaited(HapticFeedback.selectionClick());
     widget.onLongPress!();
   }
@@ -148,9 +217,9 @@ class _UiSelectableState extends State<UiSelectable> {
     final on = selecting && selected;
     final duration = animate ? t.motionBase : Duration.zero;
     return Listener(
-      onPointerDown: onLongPress == null ? null : _onDown,
+      onPointerDown: onLongPress == null && widget.onDoubleTap == null ? null : _pointerDown,
       child: UiInteractive(
-      onTap: onTap,
+      onTap: onTap == null && widget.onDoubleTap == null ? null : _tap,
       onLongPress: onLongPress == null ? null : _longPress,
       padTouchTarget: false,
       pressScale: false,
