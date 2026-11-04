@@ -1037,8 +1037,10 @@ a copy of the downloaded data (`test/button/fixtures/messenger_logos.json`). Log
 (its plane fills half its disc); Telegram's fill gradient has its stops at the logo box's top and bottom
 edges (`UiMessengerBrand.fillGradient`), so disc and button are the same blue. Web `compact: boolean |
 'auto'` is the enum `UiMessengerCompact { off, on, auto }`; web `disabled` is `onPressed: null`; `ariaLabel`
-is `semanticLabel`. auto measures its own width with a LayoutBuilder (the web uses a container query), so
-only auto is barred from intrinsic sizing; off and on work in a `UiTable` cell. The tick ring is a 2px
+is `semanticLabel`. auto shows the label exactly when it fits in full (padding + logo + gap + the label's natural width
+from a TextPainter at the current text scale + padding, `labelledWidth`), else the logo alone, never an
+ellipsis; it reads its width with a LayoutBuilder (the web measures with a ResizeObserver), so only auto
+is barred from intrinsic sizing; off and on work in a `UiTable` cell. The tick ring is a 2px
 spread shadow outside the 18px disc (the web's `box-shadow: 0 0 0 2px surface`); the badge is IgnorePointer
 + ExcludeSemantics, and its meaning goes into the button's name.
 
@@ -1046,6 +1048,9 @@ spread shadow outside the 18px disc (the web's `box-shadow: 0 0 0 2px surface`);
 (max(64, widest label) with a TextPainter at the current text scale) and lays each row out as a Row, since
 only the email row has a status cell (the number and messenger rows span value + status, as on the web).
 The error line sits 4px under the email row (the web's negative margin against the 8px row gap).
+The messenger row never mixes names and logos: a LayoutBuilder gives each button its equal share of the
+width, and the row is labelled only when every visible button's `labelledWidth` fits that share, else
+every button is icon-only (a standalone `compact: auto` button decides for itself).
 
 `UiPhoneInput` = `ui-phone-input`. `phone.dart` mirrors the web's `phone.ts` function for function
 (`uiPhoneSplit`, `uiPhoneNational`, `uiPhoneE164`, `uiPhoneSearch`, ...); `phone_countries.dart` is

@@ -1825,7 +1825,7 @@ Asks the signed-in user for more Google scopes through Google Identity Services'
 
 ### UiMessengerButton (component, `ui-messenger-button`) (0.57)
 File: `messenger/src/messenger-button.ts` (entry point `@zouriel/ui/messenger`)  
-Opens a chat in WhatsApp, Viber or Telegram: brand fill, official logo (verbatim path data from each brand's download), the app's name in a dark AA ink, 44 high, theme corners, logo and name centred as a group; compact (on / auto below 120px), expand, ticked + tickLabel (success tick badge 3px inside the top-end corner, read after the name, tooltip).  
+Opens a chat in WhatsApp, Viber or Telegram: brand fill, official logo (verbatim path data from each brand's download), the app's name in a dark AA ink, 44 high, theme corners, logo and name centred as a group; compact (on / auto: logo only when the whole label would not fit), expand, ticked + tickLabel (success tick badge 3px inside the top-end corner, read after the name, tooltip).  
 - Inputs: `app`; `label`; `compact`: boolean | 'auto'; `expand`; `ticked`; `tickLabel`; `ariaLabel`; `disabled`
 - Outputs: `pressed`
 - Flutter: `UiMessengerButton`, `UiMessengerApp`, `UiMessengerCompact`; extras `UiMessengerBrand` (colours, `logoSize`, `fillGradient`), `UiMessengerLogo`, `UiMessengerTick`, `uiMessengerLogoPaths` (the same path data as Angular's brand file)
@@ -1833,7 +1833,7 @@ Opens a chat in WhatsApp, Viber or Telegram: brand fill, official logo (verbatim
 
 ### UiContactChannels (component, `ui-contact-channels`) (0.57)
 File: `messenger/src/contact-channels.ts`  
-One person's Email / Number rows and messenger buttons in three shared columns (label >= 64 | value | status >= 44); email Send / sent tick / Retry + error / spinner.  
+One person's Email / Number rows and messenger buttons in three shared columns (label >= 64 | value | status >= 44); email Send / sent tick / Retry + error / spinner; the messenger row is all names or all logos.  
 - Inputs: `email`; `emailStatus`; `emailTickLabel`; `emailError`; `emailBusy`; `phone`; `messengers`: UiMessengerChannel[]; `emailLabel`; `numberLabel`
 - Outputs: `emailSend`; `emailRetry`; `messengerPress`
 - Flutter: `UiContactChannels`, `UiEmailStatus`, `UiMessengerChannel` (`ariaLabel` is `semanticLabel`)

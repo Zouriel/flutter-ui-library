@@ -30,7 +30,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
       name: 'Messenger buttons',
       widget: 'UiMessengerButton',
       summary:
-          'Opens a chat in WhatsApp, Viber or Telegram: the brand\'s fill, its official logo (unaltered, from each brand\'s own download) and the app\'s name in a dark ink that passes AA on the fill (white does not on any of the three), 44 high with the theme\'s corners. Logo and name are centred together. compact shows the logo alone (44x44; the name stays the accessible name); auto does so only when the button is narrower than 120, for equal rows that must fit a phone. ticked adds a success tick at the top-end corner, in the same place on every button; the button stays usable, tickLabel is read after the name and shown as a tooltip (long press on touch). It only reports the press: the app opens the link. The web twin is ui-messenger-button.',
+          'Opens a chat in WhatsApp, Viber or Telegram: the brand\'s fill, its official logo (unaltered, from each brand\'s own download) and the app\'s name in a dark ink that passes AA on the fill (white does not on any of the three), 44 high with the theme\'s corners. Logo and name are centred together. compact shows the logo alone (44x44; the name stays the accessible name); auto does so exactly when the whole name would not fit (never an ellipsis), for equal rows that must fit a phone. ticked adds a success tick at the top-end corner, in the same place on every button; the button stays usable, tickLabel is read after the name and shown as a tooltip (long press on touch). It only reports the press: the app opens the link. The web twin is ui-messenger-button.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space4, children: [
         Wrap(spacing: t.space2, runSpacing: t.space3, children: [
           for (final app in UiMessengerApp.values) UiMessengerButton(app: app, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app)),
@@ -63,14 +63,14 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
         ApiRow('app', 'UiMessengerApp', 'whatsapp, viber or telegram.'),
         ApiRow('onPressed', 'VoidCallback?', 'Open the chat. Null disables the button (half opacity).'),
         ApiRow('label', 'String?', 'The visible words.', def: 'the app\'s name'),
-        ApiRow('compact', 'UiMessengerCompact', 'off, on (logo only, 44x44), auto (logo only below 120 wide).', def: 'off'),
+        ApiRow('compact', 'UiMessengerCompact', 'off, on (logo only, 44x44), auto (logo only when the whole label would not fit; never an ellipsis).', def: 'off'),
         ApiRow('expand', 'bool', 'Fill the width; logo and words stay centred.', def: 'false'),
         ApiRow('ticked', 'bool', 'The success tick badge at the top-end corner. Still usable.', def: 'false'),
         ApiRow('tickLabel', 'String?', 'What the tick means: read after the name, shown as a tooltip.', def: 'UiStrings.messengerOpened'),
         ApiRow('semanticLabel', 'String?', 'The accessible name ("Send to Aisha on WhatsApp").', def: 'label'),
         ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
       ],
-      shapes: 'enum UiMessengerApp { whatsapp, viber, telegram }\nenum UiMessengerCompact { off, on, auto }\n// Brand colours, logo sizes and the fill: UiMessengerBrand.',
+      shapes: 'enum UiMessengerApp { whatsapp, viber, telegram }\nenum UiMessengerCompact { off, on, auto }\n// Brand colours, logo sizes and the fill: UiMessengerBrand.\n// labelledWidth(context): the width auto needs to show the label.',
     );
   }
 }

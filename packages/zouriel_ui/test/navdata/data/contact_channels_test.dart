@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -165,6 +166,54 @@ void main() {
     await pumpUi(tester, _card(_channels(), width: 640), size: const Size(700, 600));
     for (final name in ['WhatsApp', 'Viber', 'Telegram']) {
       expect(find.text(name), findsOneWidget);
+    }
+  });
+
+  testWidgets('two or three buttons at any width: whole names or logos alone, never an ellipsis', (tester) async {
+    const two = [UiMessengerChannel(app: UiMessengerApp.whatsapp), UiMessengerChannel(app: UiMessengerApp.telegram)];
+    var labelled = 0, icons = 0;
+    for (final list in [two, _all]) {
+      for (var w = 300.0; w <= 720; w += 12) {
+        await pumpUi(tester, _card(_channels(messengers: list), width: w), size: Size(w + 20, 700));
+        expect(tester.takeException(), isNull);
+        for (final p in tester.renderObjectList<RenderParagraph>(find.descendant(of: find.byType(UiMessengerButton), matching: find.byType(RichText)))) {
+          expect(p.didExceedMaxLines, isFalse, reason: '${list.length} buttons at $w: "${p.text.toPlainText()}"');
+          labelled++;
+        }
+        final shown = tester.renderObjectList<RenderParagraph>(find.descendant(of: find.byType(UiMessengerButton), matching: find.byType(RichText))).length;
+        // Never mixed: all names or none.
+        expect(shown == 0 || shown == list.length, isTrue, reason: '${list.length} buttons at $w: $shown labelled');
+        icons += list.length - shown;
+      }
+    }
+    // Both outcomes happen across the range.
+    expect(labelled, greaterThan(0));
+    expect(icons, greaterThan(0));
+  });
+
+  testWidgets('the row never mixes: one name that does not fit turns every button icon-only', (tester) async {
+    double need(UiMessengerApp app) => UiMessengerButton(app: app, onPressed: () {}).labelledWidth(tester.element(find.byType(UiContactChannels)));
+    await pumpUi(tester, SizedBox(width: 600, child: _channels()), size: const Size(700, 600));
+    final viber = need(UiMessengerApp.viber), whatsapp = need(UiMessengerApp.whatsapp), telegram = need(UiMessengerApp.telegram);
+    expect(viber, lessThan(whatsapp));
+    // Each share between Viber's need and the others': Viber alone would fit.
+    final each = (viber + (whatsapp < telegram ? whatsapp : telegram)) / 2;
+    final valueStart = tester.getRect(find.byType(UiMessengerButton).first).left - tester.getRect(find.byType(UiContactChannels)).left;
+    // ignore: avoid_print
+    print('needs: viber $viber, whatsapp $whatsapp, telegram $telegram; value column at $valueStart');
+    final width = valueStart + each * 3 + 16;
+    await pumpUi(tester, SizedBox(width: width, child: _channels()), size: const Size(700, 600));
+    final share = tester.getSize(find.descendant(of: find.byKey(const ValueKey(UiMessengerApp.viber)), matching: find.byKey(const ValueKey('ui-messenger-box')))).width;
+    expect(share, closeTo(each, 0.01));
+    expect(share, greaterThanOrEqualTo(viber));
+    for (final name in ['WhatsApp', 'Viber', 'Telegram']) {
+      expect(find.text(name), findsNothing, reason: name);
+    }
+    // Enough for every name: all three labelled.
+    final all = valueStart + [viber, whatsapp, telegram].reduce((a, b) => a > b ? a : b) * 3 + 16 + 1;
+    await pumpUi(tester, SizedBox(width: all, child: _channels()), size: const Size(700, 600));
+    for (final name in ['WhatsApp', 'Viber', 'Telegram']) {
+      expect(find.text(name), findsOneWidget, reason: name);
     }
   });
 

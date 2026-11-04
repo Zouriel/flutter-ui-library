@@ -188,11 +188,35 @@ void main() {
       }
     });
 
-    testWidgets('compact auto: icon only below 120px, labelled above', (tester) async {
-      for (final (w, labelled) in [(100.0, false), (119.0, false), (120.0, true), (200.0, true)]) {
-        await pumpUi(tester, SizedBox(width: w, child: UiMessengerButton(app: UiMessengerApp.telegram, expand: true, compact: UiMessengerCompact.auto, onPressed: () {})));
-        expect(find.text('Telegram'), labelled ? findsOneWidget : findsNothing, reason: 'at $w');
+    testWidgets('compact auto: the whole label when it fits, else the logo alone; never an ellipsis', (tester) async {
+      for (final app in _apps) {
+        for (final label in [null, 'Message on ${UiMessengerBrand.name(app)}']) {
+          await pumpUi(tester, UiMessengerButton(key: const ValueKey('probe'), app: app, label: label, onPressed: () {}));
+          final need = tester.widget<UiMessengerButton>(find.byKey(const ValueKey('probe'))).labelledWidth(tester.element(find.byKey(const ValueKey('probe'))));
+          // The hugging labelled button is exactly that wide.
+          expect(_box(tester, const ValueKey('probe')).width, closeTo(need, 0.01));
+          final words = label ?? UiMessengerBrand.name(app);
+          for (final (w, labelled) in [(need - 0.5, false), (need + 0.5, true), (need + 40, true)]) {
+            await pumpUi(tester, SizedBox(width: w, child: UiMessengerButton(key: const ValueKey('b'), app: app, label: label, expand: true, compact: UiMessengerCompact.auto, onPressed: () {})));
+            expect(find.text(words), labelled ? findsOneWidget : findsNothing, reason: '$app "$words" at $w (needs $need)');
+            if (labelled) {
+              final para = tester.renderObject<RenderParagraph>(_in(const ValueKey('b'), find.byType(RichText)));
+              expect(para.didExceedMaxLines, isFalse, reason: '$app at $w');
+            }
+          }
+        }
       }
+    });
+
+    testWidgets('compact auto follows the text scale', (tester) async {
+      Future<void> at(double scale) => pumpUi(tester, MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: SizedBox(width: 140, child: UiMessengerButton(app: UiMessengerApp.whatsapp, expand: true, compact: UiMessengerCompact.auto, onPressed: () {})),
+          ));
+      await at(1);
+      expect(find.text('WhatsApp'), findsOneWidget);
+      await at(1.6);
+      expect(find.text('WhatsApp'), findsNothing);
     });
 
     testWidgets('a long label ends in an ellipsis without overflow', (tester) async {

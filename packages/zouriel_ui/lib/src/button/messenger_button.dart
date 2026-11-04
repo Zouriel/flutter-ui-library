@@ -18,7 +18,7 @@ enum UiMessengerCompact {
   /// Logo only.
   on,
 
-  /// Logo only when the button is narrower than [UiMessengerBrand.autoCompactBelow] (useful with
+  /// Logo only when the label would not fit in full in the width given (useful with
   /// `expand`, so a row of buttons turns icon-only on a narrow screen).
   auto,
 }
@@ -62,9 +62,6 @@ abstract final class UiMessengerBrand {
     final a = ((height - logo) / 2 / height).clamp(0.0, 1.0), b = ((height + logo) / 2 / height).clamp(0.0, 1.0);
     return LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [top, bottom], stops: [a, b]);
   }
-
-  /// [UiMessengerCompact.auto] turns icon-only below this width.
-  static const double autoCompactBelow = 120;
 
   /// The tick badge: an 18px circle centred 3px inside the top-end corner.
   static const double badgeSize = 18;
@@ -181,7 +178,8 @@ class _LogoPainter extends CustomPainter {
 /// `ui-messenger-button`: opens a chat in WhatsApp, Viber or Telegram. The brand's fill, its
 /// official logo and the label (default: the app's name) in the brand's dark ink, 44 high with the
 /// theme's corners. Logo and label are centred together. [compact] shows the logo only (the full
-/// name stays the accessible name); [expand] fills the width (equal buttons in a row).
+/// name stays the accessible name); auto does so exactly when the whole label would not fit (it never
+/// ends in an ellipsis); [expand] fills the width (equal buttons in a row).
 ///
 /// [ticked] adds a success tick badge at the top-end corner (e.g. "already opened"); the button stays
 /// usable and its name gains ", [tickLabel]" (default [UiStrings.messengerOpened]); with [tickLabel]
@@ -226,6 +224,36 @@ class UiMessengerButton extends StatelessWidget {
   final FocusNode? focusNode;
   final bool autofocus;
 
+  /// The label's style in [context].
+  TextStyle labelStyle(BuildContext context) {
+    final t = context.ui;
+    return context.uiText.body.copyWith(
+      fontSize: t.fontSizeMd,
+      fontWeight: FontWeight.w600,
+      height: 20 / t.fontSizeMd,
+      leadingDistribution: TextLeadingDistribution.even,
+      color: UiMessengerBrand.ink(app),
+      decoration: TextDecoration.none,
+    );
+  }
+
+  /// The width the button needs to show its logo and its whole label on one line: padding, logo,
+  /// gap, the label's natural width (at the current text scale), padding.
+  /// [UiMessengerCompact.auto] shows the label only when it has at least this much.
+  double labelledWidth(BuildContext context) {
+    final t = context.ui;
+    final words = (label ?? '').isNotEmpty ? label! : UiMessengerBrand.name(app);
+    final p = TextPainter(
+      text: TextSpan(text: words, style: labelStyle(context)),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final w = p.width;
+    p.dispose();
+    return t.space3 + UiMessengerBrand.logoSize(app) + t.space2 + w + t.space3;
+  }
+
   /// The accessible name the button gets in [context].
   String accessibleName(BuildContext context) {
     String? nonEmpty(String? v) => (v ?? '').isEmpty ? null : v;
@@ -237,18 +265,10 @@ class UiMessengerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.uiTheme;
     final t = theme.tokens;
-    final ink = UiMessengerBrand.ink(app);
     final fill = UiMessengerBrand.fill(app);
     final radius = BorderRadius.circular(theme.radius());
     final words = (label ?? '').isNotEmpty ? label! : UiMessengerBrand.name(app);
-    final style = context.uiText.body.copyWith(
-      fontSize: t.fontSizeMd,
-      fontWeight: FontWeight.w600,
-      height: 20 / t.fontSizeMd,
-      leadingDistribution: TextLeadingDistribution.even,
-      color: ink,
-      decoration: TextDecoration.none,
-    );
+    final style = labelStyle(context);
 
     Widget buildFor(bool iconOnly) {
       return UiInteractive(
@@ -305,9 +325,10 @@ class UiMessengerButton extends StatelessWidget {
     }
 
     // Only auto needs its width, and a LayoutBuilder can't report intrinsic sizes, so the other modes
-    // build directly and work inside IntrinsicWidth (a table's natural-width columns).
+    // build directly and work inside IntrinsicWidth (a table's natural-width columns). Auto never
+    // ellipsizes: the whole label, or the logo alone.
     Widget button = compact == UiMessengerCompact.auto
-        ? LayoutBuilder(builder: (context, box) => buildFor(box.maxWidth < UiMessengerBrand.autoCompactBelow))
+        ? LayoutBuilder(builder: (context, box) => buildFor(box.maxWidth < labelledWidth(context)))
         : buildFor(compact == UiMessengerCompact.on);
     final tip = tickLabel;
     if (ticked && tip != null && tip.isNotEmpty) button = UiTooltip(message: tip, child: button);
