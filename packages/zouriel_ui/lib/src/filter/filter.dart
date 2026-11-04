@@ -436,7 +436,8 @@ class UiFilterChips extends StatelessWidget {
       container: true,
       explicitChildNodes: true,
       label: label ?? strings.filter,
-      child: Wrap(spacing: t.space2, runSpacing: t.space1, crossAxisAlignment: WrapCrossAlignment.center, children: [
+      // One token both ways, as the web's ui-filter-chips (gap: --ui-space-2).
+      child: Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
         for (final a in active)
           UiChip(
             key: ValueKey('${a.section}:${a.option}'),

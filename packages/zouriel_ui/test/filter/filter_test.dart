@@ -297,6 +297,16 @@ void main() {
     });
   });
 
+  testWidgets('chips wrap with the same gap between rows as between chips (space2, as the web)', (tester) async {
+    final sections = [
+      UiFilterSection(id: 'w', title: 'W', multiple: true, options: [for (final n in ['Aisha Ahmed', 'Mohamed Ibrahim', 'Shaina', 'Fathimath Zahra']) UiFilterOption(id: n, label: n)]),
+    ];
+    await pumpUi(tester, SizedBox(width: 300, child: UiFilterChips(sections: sections, value: {'w': [for (final o in sections.first.options) o.id]}, onChanged: (_) {})));
+    final wrap = tester.widget<Wrap>(find.descendant(of: find.byType(UiFilterChips), matching: find.byType(Wrap)));
+    final t = tester.element(find.byType(UiFilterChips)).ui;
+    expect([wrap.spacing, wrap.runSpacing], [t.space2, t.space2]);
+  });
+
   testWidgets('golden: button, chips and panel, dark and light', (tester) async {
     await expectThemedGolden(
       tester,
