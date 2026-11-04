@@ -45,7 +45,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('contact channels (0.59): the compact cards draw one line per contact, buttons on the number line', (tester) async {
+  testWidgets('contact channels (0.60): the compact cards draw one line per contact, buttons on the number line', (tester) async {
     await _pump(tester, const ContactChannelsSection());
     expect(tester.takeException(), isNull);
     final compact = find.byWidgetPredicate((w) => w is UiContactChannels && w.layout == UiContactLayout.compact);

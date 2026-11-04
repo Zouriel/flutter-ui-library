@@ -1855,7 +1855,7 @@ File: `messenger/src/messenger-switch.ts`
 
 ### UiContactChannels (component, `ui-contact-channels`) (0.57)
 File: `messenger/src/contact-channels.ts`  
-(0.58: the messenger row is small icon-only buttons, left-aligned at the value column.) (0.59: `layout: UiContactLayout.compact` for phone cards: one line per contact, icon + value + state, buttons at the end of the number line.) One person's Email / Number rows and messenger buttons in three shared columns (label >= 64 | value | status >= 44); email Send / sent tick / Retry + error / spinner; the messenger row is all names or all logos.  
+(0.58: the messenger row is small icon-only buttons, left-aligned at the value column.) (0.60: `layout: UiContactLayout.compact` for phone cards: one line per contact, icon + value + state, buttons at the end of the number line.) One person's Email / Number rows and messenger buttons in three shared columns (label >= 64 | value | status >= 44); email Send / sent tick / Retry + error / spinner; the messenger row is all names or all logos.  
 - Inputs: `email`; `emailStatus`; `emailTickLabel`; `emailError`; `emailBusy`; `phone`; `messengers`: UiMessengerChannel[]; `emailLabel`; `numberLabel`
 - Outputs: `emailSend`; `emailRetry`; `messengerPress`
 - Flutter: `UiContactChannels`, `UiEmailStatus`, `UiMessengerChannel` (`ariaLabel` is `semanticLabel`)
