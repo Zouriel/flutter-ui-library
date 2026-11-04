@@ -360,17 +360,18 @@ void main() {
   });
 
   group('0.58: size sm', () {
-    test('sm logo sizes and Telegram\'s band on the 32px box', () {
-      expect([for (final a in _apps) UiMessengerBrand.logoSize(a, UiMessengerSize.sm)], [18, 18, 23]);
+    test('sm logo sizes and Telegram\'s band on the 28px box', () {
+      expect([for (final a in _apps) UiMessengerBrand.logoSize(a, UiMessengerSize.sm)], [16, 16, 20]);
       expect([for (final a in _apps) UiMessengerBrand.logoSize(a, UiMessengerSize.md)], [22, 22, 28]);
-      expect(UiMessengerBrand.heightFor(UiMessengerSize.sm), 32);
-      final g = UiMessengerBrand.fillGradient(UiMessengerApp.telegram, height: 32, logo: 23) as LinearGradient;
-      expect(g.stops![0], closeTo(4.5 / 32, 1e-9));
-      expect(g.stops![1], closeTo(27.5 / 32, 1e-9));
+      expect(UiMessengerBrand.heightFor(UiMessengerSize.sm), 28);
+      final g = UiMessengerBrand.fillGradient(UiMessengerApp.telegram, height: 28, logo: 20) as LinearGradient;
+      expect(g.stops![0], closeTo(4 / 28, 1e-9));
+      expect(g.stops![1], closeTo(24 / 28, 1e-9));
     });
 
-    testWidgets('icon-only: a 32x32 painted box centred in a 44x44 hit area; logo centred', (tester) async {
-      await pumpUi(tester, Padding(
+    for (final theme in [UiThemeName.light, UiThemeName.dark]) {
+    testWidgets('icon-only in $theme: a 28x28 painted box centred in a 44x44 hit area; logo centred', (tester) async {
+      await pumpUi(tester, theme: theme, Padding(
         padding: const EdgeInsets.all(20),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           for (final app in _apps) UiMessengerButton(key: ValueKey(app), app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, onPressed: () {}),
@@ -381,21 +382,22 @@ void main() {
         final box = _box(tester, key);
         final hit = tester.getRect(_in(key, find.byKey(const ValueKey('ui-messenger-hit'))));
         final logo = _logo(tester, key);
-        expect(box.size, const Size(32, 32));
+        expect(box.size, const Size(28, 28));
         expect(hit.size, const Size(44, 44));
         expect(hit.center, box.center);
         final ls = UiMessengerBrand.logoSize(app, UiMessengerSize.sm);
         expect(logo.size, Size(ls, ls));
         // ignore: avoid_print
-        print('sm centring $app: logo dx ${(logo.center.dx - box.center.dx).toStringAsFixed(3)}, dy ${(logo.center.dy - box.center.dy).toStringAsFixed(3)}');
+        print('sm centring $theme $app: logo dx ${(logo.center.dx - box.center.dx).toStringAsFixed(3)}, dy ${(logo.center.dy - box.center.dy).toStringAsFixed(3)}');
         expect((logo.center - box.center).distance, lessThanOrEqualTo(0.5));
         final deco = tester.widget<Container>(_in(key, find.byKey(const ValueKey('ui-messenger-box')))).decoration! as BoxDecoration;
         expect(deco.borderRadius, BorderRadius.circular(tester.element(find.byKey(key)).uiTheme.radius()));
-        if (app == UiMessengerApp.telegram) expect((deco.gradient! as LinearGradient).stops, [4.5 / 32, 27.5 / 32]);
+        if (app == UiMessengerApp.telegram) expect((deco.gradient! as LinearGradient).stops, [4 / 28, 24 / 28]);
       }
     });
+    }
 
-    testWidgets('sm labelled: 13/600/18 words, 10 padding, 6 gap, centred', (tester) async {
+    testWidgets('sm labelled: 13/600/18 words, 8 padding, 6 gap, centred', (tester) async {
       await pumpUi(tester, Padding(padding: const EdgeInsets.all(20), child: UiMessengerButton(key: const ValueKey('b'), app: UiMessengerApp.viber, size: UiMessengerSize.sm, onPressed: () {})));
       final box = _box(tester, const ValueKey('b'));
       final logo = _logo(tester, const ValueKey('b'));
@@ -404,15 +406,16 @@ void main() {
       expect(style.fontSize, 13);
       expect(style.fontWeight, FontWeight.w600);
       expect(style.height! * style.fontSize!, closeTo(18, 0.001));
-      expect(box.height, 32);
-      expect(logo.left - box.left, 10);
+      expect(box.height, 28);
+      expect(logo.left - box.left, 8);
       expect(text.left - logo.right, 6);
-      expect(box.right - text.right, closeTo(10, 0.01));
+      expect(box.right - text.right, closeTo(8, 0.01));
       expect((text.center.dy - box.center.dy).abs(), lessThanOrEqualTo(0.5));
       expect(_box(tester, const ValueKey('b')).width, closeTo(tester.widget<UiMessengerButton>(find.byKey(const ValueKey('b'))).labelledWidth(tester.element(find.byKey(const ValueKey('b')))), 0.01));
     });
 
-    testWidgets('sm tick badge: 14px, centred 2px inside the top-end corner, 10px tick', (tester) async {
+    for (final theme in [UiThemeName.light, UiThemeName.dark]) {
+    testWidgets('sm tick badge in $theme: 12px, centred 2px inside the top-end corner, 8px tick', (tester) async {
       await pumpUi(tester, Padding(
         padding: const EdgeInsets.all(20),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -423,21 +426,24 @@ void main() {
         final key = ValueKey(app);
         final box = _box(tester, key);
         final tick = tester.getRect(_in(key, find.byKey(const ValueKey('ui-messenger-tick'))));
-        expect(tick.size, const Size(14, 14));
+        expect(tick.size, const Size(12, 12));
         expect(tick.center - box.topRight, const Offset(-2, 2));
-        expect(tester.widget<UiIcon>(_in(key, find.byType(UiIcon))).size, 10);
+        expect(tester.widget<UiIcon>(_in(key, find.byType(UiIcon))).size, 8);
+        final deco = tester.widget<Container>(_in(key, find.byKey(const ValueKey('ui-messenger-tick')))).decoration! as BoxDecoration;
+        expect(deco.boxShadow!.single.spreadRadius, 2);
       }
     });
+    }
 
-    testWidgets('a tap 5px outside the painted box still presses an sm button', (tester) async {
+    testWidgets('a tap 7px outside the painted box still presses an sm button', (tester) async {
       var n = 0;
       await pumpUi(tester, Padding(padding: const EdgeInsets.all(40), child: UiMessengerButton(key: const ValueKey('b'), app: UiMessengerApp.whatsapp, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, onPressed: () => n++)));
       final box = _box(tester, const ValueKey('b'));
-      await tester.tapAt(box.topLeft - const Offset(5, 5));
-      await tester.tapAt(box.bottomRight + const Offset(5, 5));
+      await tester.tapAt(box.topLeft - const Offset(7, 7));
+      await tester.tapAt(box.bottomRight + const Offset(7, 7));
       expect(n, 2);
-      // 8px out is past the 44 area (6 around the 32 box).
-      await tester.tapAt(box.topLeft - const Offset(8, 8));
+      // 9px out is past the 44 area (8 around the 28 box).
+      await tester.tapAt(box.topLeft - const Offset(9, 9));
       expect(n, 2);
     });
   });
@@ -504,7 +510,7 @@ void main() {
         Wrap(spacing: 12, runSpacing: 12, children: [for (final app in _apps) UiMessengerButton(app: app, ticked: true, onPressed: () {})]),
         Wrap(spacing: 8, runSpacing: 12, children: [for (final app in _apps) UiMessengerButton(app: app, onPressed: null)]),
         Row(spacing: 8, children: [for (final app in _apps) Expanded(child: UiMessengerButton(app: app, expand: true, ticked: app == UiMessengerApp.viber, compact: UiMessengerCompact.auto, onPressed: () {}))]),
-        // sm: icon-only 32px boxes 12 apart (their 44 hit areas touch), ticked, and labelled.
+        // sm: icon-only 28px boxes, ticked, and labelled.
         Row(mainAxisSize: MainAxisSize.min, children: [
           for (final app in _apps) UiMessengerButton(app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, onPressed: () {}),
           for (final app in _apps) UiMessengerButton(app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, ticked: true, onPressed: () {}),

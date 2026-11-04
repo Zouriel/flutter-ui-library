@@ -65,8 +65,10 @@ void main() {
     expect(boxes.first.left, values[0].left);
     final rows = [tester.getRect(find.byKey(const ValueKey('ui-contact-status'))), values[1]];
     expect(rows[0].height, greaterThanOrEqualTo(32));
-    // 6 above the boxes for the badges.
-    expect(boxes.first.top - apps.top, 6);
+    // 4 above the boxes for the badges: the boxes start 8 (row gap) + 4 under the number row, which is
+    // 32 tall with its text centred.
+    expect(boxes.first.top - (values[1].center.dy + 16), closeTo(8 + 4, 0.001));
+    expect(apps, isNotNull);
   });
 
   testWidgets('a long label widens the label column for every row', (tester) async {
@@ -148,48 +150,66 @@ void main() {
     expect(find.byKey(const ValueKey('ui-contact-messengers')), findsNothing);
   });
 
-  testWidgets('the messenger row: small icon-only 32px boxes, left-aligned, 12 apart, 44px hit areas that tile', (tester) async {
-    final handle = tester.ensureSemantics();
-    for (final w in [360.0, 700.0]) {
-      await pumpUi(tester, _card(_channels(), width: w), size: Size(w, 740));
-      expect(tester.takeException(), isNull);
-      final boxes = _boxes(tester);
-      expect(boxes, hasLength(3));
-      for (final b in boxes) {
-        expect(b.size, const Size(32, 32), reason: 'at $w');
+  for (final theme in [UiThemeName.light, UiThemeName.dark]) {
+    testWidgets('the messenger row in $theme: 28px boxes, 8 apart, first on the value column, never stretched', (tester) async {
+      final handle = tester.ensureSemantics();
+      for (final w in [360.0, 1440.0]) {
+        await pumpUi(tester, _card(_channels(), width: w), size: Size(w, 740), theme: theme);
+        expect(tester.takeException(), isNull);
+        final boxes = _boxes(tester);
+        expect(boxes, hasLength(3));
+        for (final b in boxes) {
+          expect(b.size, const Size(28, 28), reason: 'at $w');
+        }
+        final value = _rects(tester, const ValueKey('ui-contact-value'))[0];
+        expect(boxes[0].left, value.left, reason: 'at $w');
+        expect(boxes[1].left - boxes[0].right, 8, reason: 'at $w');
+        expect(boxes[2].left - boxes[1].right, 8, reason: 'at $w');
+        expect(boxes[2].right - boxes[0].left, 28 * 3 + 16, reason: 'not stretched at $w');
+        // ignore: avoid_print
+        print('row $theme at $w: boxes at x ${[for (final b in boxes) (b.left - value.left).toStringAsFixed(1)].join(', ')} from the value column, gaps ${(boxes[1].left - boxes[0].right).toStringAsFixed(1)} / ${(boxes[2].left - boxes[1].right).toStringAsFixed(1)}');
+        final hits = [for (final e in find.byKey(const ValueKey('ui-messenger-hit')).evaluate()) tester.getRect(find.byWidget(e.widget))];
+        expect(hits, hasLength(3));
+        for (var i = 0; i < 3; i++) {
+          expect(hits[i].size, const Size(44, 44));
+          expect(hits[i].center, boxes[i].center);
+          // Neighbouring hit areas overlap by 8.
+          if (i > 0) expect(hits[i - 1].right - hits[i].left, closeTo(8, 0.001));
+        }
+        for (final name in ['WhatsApp', 'Viber', 'Telegram']) {
+          expect(find.text(name), findsNothing);
+        }
+        expect(find.bySemanticsLabel('Send to Aisha on WhatsApp'), findsOneWidget);
+        expect(find.bySemanticsLabel('Viber, Opened 14:05'), findsOneWidget);
+        expect(find.bySemanticsLabel('Telegram'), findsOneWidget);
       }
-      final value = _rects(tester, const ValueKey('ui-contact-value'))[0];
-      expect(boxes[0].left, value.left, reason: 'at $w');
-      expect(boxes[1].left - boxes[0].right, 12);
-      expect(boxes[2].left - boxes[1].right, 12);
-      // Not stretched: the same place at any width.
-      expect(boxes[2].right - boxes[0].left, 32 * 3 + 24);
-      final hits = [for (final e in find.byKey(const ValueKey('ui-messenger-hit')).evaluate()) tester.getRect(find.byWidget(e.widget))];
-      expect(hits, hasLength(3));
-      for (var i = 0; i < 3; i++) {
-        expect(hits[i].size, const Size(44, 44));
-        expect(hits[i].center, boxes[i].center);
-        if (i > 0) expect(hits[i].left, closeTo(hits[i - 1].right, 0.001));
-      }
-      for (final name in ['WhatsApp', 'Viber', 'Telegram']) {
-        expect(find.text(name), findsNothing);
-      }
-      expect(find.bySemanticsLabel('Send to Aisha on WhatsApp'), findsOneWidget);
-      expect(find.bySemanticsLabel('Viber, Opened 14:05'), findsOneWidget);
-      expect(find.bySemanticsLabel('Telegram'), findsOneWidget);
-    }
-    handle.dispose();
-  });
+      handle.dispose();
+    });
+  }
 
-  testWidgets('a tap anywhere in a button\'s 44px area reaches it, and only it', (tester) async {
-    final got = <UiMessengerApp>[];
-    await pumpUi(tester, _card(_channels(onApp: got.add)));
-    final boxes = _boxes(tester);
-    // 5px outside the painted box, in the gap towards the next button.
-    await tester.tapAt(Offset(boxes[0].right + 5, boxes[0].center.dy));
-    await tester.tapAt(Offset(boxes[1].left - 5, boxes[1].center.dy));
-    await tester.tapAt(Offset(boxes[2].center.dx, boxes[2].top - 5));
-    expect(got, [UiMessengerApp.whatsapp, UiMessengerApp.viber, UiMessengerApp.telegram]);
+  testWidgets('taps: inside a painted box always that button; the 8px overlap split in the middle; the band above', (tester) async {
+    for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+      final got = <UiMessengerApp>[];
+      await pumpUi(tester, Directionality(textDirection: dir, child: _card(_channels(onApp: got.add))));
+      final boxes = _boxes(tester);
+      // Every corner of every painted box (1px in).
+      for (final b in boxes) {
+        for (final p in [b.topLeft + const Offset(1, 1), b.topRight + const Offset(-1, 1), b.bottomLeft + const Offset(1, -1), b.bottomRight + const Offset(-1, -1)]) {
+          await tester.tapAt(p);
+        }
+      }
+      final apps = [UiMessengerApp.whatsapp, UiMessengerApp.viber, UiMessengerApp.telegram];
+      expect(got, [for (final a in apps) ...[a, a, a, a]], reason: '$dir');
+      got.clear();
+      // The 8px gap between the first two boxes: the 3px nearest each box go to that box.
+      final (a, b) = dir == TextDirection.ltr ? (boxes[0], boxes[1]) : (boxes[1], boxes[0]);
+      final (aApp, bApp) = dir == TextDirection.ltr ? (apps[0], apps[1]) : (apps[1], apps[0]);
+      await tester.tapAt(Offset(a.right + 3, a.center.dy));
+      await tester.tapAt(Offset(b.left - 3, b.center.dy));
+      // 3px above a box (inside the 4 the row moved up) still reaches it.
+      await tester.tapAt(Offset(boxes[2].center.dx, boxes[2].top - 3));
+      expect(got, [aApp, bApp, apps[2]], reason: '$dir');
+    }
   });
 
   testWidgets('pressing a messenger reports its app', (tester) async {

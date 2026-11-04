@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -37,7 +38,7 @@ class UiMessengerChannel {
 /// (label | value | status): the email address with its status (a Send button, a sent tick, a
 /// Retry button with the error under it, or a spinner while [emailBusy]); the phone number; and
 /// under it, starting at the value column, a small icon-only messenger button per channel
-/// (`UiMessengerSize.sm`, 32px boxes 12 apart, each with a 44px hit area), left-aligned. The buttons
+/// (`UiMessengerSize.sm`, 28px boxes 8 apart, each with a 44px hit area), left-aligned. The buttons
 /// keep their full names for screen readers.
 ///
 /// The email row shows only with a non-empty [email], the number and messenger rows only with a
@@ -90,6 +91,12 @@ class UiContactChannels extends StatelessWidget {
 
   /// A row's minimum height.
   static const double rowMinHeight = 32;
+
+  /// The gap between the messenger buttons' painted boxes.
+  static const double messengerGap = 8;
+
+  /// The room above the messenger boxes for their tick badges.
+  static const double messengerBadgeRoom = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -154,29 +161,61 @@ class UiContactChannels extends StatelessWidget {
           ),
         ]),
       if (hasPhone) row([label(numberText), Expanded(child: value(phone!))]),
-      if (visible.isNotEmpty)
-        Padding(
-          key: const ValueKey('ui-contact-messengers'),
-          // The 32px boxes start at the value column with 12 between them. Each has an invisible 44px
-          // hit area centred on it (6 around), so the areas tile without overlapping: the row starts 6
-          // before the value column, and the 6 above the boxes is the room for the tick badges.
-          padding: EdgeInsetsDirectional.only(start: valueStart - (UiMessengerBrand.hitSm - UiMessengerBrand.heightSm) / 2),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            for (final m in visible)
-              UiMessengerButton(
-                key: ValueKey(m.app),
-                app: m.app,
-                size: UiMessengerSize.sm,
-                compact: UiMessengerCompact.on,
-                ticked: m.ticked,
-                tickLabel: m.tickLabel,
-                semanticLabel: m.semanticLabel,
-                onPressed: onMessengerPressed == null ? null : () => onMessengerPressed!(m.app),
-              ),
-          ]),
-        ),
+      if (visible.isNotEmpty) _messengerRow(context, visible, valueStart),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: children);
+  }
+
+  /// Small icon-only buttons: 28px painted boxes, the first on the value column, 8 apart, never
+  /// stretched. Each lays out as its 44px hit area, so neighbouring areas overlap by 8; each button
+  /// takes the half of the overlap nearest to it ([_HitBand]), so a tap inside a painted box always
+  /// reaches that button. The boxes sit 4 below the row's top (room for the badges).
+  Widget _messengerRow(BuildContext context, List<UiMessengerChannel> visible, double valueStart) {
+    const hit = UiMessengerBrand.hitSm, box = UiMessengerBrand.heightSm;
+    const inset = (hit - box) / 2; // 8: the hit area around the painted box
+    const pitch = box + messengerGap; // 36
+    const trim = (hit - pitch) / 2; // 4: half the overlap
+    final n = visible.length;
+    // The hit area leaves 8 above the box; the row wants 4, so it moves up 4 into the gap above. The
+    // translation is outermost so hits in that band reach the buttons (a Transform doesn't check its
+    // own bounds; a Padding would).
+    return Transform.translate(
+      offset: const Offset(0, -(inset - messengerBadgeRoom)),
+      child: Padding(
+        key: const ValueKey('ui-contact-messengers'),
+        padding: EdgeInsetsDirectional.only(start: valueStart - inset),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: SizedBox(
+            width: pitch * (n - 1) + hit,
+            height: hit,
+            child: Stack(children: [
+              for (var i = 0; i < n; i++)
+                PositionedDirectional(
+                  start: pitch * i,
+                  top: 0,
+                  width: hit,
+                  height: hit,
+                  child: _HitBand(
+                    startTrim: i > 0 ? trim : 0,
+                    endTrim: i < n - 1 ? trim : 0,
+                    child: UiMessengerButton(
+                      key: ValueKey(visible[i].app),
+                      app: visible[i].app,
+                      size: UiMessengerSize.sm,
+                      compact: UiMessengerCompact.on,
+                      ticked: visible[i].ticked,
+                      tickLabel: visible[i].tickLabel,
+                      semanticLabel: visible[i].semanticLabel,
+                      onPressed: onMessengerPressed == null ? null : () => onMessengerPressed!(visible[i].app),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _status(BuildContext context, String? error) {
@@ -216,5 +255,37 @@ class UiContactChannels extends StatelessWidget {
           onPressed: onEmailSend,
         );
     }
+  }
+}
+
+/// Takes hits only between [startTrim] from its start edge and [endTrim] from its end edge, so two
+/// overlapping hit areas split their overlap down the middle.
+class _HitBand extends SingleChildRenderObjectWidget {
+  const _HitBand({required this.startTrim, required this.endTrim, required super.child});
+
+  final double startTrim, endTrim;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderHitBand(startTrim, endTrim, Directionality.of(context));
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderHitBand r) => r
+    ..startTrim = startTrim
+    ..endTrim = endTrim
+    ..direction = Directionality.of(context);
+}
+
+class _RenderHitBand extends RenderProxyBox {
+  _RenderHitBand(this.startTrim, this.endTrim, this.direction);
+
+  double startTrim, endTrim;
+  TextDirection direction;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final left = direction == TextDirection.ltr ? startTrim : endTrim;
+    final right = direction == TextDirection.ltr ? endTrim : startTrim;
+    if (position.dx < left || position.dx >= size.width - right) return false;
+    return super.hitTest(result, position: position);
   }
 }

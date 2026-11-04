@@ -30,7 +30,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
       name: 'Messenger buttons',
       widget: 'UiMessengerButton',
       summary:
-          'Opens a chat in WhatsApp, Viber or Telegram: the brand\'s fill, its official logo (unaltered, from each brand\'s own download) and the app\'s name in a dark ink that passes AA on the fill (white does not on any of the three), 44 high with the theme\'s corners. Logo and name are centred together. compact shows the logo alone (44x44; the name stays the accessible name); auto does so exactly when the whole name would not fit (never an ellipsis), for equal rows that must fit a phone. size sm draws a 32px box (logo 18, Telegram 23; a 14px badge) inside an invisible 44px hit area, for rows of small icons. ticked adds a success tick at the top-end corner, in the same place on every button; the button stays usable, tickLabel is read after the name and shown as a tooltip (long press on touch; a long press never presses the button). No app is hidden on any platform. It only reports the press: the app opens the link. The web twin is ui-messenger-button.',
+          'Opens a chat in WhatsApp, Viber or Telegram: the brand\'s fill, its official logo (unaltered, from each brand\'s own download) and the app\'s name in a dark ink that passes AA on the fill (white does not on any of the three), 44 high with the theme\'s corners. Logo and name are centred together. compact shows the logo alone (44x44; the name stays the accessible name); auto does so exactly when the whole name would not fit (never an ellipsis), for equal rows that must fit a phone. size sm draws a 28px box (logo 16, Telegram 20; a 12px badge) inside an invisible 44px hit area, for rows of small icons. ticked adds a success tick at the top-end corner, in the same place on every button; the button stays usable, tickLabel is read after the name and shown as a tooltip (long press on touch; a long press never presses the button). No app is hidden on any platform. It only reports the press: the app opens the link. The web twin is ui-messenger-button.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space4, children: [
         Wrap(spacing: t.space2, runSpacing: t.space3, children: [
           for (final app in UiMessengerApp.values) UiMessengerButton(app: app, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app)),
@@ -44,7 +44,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
           for (final app in UiMessengerApp.values)
             Expanded(child: UiMessengerButton(app: app, expand: true, compact: UiMessengerCompact.auto, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app))),
         ]),
-        UiText('size: sm (32px boxes, 44px hit areas, 12 apart)', variant: UiTextVariant.caption),
+        UiText('size: sm (28px boxes with 44px hit areas)', variant: UiTextVariant.caption),
         Row(mainAxisSize: MainAxisSize.min, children: [
           for (final app in UiMessengerApp.values)
             UiMessengerButton(app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app)),
@@ -71,7 +71,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
         ApiRow('app', 'UiMessengerApp', 'whatsapp, viber or telegram.'),
         ApiRow('onPressed', 'VoidCallback?', 'Open the chat. Null disables the button (half opacity).'),
         ApiRow('label', 'String?', 'The visible words.', def: 'the app\'s name'),
-        ApiRow('size', 'UiMessengerSize', 'md (44) or sm (a 32px box, 13px words, a 14px badge, inside an invisible 44px hit area).', def: 'md'),
+        ApiRow('size', 'UiMessengerSize', 'md (44) or sm (a 28px box, 13px words, a 12px badge, inside an invisible 44px hit area).', def: 'md'),
         ApiRow('compact', 'UiMessengerCompact', 'off, on (logo only, 44x44), auto (logo only when the whole label would not fit; never an ellipsis).', def: 'off'),
         ApiRow('expand', 'bool', 'Fill the width; logo and words stay centred.', def: 'false'),
         ApiRow('ticked', 'bool', 'The success tick badge at the top-end corner. Still usable.', def: 'false'),
@@ -115,7 +115,7 @@ class _ContactChannelsSectionState extends State<ContactChannelsSection> {
       name: 'Contact channels',
       widget: 'UiContactChannels',
       summary:
-          'One person\'s ways to be reached, in columns that line up: Email (label, address, status), Number, and under it a row of messenger buttons that starts at the value column. The label column is at least 64 wide (as wide as the widest label), the status column at least 44. The email status is a Send button, a success tick (sent or delivered, emailTickLabel as its tooltip and name), Retry with the error under the row (failed or bounced), or a spinner while emailBusy. The buttons are small icons (size sm, 32px boxes 12 apart with 44px hit areas) starting at the value column, keeping their full names for screen readers. It only reports presses: the app sends and sets the ticks. Press a button below to tick it. The web twin is ui-contact-channels.',
+          'One person\'s ways to be reached, in columns that line up: Email (label, address, status), Number, and under it a row of messenger buttons that starts at the value column. The label column is at least 64 wide (as wide as the widest label), the status column at least 44. The email status is a Send button, a success tick (sent or delivered, emailTickLabel as its tooltip and name), Retry with the error under the row (failed or bounced), or a spinner while emailBusy. The buttons are small icons (size sm: 28px boxes 8 apart, with 44px hit areas that split their overlap) starting at the value column, keeping their full names for screen readers. It only reports presses: the app sends and sets the ticks. Press a button below to tick it. The web twin is ui-contact-channels.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
         card(UiContactChannels(
           email: 'aisha@example.com',

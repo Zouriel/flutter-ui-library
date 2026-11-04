@@ -1828,7 +1828,7 @@ File: `messenger/src/messenger-button.ts` (entry point `@zouriel/ui/messenger`)
 Opens a chat in WhatsApp, Viber or Telegram: brand fill, official logo (verbatim path data from each brand's download), the app's name in a dark AA ink, 44 high, theme corners, logo and name centred as a group; compact (on / auto: logo only when the whole label would not fit), expand, ticked + tickLabel (success tick badge 3px inside the top-end corner, read after the name, tooltip).  
 - Inputs: `app`; `label`; `compact`: boolean | 'auto'; `expand`; `ticked`; `tickLabel`; `ariaLabel`; `disabled`
 - Outputs: `pressed`
-- 0.58: `size` (`UiMessengerSize { sm, md }`; sm = 32px box, 44px invisible hit area, 14px badge); a long press never presses
+- 0.58: `size` (`UiMessengerSize { sm, md }`; sm = 28px box since 0.58.1, 44px invisible hit area, 12px badge); a long press never presses
 - Flutter: `UiMessengerButton`, `UiMessengerApp`, `UiMessengerCompact`; extras `UiMessengerBrand` (colours, `logoSize`, `fillGradient`), `UiMessengerLogo`, `UiMessengerTick`, `uiMessengerLogoPaths` (the same path data as Angular's brand file)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

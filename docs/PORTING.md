@@ -1067,19 +1067,22 @@ reads `value`.
 
 ## Messenger size sm, contact row, messenger switch (0.58.0)
 
-`UiMessengerButton(size: UiMessengerSize.sm)` = `size="sm"`: a 32px painted box (logo 18, Telegram 23; Telegram's
-gradient band is still the logo box; a 14px badge at -5/-5 with a 10px tick) inside an invisible 44x44 hit area. The web
-puts the hit area in a `::before` that takes no layout; Flutter can't hit-test outside a box's own bounds, so sm lays out
-as 44x44 (`UiTouchTarget`, key `ui-messenger-hit`) with the 32 box centred, and sm opts out of the usual 48 touch padding:
-44 is what lets a row of them sit 12 apart with their areas touching, not overlapping (it is under Android's 48dp
-guideline, by design and as the web). A long press never presses the button: with a tick label UiTooltip's own long press
+`UiMessengerButton(size: UiMessengerSize.sm)` = `size="sm"`: since 0.58.1 a 28px painted box in every theme (logo 16,
+Telegram 20; Telegram's gradient band is still the logo box; a 12px badge at -4/-4 with an 8px tick; labelled sm has 8
+padding, a 6 gap and 13/18 words) inside an invisible 44x44 hit area (0.58.0 had 32 / 18 / 23 / 14). The web puts the hit
+area in a `::before` that takes no layout; Flutter can't hit-test outside a box's own bounds, so sm lays out as 44x44
+(`UiTouchTarget`, key `ui-messenger-hit`) with the 28 box centred, and sm opts out of the usual 48 touch padding (it is
+under Android's 48dp guideline, by design and as the web). A long press never presses the button: with a tick label UiTooltip's own long press
 wins the gesture; without one, a GestureDetector with an empty onLongPress does. One side effect: a competing long press
 makes Flutter delay the tap-down (the press veil) by kPressTimeout, 100ms, as InkWell does. No app is hidden on any
 platform; a test renders all three on android, iOS, macOS, windows and linux.
 
-`UiContactChannels`' messenger row is now sm, icon-only and left-aligned: the row starts 6 before the value column so
-the first painted box starts exactly on it, the 44 areas tile with no gap (boxes 12 apart), and the 6 above the boxes is
-the room the badges need (the web's padding-top 6). The equal-width / labels-fit logic for the row is gone; `compact: auto`
+`UiContactChannels`' messenger row is now sm, icon-only and left-aligned. Since 0.58.1 the painted boxes are 8 apart, so
+neighbouring 44 hit areas overlap by 8: the buttons sit in a Stack at a 36 pitch, each in a `_HitBand` that takes hits only
+up to the middle of each overlap (4 in from a shared edge), so a tap inside a painted box always reaches that button and the
+gap splits evenly (in RTL too). The row starts 8 before the value column so the first painted box starts exactly on it, and
+it is translated up 4 so the boxes sit 4 below the row's top (the web's padding-top 4 for the badges); the translation is
+the outermost widget, because a Transform doesn't check its own bounds when hit-testing while a Padding would drop the top 4px. The equal-width / labels-fit logic for the row is gone; `compact: auto`
 and `labelledWidth` stay on the button.
 
 `UiMessengerSwitch` = `ui-messenger-switch`. Controlled (`value` + `onChanged`), the web's `model()`. The pill is built

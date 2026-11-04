@@ -25,7 +25,7 @@ enum UiMessengerCompact {
 
 /// A [UiMessengerButton]'s size (the web `size: 'sm' | 'md'`).
 enum UiMessengerSize {
-  /// A 32px box (icon-only: 32x32) inside an invisible hit area of at least 44x44.
+  /// A 28px box (icon-only: 28x28) inside an invisible hit area of at least 44x44.
   sm,
 
   /// 44px, the 0.57 look.
@@ -57,21 +57,21 @@ abstract final class UiMessengerBrand {
   static const double height = 44;
 
   /// The sm button's painted height.
-  static const double heightSm = 32;
+  static const double heightSm = 28;
 
-  /// The smallest hit area of an sm button, invisible around its 32px box.
+  /// The smallest hit area of an sm button, invisible around its 28px box.
   static const double hitSm = 44;
 
   /// The painted height for [size].
   static double heightFor(UiMessengerSize size) => size == UiMessengerSize.sm ? heightSm : height;
 
-  /// The box each logo is fitted into, aspect kept: 22 on md, 18 on sm; Telegram 28 / 23, since its
+  /// The box each logo is fitted into, aspect kept: 22 on md, 16 on sm; Telegram 28 / 20, since its
   /// plane fills only about half its disc (at the same size it looks small beside the other glyphs).
   static double logoSize(UiMessengerApp app, [UiMessengerSize size = UiMessengerSize.md]) => switch ((app == UiMessengerApp.telegram, size)) {
         (true, UiMessengerSize.md) => 28,
-        (true, UiMessengerSize.sm) => 23,
+        (true, UiMessengerSize.sm) => 20,
         (false, UiMessengerSize.md) => 22,
-        (false, UiMessengerSize.sm) => 18,
+        (false, UiMessengerSize.sm) => 16,
       };
 
   /// The fill for [app] on a box [height] tall around a logo box [logo] tall (default: the md
@@ -91,9 +91,9 @@ abstract final class UiMessengerBrand {
   static const double badgeSize = 18;
   static const double badgeOffset = -6;
 
-  /// The sm tick badge: a 14px circle centred 2px inside the top-end corner.
-  static const double badgeSizeSm = 14;
-  static const double badgeOffsetSm = -5;
+  /// The sm tick badge: a 12px circle centred 2px inside the top-end corner.
+  static const double badgeSizeSm = 12;
+  static const double badgeOffsetSm = -4;
 
   /// The brand's name, the default label.
   static String name(UiMessengerApp app) => switch (app) {
@@ -205,9 +205,9 @@ class _LogoPainter extends CustomPainter {
 
 /// `ui-messenger-button`: opens a chat in WhatsApp, Viber or Telegram. The brand's fill, its
 /// official logo and the label (default: the app's name) in the brand's dark ink, with the theme's
-/// corners. Logo and label are centred together. [size] md is 44 high; sm is a 32px box (icon-only:
-/// 32x32) inside an invisible hit area of at least 44x44 (48 on touch screens is not added: the 44
-/// area is what lets a row of them sit 12 apart without overlapping). [compact] shows the logo only
+/// corners. Logo and label are centred together. [size] md is 44 high; sm is a 28px box (icon-only:
+/// 28x28, the theme's corners) inside an invisible hit area of at least 44x44 (48 on touch screens is
+/// not added). [compact] shows the logo only
 /// (the full name stays the accessible name); auto does so exactly when the whole label would not fit
 /// (it never ends in an ellipsis); [expand] fills the width (equal buttons in a row).
 ///
@@ -241,7 +241,7 @@ class UiMessengerButton extends StatelessWidget {
   /// The visible words; defaults to the app's name.
   final String? label;
 
-  /// md (44) or sm (a 32px box with a 44px hit area).
+  /// md (44) or sm (a 28px box with a 44px hit area).
   final UiMessengerSize size;
   final UiMessengerCompact compact;
 
@@ -275,7 +275,7 @@ class UiMessengerButton extends StatelessWidget {
     );
   }
 
-  double _pad(UiTokens t) => _sm ? 10 : t.space3;
+  double _pad(UiTokens t) => _sm ? t.space2 : t.space3;
   double _gap(UiTokens t) => _sm ? 6 : t.space2;
 
   /// The width the button needs to show its logo and its whole label on one line: padding, logo,
@@ -387,8 +387,8 @@ class UiMessengerButton extends StatelessWidget {
   }
 }
 
-/// The tick badge on a ticked [UiMessengerButton]: a success circle (18px on md, 14 on sm) with a
-/// 2px ring around it in the surface colour and a tick (12 / 10). Decorative: no semantics, no hits.
+/// The tick badge on a ticked [UiMessengerButton]: a success circle (18px on md, 12 on sm) with a
+/// 2px ring around it in the surface colour and a tick (12 / 8). Decorative: no semantics, no hits.
 class UiMessengerTick extends StatelessWidget {
   const UiMessengerTick({super.key, this.size = UiMessengerSize.md});
 
@@ -408,7 +408,7 @@ class UiMessengerTick extends StatelessWidget {
           alignment: Alignment.center,
           // The ring sits outside the disc (the web `box-shadow: 0 0 0 2px surface`).
           decoration: BoxDecoration(color: t.success, shape: BoxShape.circle, boxShadow: [BoxShadow(color: t.surface, spreadRadius: 2)]),
-          child: UiIcon(HugeIcons.strokeRoundedTick02, size: sm ? 10 : 12, strokeWidth: 2.5, color: t.successContrast),
+          child: UiIcon(HugeIcons.strokeRoundedTick02, size: sm ? 8 : 12, strokeWidth: 2.5, color: t.successContrast),
         ),
       ),
     );
