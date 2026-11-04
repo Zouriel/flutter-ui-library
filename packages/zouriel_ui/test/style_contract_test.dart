@@ -13,7 +13,7 @@ void main() {
     // The exceptions: the sign-in buttons' brand colours, fixed whatever the theme by
     // https://developers.google.com/identity/branding-guidelines and Apple's Human Interface
     // Guidelines (Sign in with Apple).
-    final brand = RegExp(r'(google|apple)_sign_in_button\.dart$');
+    final brand = RegExp(r'(google|apple|social)_sign_in_button\.dart$');
     for (final f in files) {
       if (brand.hasMatch(f.path.replaceAll(r'\', '/'))) continue;
       final lines = f.readAsLinesSync();

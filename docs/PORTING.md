@@ -231,6 +231,21 @@ gets the route's context so buttons can pop it first. The scrim is painted (clea
 88% at the bottom), the same stops as the web's `linear-gradient`. Hover on a tile is a 2px
 border-strong ring on both sides (the style contract forbids a brightness filter on the web).
 
+**0.55.0 additions.** `UiSocialSignInButton` (web `ui-social-button`) draws the Apple and Google
+buttons as one matching pair, because the owner asked for them to be the same size with their logos.
+The two brand guides disagree on type (Google: 14/20 at 40 high; Apple: the title 43% of the
+height), so the pair takes Apple's proportion (17/20 at 40, which App Review checks) and Google's
+height, colours, 20px "G" and 12px inset (Google allows scaling the text with the button; its "G"
+is never resized). Both share 4px corners (Google's rectangular; Apple: match the app's buttons), a
+1px stroke (Google's colours; Apple allows a bezel stroke), and a 44px logo slot at each end so the
+words centre on one line (Apple: at least 8% of the width after the title; logos may be inset to
+line up). The Apple logo is Apple's own artwork this time, "Sign in with Apple - Left Aligned -
+Medium" from Apple Design Resources (Logo-Sign-in-with-Apple.dmg), its path verbatim in its 31x44
+box and drawn as tall as the button, as the HIG asks; Medium because its glyph (about 17 high) sits
+closest to the 20px "G". `auto` is dark on a light theme (Apple black, Google dark) and light on a
+dark theme (Apple white, Google light): Apple asks for black on light backgrounds and white on dark
+ones. The single-provider buttons stay for apps that show one provider.
+
 **0.48.0 additions.** `UiAppleSignInButton` (web `ui-apple-button`) draws Sign in with Apple's
 button to Apple's Human Interface Guidelines: black, white or white with a 1px black outline
 (`UiAppleBrand`, the second file `style_contract_test` lets use literal colours), Apple logo and

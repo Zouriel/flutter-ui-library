@@ -62,6 +62,10 @@ sign anyone in: add the `google_sign_in` package to the app, call
 `googleSignUp`, `googleContinue`, `googleSignInShort`) are in `UiStrings`. Its text is the bundled
 Roboto Medium (Google's guideline now uses Google Sans, which the library doesn't ship).
 
+**Social sign-in buttons (0.55):** `UiSocialSignInButton(provider: UiSocialProvider.apple | google)`
+draws the Apple and Google buttons as a matching pair (same size, font, corners and logo slot, each
+with its official logo); use it whenever both are shown, with the same `text` for both.
+
 **Sign in with Apple (0.48):** `UiAppleSignInButton` draws Apple's button to the Human Interface
 Guidelines (black, white, white with an outline, or `auto`: white on a dark theme; rectangular or
 pill; `loading`; `expand`, with logo and words centred together). It is 40 high like the Google
