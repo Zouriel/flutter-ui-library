@@ -28,19 +28,31 @@ void main() {
   testWidgets('contact channels: pressing a messenger ticks it; Retry shows a spinner, then the tick', (tester) async {
     await _pump(tester, const ContactChannelsSection());
     expect(tester.takeException(), isNull);
+    // Aisha is in the compact card and the columns card; both share the ticks.
     final telegram = find.bySemanticsLabel('Send to Aisha on Telegram');
-    expect(telegram, findsOneWidget);
+    expect(telegram, findsNWidgets(2));
     await tester.tap(find.byType(UiMessengerButton).at(2));
     await tester.pump();
     expect(tester.widget<UiMessengerButton>(find.byType(UiMessengerButton).at(2)).ticked, isTrue);
-    await tester.ensureVisible(find.text('Retry'));
-    await tester.tap(find.text('Retry'));
+    await tester.ensureVisible(find.text('Retry').first);
+    await tester.tap(find.text('Retry').first);
     await tester.pump();
-    expect(find.byType(UiSpinner), findsOneWidget);
+    // Hassan's compact and columns cards share the retry state.
+    expect(find.byType(UiSpinner), findsNWidgets(2));
     await tester.pump(const Duration(seconds: 2));
     await tester.pump();
     expect(find.text('Retry'), findsNothing);
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('contact channels (0.59): the compact cards draw one line per contact, buttons on the number line', (tester) async {
+    await _pump(tester, const ContactChannelsSection());
+    expect(tester.takeException(), isNull);
+    final compact = find.byWidgetPredicate((w) => w is UiContactChannels && w.layout == UiContactLayout.compact);
+    expect(compact, findsNWidgets(2));
+    final number = tester.getRect(find.text('+960 777 1234').first);
+    final wa = tester.getRect(find.descendant(of: compact.first, matching: find.byKey(const ValueKey('ui-messenger-box'))).first);
+    expect((wa.center.dy - number.center.dy).abs(), lessThanOrEqualTo(0.5));
   });
 
   testWidgets('table custom cells: badges and messenger buttons in cells', (tester) async {

@@ -1110,3 +1110,20 @@ a `UiAnchoredOverlay` under the button, 340 wide, max 560 or 70% of the height, 
 Rows are `UiInteractive` (checked state, not a button) with `UiCheckMark` / `UiRadioMark`, 44 tall painted (48 to the
 touch); the web uses native checkboxes/radios in a fieldset. The button is `UiButton` with the 0.44 count badge, tone
 primary, read as "Filter, 2 on" (`filterOn`).
+
+## UiContactChannels compact layout (0.60.0)
+
+`layout: UiContactLayout.compact` (web `layout="compact"`) is the phone card: no label column; each contact is one line of a
+16px muted icon (Mail01, SmartPhone01), 8, the value (one line, ellipsis, full text in a tooltip, and the visible word gone so
+screen readers hear "Email, aisha@example.com"), 8, then its state right after the text (a loose Flexible, so the state
+follows the text and the text only shrinks when it must). The number line ends with the small messenger buttons at the inline
+end (an Expanded holding the start-aligned number, since a loose Flexible beside a Spacer leaves half the free space unused,
+which a 1440 test caught); when the number's natural width (TextPainter, current text scale) + 8 + the buttons doesn't fit
+after the icon, the buttons go on their own line at indent 24. Lines are min 28 high, 8 apart; the email error sits 4 under
+its line. Block height for email + number: 64.
+
+The lines stay 28 although the buttons' hit areas are 44 (and a small UiButton's touch target 48 on phones): `_SlopBox` lays
+out at the painted size and takes hits over its child's whole area, and the block's root `_SlopRoot` sends a hit that lands in
+a slop box's area but outside the 28px line holding it (which only takes hits inside its own bounds) straight to that box. The
+messenger stack's overlapping hit areas still split down the middle (`_HitBand`). Both layouts share `_buttonStack`. The
+compact layout measures its width with a LayoutBuilder, so it can't sit inside intrinsic sizing; `columns` is unchanged.

@@ -117,6 +117,43 @@ class _ContactChannelsSectionState extends State<ContactChannelsSection> {
       summary:
           'One person\'s ways to be reached, in columns that line up: Email (label, address, status), Number, and under it a row of messenger buttons that starts at the value column. The label column is at least 64 wide (as wide as the widest label), the status column at least 44. The email status is a Send button, a success tick (sent or delivered, emailTickLabel as its tooltip and name), Retry with the error under the row (failed or bounced), or a spinner while emailBusy. The buttons are small icons (size sm: 28px boxes 8 apart, with 44px hit areas that split their overlap) starting at the value column, keeping their full names for screen readers. It only reports presses: the app sends and sets the ticks. Press a button below to tick it. The web twin is ui-contact-channels.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+        UiText('layout: compact, in a phone-width card', variant: UiTextVariant.caption),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 358),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+              UiCard(
+                child: UiContactChannels(
+                  layout: UiContactLayout.compact,
+                  email: 'aisha@example.com',
+                  emailStatus: UiEmailStatus.delivered,
+                  emailTickLabel: 'Emailed 4 Nov, 19:02',
+                  phone: '+960 777 1234',
+                  messengers: [
+                    for (final app in UiMessengerApp.values)
+                      UiMessengerChannel(app: app, ticked: _ticks.containsKey(app), tickLabel: _ticks[app], semanticLabel: 'Send to Aisha on ${UiMessengerBrand.name(app)}'),
+                  ],
+                  onMessengerPressed: (app) => setState(() => _ticks[app] = 'Opened ${_clock(DateTime.now())}'),
+                ),
+              ),
+              UiCard(
+                child: UiContactChannels(
+                  layout: UiContactLayout.compact,
+                  email: 'hassan@exampel.com',
+                  emailStatus: _second,
+                  emailBusy: _busy,
+                  emailError: 'The address bounced: no such mailbox.',
+                  phone: '+44 7700 900123',
+                  messengers: const [UiMessengerChannel(app: UiMessengerApp.whatsapp), UiMessengerChannel(app: UiMessengerApp.telegram)],
+                  onEmailRetry: _retry,
+                  onMessengerPressed: (_) {},
+                ),
+              ),
+            ]),
+          ),
+        ),
+        UiText('layout: columns (the default)', variant: UiTextVariant.caption),
         card(UiContactChannels(
           email: 'aisha@example.com',
           emailStatus: UiEmailStatus.delivered,
@@ -161,13 +198,14 @@ class _ContactChannelsSectionState extends State<ContactChannelsSection> {
         ApiRow('phone', 'String?', 'Shown as given; no number or messenger row without one.'),
         ApiRow('messengers', 'List<UiMessengerChannel>', 'The buttons under the number, in order.', def: '[]'),
         ApiRow('emailLabel / numberLabel', 'String?', 'Row labels.', def: 'UiStrings.contactEmail / contactNumber'),
+        ApiRow('layout', 'UiContactLayout', 'columns (label | value | status) or compact: one line per contact for phone cards, a small icon, the value, its state right after it, the buttons at the end of the number line (under it when they don\'t fit).', def: 'columns'),
       ],
       callbacks: const [
         ApiRow('onEmailSend', 'VoidCallback?', 'Send pressed.'),
         ApiRow('onEmailRetry', 'VoidCallback?', 'Retry pressed.'),
         ApiRow('onMessengerPressed', 'ValueChanged<UiMessengerApp>?', 'A messenger button pressed.'),
       ],
-      shapes: 'enum UiEmailStatus { none, skipped, sent, delivered, failed, bounced }\nclass UiMessengerChannel { UiMessengerApp app; bool ticked; String? tickLabel; String? semanticLabel; bool hidden; }',
+      shapes: 'enum UiContactLayout { columns, compact }\nenum UiEmailStatus { none, skipped, sent, delivered, failed, bounced }\nclass UiMessengerChannel { UiMessengerApp app; bool ticked; String? tickLabel; String? semanticLabel; bool hidden; }',
     );
   }
 }
