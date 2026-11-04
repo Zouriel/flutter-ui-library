@@ -28,6 +28,8 @@ void main() {
         ))));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('like for 0'), findsOneWidget);
+    // At the bottom, below the picture: never in the top bar with the actions.
+    expect(tester.getCenter(find.text('like for 0')).dy, greaterThan(844 / 2));
 
     final centre = tester.getCenter(find.byType(UiMediaLightbox));
     await tester.tapAt(centre);

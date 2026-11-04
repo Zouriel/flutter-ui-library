@@ -123,8 +123,9 @@ class UiMediaLightbox extends StatefulWidget {
   /// a heart there (a like), false for none (an unlike).
   final bool Function(UiMediaItem item, int index, Offset at)? onDoubleTap;
 
-  /// Extra controls at the start of the top bar's actions for the item on screen (0.63.0), e.g. a
-  /// [UiLikeButton]; called on every build, so it can listen to the app's own state.
+  /// Extra controls for the item on screen, e.g. a [UiLikeButton]: at the start of the bottom bar
+  /// (0.63.1; 0.63.0 put them in the top bar, where they pushed actions into More on a phone). Called
+  /// on every build, so it can listen to the app's own state.
   final Widget Function(BuildContext context, UiMediaItem item, int index)? leadingActions;
 
   /// Makes the player for a clip (tests and custom sources); defaults to [UiFileSources.playerFor].
@@ -654,9 +655,8 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
             ),
           ),
           // Bounded (0.53.0): the actions get only the room the meta line leaves them.
-          if (item != null && widget.leadingActions != null) widget.leadingActions!(context, item, widget.index),
           _TopActions(
-            width: box.maxWidth - t.space4 * 2 - (widget.leadingActions == null ? 0 : 72 + t.space3),
+            width: box.maxWidth - t.space4 * 2,
             hasMeta: metaLine.isNotEmpty || count > 1,
             zoomLabel: _zoomed ? '${(_zoom * 100).round()}% · Fit' : null,
             onResetZoom: _resetView,
@@ -672,6 +672,10 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
     final bottom = Padding(
         padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, math.max(t.space3, pad.bottom)),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+          // 0.63.1: the app's own controls (a like button) at the start of the bottom bar, where they
+          // never take room from the top bar's actions (the web's [lightbox-bottom] slot).
+          if (item != null && widget.leadingActions != null)
+            Align(alignment: AlignmentDirectional.centerStart, child: widget.leadingActions!(context, item, widget.index)),
           if (_isVideo && cv != null)
             Row(spacing: t.space2, children: [
               _Glass(icon: _playing ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay, semanticLabel: _playing ? context.uiStrings.pause : context.uiStrings.play, onTap: _togglePlay),
