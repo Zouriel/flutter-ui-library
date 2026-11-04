@@ -23,6 +23,15 @@ enum UiMessengerCompact {
   auto,
 }
 
+/// A [UiMessengerButton]'s size (the web `size: 'sm' | 'md'`).
+enum UiMessengerSize {
+  /// A 32px box (icon-only: 32x32) inside an invisible hit area of at least 44x44.
+  sm,
+
+  /// 44px, the 0.57 look.
+  md,
+}
+
 /// The messengers' brand colours and logos, the same in every theme and in both libraries. With the
 /// sign-in buttons' brand files, the only literal colours outside the generated tokens
 /// (`style_contract_test.dart` allows this file).
@@ -44,21 +53,36 @@ abstract final class UiMessengerBrand {
   /// The white the logos are drawn in (their official files' fill).
   static const logoWhite = Color(0xFFFFFFFF);
 
-  /// The button's height (the minimum touch target on the web).
+  /// The md button's height (the minimum touch target on the web).
   static const double height = 44;
 
-  /// The box each logo is fitted into, aspect kept: 22, and 28 for Telegram, whose plane fills only
-  /// about half its disc (at 22 it looks small beside the other glyphs).
-  static double logoSize(UiMessengerApp app) => app == UiMessengerApp.telegram ? 28 : 22;
+  /// The sm button's painted height.
+  static const double heightSm = 32;
 
-  /// The fill for [app] on a button [height] tall. Telegram's two stops sit at the logo box's top and
-  /// bottom edges (solid outside that band), so the disc and the button are the same blue at every
-  /// height and the logo reads as the white plane on Telegram blue (the web
-  /// `linear-gradient(top calc(50% - logo/2), bottom calc(50% + logo/2))`).
-  static Gradient fillGradient(UiMessengerApp app, {double height = UiMessengerBrand.height}) {
+  /// The smallest hit area of an sm button, invisible around its 32px box.
+  static const double hitSm = 44;
+
+  /// The painted height for [size].
+  static double heightFor(UiMessengerSize size) => size == UiMessengerSize.sm ? heightSm : height;
+
+  /// The box each logo is fitted into, aspect kept: 22 on md, 18 on sm; Telegram 28 / 23, since its
+  /// plane fills only about half its disc (at the same size it looks small beside the other glyphs).
+  static double logoSize(UiMessengerApp app, [UiMessengerSize size = UiMessengerSize.md]) => switch ((app == UiMessengerApp.telegram, size)) {
+        (true, UiMessengerSize.md) => 28,
+        (true, UiMessengerSize.sm) => 23,
+        (false, UiMessengerSize.md) => 22,
+        (false, UiMessengerSize.sm) => 18,
+      };
+
+  /// The fill for [app] on a box [height] tall around a logo box [logo] tall (default: the md
+  /// button's). Telegram's two stops sit at the logo box's top and bottom edges (solid outside that
+  /// band), so the disc and the button are the same blue at every height and the logo reads as the
+  /// white plane on Telegram blue (the web `linear-gradient(top calc(50% - logo/2), bottom calc(50% +
+  /// logo/2))`). WhatsApp's and Viber's two stops are the same colour.
+  static Gradient fillGradient(UiMessengerApp app, {double height = UiMessengerBrand.height, double? logo}) {
     final f = fill(app);
     final top = f.first, bottom = f.last;
-    final logo = logoSize(app);
+    logo ??= logoSize(app);
     final a = ((height - logo) / 2 / height).clamp(0.0, 1.0), b = ((height + logo) / 2 / height).clamp(0.0, 1.0);
     return LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [top, bottom], stops: [a, b]);
   }
@@ -66,6 +90,10 @@ abstract final class UiMessengerBrand {
   /// The tick badge: an 18px circle centred 3px inside the top-end corner.
   static const double badgeSize = 18;
   static const double badgeOffset = -6;
+
+  /// The sm tick badge: a 14px circle centred 2px inside the top-end corner.
+  static const double badgeSizeSm = 14;
+  static const double badgeOffsetSm = -5;
 
   /// The brand's name, the default label.
   static String name(UiMessengerApp app) => switch (app) {
@@ -176,24 +204,28 @@ class _LogoPainter extends CustomPainter {
 }
 
 /// `ui-messenger-button`: opens a chat in WhatsApp, Viber or Telegram. The brand's fill, its
-/// official logo and the label (default: the app's name) in the brand's dark ink, 44 high with the
-/// theme's corners. Logo and label are centred together. [compact] shows the logo only (the full
-/// name stays the accessible name); auto does so exactly when the whole label would not fit (it never
-/// ends in an ellipsis); [expand] fills the width (equal buttons in a row).
+/// official logo and the label (default: the app's name) in the brand's dark ink, with the theme's
+/// corners. Logo and label are centred together. [size] md is 44 high; sm is a 32px box (icon-only:
+/// 32x32) inside an invisible hit area of at least 44x44 (48 on touch screens is not added: the 44
+/// area is what lets a row of them sit 12 apart without overlapping). [compact] shows the logo only
+/// (the full name stays the accessible name); auto does so exactly when the whole label would not fit
+/// (it never ends in an ellipsis); [expand] fills the width (equal buttons in a row).
 ///
 /// [ticked] adds a success tick badge at the top-end corner (e.g. "already opened"); the button stays
 /// usable and its name gains ", [tickLabel]" (default [UiStrings.messengerOpened]); with [tickLabel]
-/// set, a tooltip shows it (hover, keyboard focus, long press on touch). Hover lays a 10% white veil
-/// over the fill, press 18% (a white veil only raises the dark ink's contrast). [onPressed] null
-/// disables it. [UiMessengerCompact.auto] measures the space it is given, so it can't sit inside
-/// intrinsic sizing (IntrinsicWidth); [UiMessengerCompact.on] and off can (e.g. in a [UiTable] cell).
-/// Twin of Angular's `ui-messenger-button`.
+/// set, a tooltip shows it (hover, keyboard focus, long press on touch). A long press never presses
+/// the button. Hover lays a 10% white veil over the fill, press 18% (a white veil only raises the dark
+/// ink's contrast). [onPressed] null disables it. [UiMessengerCompact.auto] measures the space it is
+/// given, so it can't sit inside intrinsic sizing (IntrinsicWidth); [UiMessengerCompact.on] and off
+/// can (e.g. in a [UiTable] cell). Nothing hides an app by platform. Twin of Angular's
+/// `ui-messenger-button`.
 class UiMessengerButton extends StatelessWidget {
   const UiMessengerButton({
     super.key,
     required this.app,
     required this.onPressed,
     this.label,
+    this.size = UiMessengerSize.md,
     this.compact = UiMessengerCompact.off,
     this.expand = false,
     this.ticked = false,
@@ -208,6 +240,9 @@ class UiMessengerButton extends StatelessWidget {
 
   /// The visible words; defaults to the app's name.
   final String? label;
+
+  /// md (44) or sm (a 32px box with a 44px hit area).
+  final UiMessengerSize size;
   final UiMessengerCompact compact;
 
   /// Fill the available width.
@@ -224,18 +259,24 @@ class UiMessengerButton extends StatelessWidget {
   final FocusNode? focusNode;
   final bool autofocus;
 
-  /// The label's style in [context].
+  bool get _sm => size == UiMessengerSize.sm;
+
+  /// The label's style in [context]: md 15/600/20, sm 13/600/18.
   TextStyle labelStyle(BuildContext context) {
     final t = context.ui;
+    final fs = _sm ? t.fontSizeSm : t.fontSizeMd;
     return context.uiText.body.copyWith(
-      fontSize: t.fontSizeMd,
+      fontSize: fs,
       fontWeight: FontWeight.w600,
-      height: 20 / t.fontSizeMd,
+      height: (_sm ? 18 : 20) / fs,
       leadingDistribution: TextLeadingDistribution.even,
       color: UiMessengerBrand.ink(app),
       decoration: TextDecoration.none,
     );
   }
+
+  double _pad(UiTokens t) => _sm ? 10 : t.space3;
+  double _gap(UiTokens t) => _sm ? 6 : t.space2;
 
   /// The width the button needs to show its logo and its whole label on one line: padding, logo,
   /// gap, the label's natural width (at the current text scale), padding.
@@ -251,7 +292,7 @@ class UiMessengerButton extends StatelessWidget {
     )..layout();
     final w = p.width;
     p.dispose();
-    return t.space3 + UiMessengerBrand.logoSize(app) + t.space2 + w + t.space3;
+    return _pad(t) + UiMessengerBrand.logoSize(app, size) + _gap(t) + w + _pad(t);
   }
 
   /// The accessible name the button gets in [context].
@@ -269,6 +310,8 @@ class UiMessengerButton extends StatelessWidget {
     final radius = BorderRadius.circular(theme.radius());
     final words = (label ?? '').isNotEmpty ? label! : UiMessengerBrand.name(app);
     final style = labelStyle(context);
+    final h = UiMessengerBrand.heightFor(size);
+    final logo = UiMessengerBrand.logoSize(app, size);
 
     Widget buildFor(bool iconOnly) {
       return UiInteractive(
@@ -278,6 +321,8 @@ class UiMessengerButton extends StatelessWidget {
         autofocus: autofocus,
         semanticLabel: accessibleName(context),
         excludeChildSemantics: true,
+        // sm makes its own 44 hit area below; md keeps the usual 48 on touch screens.
+        padTouchTarget: !_sm,
         builder: (context, s) {
           final veil = s.pressed ? 0.18 : s.hovered ? 0.10 : 0.0;
           final content = Row(
@@ -285,23 +330,23 @@ class UiMessengerButton extends StatelessWidget {
             mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              UiMessengerLogo(app),
+              UiMessengerLogo(app, size: logo),
               if (!iconOnly) ...[
-                SizedBox(width: t.space2),
+                SizedBox(width: _gap(t)),
                 Flexible(child: Text(words, style: style, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false)),
               ],
             ],
           );
           Widget face = Container(
             key: const ValueKey('ui-messenger-box'),
-            height: UiMessengerBrand.height,
-            width: iconOnly && !expand ? UiMessengerBrand.height : null,
-            padding: iconOnly && !expand ? null : EdgeInsets.symmetric(horizontal: t.space3),
+            height: h,
+            width: iconOnly && !expand ? h : null,
+            padding: iconOnly && !expand ? null : EdgeInsets.symmetric(horizontal: _pad(t)),
             // Only a box wider than its content centres it (an Align would make a hugging button fill).
             alignment: expand || iconOnly ? Alignment.center : null,
             decoration: BoxDecoration(
               color: fill.length == 1 ? fill.first : null,
-              gradient: fill.length > 1 ? UiMessengerBrand.fillGradient(app) : null,
+              gradient: fill.length > 1 ? UiMessengerBrand.fillGradient(app, height: h, logo: logo) : null,
               borderRadius: radius,
               boxShadow: s.focused ? t.focusRing : null,
             ),
@@ -310,16 +355,16 @@ class UiMessengerButton extends StatelessWidget {
           );
           if (expand) face = SizedBox(width: double.infinity, child: face);
           if (ticked) {
+            final off = _sm ? UiMessengerBrand.badgeOffsetSm : UiMessengerBrand.badgeOffset;
             face = Stack(clipBehavior: Clip.none, children: [
               face,
-              const PositionedDirectional(
-                top: UiMessengerBrand.badgeOffset,
-                end: UiMessengerBrand.badgeOffset,
-                child: UiMessengerTick(),
-              ),
+              PositionedDirectional(top: off, end: off, child: UiMessengerTick(size: size)),
             ]);
           }
-          return Opacity(opacity: s.disabled ? 0.5 : 1, child: face);
+          face = Opacity(opacity: s.disabled ? 0.5 : 1, child: face);
+          // The invisible hit area: at least 44x44, the painted box centred in it.
+          if (_sm) face = UiTouchTarget(key: const ValueKey('ui-messenger-hit'), minSize: const Size.square(UiMessengerBrand.hitSm), child: face);
+          return face;
         },
       );
     }
@@ -331,29 +376,39 @@ class UiMessengerButton extends StatelessWidget {
         ? LayoutBuilder(builder: (context, box) => buildFor(box.maxWidth < labelledWidth(context)))
         : buildFor(compact == UiMessengerCompact.on);
     final tip = tickLabel;
-    if (ticked && tip != null && tip.isNotEmpty) button = UiTooltip(message: tip, child: button);
+    if (ticked && tip != null && tip.isNotEmpty) {
+      // The tooltip's own long press shows it and wins over the tap.
+      button = UiTooltip(message: tip, child: button);
+    } else {
+      // A long press is never a press: it wins the gesture over the tap and does nothing.
+      button = GestureDetector(excludeFromSemantics: true, onLongPress: () {}, child: button);
+    }
     return button;
   }
 }
 
-/// The tick badge on a ticked [UiMessengerButton]: an 18px success circle with a 2px ring around it
-/// in the surface colour and a 12px tick. Decorative: no semantics, no hits.
+/// The tick badge on a ticked [UiMessengerButton]: a success circle (18px on md, 14 on sm) with a
+/// 2px ring around it in the surface colour and a tick (12 / 10). Decorative: no semantics, no hits.
 class UiMessengerTick extends StatelessWidget {
-  const UiMessengerTick({super.key});
+  const UiMessengerTick({super.key, this.size = UiMessengerSize.md});
+
+  final UiMessengerSize size;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
+    final sm = size == UiMessengerSize.sm;
+    final d = sm ? UiMessengerBrand.badgeSizeSm : UiMessengerBrand.badgeSize;
     return IgnorePointer(
       child: ExcludeSemantics(
         child: Container(
           key: const ValueKey('ui-messenger-tick'),
-          width: UiMessengerBrand.badgeSize,
-          height: UiMessengerBrand.badgeSize,
+          width: d,
+          height: d,
           alignment: Alignment.center,
-          // The ring sits outside the 18px disc (the web `box-shadow: 0 0 0 2px surface`).
+          // The ring sits outside the disc (the web `box-shadow: 0 0 0 2px surface`).
           decoration: BoxDecoration(color: t.success, shape: BoxShape.circle, boxShadow: [BoxShadow(color: t.surface, spreadRadius: 2)]),
-          child: UiIcon(HugeIcons.strokeRoundedTick02, size: 12, strokeWidth: 2.5, color: t.successContrast),
+          child: UiIcon(HugeIcons.strokeRoundedTick02, size: sm ? 10 : 12, strokeWidth: 2.5, color: t.successContrast),
         ),
       ),
     );

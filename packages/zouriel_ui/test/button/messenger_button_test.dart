@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show TargetPlatform, debugDefaultTargetPlatformOverride;
+import 'package:flutter/gestures.dart' show kPressTimeout;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -349,15 +351,150 @@ void main() {
     Color? veil() => (tester.widget<Container>(find.byKey(const ValueKey('ui-messenger-box'))).foregroundDecoration as BoxDecoration?)?.color;
     expect(veil(), isNull);
     final g = await tester.startGesture(tester.getCenter(find.byType(UiMessengerButton)));
-    await tester.pump();
+    // A long press competes with the tap, so the press shows after the tap's short delay.
+    await tester.pump(kPressTimeout);
     expect(veil(), const Color(0xFFFFFFFF).withValues(alpha: 0.18));
     await g.up();
     await tester.pumpAndSettle();
     expect(veil(), isNull);
   });
 
+  group('0.58: size sm', () {
+    test('sm logo sizes and Telegram\'s band on the 32px box', () {
+      expect([for (final a in _apps) UiMessengerBrand.logoSize(a, UiMessengerSize.sm)], [18, 18, 23]);
+      expect([for (final a in _apps) UiMessengerBrand.logoSize(a, UiMessengerSize.md)], [22, 22, 28]);
+      expect(UiMessengerBrand.heightFor(UiMessengerSize.sm), 32);
+      final g = UiMessengerBrand.fillGradient(UiMessengerApp.telegram, height: 32, logo: 23) as LinearGradient;
+      expect(g.stops![0], closeTo(4.5 / 32, 1e-9));
+      expect(g.stops![1], closeTo(27.5 / 32, 1e-9));
+    });
+
+    testWidgets('icon-only: a 32x32 painted box centred in a 44x44 hit area; logo centred', (tester) async {
+      await pumpUi(tester, Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final app in _apps) UiMessengerButton(key: ValueKey(app), app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, onPressed: () {}),
+        ]),
+      ));
+      for (final app in _apps) {
+        final key = ValueKey(app);
+        final box = _box(tester, key);
+        final hit = tester.getRect(_in(key, find.byKey(const ValueKey('ui-messenger-hit'))));
+        final logo = _logo(tester, key);
+        expect(box.size, const Size(32, 32));
+        expect(hit.size, const Size(44, 44));
+        expect(hit.center, box.center);
+        final ls = UiMessengerBrand.logoSize(app, UiMessengerSize.sm);
+        expect(logo.size, Size(ls, ls));
+        // ignore: avoid_print
+        print('sm centring $app: logo dx ${(logo.center.dx - box.center.dx).toStringAsFixed(3)}, dy ${(logo.center.dy - box.center.dy).toStringAsFixed(3)}');
+        expect((logo.center - box.center).distance, lessThanOrEqualTo(0.5));
+        final deco = tester.widget<Container>(_in(key, find.byKey(const ValueKey('ui-messenger-box')))).decoration! as BoxDecoration;
+        expect(deco.borderRadius, BorderRadius.circular(tester.element(find.byKey(key)).uiTheme.radius()));
+        if (app == UiMessengerApp.telegram) expect((deco.gradient! as LinearGradient).stops, [4.5 / 32, 27.5 / 32]);
+      }
+    });
+
+    testWidgets('sm labelled: 13/600/18 words, 10 padding, 6 gap, centred', (tester) async {
+      await pumpUi(tester, Padding(padding: const EdgeInsets.all(20), child: UiMessengerButton(key: const ValueKey('b'), app: UiMessengerApp.viber, size: UiMessengerSize.sm, onPressed: () {})));
+      final box = _box(tester, const ValueKey('b'));
+      final logo = _logo(tester, const ValueKey('b'));
+      final text = tester.getRect(find.text('Viber'));
+      final style = tester.renderObject<RenderParagraph>(find.byType(RichText)).text.style!;
+      expect(style.fontSize, 13);
+      expect(style.fontWeight, FontWeight.w600);
+      expect(style.height! * style.fontSize!, closeTo(18, 0.001));
+      expect(box.height, 32);
+      expect(logo.left - box.left, 10);
+      expect(text.left - logo.right, 6);
+      expect(box.right - text.right, closeTo(10, 0.01));
+      expect((text.center.dy - box.center.dy).abs(), lessThanOrEqualTo(0.5));
+      expect(_box(tester, const ValueKey('b')).width, closeTo(tester.widget<UiMessengerButton>(find.byKey(const ValueKey('b'))).labelledWidth(tester.element(find.byKey(const ValueKey('b')))), 0.01));
+    });
+
+    testWidgets('sm tick badge: 14px, centred 2px inside the top-end corner, 10px tick', (tester) async {
+      await pumpUi(tester, Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final app in _apps) UiMessengerButton(key: ValueKey(app), app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, ticked: true, onPressed: () {}),
+        ]),
+      ));
+      for (final app in _apps) {
+        final key = ValueKey(app);
+        final box = _box(tester, key);
+        final tick = tester.getRect(_in(key, find.byKey(const ValueKey('ui-messenger-tick'))));
+        expect(tick.size, const Size(14, 14));
+        expect(tick.center - box.topRight, const Offset(-2, 2));
+        expect(tester.widget<UiIcon>(_in(key, find.byType(UiIcon))).size, 10);
+      }
+    });
+
+    testWidgets('a tap 5px outside the painted box still presses an sm button', (tester) async {
+      var n = 0;
+      await pumpUi(tester, Padding(padding: const EdgeInsets.all(40), child: UiMessengerButton(key: const ValueKey('b'), app: UiMessengerApp.whatsapp, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, onPressed: () => n++)));
+      final box = _box(tester, const ValueKey('b'));
+      await tester.tapAt(box.topLeft - const Offset(5, 5));
+      await tester.tapAt(box.bottomRight + const Offset(5, 5));
+      expect(n, 2);
+      // 8px out is past the 44 area (6 around the 32 box).
+      await tester.tapAt(box.topLeft - const Offset(8, 8));
+      expect(n, 2);
+    });
+  });
+
+  for (final theme in [UiThemeName.light, UiThemeName.dark]) {
+    testWidgets('badge ring: success is at least 3:1 on the surface in $theme, on every app', (tester) async {
+      await pumpUi(tester, Padding(
+        padding: const EdgeInsets.all(20),
+        child: Wrap(spacing: 12, runSpacing: 12, children: [
+          for (final app in _apps) UiMessengerButton(key: ValueKey(app), app: app, ticked: true, onPressed: () {}),
+        ]),
+      ), theme: theme);
+      for (final app in _apps) {
+        final deco = tester.widget<Container>(_in(ValueKey(app), find.byKey(const ValueKey('ui-messenger-tick')))).decoration! as BoxDecoration;
+        final ratio = uiContrast(deco.color!, deco.boxShadow!.single.color);
+        expect(ratio, greaterThanOrEqualTo(3), reason: '$theme $app: $ratio');
+        expect(deco.boxShadow!.single.color, tester.element(find.byKey(ValueKey(app))).ui.surface);
+      }
+    });
+  }
+
+  group('long press', () {
+    testWidgets('never presses, with or without a tooltip', (tester) async {
+      var n = 0;
+      for (final ticked in [false, true]) {
+        await pumpUi(tester, Padding(padding: const EdgeInsets.all(40), child: UiMessengerButton(app: UiMessengerApp.whatsapp, ticked: ticked, tickLabel: ticked ? 'Opened 14:05' : null, onPressed: () => n++)));
+        await tester.longPress(find.byType(UiMessengerButton));
+        await tester.pump(const Duration(milliseconds: 100));
+        if (ticked) expect(find.text('Opened 14:05'), findsOneWidget);
+        await tester.pumpAndSettle(const Duration(seconds: 2));
+        expect(n, 0, reason: 'ticked: $ticked');
+        // A plain tap still works.
+        await tester.tap(find.byType(UiMessengerButton));
+        expect(n, 1, reason: 'ticked: $ticked');
+        n = 0;
+      }
+    });
+  });
+
+  testWidgets('every app renders on every platform (only the caller hides one)', (tester) async {
+    for (final p in [TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.macOS, TargetPlatform.windows, TargetPlatform.linux]) {
+      debugDefaultTargetPlatformOverride = p;
+      await pumpUi(tester, Column(mainAxisSize: MainAxisSize.min, children: [
+        for (final app in _apps) UiMessengerButton(app: app, onPressed: () {}),
+        UiContactChannels(phone: '+960 777 1234', messengers: [for (final app in _apps) UiMessengerChannel(app: app)], onMessengerPressed: (_) {}),
+        UiMessengerSwitch(value: UiMessengerApp.viber, onChanged: (_) {}),
+      ]));
+      for (final app in _apps) {
+        expect(find.text(UiMessengerBrand.name(app)), findsOneWidget, reason: '$p $app button');
+        expect(find.byWidgetPredicate((w) => w is UiMessengerLogo && w.app == app), findsNWidgets(app == UiMessengerApp.viber ? 4 : 3), reason: '$p $app');
+      }
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('golden: the three, labelled, compact, ticked, disabled, expanded', (tester) async {
-    await expectThemedGolden(tester, 'messenger_buttons', height: 400, (context) {
+    await expectThemedGolden(tester, 'messenger_buttons', height: 520, (context) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 14, children: [
         Wrap(spacing: 8, runSpacing: 12, children: [for (final app in _apps) UiMessengerButton(app: app, onPressed: () {})]),
         Wrap(spacing: 12, runSpacing: 12, children: [
@@ -367,6 +504,12 @@ void main() {
         Wrap(spacing: 12, runSpacing: 12, children: [for (final app in _apps) UiMessengerButton(app: app, ticked: true, onPressed: () {})]),
         Wrap(spacing: 8, runSpacing: 12, children: [for (final app in _apps) UiMessengerButton(app: app, onPressed: null)]),
         Row(spacing: 8, children: [for (final app in _apps) Expanded(child: UiMessengerButton(app: app, expand: true, ticked: app == UiMessengerApp.viber, compact: UiMessengerCompact.auto, onPressed: () {}))]),
+        // sm: icon-only 32px boxes 12 apart (their 44 hit areas touch), ticked, and labelled.
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final app in _apps) UiMessengerButton(app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, onPressed: () {}),
+          for (final app in _apps) UiMessengerButton(app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, ticked: true, onPressed: () {}),
+        ]),
+        Wrap(spacing: 8, runSpacing: 4, children: [for (final app in _apps) UiMessengerButton(app: app, size: UiMessengerSize.sm, onPressed: () {})]),
       ]);
     });
   });

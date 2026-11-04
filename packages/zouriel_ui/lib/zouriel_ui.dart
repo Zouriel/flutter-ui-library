@@ -7,6 +7,7 @@ export 'src/button/apple_sign_in_button.dart';
 export 'src/button/google_sign_in_button.dart';
 export 'src/button/social_sign_in_button.dart';
 export 'src/button/messenger_button.dart';
+export 'src/button/messenger_switch.dart';
 export 'src/button/hold_button.dart';
 export 'src/card/card.dart';
 export 'src/card/feature_card.dart';

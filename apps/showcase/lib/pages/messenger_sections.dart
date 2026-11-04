@@ -30,7 +30,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
       name: 'Messenger buttons',
       widget: 'UiMessengerButton',
       summary:
-          'Opens a chat in WhatsApp, Viber or Telegram: the brand\'s fill, its official logo (unaltered, from each brand\'s own download) and the app\'s name in a dark ink that passes AA on the fill (white does not on any of the three), 44 high with the theme\'s corners. Logo and name are centred together. compact shows the logo alone (44x44; the name stays the accessible name); auto does so exactly when the whole name would not fit (never an ellipsis), for equal rows that must fit a phone. ticked adds a success tick at the top-end corner, in the same place on every button; the button stays usable, tickLabel is read after the name and shown as a tooltip (long press on touch). It only reports the press: the app opens the link. The web twin is ui-messenger-button.',
+          'Opens a chat in WhatsApp, Viber or Telegram: the brand\'s fill, its official logo (unaltered, from each brand\'s own download) and the app\'s name in a dark ink that passes AA on the fill (white does not on any of the three), 44 high with the theme\'s corners. Logo and name are centred together. compact shows the logo alone (44x44; the name stays the accessible name); auto does so exactly when the whole name would not fit (never an ellipsis), for equal rows that must fit a phone. size sm draws a 32px box (logo 18, Telegram 23; a 14px badge) inside an invisible 44px hit area, for rows of small icons. ticked adds a success tick at the top-end corner, in the same place on every button; the button stays usable, tickLabel is read after the name and shown as a tooltip (long press on touch; a long press never presses the button). No app is hidden on any platform. It only reports the press: the app opens the link. The web twin is ui-messenger-button.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space4, children: [
         Wrap(spacing: t.space2, runSpacing: t.space3, children: [
           for (final app in UiMessengerApp.values) UiMessengerButton(app: app, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app)),
@@ -43,6 +43,14 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
         Row(spacing: t.space2, children: [
           for (final app in UiMessengerApp.values)
             Expanded(child: UiMessengerButton(app: app, expand: true, compact: UiMessengerCompact.auto, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app))),
+        ]),
+        UiText('size: sm (32px boxes, 44px hit areas, 12 apart)', variant: UiTextVariant.caption),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final app in UiMessengerApp.values)
+            UiMessengerButton(app: app, size: UiMessengerSize.sm, compact: UiMessengerCompact.on, ticked: _opened.containsKey(app), tickLabel: _opened[app], onPressed: () => press(app)),
+        ]),
+        Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          for (final app in UiMessengerApp.values) UiMessengerButton(app: app, size: UiMessengerSize.sm, onPressed: () => press(app)),
         ]),
         UiText(_log, variant: UiTextVariant.caption),
       ]),
@@ -63,6 +71,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
         ApiRow('app', 'UiMessengerApp', 'whatsapp, viber or telegram.'),
         ApiRow('onPressed', 'VoidCallback?', 'Open the chat. Null disables the button (half opacity).'),
         ApiRow('label', 'String?', 'The visible words.', def: 'the app\'s name'),
+        ApiRow('size', 'UiMessengerSize', 'md (44) or sm (a 32px box, 13px words, a 14px badge, inside an invisible 44px hit area).', def: 'md'),
         ApiRow('compact', 'UiMessengerCompact', 'off, on (logo only, 44x44), auto (logo only when the whole label would not fit; never an ellipsis).', def: 'off'),
         ApiRow('expand', 'bool', 'Fill the width; logo and words stay centred.', def: 'false'),
         ApiRow('ticked', 'bool', 'The success tick badge at the top-end corner. Still usable.', def: 'false'),
@@ -70,7 +79,7 @@ class _MessengerButtonSectionState extends State<MessengerButtonSection> {
         ApiRow('semanticLabel', 'String?', 'The accessible name ("Send to Aisha on WhatsApp").', def: 'label'),
         ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
       ],
-      shapes: 'enum UiMessengerApp { whatsapp, viber, telegram }\nenum UiMessengerCompact { off, on, auto }\n// Brand colours, logo sizes and the fill: UiMessengerBrand.\n// labelledWidth(context): the width auto needs to show the label.',
+      shapes: 'enum UiMessengerApp { whatsapp, viber, telegram }\nenum UiMessengerSize { sm, md }\nenum UiMessengerCompact { off, on, auto }\n// Brand colours, logo sizes and the fill: UiMessengerBrand.\n// labelledWidth(context): the width auto needs to show the label.',
     );
   }
 }
@@ -106,7 +115,7 @@ class _ContactChannelsSectionState extends State<ContactChannelsSection> {
       name: 'Contact channels',
       widget: 'UiContactChannels',
       summary:
-          'One person\'s ways to be reached, in columns that line up: Email (label, address, status), Number, and under it a row of messenger buttons that starts at the value column. The label column is at least 64 wide (as wide as the widest label), the status column at least 44. The email status is a Send button, a success tick (sent or delivered, emailTickLabel as its tooltip and name), Retry with the error under the row (failed or bounced), or a spinner while emailBusy. The buttons share the width equally and turn icon-only when there isn\'t room (a phone), keeping their names for screen readers. It only reports presses: the app sends and sets the ticks. Press a button below to tick it. The web twin is ui-contact-channels.',
+          'One person\'s ways to be reached, in columns that line up: Email (label, address, status), Number, and under it a row of messenger buttons that starts at the value column. The label column is at least 64 wide (as wide as the widest label), the status column at least 44. The email status is a Send button, a success tick (sent or delivered, emailTickLabel as its tooltip and name), Retry with the error under the row (failed or bounced), or a spinner while emailBusy. The buttons are small icons (size sm, 32px boxes 12 apart with 44px hit areas) starting at the value column, keeping their full names for screen readers. It only reports presses: the app sends and sets the ticks. Press a button below to tick it. The web twin is ui-contact-channels.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
         card(UiContactChannels(
           email: 'aisha@example.com',
@@ -300,6 +309,59 @@ class _PhoneInputSectionState extends State<PhoneInputSection> {
         ApiRow('uiPhoneSplit / uiPhoneE164 / uiPhoneSearch', 'functions', 'The same parsing, output and search the widget uses; uiPhoneCountries holds the 245 countries (libphonenumber v9.0.42).'),
       ],
       shapes: 'class UiPhoneCountry { String iso2, name, dial, trunk, leading; bool main; String flag; }',
+    );
+  }
+}
+
+/// Buttons page: "Messenger switch".
+class MessengerSwitchSection extends StatefulWidget {
+  const MessengerSwitchSection({super.key});
+  @override
+  State<MessengerSwitchSection> createState() => _MessengerSwitchSectionState();
+}
+
+class _MessengerSwitchSectionState extends State<MessengerSwitchSection> {
+  UiMessengerApp _app = UiMessengerApp.whatsapp;
+  int _sent = 0;
+  String _last = 'Nothing sent yet';
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return DocSection(
+      name: 'Messenger switch',
+      widget: 'UiMessengerSwitch',
+      summary:
+          'A "Send next on WhatsApp" button that is also a channel switch: the pill (the brand\'s fill and logo, the words and an optional second line) sends with the current app; the chevrons, a swipe across the pill (finger left = next, right = previous, mirrored in RTL), the arrow keys (Home/End for first/last) and the logo dots under it change the channel. Centred, up to 360 wide; the words wrap to two lines on a narrow screen. disabled only stops sending: the channel can still change. Controlled: give the new value back from onChanged. The web twin is ui-messenger-switch.',
+      demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+        UiMessengerSwitch(
+          value: _app,
+          sublabel: 'Next: Aisha',
+          onChanged: (a) => setState(() => _app = a),
+          onPressed: (a) => setState(() {
+            _sent++;
+            _last = 'Sent $_sent: ${UiMessengerBrand.name(a)}';
+          }),
+        ),
+        Center(child: UiText(_last, variant: UiTextVariant.caption)),
+      ]),
+      code: '''UiMessengerSwitch(
+  value: channel,
+  sublabel: 'Next: \${next.name}',
+  onChanged: (app) => setState(() => channel = app),
+  onPressed: (app) => sendNext(app),
+)''',
+      api: const [
+        ApiRow('value / onChanged', 'UiMessengerApp / ValueChanged<UiMessengerApp>?', 'The channel; give the new one back.'),
+        ApiRow('apps', 'List<UiMessengerApp>', 'The channels, in order; chevrons and swipes wrap round.', def: 'all three'),
+        ApiRow('label', 'String?', 'The pill\'s words (up to two lines).', def: 'UiStrings.messengerSendNext ("Send next on {app}")'),
+        ApiRow('sublabel', 'String?', 'A second line, e.g. "Next: Aisha".'),
+        ApiRow('disabled', 'bool', 'The pill doesn\'t send (half opacity); switching still works.', def: 'false'),
+        ApiRow('focusNode', 'FocusNode?', 'The pill\'s focus.'),
+      ],
+      callbacks: const [
+        ApiRow('onPressed', 'ValueChanged<UiMessengerApp>?', 'The pill was tapped (or Enter/Space): the current app. Never fired by a swipe.'),
+      ],
     );
   }
 }

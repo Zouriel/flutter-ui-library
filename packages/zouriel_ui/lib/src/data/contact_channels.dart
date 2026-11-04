@@ -36,10 +36,9 @@ class UiMessengerChannel {
 /// `ui-contact-channels`: how to reach one person, as rows that share three columns
 /// (label | value | status): the email address with its status (a Send button, a sent tick, a
 /// Retry button with the error under it, or a spinner while [emailBusy]); the phone number; and
-/// under it, starting at the value column, a messenger button per channel in equal columns. The
-/// buttons show their names when every whole name fits its equal share of the width, else all show
-/// their logos alone (a phone-width card); a row never mixes the two, and the full names stay for
-/// screen readers. It measures its width, so it can't sit inside intrinsic sizing.
+/// under it, starting at the value column, a small icon-only messenger button per channel
+/// (`UiMessengerSize.sm`, 32px boxes 12 apart, each with a 44px hit area), left-aligned. The buttons
+/// keep their full names for screen readers.
 ///
 /// The email row shows only with a non-empty [email], the number and messenger rows only with a
 /// non-empty [phone] (shown as given). Twin of Angular's `ui-contact-channels`.
@@ -158,28 +157,23 @@ class UiContactChannels extends StatelessWidget {
       if (visible.isNotEmpty)
         Padding(
           key: const ValueKey('ui-contact-messengers'),
-          // Room above for the tick badges.
-          padding: EdgeInsetsDirectional.only(start: valueStart, top: 6),
-          child: LayoutBuilder(builder: (context, box) {
-            UiMessengerButton button(UiMessengerChannel m, UiMessengerCompact compact) => UiMessengerButton(
-                  key: ValueKey(m.app),
-                  app: m.app,
-                  expand: true,
-                  compact: compact,
-                  ticked: m.ticked,
-                  tickLabel: m.tickLabel,
-                  semanticLabel: m.semanticLabel,
-                  onPressed: onMessengerPressed == null ? null : () => onMessengerPressed!(m.app),
-                );
-            // One rule for the whole row, so it never mixes names and logos: names only when every
-            // visible button's whole name fits its equal share of the width.
-            final each = (box.maxWidth - t.space2 * (visible.length - 1)) / visible.length;
-            final fits = visible.every((m) => button(m, UiMessengerCompact.off).labelledWidth(context) <= each);
-            final compact = fits ? UiMessengerCompact.off : UiMessengerCompact.on;
-            return Row(spacing: t.space2, children: [
-              for (final m in visible) Expanded(child: button(m, compact)),
-            ]);
-          }),
+          // The 32px boxes start at the value column with 12 between them. Each has an invisible 44px
+          // hit area centred on it (6 around), so the areas tile without overlapping: the row starts 6
+          // before the value column, and the 6 above the boxes is the room for the tick badges.
+          padding: EdgeInsetsDirectional.only(start: valueStart - (UiMessengerBrand.hitSm - UiMessengerBrand.heightSm) / 2),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final m in visible)
+              UiMessengerButton(
+                key: ValueKey(m.app),
+                app: m.app,
+                size: UiMessengerSize.sm,
+                compact: UiMessengerCompact.on,
+                ticked: m.ticked,
+                tickLabel: m.tickLabel,
+                semanticLabel: m.semanticLabel,
+                onPressed: onMessengerPressed == null ? null : () => onMessengerPressed!(m.app),
+              ),
+          ]),
         ),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: children);

@@ -1064,3 +1064,32 @@ widget sent, so typing isn't reformatted under the caret.
 `UiColumn.cellBuilder` = the web's `<ng-template uiCell="key">`: the builder replaces the formatted text
 inside the usual cell padding and alignment (with the cell's text style as the default); sorting still
 reads `value`.
+
+## Messenger size sm, contact row, messenger switch (0.58.0)
+
+`UiMessengerButton(size: UiMessengerSize.sm)` = `size="sm"`: a 32px painted box (logo 18, Telegram 23; Telegram's
+gradient band is still the logo box; a 14px badge at -5/-5 with a 10px tick) inside an invisible 44x44 hit area. The web
+puts the hit area in a `::before` that takes no layout; Flutter can't hit-test outside a box's own bounds, so sm lays out
+as 44x44 (`UiTouchTarget`, key `ui-messenger-hit`) with the 32 box centred, and sm opts out of the usual 48 touch padding:
+44 is what lets a row of them sit 12 apart with their areas touching, not overlapping (it is under Android's 48dp
+guideline, by design and as the web). A long press never presses the button: with a tick label UiTooltip's own long press
+wins the gesture; without one, a GestureDetector with an empty onLongPress does. One side effect: a competing long press
+makes Flutter delay the tap-down (the press veil) by kPressTimeout, 100ms, as InkWell does. No app is hidden on any
+platform; a test renders all three on android, iOS, macOS, windows and linux.
+
+`UiContactChannels`' messenger row is now sm, icon-only and left-aligned: the row starts 6 before the value column so
+the first painted box starts exactly on it, the 44 areas tile with no gap (boxes 12 apart), and the 6 above the boxes is
+the room the badges need (the web's padding-top 6). The equal-width / labels-fit logic for the row is gone; `compact: auto`
+and `labelledWidth` stay on the button.
+
+`UiMessengerSwitch` = `ui-messenger-switch`. Controlled (`value` + `onChanged`), the web's `model()`. The pill is built
+from FocusableActionDetector + GestureDetector + one Semantics node (button, enabled = !disabled, label "label, sublabel",
+hint `messengerSwitchHint`, onIncrease/onDecrease to step) rather than UiInteractive, because a disabled pill must stay
+focusable and keep its arrow keys (UiInteractive's disabled state drops focus). The swipe is the GestureDetector's
+horizontal drag: on end, |dx| >= 40 and |dx| > |dy|, or a fling >= 300 px/s the same way. The fill is painted (so
+Telegram's band follows the pill's real height, which grows when the label wraps) and cross-fades from the previous app
+over motion-base; the content is an AnimatedSwitcher keyed by app, the new content sliding 16px in from the side it comes
+from (the shorter way round decides the side) while the old one fades. The label may take two lines (the web uses
+`text-wrap: balance`, which Flutter has no twin for, so the break falls where the line fills); the sublabel keeps to one.
+The dots are radios (`inMutuallyExclusiveGroup`, checked) in a group named `messengerChannel`; arrow keys on a dot move the
+choice and the focus with it. Dots: a 20px brand disc with the logo at 16 (Telegram: its own disc logo at 20) in a 28 target.

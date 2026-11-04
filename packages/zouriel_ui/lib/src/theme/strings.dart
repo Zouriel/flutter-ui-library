@@ -56,6 +56,11 @@ class UiStrings {
     this.contactRetry = 'Retry',
     this.contactEmailSent = 'Sent',
     this.messengerOpened = 'Opened',
+    this.messengerSendNext = 'Send next on {app}',
+    this.messengerChannel = 'Channel',
+    this.messengerPrevChannel = 'Previous channel',
+    this.messengerNextChannel = 'Next channel',
+    this.messengerSwitchHint = 'Swipe or use the arrow keys to change channel',
     this.phoneCountry = 'Country',
     this.phoneSearch = 'Search countries',
     this.phoneNumber = 'Phone number',
@@ -253,6 +258,11 @@ class UiStrings {
     contactRetry: 'އަލުން ފޮނުވާ',
     contactEmailSent: 'ފޮނުވިއްޖެ',
     messengerOpened: 'ހުޅުވިއްޖެ',
+    messengerSendNext: '{app} ގައި ދެން ފޮނުވާ',
+    messengerChannel: 'ޗެނަލް',
+    messengerPrevChannel: 'ކުރީގެ ޗެނަލް',
+    messengerNextChannel: 'ދެން އޮތް ޗެނަލް',
+    messengerSwitchHint: 'ޗެނަލް ބަދަލުކުރަން ފަޅިއަށް ކަނޑާ ނުވަތަ އެރޯ ކީ ބޭނުންކުރޭ',
     phoneCountry: 'ޤައުމު',
     phoneSearch: 'ޤައުމު ހޯދާ',
     phoneNumber: 'ފޯނު ނަންބަރު',
@@ -524,6 +534,21 @@ class UiStrings {
 
   /// Messenger button: read after the name when ticked and no tickLabel is given.
   final String messengerOpened;
+
+  /// Messenger switch: the main button's words ({app}: the app's name).
+  final String messengerSendNext;
+
+  /// Messenger switch: the name of the row of channel dots.
+  final String messengerChannel;
+
+  /// Messenger switch: the previous-channel chevron.
+  final String messengerPrevChannel;
+
+  /// Messenger switch: the next-channel chevron.
+  final String messengerNextChannel;
+
+  /// Messenger switch: how to change the channel (the main button's hint).
+  final String messengerSwitchHint;
 
   /// Phone input: the country button's name ("Country: United Kingdom +44").
   final String phoneCountry;
@@ -1008,6 +1033,11 @@ class UiStrings {
     String? contactRetry,
     String? contactEmailSent,
     String? messengerOpened,
+    String? messengerSendNext,
+    String? messengerChannel,
+    String? messengerPrevChannel,
+    String? messengerNextChannel,
+    String? messengerSwitchHint,
     String? phoneCountry,
     String? phoneSearch,
     String? phoneNumber,
@@ -1200,6 +1230,11 @@ class UiStrings {
         contactRetry: contactRetry ?? this.contactRetry,
         contactEmailSent: contactEmailSent ?? this.contactEmailSent,
         messengerOpened: messengerOpened ?? this.messengerOpened,
+        messengerSendNext: messengerSendNext ?? this.messengerSendNext,
+        messengerChannel: messengerChannel ?? this.messengerChannel,
+        messengerPrevChannel: messengerPrevChannel ?? this.messengerPrevChannel,
+        messengerNextChannel: messengerNextChannel ?? this.messengerNextChannel,
+        messengerSwitchHint: messengerSwitchHint ?? this.messengerSwitchHint,
         phoneCountry: phoneCountry ?? this.phoneCountry,
         phoneSearch: phoneSearch ?? this.phoneSearch,
         phoneNumber: phoneNumber ?? this.phoneNumber,
@@ -1394,6 +1429,11 @@ class UiStrings {
         'contactRetry': contactRetry,
         'contactEmailSent': contactEmailSent,
         'messengerOpened': messengerOpened,
+        'messengerSendNext': messengerSendNext,
+        'messengerChannel': messengerChannel,
+        'messengerPrevChannel': messengerPrevChannel,
+        'messengerNextChannel': messengerNextChannel,
+        'messengerSwitchHint': messengerSwitchHint,
         'phoneCountry': phoneCountry,
         'phoneSearch': phoneSearch,
         'phoneNumber': phoneNumber,

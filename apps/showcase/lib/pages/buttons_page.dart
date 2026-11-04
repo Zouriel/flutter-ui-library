@@ -282,6 +282,7 @@ UiSocialSignInButton(
           shapes: 'enum UiSocialProvider { apple, google }\nenum UiSocialButtonText { signIn, continueWith, signUp }\nenum UiSocialButtonStyle { auto, dark, light }\nenum UiSocialButtonShape { rounded, rectangular, pill }',
         ),
         const MessengerButtonSection(),
+        const MessengerSwitchSection(),
         DocSection(
           name: 'Icon button',
           widget: 'UiIconButton',

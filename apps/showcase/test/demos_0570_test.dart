@@ -52,6 +52,16 @@ void main() {
     expect(find.text('WhatsApp for Aisha Mohamed'), findsOneWidget);
   });
 
+  testWidgets('messenger switch (0.58): next changes the channel; the pill sends the current one', (tester) async {
+    await _pump(tester, const MessengerSwitchSection());
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byKey(const ValueKey('ui-mswitch-next')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('ui-mswitch-pill')));
+    await tester.pump();
+    expect(find.text('Sent 1: Viber'), findsOneWidget);
+  });
+
   testWidgets('phone input: the value shows live; the form validates', (tester) async {
     await _pump(tester, const PhoneInputSection());
     expect(tester.takeException(), isNull);
