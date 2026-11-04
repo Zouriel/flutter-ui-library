@@ -12,8 +12,9 @@ void main() {
     final allowed = RegExp(r'Color\(0x00000000\)'); // fully transparent
     // The exceptions: the sign-in buttons' brand colours, fixed whatever the theme by
     // https://developers.google.com/identity/branding-guidelines and Apple's Human Interface
-    // Guidelines (Sign in with Apple).
-    final brand = RegExp(r'(google|apple|social)_sign_in_button\.dart$');
+    // Guidelines (Sign in with Apple); and the messenger buttons' brand fills, inks and logos, from
+    // the WhatsApp, Viber and Telegram brand resources.
+    final brand = RegExp(r'((google|apple|social)_sign_in_button|messenger_button)\.dart$');
     for (final f in files) {
       if (brand.hasMatch(f.path.replaceAll(r'\', '/'))) continue;
       final lines = f.readAsLinesSync();

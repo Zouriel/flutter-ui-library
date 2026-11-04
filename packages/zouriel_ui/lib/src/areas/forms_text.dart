@@ -14,6 +14,7 @@ export '../forms/text/form_field.dart' show UiFormField, UiFieldScope, UiFieldLi
 export '../forms/text/inputs.dart';
 export '../forms/text/number_input.dart';
 export '../forms/text/otp_input.dart';
+export '../forms/text/phone_input.dart';
 export '../forms/text/select.dart';
 export '../forms/text/text_core.dart'
     show UiFieldFrame, UiFieldButton, UiTextEditor, UiTextSelectionControls, uiTextSelectionControls, uiTextContextMenu, UiTextContextMenu, uiFieldTextStyle, uiFieldFontSize, uiDangerRing;

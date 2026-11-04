@@ -13,10 +13,12 @@ enum UiColumnAlign { start, center, end }
 /// A column of a [UiTable].
 ///
 /// The cell value is read with [value], or, when rows are maps, `row[key]`. [format] turns it into
-/// the text shown (default: `toString()`, empty for null).
+/// the text shown (default: `toString()`, empty for null). [cellBuilder] draws the cell as a widget
+/// instead (a status pill, a button; the web `<ng-template uiCell="key">`); sorting still uses the
+/// value.
 @immutable
 class UiColumn<T> {
-  const UiColumn({required this.key, required this.header, this.sortable = false, this.align = UiColumnAlign.start, this.value, this.format});
+  const UiColumn({required this.key, required this.header, this.sortable = false, this.align = UiColumnAlign.start, this.value, this.format, this.cellBuilder});
 
   final String key;
   final String header;
@@ -24,6 +26,10 @@ class UiColumn<T> {
   final UiColumnAlign align;
   final Object? Function(T row)? value;
   final String Function(Object? value, T row)? format;
+
+  /// Builds the cell's content in place of [format]'s text (the web `UiCell` template). The cell's
+  /// padding, alignment and default text style still apply.
+  final Widget Function(BuildContext context, T row)? cellBuilder;
 
   Object? read(T row) {
     if (value != null) return value!(row);
@@ -238,7 +244,13 @@ class _UiTableState<T> extends State<UiTable<T>> {
             for (final col in widget.columns)
               hoverable(i, Padding(
                 padding: pad,
-                child: Align(alignment: align(col.align), widthFactor: 1, child: Text(col.text(rows[i]), style: body, textAlign: textAlign(col.align))),
+                child: Align(
+                  alignment: align(col.align),
+                  widthFactor: 1,
+                  child: col.cellBuilder != null
+                      ? DefaultTextStyle(style: body, textAlign: textAlign(col.align), child: Builder(builder: (context) => col.cellBuilder!(context, rows[i])))
+                      : Text(col.text(rows[i]), style: body, textAlign: textAlign(col.align)),
+                ),
               )),
             if (hasActions)
               hoverable(i, Padding(

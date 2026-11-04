@@ -1819,3 +1819,38 @@ File: `google-sign-in/src/google-authorization.ts`
 Asks the signed-in user for more Google scopes through Google Identity Services' token client (`google.accounts.oauth2.initTokenClient`, popup) and returns `{ accessToken, grantedScopes, expiresIn }`; rejects with `UiGoogleAuthorizationError` (`cancelled` | `popup_blocked` | `unavailable` | `failed`). Web only: a Flutter app asks for scopes with the `google_sign_in` package's `authorizationClient` (`authorizeScopes` / `authorizationForScopes`), which needs no library widget.  
 - Methods: `requestAccessToken({ clientId, scopes, hint?, prompt? })`; `preload()`
 - [ ] Flutter port (not applicable: scopes come from the google_sign_in plugin's authorizationClient)  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+
+
+## messenger (0.57)
+
+### UiMessengerButton (component, `ui-messenger-button`) (0.57)
+File: `messenger/src/messenger-button.ts` (entry point `@zouriel/ui/messenger`)  
+Opens a chat in WhatsApp, Viber or Telegram: brand fill, official logo (verbatim path data from each brand's download), the app's name in a dark AA ink, 44 high, theme corners, logo and name centred as a group; compact (on / auto below 120px), expand, ticked + tickLabel (success tick badge 3px inside the top-end corner, read after the name, tooltip).  
+- Inputs: `app`; `label`; `compact`: boolean | 'auto'; `expand`; `ticked`; `tickLabel`; `ariaLabel`; `disabled`
+- Outputs: `pressed`
+- Flutter: `UiMessengerButton`, `UiMessengerApp`, `UiMessengerCompact`; extras `UiMessengerBrand` (colours, `logoSize`, `fillGradient`), `UiMessengerLogo`, `UiMessengerTick`, `uiMessengerLogoPaths` (the same path data as Angular's brand file)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiContactChannels (component, `ui-contact-channels`) (0.57)
+File: `messenger/src/contact-channels.ts`  
+One person's Email / Number rows and messenger buttons in three shared columns (label >= 64 | value | status >= 44); email Send / sent tick / Retry + error / spinner.  
+- Inputs: `email`; `emailStatus`; `emailTickLabel`; `emailError`; `emailBusy`; `phone`; `messengers`: UiMessengerChannel[]; `emailLabel`; `numberLabel`
+- Outputs: `emailSend`; `emailRetry`; `messengerPress`
+- Flutter: `UiContactChannels`, `UiEmailStatus`, `UiMessengerChannel` (`ariaLabel` is `semanticLabel`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+## form: phone input (0.57)
+
+### UiPhoneInput (component, `ui-phone-input`) (0.57)
+File: `form/src/phone-input.ts`, helpers `form/src/phone.ts`, data `form/src/phone-countries.ts` (generated)  
+E.164 phone value: country button (flag, dial code, searchable list of 245 countries from libphonenumber v9.0.42) and the national number field; trunk prefixes stripped; "+44…" / "0044…" switches the country.  
+- Inputs: `defaultCountry`; `placeholder`; `ariaLabel`; `name`; `size`; `invalid`; `radius`; CVA value / disabled
+- Outputs: `countryChange`
+- Flutter: `UiPhoneInput` (`value` / `onChanged`, `onCountryChanged`, `semanticLabel`, `enabled`), `UiPhoneCountry`, `uiPhoneCountries`, `uiPhoneCountry`, `uiPhoneFlag`, `uiPhoneSplit`, `uiPhoneNational`, `uiPhoneE164`, `uiPhoneSearch`, `uiPhoneIsInternational`, `uiPhoneInternationalDigits`; data `lib/src/forms/text/phone_countries.dart` from `tool/gen_phone_countries.mjs`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiCell (directive, `uiCell`) (0.57)
+File: `table/src/table.ts`  
+A template for one column's cells inside `ui-table`; sorting still uses the value.  
+- Flutter: `UiColumn.cellBuilder: Widget Function(BuildContext, T row)?`
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase

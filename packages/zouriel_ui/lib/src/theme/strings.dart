@@ -50,6 +50,15 @@ class UiStrings {
     this.appleSignIn = 'Sign in with Apple',
     this.appleSignUp = 'Sign up with Apple',
     this.appleContinue = 'Continue with Apple',
+    this.contactEmail = 'Email',
+    this.contactNumber = 'Number',
+    this.contactSend = 'Send',
+    this.contactRetry = 'Retry',
+    this.contactEmailSent = 'Sent',
+    this.messengerOpened = 'Opened',
+    this.phoneCountry = 'Country',
+    this.phoneSearch = 'Search countries',
+    this.phoneNumber = 'Phone number',
     this.sidebarToggle = 'Toggle navigation',
     this.sidebarClose = 'Close navigation',
     this.sidebarLabel = 'Navigation',
@@ -238,6 +247,15 @@ class UiStrings {
     appleSignIn: 'އެޕަލްއިން ސައިން އިން ކުރޭ',
     appleSignUp: 'އެޕަލްއިން ސައިން އަޕް ކުރޭ',
     appleContinue: 'އެޕަލްއިން ކުރިއަށް',
+    contactEmail: 'އީމެއިލް',
+    contactNumber: 'ނަންބަރު',
+    contactSend: 'ފޮނުވާ',
+    contactRetry: 'އަލުން ފޮނުވާ',
+    contactEmailSent: 'ފޮނުވިއްޖެ',
+    messengerOpened: 'ހުޅުވިއްޖެ',
+    phoneCountry: 'ޤައުމު',
+    phoneSearch: 'ޤައުމު ހޯދާ',
+    phoneNumber: 'ފޯނު ނަންބަރު',
     sidebarToggle: 'މެނޫ',
     sidebarClose: 'މެނޫ ބަންދުކުރޭ',
     sidebarLabel: 'ނެވިގޭޝަން',
@@ -488,6 +506,33 @@ class UiStrings {
 
   /// Sign in with Apple button wording.
   final String appleContinue;
+
+  /// Contact channels: the email row's label.
+  final String contactEmail;
+
+  /// Contact channels: the phone number row's label.
+  final String contactNumber;
+
+  /// Contact channels: the button that sends the email.
+  final String contactSend;
+
+  /// Contact channels: the button that sends a failed email again.
+  final String contactRetry;
+
+  /// Contact channels: the sent tick's name when no emailTickLabel is given.
+  final String contactEmailSent;
+
+  /// Messenger button: read after the name when ticked and no tickLabel is given.
+  final String messengerOpened;
+
+  /// Phone input: the country button's name ("Country: United Kingdom +44").
+  final String phoneCountry;
+
+  /// Phone input: the country search field's placeholder.
+  final String phoneSearch;
+
+  /// Phone input: the number field's default name.
+  final String phoneNumber;
 
   /// Sidebar layout: the menu button.
   final String sidebarToggle;
@@ -957,6 +1002,15 @@ class UiStrings {
     String? appleSignIn,
     String? appleSignUp,
     String? appleContinue,
+    String? contactEmail,
+    String? contactNumber,
+    String? contactSend,
+    String? contactRetry,
+    String? contactEmailSent,
+    String? messengerOpened,
+    String? phoneCountry,
+    String? phoneSearch,
+    String? phoneNumber,
     String? sidebarToggle,
     String? sidebarClose,
     String? sidebarLabel,
@@ -1140,6 +1194,15 @@ class UiStrings {
         appleSignIn: appleSignIn ?? this.appleSignIn,
         appleSignUp: appleSignUp ?? this.appleSignUp,
         appleContinue: appleContinue ?? this.appleContinue,
+        contactEmail: contactEmail ?? this.contactEmail,
+        contactNumber: contactNumber ?? this.contactNumber,
+        contactSend: contactSend ?? this.contactSend,
+        contactRetry: contactRetry ?? this.contactRetry,
+        contactEmailSent: contactEmailSent ?? this.contactEmailSent,
+        messengerOpened: messengerOpened ?? this.messengerOpened,
+        phoneCountry: phoneCountry ?? this.phoneCountry,
+        phoneSearch: phoneSearch ?? this.phoneSearch,
+        phoneNumber: phoneNumber ?? this.phoneNumber,
         sidebarToggle: sidebarToggle ?? this.sidebarToggle,
         sidebarClose: sidebarClose ?? this.sidebarClose,
         sidebarLabel: sidebarLabel ?? this.sidebarLabel,
@@ -1325,6 +1388,15 @@ class UiStrings {
         'appleSignIn': appleSignIn,
         'appleSignUp': appleSignUp,
         'appleContinue': appleContinue,
+        'contactEmail': contactEmail,
+        'contactNumber': contactNumber,
+        'contactSend': contactSend,
+        'contactRetry': contactRetry,
+        'contactEmailSent': contactEmailSent,
+        'messengerOpened': messengerOpened,
+        'phoneCountry': phoneCountry,
+        'phoneSearch': phoneSearch,
+        'phoneNumber': phoneNumber,
         'sidebarToggle': sidebarToggle,
         'sidebarClose': sidebarClose,
         'sidebarLabel': sidebarLabel,

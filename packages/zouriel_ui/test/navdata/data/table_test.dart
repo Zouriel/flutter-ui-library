@@ -61,6 +61,41 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('cellBuilder draws a widget in place of the text; sorting still uses the value', (tester) async {
+    var pressed = <String>[];
+    final cols = [
+      const UiColumn<Item>(key: 'name', header: 'Name'),
+      UiColumn<Item>(
+        key: 'qty',
+        header: 'Qty',
+        sortable: true,
+        format: (v, row) => 'never shown',
+        cellBuilder: (context, row) => UiButton(
+          key: ValueKey('cell-${row['name']}'),
+          label: 'Qty ${row['qty'] ?? '-'}',
+          size: UiSize.sm,
+          onPressed: () => pressed.add(row['name']! as String),
+        ),
+      ),
+    ];
+    await pumpUi(tester, SizedBox(width: 390, child: UiTable<Item>(columns: cols, data: [a, b, c, d])));
+    expect(find.text('never shown'), findsNothing);
+    expect(find.byType(UiButton), findsNWidgets(4));
+    expect(find.text('Qty 5'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('cell-Apple')));
+    expect(pressed, ['Apple']);
+    List<String> order() => [for (final e in tester.widgetList<UiButton>(find.byType(UiButton))) e.label!];
+    expect(order(), ['Qty 3', 'Qty 5', 'Qty -', 'Qty 1']);
+    await tester.tap(_sort('Qty'));
+    await tester.pump();
+    // Sorted by the value (empties last), not by the builder.
+    expect(order(), ['Qty 1', 'Qty 3', 'Qty 5', 'Qty -']);
+    // The cell is still a cell: same padding as the text cells around it.
+    final cell = tester.getRect(find.byKey(const ValueKey('cell-Apple')));
+    final row = tester.getRect(find.text('Apple'));
+    expect((cell.center.dy - row.center.dy).abs(), lessThan(0.5));
+  });
+
   testWidgets('selection: select all, forget rows that leave, partial shows mixed', (tester) async {
     final handle = tester.ensureSemantics();
     final emitted = <List<Item>>[];

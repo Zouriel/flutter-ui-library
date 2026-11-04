@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
+import 'messenger_sections.dart';
 import 'navdata_sections.dart';
 
 class DataPage extends StatefulWidget {
@@ -395,6 +396,8 @@ class _DataPageState extends State<DataPage> {
           code: "UiDivider()\nUiDivider(label: 'or')\nUiDivider(axis: Axis.vertical)",
         ),
         ...navdataDataSections(),
+        const ContactChannelsSection(),
+        const TableCellSection(),
       ],
     );
   }

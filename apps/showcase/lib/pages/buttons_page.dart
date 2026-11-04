@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
+import 'messenger_sections.dart';
 
 class ButtonsPage extends StatefulWidget {
   const ButtonsPage({super.key});
@@ -280,6 +281,7 @@ UiSocialSignInButton(
           ],
           shapes: 'enum UiSocialProvider { apple, google }\nenum UiSocialButtonText { signIn, continueWith, signUp }\nenum UiSocialButtonStyle { auto, dark, light }\nenum UiSocialButtonShape { rounded, rectangular, pill }',
         ),
+        const MessengerButtonSection(),
         DocSection(
           name: 'Icon button',
           widget: 'UiIconButton',

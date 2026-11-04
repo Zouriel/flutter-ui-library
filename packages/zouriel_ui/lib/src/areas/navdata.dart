@@ -21,6 +21,7 @@ export '../list/list.dart';
 export '../tabs/tabs.dart';
 export '../table/table.dart';
 export '../data/code_block.dart';
+export '../data/contact_channels.dart';
 export '../data/description_list.dart';
 export '../data/chat_bubble.dart';
 export '../data/timeline.dart';
