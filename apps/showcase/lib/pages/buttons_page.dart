@@ -242,7 +242,7 @@ UiAppleSignInButton(
         DocSection(
           name: 'Social sign-in buttons',
           widget: 'UiSocialSignInButton',
-          summary: 'Sign in with Apple and Sign in with Google as one matching pair: the same height (40), 4px corners (or pill), 1px stroke, font (San Francisco on iOS and macOS, the bundled Roboto elsewhere; 17/20 medium, Apple\'s 43% of the height) and a 44px logo slot at the start with an equal one at the end, so a stack lines up exactly and the words centre on one line. Apple\'s logo is Apple\'s own left-aligned artwork (Apple Design Resources, Medium) at the full button height, black or white only; Google\'s is the standard multicolour G at 20px, 12px from the edge. dark is Apple\'s black button and Google\'s dark one, light is Apple\'s white and Google\'s light (both outlined); auto is dark on a light theme and light on a dark one. Use the same text for the whole stack. loading swaps the logo for a spinner and ignores taps. The web twin is ui-social-button.',
+          summary: 'Sign in with Apple and Sign in with Google as one matching pair: the same height (40), the theme\'s button corners (rounded, like UiButton; or 4px rectangular, or pill), 1px stroke, font (San Francisco on iOS and macOS, the bundled Roboto elsewhere; 17/20 medium, Apple\'s 43% of the height) and a 44px logo slot at the start with an equal one at the end, so a stack lines up exactly and the words centre on one line. Apple\'s logo is Apple\'s own left-aligned artwork (Apple Design Resources, Medium) at the full button height, black or white only; Google\'s is the standard multicolour G at 20px, 12px from the edge. light is Apple\'s white button with an outline and Google\'s light one, dark is Apple\'s black and Google\'s dark; auto (the default) is light on every theme. Use the same text for the whole stack. loading swaps the logo for a spinner and ignores taps. The web twin is ui-social-button.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             UiSocialSignInButton(provider: UiSocialProvider.apple, text: UiSocialButtonText.continueWith, expand: true, onPressed: () {}),
             UiSocialSignInButton(provider: UiSocialProvider.google, text: UiSocialButtonText.continueWith, expand: true, onPressed: () {}),
@@ -271,14 +271,14 @@ UiSocialSignInButton(
             ApiRow('provider', 'UiSocialProvider', 'apple or google.'),
             ApiRow('onPressed', 'VoidCallback?', 'Start the app\'s sign-in. Null disables the button.'),
             ApiRow('text', 'UiSocialButtonText', 'signIn, continueWith, signUp; one for the whole stack.', def: 'signIn'),
-            ApiRow('buttonStyle', 'UiSocialButtonStyle', 'auto (dark on a light UiApp theme, light on a dark one), dark (Apple black, Google dark), light (Apple white, Google light).', def: 'auto'),
-            ApiRow('shape', 'UiSocialButtonShape', 'rectangular (4px corners) or pill.', def: 'rectangular'),
+            ApiRow('buttonStyle', 'UiSocialButtonStyle', 'auto (light on every theme), light (Apple white with outline, Google light), dark (Apple black, Google dark).', def: 'auto'),
+            ApiRow('shape', 'UiSocialButtonShape', 'rounded (the theme\'s button radius, like UiButton), rectangular (4px) or pill.', def: 'rounded'),
             ApiRow('loading', 'bool', 'Spinner in place of the logo, taps ignored, announced as busy.', def: 'false'),
             ApiRow('expand', 'bool', 'Full width; the logo stays at the start, the words centre.', def: 'false'),
             ApiRow('semanticLabel', 'String?', 'Accessible name override.', def: 'the words'),
             ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
           ],
-          shapes: 'enum UiSocialProvider { apple, google }\nenum UiSocialButtonText { signIn, continueWith, signUp }\nenum UiSocialButtonStyle { auto, dark, light }\nenum UiSocialButtonShape { rectangular, pill }',
+          shapes: 'enum UiSocialProvider { apple, google }\nenum UiSocialButtonText { signIn, continueWith, signUp }\nenum UiSocialButtonStyle { auto, dark, light }\nenum UiSocialButtonShape { rounded, rectangular, pill }',
         ),
         DocSection(
           name: 'Icon button',

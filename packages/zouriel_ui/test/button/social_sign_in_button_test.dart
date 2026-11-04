@@ -16,7 +16,7 @@ TextStyle _style(WidgetTester tester, Key key) => tester.widget<Text>(_in(key, f
 const _a = Key('apple');
 const _g = Key('google');
 
-Widget _pair({UiSocialButtonText text = UiSocialButtonText.continueWith, UiSocialButtonStyle style = UiSocialButtonStyle.auto, bool expand = true, UiSocialButtonShape shape = UiSocialButtonShape.rectangular}) =>
+Widget _pair({UiSocialButtonText text = UiSocialButtonText.continueWith, UiSocialButtonStyle style = UiSocialButtonStyle.auto, bool expand = true, UiSocialButtonShape shape = UiSocialButtonShape.rounded}) =>
     SizedBox(
       width: 342,
       child: Column(
@@ -38,7 +38,9 @@ void main() {
     expect(a.height, 40);
     expect(a.width, 342);
     expect(_deco(tester, _a).borderRadius, _deco(tester, _g).borderRadius);
-    expect(_deco(tester, _a).borderRadius, BorderRadius.circular(4));
+    // The theme's button corners, as on UiButton (rounded is the default).
+    expect(_deco(tester, _a).borderRadius, BorderRadius.circular(tester.element(find.byKey(_a)).ui.radius));
+    expect(tester.element(find.byKey(_a)).ui.radius, greaterThan(4));
     expect((_deco(tester, _a).border! as Border).top.width, (_deco(tester, _g).border! as Border).top.width);
     final sa = _style(tester, _a), sg = _style(tester, _g);
     expect((sa.fontFamily, sa.fontSize, sa.fontWeight, sa.height), (sg.fontFamily, sg.fontSize, sg.fontWeight, sg.height));
@@ -95,8 +97,21 @@ void main() {
   });
 
   group('colours', () {
-    testWidgets('auto on a light theme: Apple black, Google dark', (tester) async {
-      await pumpUi(tester, _pair(), theme: UiThemeName.light);
+    for (final theme in [UiThemeName.light, UiThemeName.dark]) {
+      testWidgets('auto on $theme: both white, outlined (Apple white with outline, Google light)', (tester) async {
+        await pumpUi(tester, _pair(), theme: theme);
+        expect(_deco(tester, _a).color, const Color(0xFFFFFFFF));
+        expect(_style(tester, _a).color, const Color(0xFF000000));
+        expect(tester.widget<UiAppleLogoArtwork>(find.byType(UiAppleLogoArtwork)).color, const Color(0xFF000000));
+        expect(_deco(tester, _g).color, const Color(0xFFFFFFFF));
+        expect(_style(tester, _g).color, const Color(0xFF1F1F1F));
+        expect((_deco(tester, _a).border! as Border).top.color, const Color(0xFF747775));
+        expect((_deco(tester, _g).border! as Border).top.color, const Color(0xFF747775));
+      });
+    }
+
+    testWidgets('dark style: Apple black, Google dark', (tester) async {
+      await pumpUi(tester, _pair(style: UiSocialButtonStyle.dark), theme: UiThemeName.light);
       expect(_deco(tester, _a).color, const Color(0xFF000000));
       expect(_style(tester, _a).color, const Color(0xFFFFFFFF));
       expect(tester.widget<UiAppleLogoArtwork>(find.byType(UiAppleLogoArtwork)).color, const Color(0xFFFFFFFF));
@@ -105,17 +120,12 @@ void main() {
       expect((_deco(tester, _a).border! as Border).top.color, const Color(0xFF8E918F));
       expect((_deco(tester, _g).border! as Border).top.color, const Color(0xFF8E918F));
     });
+  });
 
-    testWidgets('auto on a dark theme: Apple white, Google light, both outlined', (tester) async {
-      await pumpUi(tester, _pair(), theme: UiThemeName.dark);
-      expect(_deco(tester, _a).color, const Color(0xFFFFFFFF));
-      expect(_style(tester, _a).color, const Color(0xFF000000));
-      expect(tester.widget<UiAppleLogoArtwork>(find.byType(UiAppleLogoArtwork)).color, const Color(0xFF000000));
-      expect(_deco(tester, _g).color, const Color(0xFFFFFFFF));
-      expect(_style(tester, _g).color, const Color(0xFF1F1F1F));
-      expect((_deco(tester, _a).border! as Border).top.color, const Color(0xFF747775));
-      expect((_deco(tester, _g).border! as Border).top.color, const Color(0xFF747775));
-    });
+  testWidgets('rectangular is 4px for both', (tester) async {
+    await pumpUi(tester, _pair(shape: UiSocialButtonShape.rectangular));
+    expect(_deco(tester, _a).borderRadius, BorderRadius.circular(4));
+    expect(_deco(tester, _g).borderRadius, BorderRadius.circular(4));
   });
 
   testWidgets('pill rounds both fully', (tester) async {

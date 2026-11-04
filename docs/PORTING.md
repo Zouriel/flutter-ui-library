@@ -231,6 +231,14 @@ gets the route's context so buttons can pop it first. The scrim is painted (clea
 88% at the bottom), the same stops as the web's `linear-gradient`. Hover on a tile is a 2px
 border-strong ring on both sides (the style contract forbids a brightness filter on the web).
 
+**0.56.0 changes.** The owner found the 0.55.0 pair black in the light theme and too square. Now
+`UiSocialButtonStyle.auto` is `light` on every theme (Apple's white-with-outline style, which the HIG
+recommends on white or light backgrounds and allows on dark ones as plain white; Google's light
+style, allowed on any background), and the default shape is the new `UiSocialButtonShape.rounded`:
+the theme's button radius (`context.ui.radius` / `--ui-radius`, as on `UiButton`; Apple: match your
+other buttons' corner radius). Height stays 40, above the app buttons' 30, because the "G" is fixed
+at 20 and Apple's title must be 43% of the height. `rectangular` (4px) and `pill` remain.
+
 **0.55.0 additions.** `UiSocialSignInButton` (web `ui-social-button`) draws the Apple and Google
 buttons as one matching pair, because the owner asked for them to be the same size with their logos.
 The two brand guides disagree on type (Google: 14/20 at 40 high; Apple: the title 43% of the

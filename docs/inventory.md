@@ -1799,10 +1799,10 @@ File: `google-sign-in/src/apple-button.ts` (entry point `@zouriel/ui/google-sign
 - Flutter extras: `UiAppleLogo`, `UiAppleBrand`, `uiAppleLogoPath` (the path both libraries draw)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
-### UiSocialButton (component, `ui-social-button`) (0.55)
+### UiSocialButton (component, `ui-social-button`) (0.55, defaults changed 0.56)
 File: `google-sign-in/src/social-button.ts` (entry point `@zouriel/ui/google-sign-in`)  
 Sign in with Apple and Sign in with Google as one matching pair: same height (40), corners (4 / pill), 1px stroke, font (system / Roboto 17/20 medium) and 44px logo slot at each end. Apple's own left-aligned Medium logo artwork at full height; Google's standard G at 20px. Flutter: `UiSocialSignInButton`.  
-- Inputs: `provider` (apple | google); `text` (signIn | continueWith | signUp); `buttonStyle` (auto | dark | light); `shape` (rectangular | pill); `loading`; `expand`; `disabled` (Flutter: `onPressed` null); `ariaLabel` (Flutter `semanticLabel`)
+- Inputs: `provider` (apple | google); `text` (signIn | continueWith | signUp); `buttonStyle` (auto = light | light | dark); `shape` (rounded = theme radius, default 0.56 | rectangular | pill); `loading`; `expand`; `disabled` (Flutter: `onPressed` null); `ariaLabel` (Flutter `semanticLabel`)
 - Outputs: `pressed` (Flutter `onPressed`)
 - Flutter extras: `UiSocialBrand`, `UiAppleLogoArtwork`, `uiAppleLogoLeftMediumPath` (Angular `UI_APPLE_LOGO_LEFT_MEDIUM_PATH`, the same path)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase

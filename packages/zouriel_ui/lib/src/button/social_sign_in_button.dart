@@ -22,13 +22,16 @@ enum UiSocialButtonText {
   signUp,
 }
 
-/// [dark]: Apple's black button and Google's dark one. [light]: Apple's white button and Google's
-/// light one, both outlined. [auto]: dark on a light library theme and light on a dark one (Apple:
-/// black on light backgrounds, white on dark ones).
+/// [light]: Apple's white button with an outline and Google's light one. [dark]: Apple's black
+/// button and Google's dark one. [auto] (0.56.0) is [light] on every theme: white buttons read well on
+/// light and dark backgrounds alike (Apple: white with an outline on light backgrounds, white on dark
+/// ones; Google's light style is allowed on any background).
 enum UiSocialButtonStyle { auto, dark, light }
 
-/// 4px corners (Google's rectangular shape) or fully rounded (Google's pill).
-enum UiSocialButtonShape { rectangular, pill }
+/// [rounded] (0.56.0, the default): the theme's button corners (`context.ui.radius`, as on
+/// [UiButton]), so the pair matches the app's own buttons (Apple: match the corner radius of your
+/// other buttons). [rectangular]: 4px (Google's rectangular shape). [pill]: fully rounded.
+enum UiSocialButtonShape { rounded, rectangular, pill }
 
 /// The pair's shared measures and the brands' colours. With [UiGoogleBrand] and [UiAppleBrand], the
 /// only literal colours outside the generated tokens: brands look the same in every theme
@@ -47,9 +50,10 @@ abstract final class UiSocialBrand {
   static const darkStroke = Color(0xFF8E918F);
   static const lightStroke = Color(0xFF747775);
 
-  /// The same for both providers: 40 high, 4px corners, a 44px logo slot at each end (measured from
+  /// The same for both providers: 40 high, the same corners, a 44px logo slot at each end (measured from
   /// the outer edge), 17/20 Medium words (Apple: the title is 43% of the height).
   static const double height = 40;
+  /// [UiSocialButtonShape.rectangular]'s corners.
   static const double radius = 4;
   static const double slot = 44;
   static const double minWidth = 140;
@@ -78,7 +82,7 @@ class UiSocialSignInButton extends StatelessWidget {
     required this.onPressed,
     this.text = UiSocialButtonText.signIn,
     this.buttonStyle = UiSocialButtonStyle.auto,
-    this.shape = UiSocialButtonShape.rectangular,
+    this.shape = UiSocialButtonShape.rounded,
     this.loading = false,
     this.expand = false,
     this.semanticLabel,
@@ -116,11 +120,10 @@ class UiSocialSignInButton extends StatelessWidget {
     };
   }
 
-  /// The style [style] resolves to here: [UiSocialButtonStyle.auto] is dark on a light library theme
-  /// and light on a dark one.
+  /// The style [style] resolves to here: [UiSocialButtonStyle.auto] is [UiSocialButtonStyle.light]
+  /// on every theme (kept as a function so a theme-dependent rule can return without an API change).
   static UiSocialButtonStyle resolve(BuildContext context, UiSocialButtonStyle style) {
-    if (style != UiSocialButtonStyle.auto) return style;
-    return context.uiTheme.brightness == Brightness.dark ? UiSocialButtonStyle.light : UiSocialButtonStyle.dark;
+    return style == UiSocialButtonStyle.auto ? UiSocialButtonStyle.light : style;
   }
 
   /// Fill, stroke and ink (words and Apple's logo) for a provider in a resolved style.
@@ -141,7 +144,11 @@ class UiSocialSignInButton extends StatelessWidget {
     final t = context.ui;
     final words = label(context, provider, text);
     final (fill, stroke, ink) = colors(provider, resolve(context, buttonStyle));
-    final radius = BorderRadius.circular(shape == UiSocialButtonShape.pill ? UiSocialBrand.height / 2 : UiSocialBrand.radius);
+    final radius = BorderRadius.circular(switch (shape) {
+      UiSocialButtonShape.pill => UiSocialBrand.height / 2,
+      UiSocialButtonShape.rectangular => UiSocialBrand.radius,
+      UiSocialButtonShape.rounded => t.radius,
+    });
     final body = context.uiText.body;
     final style = TextStyle(
       inherit: false,
