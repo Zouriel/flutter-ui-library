@@ -243,6 +243,7 @@ class _MediaPageState extends State<MediaPage> {
             ApiRow('UiHeartBurstState.play([Offset?])', 'method', 'Pops a heart at a point inside the box (the centre without one).'),
             ApiRow('UiLikeButton liked / count / tone', 'bool / int / UiLikeButtonTone', 'State shown; the count hides at 0; media (white) or surface.'),
             ApiRow('UiSelectable onDoubleTap', 'ValueChanged<Offset>?', 'Two taps within 280ms and 24px; while set, a single tap waits.'),
+            ApiRow('UiMediaLightbox onDoubleTap / leadingActions', 'bool Function(item, index, Offset)? / Widget Function(context, item, index)?', 'A double tap likes instead of zooming (return true to pop the heart); a like button at the start of the top bar.'),
           ],
           callbacks: const [ApiRow('UiLikeButton onChanged', 'ValueChanged<bool>?', 'The new state; the count is yours to update.')],
           demo: const _LikeDemo(),

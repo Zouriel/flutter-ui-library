@@ -14,6 +14,7 @@ import '../overlay/anchored.dart';
 import '../overlay/menu.dart';
 import '../overlay/tooltip.dart';
 import '../feedback/spinner.dart';
+import '../media/like.dart';
 import '../theme/theme.dart';
 import 'image_viewer.dart' show uiFitContain;
 import 'seek_bar.dart';
@@ -101,6 +102,8 @@ class UiMediaLightbox extends StatefulWidget {
     this.actions = const [],
     this.onAction,
     this.controllerFor,
+    this.onDoubleTap,
+    this.leadingActions,
   });
 
   final List<UiMediaItem> items;
@@ -115,6 +118,15 @@ class UiMediaLightbox extends StatefulWidget {
   /// One of [actions] was pressed, with the item it was pressed over.
   final void Function(String id, UiMediaItem item, int index)? onAction;
 
+  /// A double tap on the picture or clip (0.63.0, the web's `doubleTap="emit"` + `(doubleTapped)`):
+  /// called with the item and the point instead of zooming (zoom stays on pinch). Return true to pop
+  /// a heart there (a like), false for none (an unlike).
+  final bool Function(UiMediaItem item, int index, Offset at)? onDoubleTap;
+
+  /// Extra controls at the start of the top bar's actions for the item on screen (0.63.0), e.g. a
+  /// [UiLikeButton]; called on every build, so it can listen to the app's own state.
+  final Widget Function(BuildContext context, UiMediaItem item, int index)? leadingActions;
+
   /// Makes the player for a clip (tests and custom sources); defaults to [UiFileSources.playerFor].
   final VideoPlayerController Function(String src)? controllerFor;
 
@@ -128,6 +140,8 @@ class UiMediaLightbox extends StatefulWidget {
     void Function(String id, UiMediaItem item, int index)? onAction,
     ValueChanged<int>? onIndexChanged,
     VideoPlayerController Function(String src)? controllerFor,
+    bool Function(UiMediaItem item, int index, Offset at)? onDoubleTap,
+    Widget Function(BuildContext context, UiMediaItem item, int index)? leadingActions,
   }) {
     final animate = context.uiAnimate;
     final t = context.ui;
@@ -151,6 +165,8 @@ class UiMediaLightbox extends StatefulWidget {
           actions: actions,
           onAction: onAction,
           controllerFor: controllerFor,
+          onDoubleTap: onDoubleTap,
+          leadingActions: leadingActions,
           onIndexChanged: (i) {
             set(() => at = i);
             onIndexChanged?.call(i);
@@ -202,6 +218,20 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
   // Clip.
   VideoPlayerController? _clip;
   final ScrollController _strip = ScrollController();
+  final GlobalKey<UiHeartBurstState> _heart = GlobalKey<UiHeartBurstState>();
+  Offset? _doubleAt;
+
+  void _onDoubleTap() {
+    final like = widget.onDoubleTap;
+    final item = _item;
+    if (like == null) {
+      if (!_isVideo) _toggleZoom();
+      return;
+    }
+    if (item == null) return;
+    final at = _doubleAt ?? _stage.center(Offset.zero);
+    if (like(item, widget.index, at)) _heart.currentState?.play(at);
+  }
   final FocusNode _focus = FocusNode(debugLabel: 'UiMediaLightbox');
   ImageStream? _stream;
   ImageStreamListener? _streamListener;
@@ -587,7 +617,8 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
         onScaleStart: _onScaleStart,
         onScaleUpdate: _onScaleUpdate,
         onScaleEnd: _onScaleEnd,
-        onDoubleTap: _isVideo ? null : _toggleZoom,
+        onDoubleTapDown: widget.onDoubleTap == null ? null : (d) => _doubleAt = d.localPosition,
+        onDoubleTap: widget.onDoubleTap == null && _isVideo ? null : _onDoubleTap,
         child: Stack(fit: StackFit.expand, alignment: Alignment.center, children: [
           AnimatedContainer(
             duration: _interacting || !context.uiAnimate ? Duration.zero : t.motionFast,
@@ -599,6 +630,7 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
           if (_loading) Center(child: UiSpinner(size: 34, strokeWidth: 2, color: onScrim)),
           // The one control that is not chrome: a paused clip says so in the middle of itself.
           if (_isVideo && !_playing && !_loading) Center(child: _BigPlay(onTap: _togglePlay)),
+          UiHeartBurst(key: _heart),
         ]),
       );
     });
@@ -622,8 +654,9 @@ class _UiMediaLightboxState extends State<UiMediaLightbox> {
             ),
           ),
           // Bounded (0.53.0): the actions get only the room the meta line leaves them.
+          if (item != null && widget.leadingActions != null) widget.leadingActions!(context, item, widget.index),
           _TopActions(
-            width: box.maxWidth - t.space4 * 2,
+            width: box.maxWidth - t.space4 * 2 - (widget.leadingActions == null ? 0 : 72 + t.space3),
             hasMeta: metaLine.isNotEmpty || count > 1,
             zoomLabel: _zoomed ? '${(_zoom * 100).round()}% · Fit' : null,
             onResetZoom: _resetView,
