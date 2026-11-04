@@ -1096,3 +1096,17 @@ from (the shorter way round decides the side) while the old one fades. The label
 `text-wrap: balance`, which Flutter has no twin for, so the break falls where the line fills); the sublabel keeps to one.
 The dots are radios (`inMutuallyExclusiveGroup`, checked) in a group named `messengerChannel`; arrow keys on a dot move the
 choice and the focus with it. Dots: a 20px brand disc with the logo at 16 (Telegram: its own disc logo at 20) in a 28 target.
+
+## Filter (0.59.0)
+
+`UiFilter` = `ui-filter`, `UiFilterChips` = `ui-filter-chips`, with the parts `UiFilterButton`, `UiFilterPanel`,
+`UiFilterFooter` and the helpers `uiFilterCount`, `uiActiveFilters`, `uiFilterPrune`, `uiFilterToggle`, `uiFilterSet`,
+`uiFilterRemove` (same names and rules as the web). `UiFilterValue` is `Map<String, List<String>>` (the web's
+`Record<string, string[]>`); `value` + `onChanged` replace the web's `model()`. Under `narrowAt` (600) the panel is a
+`UiBottomSheet` on a `UiDialogRoute` with the sheet transition (the way an app's own report sheet is built), snaps
+`[0, 0.85]`, the footer pinned; the route can't see the widget's later props, so `UiFilter` keeps a `ValueNotifier` of
+sections/value/resultCount that it updates after each build (never during one) and the sheet listens to it. Wider, it is
+a `UiAnchoredOverlay` under the button, 340 wide, max 560 or 70% of the height, focus moved into it so Escape closes it.
+Rows are `UiInteractive` (checked state, not a button) with `UiCheckMark` / `UiRadioMark`, 44 tall painted (48 to the
+touch); the web uses native checkboxes/radios in a fieldset. The button is `UiButton` with the 0.44 count badge, tone
+primary, read as "Filter, 2 on" (`filterOn`).

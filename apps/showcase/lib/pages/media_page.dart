@@ -249,6 +249,30 @@ class _MediaPageState extends State<MediaPage> {
           shapes: 'UiSelectionAction({required String id, required String label, Widget? icon, bool danger = false, bool enabled = true})',
         ),
         DocSection(
+          name: 'Filter',
+          widget: 'UiFilter · UiFilterChips',
+          summary: 'One compact Filter button for a toolbar, however many filters there are: a filter icon, the words and, while filters are on, a count bubble (read as "Filter, 2 on"). It opens a panel of sections. On a screen under narrowAt (600) the panel is a modal bottom sheet with its footer pinned; wider, a 340 popover under the button whose body scrolls between its title and footer. Each section is a titled group: its "all" row (allLabel, e.g. Everyone) first, then its options with counts; multiple sections have checkboxes (any chosen option passes), the others radios, and from searchAt options (8) a search field narrows the rows. Rows are 44 tall (48 to the touch). Every tap calls onChanged at once, so the page behind updates; the footer\'s Show N (resultCount) or Done closes it, Clear all turns everything off. Escape, a tap outside, a drag down and Back close it too. To add a filter, add a section: the toolbar keeps its one button. UiFilterChips shows the filters that are on as removable chips with Clear all, for under the toolbar; uiFilterPrune drops choices the sections no longer offer, so a stale choice never empties the page. UiFilterButton, UiFilterPanel and UiFilterFooter are the parts, for your own container.',
+          demo: const _FilterDemo(),
+          code: 'UiFilter(\n  sections: sections,\n  value: filter,\n  resultCount: shown.length,\n  onChanged: (v) => setState(() => filter = v),\n),\nUiFilterChips(sections: sections, value: filter, onChanged: (v) => setState(() => filter = v)),',
+          api: const [
+            ApiRow('sections', 'List<UiFilterSection>', 'The panel, top to bottom. Add one to add a filter.'),
+            ApiRow('value', 'UiFilterValue (Map<String, List<String>>)', 'Chosen option ids by section id; missing or empty = everything.'),
+            ApiRow('resultCount', 'int?', 'How many pass: the footer reads Show N; null: Done.'),
+            ApiRow('label / title', 'String?', "The button's words / the panel's title.", def: "'Filter'"),
+            ApiRow('size', 'UiSize', 'The button size (48 to the touch either way).', def: 'UiSize.sm'),
+            ApiRow('narrowAt', 'double', 'Below this width the panel is a bottom sheet, else a popover.', def: '600'),
+            ApiRow('enabled', 'bool', 'The button on or off.', def: 'true'),
+          ],
+          callbacks: const [
+            ApiRow('onChanged', 'ValueChanged<UiFilterValue>', 'Every tap in the panel, Clear all, and a chip\'s remove.'),
+            ApiRow('UiFilterChips(sections, value, onChanged, label)', 'Widget', 'The filters that are on as chips and Clear all; nothing while none is on.'),
+            ApiRow('UiFilterButton(count, onPressed, label, size)', 'Widget', 'Only the button.'),
+            ApiRow('UiFilterPanel(sections, value, onChanged)', 'Widget', 'Only the sections (put it in a scroll view).'),
+            ApiRow('UiFilterFooter(count, resultCount, onClearAll, onDone)', 'Widget', 'Only the footer.'),
+          ],
+          shapes: 'UiFilterOption({required String id, required String label, int? count})\nUiFilterSection({required String id, required String title, required List<UiFilterOption> options,\n  bool multiple = false, String? allLabel, int? allCount, int searchAt = 8})\nuiFilterCount · uiActiveFilters · uiFilterPrune · uiFilterToggle · uiFilterSet · uiFilterRemove',
+        ),
+        DocSection(
           name: 'Task progress',
           widget: 'UiTaskProgress · showUiTaskProgress',
           summary: 'Progress for a job over many files: the title, "12 of 40", a detail line (the file in hand) and a bar that fills as files finish (it sweeps while the total is 0). Cancel calls controller.cancel() and then reads Stopping, busy, until the job calls controller.close(). showUiTaskProgress opens it in a small dialog the backdrop can\'t close; back and Escape cancel, and it closes itself on close() (even one that came before it finished opening) and completes once closed.',
@@ -571,6 +595,65 @@ class _SelectDemoState extends State<_SelectDemo> {
             ),
         ]);
       }),
+    ]);
+  }
+}
+
+
+/// A toolbar Filter over 30 coloured tiles by ten people, some of them videos.
+class _FilterDemo extends StatefulWidget {
+  const _FilterDemo();
+  @override
+  State<_FilterDemo> createState() => _FilterDemoState();
+}
+
+class _FilterDemoState extends State<_FilterDemo> {
+  static const names = ['Aisha', 'Ali', 'Mariyam', 'Hassan', 'Shaina', 'Ibrahim', 'Fathimath', 'Ahmed', 'Zara', 'Moosa'];
+  static final items = [for (var n = 0; n < 30; n++) (n: n, who: names[(n * 7) % (n < 12 ? 3 : 10)], video: n % 5 == 0)];
+  UiFilterValue filter = const {};
+
+  List<UiFilterSection> get sections {
+    final counts = <String, int>{};
+    for (final it in items) {
+      counts[it.who] = (counts[it.who] ?? 0) + 1;
+    }
+    final people = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final videos = items.where((it) => it.video).length;
+    return [
+      UiFilterSection(id: 'who', title: 'Uploaded by', multiple: true, allLabel: 'Everyone', allCount: items.length, options: [for (final e in people) UiFilterOption(id: e.key, label: e.key, count: e.value)]),
+      UiFilterSection(id: 'kind', title: 'Type', allLabel: 'Photos and videos', options: [UiFilterOption(id: 'photo', label: 'Photos', count: items.length - videos), UiFilterOption(id: 'video', label: 'Videos', count: videos)]),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final s = sections;
+    final v = uiFilterPrune(s, filter);
+    final shown = [
+      for (final it in items)
+        if ((v['who'] == null || v['who']!.contains(it.who)) && (v['kind'] == null || v['kind']!.contains(it.video ? 'video' : 'photo'))) it,
+    ];
+    const colours = [Color(0xFF3D5AFE), Color(0xFFE5484D), Color(0xFF2FAA6E), Color(0xFFD9A521), Color(0xFF8A8F98), Color(0xFF5B2A86)];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        UiFilter(sections: s, value: filter, resultCount: shown.length, onChanged: (v) => setState(() => filter = v)),
+        SizedBox(width: t.space2),
+        Text('${shown.length} of ${items.length}', style: context.uiText.caption),
+      ]),
+      SizedBox(height: t.space2),
+      UiFilterChips(sections: s, value: filter, onChanged: (v) => setState(() => filter = v)),
+      SizedBox(height: t.space2),
+      Wrap(spacing: 4, runSpacing: 4, children: [
+        for (final it in shown)
+          Container(
+            width: 72,
+            height: 72,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: colours[it.n % colours.length], borderRadius: BorderRadius.circular(t.radiusSm)),
+            child: Text(it.video ? '${it.who}\n(video)' : it.who, textAlign: TextAlign.center, style: context.uiText.caption.copyWith(color: const Color(0xFFFFFFFF), fontWeight: FontWeight.w600)),
+          ),
+      ]),
     ]);
   }
 }

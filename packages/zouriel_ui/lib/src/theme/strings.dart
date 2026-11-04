@@ -202,6 +202,12 @@ class UiStrings {
     this.cancelSelection = 'Cancel selection',
     this.taskCount = '{done} of {total}',
     this.taskStopping = 'Stopping…',
+    this.filter = 'Filter',
+    this.filterOn = '{n} on',
+    this.filterClearAll = 'Clear all',
+    this.filterShow = 'Show {n}',
+    this.filterDone = 'Done',
+    this.filterAll = 'All',
     this.locale = '',
     this.months = const [],
     this.monthsShort = const [],
@@ -404,6 +410,12 @@ class UiStrings {
     cancelSelection: 'ހޮވުން ހުއްޓާލާ',
     taskCount: '{total} އިން {done}',
     taskStopping: 'ހުއްޓުވަނީ…',
+    filter: 'ފިލްޓަރ',
+    filterOn: '{n} ހިންގާފައި',
+    filterClearAll: 'ހުރިހާ ފޮހެލާ',
+    filterShow: '{n} ދައްކާ',
+    filterDone: 'ނިމުނީ',
+    filterAll: 'ހުރިހާ',
     locale: 'dv',
     months: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
     monthsShort: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
@@ -973,6 +985,24 @@ class UiStrings {
   /// Task progress: the Cancel button once pressed, until the job closes it.
   final String taskStopping;
 
+  /// Filter (0.59.0): the filter button and the panel's title.
+  final String filter;
+
+  /// Filter: added to the button's name while filters are on (`{n}` of them): "Filter, 2 on".
+  final String filterOn;
+
+  /// Filter: the panel's and the chips' button that turns every filter off.
+  final String filterClearAll;
+
+  /// Filter: the panel's close button when the app gives a result count (`{n}`).
+  final String filterShow;
+
+  /// Filter: the panel's close button without a result count.
+  final String filterDone;
+
+  /// Filter: a section's "all" row when the section gives no allLabel.
+  final String filterAll;
+
   /// The locale for date names and formats, e.g. 'dv'; empty uses the app's locale.
   final String locale;
 
@@ -1179,6 +1209,12 @@ class UiStrings {
     String? cancelSelection,
     String? taskCount,
     String? taskStopping,
+    String? filter,
+    String? filterOn,
+    String? filterClearAll,
+    String? filterShow,
+    String? filterDone,
+    String? filterAll,
     String? locale,
     List<String>? months,
     List<String>? monthsShort,
@@ -1376,6 +1412,12 @@ class UiStrings {
         cancelSelection: cancelSelection ?? this.cancelSelection,
         taskCount: taskCount ?? this.taskCount,
         taskStopping: taskStopping ?? this.taskStopping,
+        filter: filter ?? this.filter,
+        filterOn: filterOn ?? this.filterOn,
+        filterClearAll: filterClearAll ?? this.filterClearAll,
+        filterShow: filterShow ?? this.filterShow,
+        filterDone: filterDone ?? this.filterDone,
+        filterAll: filterAll ?? this.filterAll,
         locale: locale ?? this.locale,
         months: months ?? this.months,
         monthsShort: monthsShort ?? this.monthsShort,
@@ -1575,6 +1617,12 @@ class UiStrings {
         'cancelSelection': cancelSelection,
         'taskCount': taskCount,
         'taskStopping': taskStopping,
+        'filter': filter,
+        'filterOn': filterOn,
+        'filterClearAll': filterClearAll,
+        'filterShow': filterShow,
+        'filterDone': filterDone,
+        'filterAll': filterAll,
       };
 
   @override

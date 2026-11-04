@@ -1325,6 +1325,19 @@ File: `media/src/selection.ts`
 - [x] Flutter port (`UiSelectionBar`, `UiSelectionAction`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiSelectionAction` (selection.ts); consts `UI_LONG_PRESS_MS`, `UI_LONG_PRESS_SLOP`
+### UiFilter (component, `ui-filter`)
+File: `filter/src/filter.ts`  
+`ui-filter` — one Filter button (count badge) opening a panel of sections: a bottom sheet under 600px, a popover wider.  
+- Inputs: `sections`: UiFilterSection[]; `value` (model): UiFilterValue; `resultCount`: number | null; `label`; `title`; `size`; `disabled`; `narrowAt` = 600; `open` (model)
+- [x] Flutter port (`UiFilter`, `UiFilterButton`, `UiFilterPanel`, `UiFilterFooter`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiFilterChips (component, `ui-filter-chips`)
+File: `filter/src/filter.ts`  
+`ui-filter-chips` — the filters that are on as removable chips, then Clear all; nothing while none is on.  
+- Inputs: `sections`; `value` (model); `label`
+- [x] Flutter port (`UiFilterChips`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- interfaces `UiFilterOption`, `UiFilterSection`, `UiActiveFilter`, type `UiFilterValue`; functions `uiFilterCount`, `uiActiveFilters`, `uiFilterPrune`, `uiFilterToggle`, `uiFilterSet`, `uiFilterRemove` (filter-model.ts)
 ### UiImagePicker (component, `ui-image-picker`)
 File: `media/src/image-picker.ts`  
 `ui-image-picker` — a grid of image tiles to choose from: search results, stock art, uploads. Tap or Enter picks (`pick`). One tile can show as busy while its choice is being fetched. When `hasMore` is on, scrolling near the end asks for the next page (`more`) — there is no "Load more" button to reach for with a thumb. Thumbnails that fail to load show the label on a plain tile rather than a broken-image glyph. Tiles sit on a faint checkerboard so white or transparent art is visible. With `dragType` set, tiles can be dragged: the item's `id` is the drag data under that type.  

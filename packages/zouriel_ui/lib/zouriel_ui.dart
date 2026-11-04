@@ -18,6 +18,7 @@ export 'src/core/interactive.dart';
 export 'src/core/types.dart';
 export 'src/feedback/alert.dart';
 export 'src/feedback/spinner.dart';
+export 'src/filter/filter.dart';
 export 'src/overlay/anchored.dart';
 export 'src/plans/plans.dart';
 export 'src/text/text.dart';
