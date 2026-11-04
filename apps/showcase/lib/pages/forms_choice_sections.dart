@@ -56,6 +56,7 @@ class _FormsChoiceSectionsState extends State<FormsChoiceSections> {
           UiSwitch(value: _disabled, label: 'Disable the controls below', onChanged: (v) => setState(() => _disabled = v)),
           UiCheckbox(value: _terms, label: 'I agree to the terms', onChanged: enabled ? (v) => setState(() => _terms = v) : null),
           UiCheckbox(value: _news, label: 'Send me the newsletter', invalid: !_news, onChanged: enabled ? (v) => setState(() => _news = v) : null),
+          UiCheckbox(value: _terms, semanticLabel: 'Box at the start of its touch cell', touchAlignment: AlignmentDirectional.centerStart, onChanged: enabled ? (v) => setState(() => _terms = v) : null),
           UiSwitch(value: _wifi, label: 'Wi-Fi', onChanged: enabled ? (v) => setState(() => _wifi = v) : null),
         ]),
         code: '''UiCheckbox(value: agreed, label: 'I agree', onChanged: (v) => setState(() => agreed = v))
@@ -68,6 +69,7 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
           ApiRow('invalid', 'bool', 'Checkbox: danger border.', def: 'false'),
           ApiRow('semanticLabel', 'String?', 'Name when there is no visible label.'),
           ApiRow('focusNode / autofocus', 'FocusNode? / bool', 'Keyboard focus.'),
+          ApiRow('touchAlignment', 'AlignmentDirectional', 'Checkbox, touch platforms (0.61.0): where the box sits in its 48dp touch cell. centerStart keeps it at the start edge, as the web draws it, and the tap area reaches toward the end. Flutter only.', def: 'center'),
         ],
       ),
       DocSection(

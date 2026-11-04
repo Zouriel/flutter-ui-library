@@ -33,6 +33,17 @@ enum UiDrawerSide {
   bool get isHorizontal => this != top && this != bottom;
 }
 
+/// How tall a top or bottom drawer is, the web `fit` (0.61.0).
+enum UiDrawerFit {
+  /// Today's size: up to 320px tall (80% of the room), whatever it holds.
+  fixed,
+
+  /// As tall as its content (title bar, header, body and footer), up to 90% of the room above the
+  /// keyboard and the safe area; the body scrolls only once the content is taller than that. Side
+  /// drawers ignore it. A [UiDrawer.bodyBuilder]'s scroll view must shrink-wrap to take part.
+  content,
+}
+
 /// Opens a [UiDrawer] on a [UiDialogRoute]; completes with what it is popped with.
 ///
 /// It slides in from [side]. The barrier closes it when [closeOnBackdrop], Escape when
@@ -53,6 +64,9 @@ Future<T?> showUiDrawer<T>({
   bool closeOnEscape = true,
   bool? glass,
   bool? radius,
+  bool handle = false,
+  UiDrawerFit fit = UiDrawerFit.fixed,
+  String? semanticLabel,
   bool useRootNavigator = true,
   RouteSettings? settings,
 }) {
@@ -72,6 +86,9 @@ Future<T?> showUiDrawer<T>({
         closeOnEscape: closeOnEscape,
         glass: glass,
         radius: radius,
+        handle: handle,
+        fit: fit,
+        semanticLabel: semanticLabel,
         header: headerBuilder == null ? null : Builder(builder: headerBuilder),
         footer: footerBuilder == null ? null : Builder(builder: footerBuilder),
         bodyBuilder: bodyBuilder,
@@ -122,6 +139,11 @@ class _DragAwareCurve extends Animation<double> with AnimationWithParentMixin<do
 /// height taken from the space above it, so its fields and footer stay in view. Open it with [showUiDrawer]: the route gives it the backdrop, focus trap and
 /// focus return, and back-button closing. On touch it follows a swipe toward its edge and closes
 /// when flung or let go past half way. Escape closes it unless [closeOnEscape] is false.
+///
+/// 0.61.0: [handle] draws a drag-handle pill (36x4, 8px from the top) at the top of a bottom
+/// drawer, decorative for screen readers; the swipe down to close works from it as from the rest of
+/// the panel. [fit] [UiDrawerFit.content] sizes a top or bottom drawer to its content, capped at 90%
+/// of the room. [semanticLabel] names a drawer that has no [title] (an action sheet).
 class UiDrawer extends StatelessWidget {
   const UiDrawer({
     super.key,
@@ -134,6 +156,9 @@ class UiDrawer extends StatelessWidget {
     this.closeOnEscape = true,
     this.glass,
     this.radius,
+    this.handle = false,
+    this.fit = UiDrawerFit.fixed,
+    this.semanticLabel,
     this.onClose,
     this.autofocus = true,
     this.onPointerEnter,
@@ -165,6 +190,19 @@ class UiDrawer extends StatelessWidget {
   final bool closeOnEscape;
   final bool? glass;
   final bool? radius;
+
+  /// A drag-handle pill at the top of a bottom drawer (other sides ignore it). Off by default.
+  final bool handle;
+
+  /// Fixed height (default) or as tall as the content, for top and bottom drawers.
+  final UiDrawerFit fit;
+
+  /// The accessible name when there is no [title]; [title] wins when both are given.
+  final String? semanticLabel;
+
+  /// The handle's key, for tests.
+  static const handleKey = ValueKey('ui-drawer-handle');
+
   final VoidCallback? onClose;
 
   /// Take keyboard focus when it opens. A peek opened by hovering ([UiDrawerPeek]) leaves it where it is.
@@ -187,6 +225,7 @@ class UiDrawer extends StatelessWidget {
     final isGlass = glass ?? theme.config.glass;
     final rr = (radius ?? theme.config.radius) ? Radius.circular(t.radiusLg) : Radius.zero;
     final close = onClose ?? () => Navigator.maybePop(context);
+    final hug = fit == UiDrawerFit.content && !_horizontal;
     final shape = switch (side) {
       UiDrawerSide.left => BorderRadius.only(topRight: rr, bottomRight: rr),
       UiDrawerSide.right => BorderRadius.only(topLeft: rr, bottomLeft: rr),
@@ -218,10 +257,27 @@ class UiDrawer extends StatelessWidget {
             style: const TextStyle(height: 1.35),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: hug ? MainAxisSize.min : MainAxisSize.max,
               children: [
+                if (handle && side == UiDrawerSide.bottom)
+                  ExcludeSemantics(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: t.space2, bottom: t.space1),
+                      child: Center(
+                        child: Container(
+                          key: UiDrawer.handleKey,
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(color: t.borderStrong, borderRadius: BorderRadius.circular(t.radiusPill)),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (title != null) UiDialogHeader(title: title!, onClose: close),
-                Expanded(
+                Flexible(
+                  fit: hug ? FlexFit.loose : FlexFit.tight,
                   child: UiPinnedEdges(
+                    shrinkWrap: hug,
                     header: header,
                     footer: footer,
                     headerPadding: UiDrawer.bodyPadding(context),
@@ -249,7 +305,7 @@ class UiDrawer extends StatelessWidget {
         ),
       );
     }
-    panel = UiDialogScope(label: title, closeOnEscape: closeOnEscape, onClose: close, autofocus: autofocus, child: panel);
+    panel = UiDialogScope(label: title ?? semanticLabel, closeOnEscape: closeOnEscape, onClose: close, autofocus: autofocus, child: panel);
     if (onPointerEnter != null || onPointerExit != null) {
       panel = MouseRegion(onEnter: (_) => onPointerEnter?.call(), onExit: (_) => onPointerExit?.call(), child: panel);
     }
@@ -258,8 +314,12 @@ class UiDrawer extends StatelessWidget {
     // A bottom drawer rests on the on-screen keyboard (0.41.3): until then it stayed at the screen
     // edge and the keyboard covered its fields and footer. Its height comes from the space left.
     final keyboard = side == UiDrawerSide.bottom ? mq.viewInsets.bottom : 0.0;
-    final extent = _horizontal ? math.min(360.0, size.width * 0.9) : math.min(320.0, math.max(0.0, size.height - keyboard - mq.padding.top) * 0.8);
-    panel = SizedBox(width: _horizontal ? extent : double.infinity, height: _horizontal ? double.infinity : extent, child: panel);
+    final room = math.max(0.0, size.height - keyboard - mq.padding.top);
+    final extent = _horizontal ? math.min(360.0, size.width * 0.9) : math.min(320.0, room * 0.8);
+    panel = hug
+        // Content-sized (0.61.0): as tall as it needs, up to 90% of the room.
+        ? SizedBox(width: double.infinity, child: ConstrainedBox(constraints: BoxConstraints(maxHeight: room * 0.9), child: panel))
+        : SizedBox(width: _horizontal ? extent : double.infinity, height: _horizontal ? double.infinity : extent, child: panel);
     // The route slides the whole screen-sized layer, so a finger maps onto the screen's extent.
     panel = _SwipeToClose(side: side, extent: _horizontal ? size.width : size.height, child: panel);
     return Padding(

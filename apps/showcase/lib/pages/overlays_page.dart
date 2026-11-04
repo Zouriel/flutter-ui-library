@@ -35,6 +35,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
   final OverlayPortalController _toastLayer = OverlayPortalController();
   UiToastPosition _toastPos = UiToastPosition.bottomEnd;
   String _menuChoice = 'nothing yet';
+  String _sheetChoice = 'nothing yet';
   String _contextChoice = 'nothing yet';
   String _modalResult = 'not opened';
   String _confirmResult = 'not asked';
@@ -312,6 +313,25 @@ class _OverlaysPageState extends State<OverlaysPage> {
                 ]),
               ),
             ),
+            UiButton(
+              label: 'Edit guest (fits content)',
+              variant: UiButtonVariant.outline,
+              onPressed: () => showUiDrawer<void>(
+                context: context,
+                side: UiDrawerSide.bottom,
+                title: 'Edit guest',
+                handle: true,
+                fit: UiDrawerFit.content,
+                builder: (context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space3, children: const [
+                  UiFormField(label: 'Name', child: UiInput(value: 'Aminath Hassan', semanticLabel: 'Name')),
+                  UiFormField(label: 'Phone', child: UiInput(value: '+960 777 1234', semanticLabel: 'Phone')),
+                ]),
+                footerBuilder: (context) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: context.ui.space2, children: [
+                  UiButton(label: 'Cancel', variant: UiButtonVariant.outline, onPressed: () => Navigator.pop(context)),
+                  UiButton(label: 'Save', onPressed: () => Navigator.pop(context)),
+                ]),
+              ),
+            ),
             for (final side in UiDrawerSide.values)
               UiButton(
                 label: side.name[0].toUpperCase() + side.name.substring(1),
@@ -354,8 +374,51 @@ showUiDrawer<void>(
             ApiRow('title', 'String?', 'Header title, also the accessible name. Without it there is no header or close button.'),
             ApiRow('closeOnBackdrop / closeOnEscape', 'bool', 'As for the modal.', def: 'true'),
             ApiRow('glass / radius', 'bool?', 'Frosted surface / rounded inner corners; default to UiConfig.'),
+            ApiRow('handle', 'bool', 'Bottom drawers: a drag-handle pill (36x4, 8px from the top), hidden from screen readers; the swipe down closes from it. (0.61.0)', def: 'false'),
+            ApiRow('fit', 'UiDrawerFit', 'Top and bottom drawers: fixed (up to 320px) or content: as tall as the title bar, header, body and footer, up to 90% of the room above the keyboard and safe area; the body scrolls past that. A bodyBuilder list must shrinkWrap. (0.61.0)', def: 'fixed'),
+            ApiRow('semanticLabel', 'String?', 'Accessible name when there is no title. (0.61.0)'),
             ApiRow('UiDrawer.onPointerEnter / onPointerExit', 'VoidCallback?', 'The pointer entered or left the panel (for drawers that close when it leaves).'),
             ApiRow('UiDrawerPeek', 'widget', 'The web modal=false drawer: open, child, drawer, side, title, onClose. Slides over the page without blocking it (no barrier, no route, no focus grab); a hover peek.'),
+          ],
+        ),
+        DocSection(
+          name: 'Action sheet',
+          widget: 'showUiActionSheet · UiActionSheet',
+          summary: 'A compact list of actions in a bottom drawer with a drag handle, as tall as its content (up to 90% of the screen, then the rows scroll). An optional title (a guest\'s name) and a muted message sit above full-width 48px rows with a 20px icon. Danger rows are red, icon too, and always come after the others. Tapping a row completes with its value; the backdrop, a swipe down, Escape, Back and Cancel complete with null. Focus starts on the first action and the arrow keys move between rows. (0.61.0)',
+          demo: row([
+            UiButton(
+              label: 'Guest actions',
+              onPressed: () async {
+                final v = await showUiActionSheet<String>(
+                  context: context,
+                  title: 'Aminath Hassan',
+                  message: 'Invited 3 Nov',
+                  cancelLabel: '',
+                  actions: const [
+                    UiActionSheetAction(label: 'Remove', value: 'remove', icon: HugeIcons.strokeRoundedDelete02, danger: true),
+                    UiActionSheetAction(label: 'Edit', value: 'edit', icon: HugeIcons.strokeRoundedEdit02),
+                    UiActionSheetAction(label: 'Resend', value: 'resend', icon: HugeIcons.strokeRoundedSent),
+                  ],
+                );
+                if (mounted) setState(() => _sheetChoice = v ?? 'closed');
+              },
+            ),
+            UiText('Chose: $_sheetChoice', variant: UiTextVariant.caption),
+          ]),
+          code: '''final action = await showUiActionSheet<String>(
+  context: context,
+  title: guest.name,
+  cancelLabel: '', // '' = the built-in Cancel
+  actions: const [
+    UiActionSheetAction(label: 'Edit', value: 'edit', icon: HugeIcons.strokeRoundedEdit02),
+    UiActionSheetAction(label: 'Resend', value: 'resend', icon: HugeIcons.strokeRoundedSent),
+    UiActionSheetAction(label: 'Remove', value: 'remove', icon: HugeIcons.strokeRoundedDelete02, danger: true),
+  ],
+); // null when dismissed''',
+          api: const [
+            ApiRow('title / message', 'String?', 'Above the rows; the title also names the sheet.'),
+            ApiRow('actions', 'List<UiActionSheetAction<T>>', 'label, value, icon, danger, disabled. Danger rows are placed after the others, keeping their order.'),
+            ApiRow('cancelLabel', 'String?', 'A Cancel button at the end; \'\' for the built-in UiStrings.cancel; null for none.'),
           ],
         ),
         DocSection(

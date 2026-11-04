@@ -105,6 +105,7 @@ class UiInteractive extends StatefulWidget {
     this.cursor = SystemMouseCursors.click,
     this.padTouchTarget = true,
     this.minTouchSize = const Size(uiMinTouchTarget, uiMinTouchTarget),
+    this.touchAlignment = Alignment.center,
     this.pressScale = true,
     this.shortcuts,
     this.actions,
@@ -137,6 +138,9 @@ class UiInteractive extends StatefulWidget {
   /// The padded hit area. Use `Size(0, 48)` for controls joined edge to edge (segmented, button
   /// groups) so they grow only vertically and neighbours don't overlap.
   final Size minTouchSize;
+
+  /// Where the visual sits inside the padded hit area (0.61.0); centred by default.
+  final AlignmentGeometry touchAlignment;
 
   /// Shrink slightly while pressed (the web `--ui-scale-press`).
   final bool pressScale;
@@ -242,7 +246,7 @@ class _UiInteractiveState extends State<UiInteractive> {
         onTap: _enabled && widget.onTap != null ? _activate : null,
         onLongPress: _enabled ? widget.onLongPress : null,
         excludeFromSemantics: true,
-        child: widget.padTouchTarget && uiTouchPlatform(context) ? UiTouchTarget(minSize: widget.minTouchSize, child: visual) : visual,
+        child: widget.padTouchTarget && uiTouchPlatform(context) ? UiTouchTarget(minSize: widget.minTouchSize, alignment: widget.touchAlignment, child: visual) : visual,
       ),
     );
 
@@ -274,24 +278,45 @@ class _UiInteractiveState extends State<UiInteractive> {
 /// the child, so the hit area meets the touch minimum while the visual stays compact (like the
 /// web's invisible `::before` hit slop and Material's padded tap targets).
 class UiTouchTarget extends SingleChildRenderObjectWidget {
-  const UiTouchTarget({super.key, this.minSize = const Size(uiMinTouchTarget, uiMinTouchTarget), super.child});
+  const UiTouchTarget({super.key, this.minSize = const Size(uiMinTouchTarget, uiMinTouchTarget), this.alignment = Alignment.center, super.child});
 
   final Size minSize;
 
-  @override
-  RenderObject createRenderObject(BuildContext context) => RenderUiTouchTarget(minSize);
+  /// Where the child sits in the padded area (0.61.0): centred by default; an
+  /// [AlignmentDirectional] follows the text direction.
+  final AlignmentGeometry alignment;
 
   @override
-  void updateRenderObject(BuildContext context, RenderUiTouchTarget renderObject) => renderObject.minSize = minSize;
+  RenderObject createRenderObject(BuildContext context) => RenderUiTouchTarget(minSize, alignment, Directionality.maybeOf(context));
+
+  @override
+  void updateRenderObject(BuildContext context, RenderUiTouchTarget renderObject) => renderObject
+    ..minSize = minSize
+    ..alignment = alignment
+    ..textDirection = Directionality.maybeOf(context);
 }
 
 class RenderUiTouchTarget extends RenderShiftedBox {
-  RenderUiTouchTarget(this._minSize) : super(null);
+  RenderUiTouchTarget(this._minSize, [this._alignment = Alignment.center, this._textDirection]) : super(null);
 
   Size _minSize;
   set minSize(Size v) {
     if (v == _minSize) return;
     _minSize = v;
+    markNeedsLayout();
+  }
+
+  AlignmentGeometry _alignment;
+  set alignment(AlignmentGeometry v) {
+    if (v == _alignment) return;
+    _alignment = v;
+    markNeedsLayout();
+  }
+
+  TextDirection? _textDirection;
+  set textDirection(TextDirection? v) {
+    if (v == _textDirection) return;
+    _textDirection = v;
     markNeedsLayout();
   }
 
@@ -302,7 +327,7 @@ class RenderUiTouchTarget extends RenderShiftedBox {
     final w = c.size.width < _minSize.width ? _minSize.width : c.size.width;
     final h = c.size.height < _minSize.height ? _minSize.height : c.size.height;
     size = constraints.constrain(Size(w, h));
-    (c.parentData! as BoxParentData).offset = Alignment.center.alongOffset(size - c.size as Offset);
+    (c.parentData! as BoxParentData).offset = _alignment.resolve(_textDirection ?? TextDirection.ltr).alongOffset(size - c.size as Offset);
   }
 
   @override

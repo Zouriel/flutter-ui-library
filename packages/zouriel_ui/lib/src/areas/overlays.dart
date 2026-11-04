@@ -7,6 +7,7 @@ export '../overlay/menu.dart';
 export '../overlay/panel.dart';
 export '../overlay/popover.dart';
 export '../overlay/tooltip.dart';
+export '../dialog/action_sheet.dart';
 export '../dialog/confirm.dart';
 export '../dialog/drawer.dart';
 export '../dialog/modal.dart';

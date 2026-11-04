@@ -22,6 +22,7 @@ class UiCheckbox extends StatelessWidget {
     this.autofocus = false,
     this.semanticLabel,
     this.size = UiSize.md,
+    this.touchAlignment = AlignmentDirectional.center,
   });
 
   final bool? value;
@@ -42,6 +43,11 @@ class UiCheckbox extends StatelessWidget {
   /// [UiSize.sm] for dense panels (inspectors, settings): a 13px label and a 16px box; lg is drawn as md.
   final UiSize size;
 
+  /// Where the box (with its label) sits in the 48dp touch cell on touch platforms (0.61.0).
+  /// Centred by default; [AlignmentDirectional.centerStart] keeps the box at the cell's start edge,
+  /// where the web draws it (an app adds the hit area there), so the tap area reaches toward the end.
+  final AlignmentDirectional touchAlignment;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onChanged != null;
@@ -55,6 +61,7 @@ class UiCheckbox extends StatelessWidget {
       checked: value == true,
       semanticLabel: semanticLabel,
       pressScale: false,
+      touchAlignment: touchAlignment,
       builder: (context, s) => Semantics(
         mixed: value == null ? true : null,
         child: UiMarkRow(

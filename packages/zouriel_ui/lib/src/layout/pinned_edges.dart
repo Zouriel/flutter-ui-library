@@ -21,7 +21,12 @@ class UiPinnedEdges extends StatefulWidget {
     this.footer,
     required this.headerPadding,
     required this.footerPadding,
+    this.shrinkWrap = false,
   });
+
+  /// As tall as its parts (up to the room it is given) instead of filling it: the body takes only
+  /// what it needs and scrolls past that (a content-sized drawer, 0.61.0).
+  final bool shrinkWrap;
 
   /// Builds the body around the column's own controller (a `SingleChildScrollView`, a `ListView`).
   /// A body that scrolls itself with its own controller still drives the hairlines: they follow the
@@ -101,9 +106,10 @@ class _UiPinnedEdgesState extends State<UiPinnedEdges> {
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: widget.shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
       children: [
         if (widget.header != null) group(0, part(UiPinnedEdges.headerKey, widget.header!, widget.headerPadding, top: false, show: _before)),
-        Expanded(child: group(1, body)),
+        Flexible(fit: widget.shrinkWrap ? FlexFit.loose : FlexFit.tight, child: group(1, body)),
         if (widget.footer != null) group(2, part(UiPinnedEdges.footerKey, widget.footer!, widget.footerPadding, top: true, show: _after)),
       ],
     );
