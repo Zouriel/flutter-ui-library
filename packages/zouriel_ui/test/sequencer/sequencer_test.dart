@@ -310,4 +310,13 @@ void main() {
     await expectLater(find.byType(Row).first, matchesGoldenFile('goldens/sequencer_bars_tip.png'));
     await tester.pump(const Duration(seconds: 3));
   });
+
+  _testWidgets('the shading past the end reaches the bottom, however few rows there are', (tester) async {
+    // 3 rows of 30 and a 30 ruler in a 200-tall timeline: the lanes area is taller than the rows.
+    await pumpUi(tester, const _Host(showLabels: false, end: 50));
+    final timeline = tester.getRect(find.byType(UiSequencer));
+    final beyond = find.byWidgetPredicate((w) => w is CustomPaint && w.painter.runtimeType.toString() == '_BeyondPainter');
+    expect(beyond, findsOneWidget);
+    expect(tester.getRect(beyond).bottom, moreOrLessEquals(timeline.bottom, epsilon: 1));
+  });
 }
