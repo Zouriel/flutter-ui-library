@@ -50,13 +50,22 @@ enum _Handle {
   const _Handle(this.sx, this.sy);
   final int sx, sy;
   bool get corner => sx != 0 && sy != 0;
+}
 
-  MouseCursor get cursor => switch (this) {
-        _Handle.n || _Handle.s => SystemMouseCursors.resizeUpDown,
-        _Handle.e || _Handle.w => SystemMouseCursors.resizeLeftRight,
-        _Handle.ne || _Handle.sw => SystemMouseCursors.resizeUpRightDownLeft,
-        _Handle.nw || _Handle.se => SystemMouseCursors.resizeUpLeftDownRight,
-      };
+/// The four resize cursors, by the direction they point: 0, 45, 90 and 135 degrees on screen (y down).
+const _resizeCursors = [
+  SystemMouseCursors.resizeLeftRight,
+  SystemMouseCursors.resizeUpLeftDownRight,
+  SystemMouseCursors.resizeUpDown,
+  SystemMouseCursors.resizeUpRightDownLeft,
+];
+
+/// The resize cursor for a handle that drags edges [sx]/[sy] (-1, 0 or 1) on a box turned [rotate]
+/// degrees: the handle's direction on screen, rounded to the nearest of the four resize cursors. A box
+/// turned 90 degrees shows left-right on its top handle. (The web `uiResizeCursor`.)
+MouseCursor uiResizeCursor(int sx, int sy, double rotate) {
+  final deg = math.atan2(sy.toDouble(), sx.toDouble()) * 180 / math.pi + rotate;
+  return _resizeCursors[(((deg % 180) + 180) % 180 / 45).round() % 4];
 }
 
 /// `ui-transform-box`: selection handles for an element on a design stage. Drag the body to move,
@@ -80,6 +89,11 @@ enum _Handle {
 /// fingers land beside a small element can start one with [UiTransformBoxState.startPinch]. A pinch
 /// reports as a resize. Edge handles hide when the box is too small on screen to fit them between
 /// the corners.
+///
+/// Cursors: each resize handle's cursor points the way it drags on screen, so it turns with the box;
+/// the knob shows grab, and grabbing while turning (Flutter has no custom cursor images, where the web
+/// shows a curved arrow). During a mouse drag the cursor it started with stays on the whole app until
+/// release, wherever the pointer goes.
 class UiTransformBox extends StatefulWidget {
   const UiTransformBox({
     super.key,
@@ -177,11 +191,16 @@ class UiTransformBoxState extends State<UiTransformBox> {
   DateTime? _lastTap;
   Offset? _lastTapAt;
 
+  /// The cursor a mouse drag started with, held until it ends.
+  MouseCursor? _held;
+  OverlayEntry? _heldEntry;
+
   /// Whether two fingers are pinching the box now.
   bool get pinching => _pinch != null;
 
   @override
   void dispose() {
+    _releaseCursor(rebuild: false);
     _unroute();
     _focus.dispose();
     super.dispose();
@@ -236,7 +255,39 @@ class UiTransformBoxState extends State<UiTransformBox> {
       startAngle: math.atan2(at.dy - centre.dy, at.dx - centre.dx),
     )..latest = e.position;
     _route();
+    if (e.kind != PointerDeviceKind.touch) {
+      _holdCursor(switch (mode) {
+        UiTransformMode.move => SystemMouseCursors.move,
+        UiTransformMode.rotate => SystemMouseCursors.grabbing,
+        UiTransformMode.resize => uiResizeCursor(handle!.sx, handle.sy, origin.rotate),
+      });
+    }
     widget.onTransformStart?.call(mode);
+  }
+
+  /// Shows [cursor] over the whole app, above every other region, until [_releaseCursor]: the drag
+  /// keeps its cursor over other handles, the body and the host's own controls.
+  void _holdCursor(MouseCursor cursor) {
+    _releaseCursor(rebuild: false);
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay != null) {
+      _heldEntry = OverlayEntry(builder: (_) => Positioned.fill(child: MouseRegion(key: const Key('ui-transform-held-cursor'), opaque: true, cursor: cursor)));
+      overlay.insert(_heldEntry!);
+    }
+    // Without an overlay the box's own regions at least keep it.
+    setState(() => _held = cursor);
+  }
+
+  void _releaseCursor({bool rebuild = true}) {
+    _heldEntry?.remove();
+    _heldEntry?.dispose();
+    _heldEntry = null;
+    if (_held == null) return;
+    if (rebuild && mounted) {
+      setState(() => _held = null);
+    } else {
+      _held = null;
+    }
   }
 
   Offset _globalOf(Offset local) => _stage?.localToGlobal(local) ?? local;
@@ -315,6 +366,7 @@ class UiTransformBoxState extends State<UiTransformBox> {
   void _end(_DragState d, Offset global, {required bool cancelled}) {
     _drag = null;
     _unroute();
+    _releaseCursor();
     if (d.moved && d.last != d.origin) {
       widget.onTransformEnd?.call(d.last);
     } else if (!d.moved && !cancelled && d.mode == UiTransformMode.move) {
@@ -338,6 +390,7 @@ class UiTransformBoxState extends State<UiTransformBox> {
     // A drag that already moved has told the host it started; the pinch carries on from it.
     final carried = _drag?.moved ?? false;
     _drag = null;
+    _releaseCursor();
     final la = _local(a), lb = _local(b);
     _pinch = _PinchState(
       points: {pointerA: la, pointerB: lb},
@@ -460,7 +513,7 @@ class UiTransformBoxState extends State<UiTransformBox> {
     bool fits(_Handle hd) => hd.corner || (!widget.cornersOnly && (hd.sx == 0 ? w : h) >= hit * 3);
 
     Widget claim(UiTransformMode mode, Widget child, {_Handle? handle, MouseCursor cursor = SystemMouseCursors.basic}) => MouseRegion(
-          cursor: enabled ? cursor : MouseCursor.defer,
+          cursor: enabled ? _held ?? cursor : MouseCursor.defer,
           child: RawGestureDetector(
             behavior: HitTestBehavior.opaque,
             gestures: {
@@ -499,7 +552,7 @@ class UiTransformBoxState extends State<UiTransformBox> {
                 decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle, border: Border.all(color: t.surface, width: 2)),
               ),
             ),
-            cursor: SystemMouseCursors.grab,
+            cursor: _drag?.mode == UiTransformMode.rotate ? SystemMouseCursors.grabbing : SystemMouseCursors.grab,
           ),
         ),
       ],
@@ -512,7 +565,7 @@ class UiTransformBoxState extends State<UiTransformBox> {
               top: m + (hd.sy + 1) / 2 * h - hit / 2,
               width: hit,
               height: hit,
-              child: claim(UiTransformMode.resize, Center(child: _HandleDot(touch: touch, corner: hd.corner)), handle: hd, cursor: hd.cursor),
+              child: claim(UiTransformMode.resize, Center(child: _HandleDot(touch: touch, corner: hd.corner)), handle: hd, cursor: uiResizeCursor(hd.sx, hd.sy, b.rotate)),
             ),
     ];
     if (widget.showSize) {

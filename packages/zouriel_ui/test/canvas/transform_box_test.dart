@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/rendering.dart' show CustomSemanticsAction;
+import 'package:flutter/rendering.dart' show CustomSemanticsAction, RendererBinding;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -285,5 +285,116 @@ void main() {
         ]),
       );
     });
+  });
+
+  group('cursors', () {
+    final desktop = TargetPlatformVariant.only(TargetPlatform.macOS);
+    MouseCursor? cursor() => RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1);
+    Offset at(WidgetTester tester, String key) => tester.getCenter(find.byKey(Key(key)));
+    const turned = UiBox(x: 100, y: 120, w: 160, h: 80, rotate: 90);
+
+    test('a handle cursor is its direction on screen, rounded to the nearest resize cursor', () {
+      expect(uiResizeCursor(0, -1, 0), SystemMouseCursors.resizeUpDown);
+      expect(uiResizeCursor(1, 0, 0), SystemMouseCursors.resizeLeftRight);
+      expect(uiResizeCursor(1, -1, 0), SystemMouseCursors.resizeUpRightDownLeft);
+      expect(uiResizeCursor(1, 1, 0), SystemMouseCursors.resizeUpLeftDownRight);
+      // A quarter turn swaps them; 40 degrees is nearer the diagonal; -170 is 10 degrees off flat.
+      expect(uiResizeCursor(0, -1, 90), SystemMouseCursors.resizeLeftRight);
+      expect(uiResizeCursor(1, 0, 40), SystemMouseCursors.resizeUpLeftDownRight);
+      expect(uiResizeCursor(0, -1, 40), SystemMouseCursors.resizeUpRightDownLeft);
+      expect(uiResizeCursor(1, 0, -170), SystemMouseCursors.resizeLeftRight);
+      expect(uiResizeCursor(0, -1, 270), SystemMouseCursors.resizeLeftRight);
+    });
+
+    testWidgets('hovering a handle on a turned box shows the cursor it drags with', (tester) async {
+      await pumpUi(tester, const _Stage(box: turned));
+      final mouse = await tester.createGesture(pointer: 1, kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(380, 800));
+      const expected = {
+        'n': SystemMouseCursors.resizeLeftRight,
+        'ne': SystemMouseCursors.resizeUpLeftDownRight,
+        'e': SystemMouseCursors.resizeUpDown,
+        'se': SystemMouseCursors.resizeUpRightDownLeft,
+        's': SystemMouseCursors.resizeLeftRight,
+        'sw': SystemMouseCursors.resizeUpLeftDownRight,
+        'w': SystemMouseCursors.resizeUpDown,
+        'nw': SystemMouseCursors.resizeUpRightDownLeft,
+      };
+      for (final MapEntry(:key, :value) in expected.entries) {
+        await mouse.moveTo(at(tester, 'ui-transform-$key'));
+        await tester.pump();
+        expect(cursor(), value, reason: 'handle $key');
+      }
+      await mouse.removePointer();
+    }, variant: desktop);
+
+    testWidgets('a drag keeps the cursor it started with wherever the pointer goes, until release', (tester) async {
+      await pumpUi(tester, const _Stage(box: turned));
+      final mouse = await tester.createGesture(pointer: 1, kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(380, 800));
+      await mouse.moveTo(at(tester, 'ui-transform-n'));
+      await tester.pump();
+      await mouse.down(at(tester, 'ui-transform-n'));
+      await tester.pump();
+      expect(cursor(), SystemMouseCursors.resizeLeftRight);
+      // Over another handle, the body, and off the box altogether.
+      for (final p in [at(tester, 'ui-transform-e'), const Offset(180, 160), const Offset(380, 800)]) {
+        await mouse.moveTo(p);
+        await tester.pump();
+        expect(cursor(), SystemMouseCursors.resizeLeftRight, reason: 'at $p');
+      }
+      // Released over the body: the body's own cursor again.
+      await mouse.moveTo(const Offset(180, 160));
+      await mouse.up();
+      await tester.pump();
+      expect(cursor(), SystemMouseCursors.move);
+      expect(find.byKey(const Key('ui-transform-held-cursor')), findsNothing);
+      await mouse.removePointer();
+    }, variant: desktop);
+
+    testWidgets('the knob shows grab, and grabbing while turning', (tester) async {
+      await pumpUi(tester, const _Stage(box: turned));
+      final mouse = await tester.createGesture(pointer: 1, kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(380, 800));
+      final knob = at(tester, 'ui-transform-rotate');
+      await mouse.moveTo(knob);
+      await tester.pump();
+      expect(cursor(), SystemMouseCursors.grab);
+      await mouse.down(knob);
+      await tester.pump();
+      expect(cursor(), SystemMouseCursors.grabbing);
+      await mouse.moveTo(const Offset(380, 800));
+      await tester.pump();
+      expect(cursor(), SystemMouseCursors.grabbing);
+      await mouse.up();
+      await tester.pump();
+      expect(cursor(), isNot(SystemMouseCursors.grabbing));
+      await mouse.removePointer();
+    }, variant: desktop);
+
+    testWidgets('lets go of the cursor when removed mid-drag', (tester) async {
+      await pumpUi(tester, const _Stage(box: turned));
+      final mouse = await tester.createGesture(pointer: 1, kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: at(tester, 'ui-transform-e'));
+      await mouse.down(at(tester, 'ui-transform-e'));
+      await tester.pump();
+      expect(find.byKey(const Key('ui-transform-held-cursor')), findsOneWidget);
+      await tester.pumpWidget(UiApp(theme: UiThemeName.dark, home: const SizedBox()));
+      await tester.pump();
+      expect(find.byKey(const Key('ui-transform-held-cursor')), findsNothing);
+      await mouse.moveTo(const Offset(200, 200));
+      await tester.pump();
+      expect(cursor(), SystemMouseCursors.basic);
+      await mouse.up();
+      await mouse.removePointer();
+    }, variant: desktop);
+
+    testWidgets('a finger holds no cursor', (tester) async {
+      await pumpUi(tester, const _Stage(box: turned));
+      final finger = await tester.startGesture(const Offset(180, 160));
+      await tester.pump();
+      expect(find.byKey(const Key('ui-transform-held-cursor')), findsNothing);
+      await finger.up();
+    }, variant: desktop);
   });
 }

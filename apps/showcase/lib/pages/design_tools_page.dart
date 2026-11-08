@@ -53,7 +53,9 @@ class _TransformSectionState extends State<_TransformSection> {
           'and a final value, so the host decides between live preview and an undo step. Resizing respects rotation. Shift keeps '
           'proportions and snaps rotation to 15 degrees; Alt resizes from the centre. From the keyboard, arrows nudge (Shift for 10), '
           'Alt+arrow resizes and [ / ] rotate by 1 degree (15 with Shift); screen readers get move and rotate actions. On touch the '
-          'handles are 48dp targets and two fingers pinch to scale about the point between them. Pair with uiSnap() and '
+          'handles are 48dp targets and two fingers pinch to scale about the point between them. With a mouse, each handle\'s '
+          'cursor points the way it drags on screen, so it turns with the box; the knob shows grab (grabbing while turning); and '
+          'during a drag the cursor it started with stays on the whole app until release. Pair with uiSnap() and '
           'UiSnapGuides for alignment guides, as here.',
       demo: LayoutBuilder(builder: (context, c) {
         final w = c.maxWidth;
@@ -110,6 +112,7 @@ class _TransformSectionState extends State<_TransformSection> {
         ApiRow('UiSnapGuides(guides, scale)', 'widget', 'Draws the guides uiSnap returns, over the stage.'),
         ApiRow('uiSnap(moving, targets, threshold, vertical:, horizontal:)', 'function', 'Edges-and-centres snapping: an offset and the guides.'),
         ApiRow('uiRotatedBounds(rect, degrees) / uiResizeBox(...)', 'function', 'Bounds of a rotated box to snap with; the rotated resize maths.'),
+        ApiRow('uiResizeCursor(sx, sy, rotate)', 'function', 'The resize cursor for a handle on a turned box (the nearest of the four), for hosts with their own handles.'),
       ],
       callbacks: const [
         ApiRow('onTransformStart', 'ValueChanged<UiTransformMode>?', 'A drag or pinch began: move, resize or rotate.'),
