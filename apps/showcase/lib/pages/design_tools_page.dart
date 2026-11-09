@@ -192,7 +192,8 @@ class _ImageEditorSectionState extends State<_ImageEditorSection> {
           'set). Erase paints transparency with a round brush, hard or soft; Restore paints the original back. Shift-click paints '
           'a straight line from where the last stroke ended (or the last click) to the click, as one undo step, and the next '
           'Shift-click carries it on; a faint line shows where it will go while Shift is held, and controller.straightLine does '
-          'the same without Shift for phones. Erased parts show '
+          'the same without Shift for phones. While a finger erases or restores, a round magnifier beside it shows what is under '
+          'the fingertip at twice the zoom, with the brush in the middle (loupe). Erased parts show '
           'over a checkerboard. One finger paints or drags the crop; two fingers pan and pinch-zoom; Ctrl/Cmd + wheel zooms about '
           'the pointer and Space + drag pans; once a pen has been used, fingers only navigate. Every stroke and crop change is one '
           'undo step (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z); [ and ] change the brush size. The controller exports the crop with erased '
@@ -292,6 +293,7 @@ class _ImageEditorSectionState extends State<_ImageEditorSection> {
         ApiRow('controller.mode', 'UiImageEditorMode', 'crop, erase or restore.', def: 'erase'),
         ApiRow('controller.brushSize / brushSoftness', 'double', 'Diameter in image pixels; 0 hard to 1 very soft.', def: '40 / 0.3'),
         ApiRow('controller.straightLine', 'bool', 'Every press after the first paints straight from where the last stroke ended, as Shift-click does (a "straight line" button for phones). Undo, redo, reset and another mode forget the point.', def: 'false'),
+        ApiRow('loupe', 'bool', 'While a finger erases or restores, a round magnifier beside it shows what is under the fingertip at twice the zoom, with the brush outline in the middle; up and to the left of the finger, flipping side near an edge. Never for a mouse or pen.', def: 'true'),
         ApiRow('controller.aspect', 'double?', 'Width / height the crop keeps; setting it reshapes the crop around its centre, as an undo step.'),
         ApiRow('controller.crop', 'UiImageCrop?', 'In image pixels; null until loaded, then the whole picture unless set. Setting it is not an undo step.'),
         ApiRow('controller.naturalSize / loaded / canUndo / canRedo / dirty', 'read-only', 'dirty: anything erased or cropped compared with the original.'),
@@ -388,7 +390,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
           'Draw paints with pressure-sensitive brushes, and holding still at the end of a stroke snaps it to a line, circle, '
           'rectangle or triangle. In Draw, Shift-click strokes straight from where the last stroke ended to the click, with the '
           'current brush (the eraser too), and the next Shift-click carries the line on; a faint line shows where it will go '
-          'while Shift is held, and straightLine does the same without Shift for phones. Once a pen is used, fingers pan instead of drawing. Pinch or Ctrl/Cmd + wheel zooms; a plain wheel scrolls the page. Keyboard: ] and [ step '
+          'while Shift is held, and straightLine does the same without Shift for phones. While a finger draws, a round magnifier beside it shows what is under the fingertip at twice the zoom, with the brush in the middle (loupe). Once a pen is used, fingers pan instead of drawing. Pinch or Ctrl/Cmd + wheel zooms; a plain wheel scrolls the page. Keyboard: ] and [ step '
           'through the items, Escape clears points then the item, arrows nudge (Shift for 10), Delete removes selected points, '
           'Ctrl+A selects every point, and in Pen mode Enter or Escape finishes and Backspace takes back the last point. It never '
           'changes items itself: each finished edit comes back once through onItemsChanged, so the host owns undo.',
@@ -470,6 +472,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
         ApiRow('fingerDraws', 'bool?', 'null (auto): after a pen is seen, fingers pan instead of drawing.'),
         ApiRow('snapToShape / freeHandles / lockAspect', 'bool', 'Hold-to-snap strokes; handles move independently; keep proportions when scaling.', def: 'true / false / false'),
         ApiRow('straightLine', 'bool', 'Draw mode: every press after the first strokes straight from where the last stroke ended, as Shift-click does (a "straight line" button for phones). Shift + drag goes straight to where the drag starts, then on freehand in the same stroke.', def: 'false'),
+        ApiRow('loupe', 'bool', 'Draw mode: while a finger paints, a round magnifier beside it shows what is under the fingertip at twice the zoom, with the brush outline in the middle; up and to the left of the finger, flipping side near an edge. Never for a mouse or pen.', def: 'true'),
         ApiRow('showArtboard / label', 'bool / String', 'Draw the artboard; accessible name.', def: "true / 'Shape editor'"),
       ],
       callbacks: const [

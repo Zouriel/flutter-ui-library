@@ -4,6 +4,7 @@ library;
 export '../canvas/ink.dart';
 export '../canvas/image_edit.dart';
 export '../canvas/image_editor.dart';
+export '../canvas/loupe.dart';
 export '../canvas/path.dart';
 export '../canvas/path_editor.dart';
 export '../canvas/snap.dart';

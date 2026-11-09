@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/theme.dart';
 import 'image_edit.dart';
+import 'loupe.dart';
 
 /// The state of a [UiImageEditor]: mode, brush, aspect, crop and history, plus the export. Listen to
 /// it (it's a [ChangeNotifier]) for [canUndo], [canRedo], [dirty], [crop] and the rest.
@@ -324,6 +325,9 @@ Uint8List uiPremultiply(Uint8List rgba) {
 /// same without Shift, for touch screens. Undo, redo, reset, a new picture or another mode forget
 /// the point.
 ///
+/// While a finger erases or restores, a round magnifier beside it ([loupe]) shows what's under the
+/// fingertip at twice the zoom, with the brush's outline in the middle.
+///
 /// Erased parts show over a checkerboard. One finger (or a mouse or pen) paints or drags the crop;
 /// two fingers pan and pinch-zoom; Ctrl/Cmd + wheel zooms about the pointer; Space + drag or the
 /// middle button pans. Once a pen has been used, fingers only navigate ([fingerDraws] null = auto).
@@ -340,6 +344,7 @@ class UiImageEditor extends StatefulWidget {
     this.raster,
     this.label = 'Picture editor',
     this.fingerDraws,
+    this.loupe = true,
     this.onChanged,
     this.onLoadError,
   }) : assert(image != null || bytes != null || raster != null, 'Give the picture as image, bytes or raster');
@@ -354,6 +359,12 @@ class UiImageEditor extends StatefulWidget {
 
   /// Whether a finger paints; null (auto): until a pen is used, then fingers only pan and zoom.
   final bool? fingerDraws;
+
+  /// While a finger erases or restores, show what's under it in a round magnifier beside it (twice
+  /// the editor's zoom, with the brush's outline in the middle): up and to the left of the finger,
+  /// flipping to the other side near an edge ([uiLoupePlace]). A mouse or pen doesn't hide the spot
+  /// and gets none.
+  final bool loupe;
 
   /// After each committed stroke or crop change (and undo, redo and reset).
   final VoidCallback? onChanged;
@@ -396,6 +407,9 @@ class _UiImageEditorState extends State<UiImageEditor> {
   Offset _center = Offset.zero;
   bool _fitted = false;
   Offset? _hover;
+
+  /// A finger painting, where it is: the loupe shows what's under it.
+  Offset? _loupe;
   bool _space = false;
   bool _cropping = false;
   bool _penSeen = false;
@@ -627,6 +641,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
       ed.beginStroke(_c.mode, start.dx, start.dy, math.max(1, _c.brushSize), _c.brushSoftness);
       if (straight) ed.lineTo(u.dx, u.dy);
       if (e.kind == PointerDeviceKind.touch) _hover = e.localPosition;
+      if (e.kind == PointerDeviceKind.touch && widget.loupe) _loupe = e.localPosition;
     }
     if (drag.kind == _G.crop) _cropping = true;
     setState(() {});
@@ -678,6 +693,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
     if (d.kind == _G.paint) {
       final u = _toUnits(e.localPosition);
       ed.strokeTo(u.dx, u.dy);
+      if (_loupe != null) _loupe = e.localPosition;
       setState(() {});
       return;
     }
@@ -712,6 +728,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
     _drag = null;
     _penPainting = false;
     _cropping = false;
+    _loupe = null;
     if (e.kind == PointerDeviceKind.touch) _hover = null;
     final ed = _c._edit;
     if (ed != null) {
@@ -738,6 +755,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
     _drag = null;
     _penPainting = false;
     _cropping = false;
+    _loupe = null;
     final ed = _c._edit;
     if (d == null || ed == null) return;
     if (d.kind == _G.paint) ed.cancelStroke();
@@ -825,6 +843,8 @@ class _UiImageEditorState extends State<UiImageEditor> {
         brush: painting && !_space && _hover != null ? (at: _hover!, r: _c.brushSize / 2 * _px, softness: _c.brushSoftness) : null,
         linePreview: _linePreview,
         ring: _ring,
+        loupe: painting && !_space ? _loupe : null,
+        loupeBrush: _c.brushSize / 2 * _px,
       );
       return Semantics(
         container: true,
@@ -903,6 +923,8 @@ class _ImageEditorPainter extends CustomPainter {
     required this.brush,
     required this.linePreview,
     required this.ring,
+    this.loupe,
+    this.loupeBrush = 0,
   });
 
   final UiTokens tokens;
@@ -918,10 +940,21 @@ class _ImageEditorPainter extends CustomPainter {
   final (Offset, Offset)? linePreview;
   final bool ring;
 
+  /// A finger painting (see [uiPaintLoupe]), and the brush's radius on screen.
+  final Offset? loupe;
+  final double loupeBrush;
+
   Offset _screen(double x, double y) => Offset(size.width / 2 + (x - center.dx) * px, size.height / 2 + (y - center.dy) * px);
 
   @override
   void paint(Canvas canvas, Size _) {
+    _scene(canvas);
+    final l = loupe;
+    if (l != null) uiPaintLoupe(canvas, tokens, finger: l, surface: size, scene: (c) => _scene(c, chrome: false), brushRadius: loupeBrush);
+  }
+
+  /// The picture, the crop and (with [chrome]) the brush, the line preview and the focus ring.
+  void _scene(Canvas canvas, {bool chrome = true}) {
     final t = tokens;
     canvas.drawRect(Offset.zero & size, Paint()..color = t.surfaceSubtle);
     final img = image;
@@ -1027,6 +1060,7 @@ class _ImageEditorPainter extends CustomPainter {
         _dashedRect(canvas, f, line..color = t.mediaOnScrim.withValues(alpha: 0.7));
       }
     }
+    if (!chrome) return;
     final line = linePreview;
     if (line != null) {
       final (a, z) = line;

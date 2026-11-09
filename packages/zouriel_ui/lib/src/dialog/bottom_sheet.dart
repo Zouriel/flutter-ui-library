@@ -21,10 +21,12 @@ const double _flick = 450;
 ///
 /// Heights are [snaps]: fractions of the room it has (the screen less [offset] below it for a
 /// toolbar and [topInset] above it for a header). [snap] is the index it rests at; a first snap of
-/// 0 is closed. Drag the header, or flick it: a fast release moves one snap that way. Dragging the
-/// body moves the sheet when the content can't use the drag: pulling down with the content at its
-/// top, or pushing up while there's a taller snap. Otherwise the content scrolls. Give a
-/// [builder] that puts the provided controller on your own scroll view to make a list take part.
+/// 0 is closed. Drag the header, or flick it: a fast release moves one snap that way. Pulling the
+/// body down with the content at its top moves the sheet down. Pushing the body up scrolls the
+/// content and never makes the sheet taller (0.69): someone scrolling a list doesn't mean to
+/// resize it, and the handle is there for that; [bodyExpands] brings back the old reading (the
+/// sheet grows first while there's a taller snap). Give a [builder] that puts the provided
+/// controller on your own scroll view to make a list take part.
 ///
 /// Non-modal by default: what's above stays usable, opening it does not move focus, and Tab can
 /// leave it. With [backdrop] it is modal while open: the page dims and a tap on it closes the
@@ -77,6 +79,7 @@ class UiBottomSheet extends StatefulWidget {
     this.hasHeader = false,
     this.actions,
     this.expandOnFocus = true,
+    this.bodyExpands = false,
     this.onHeightChanged,
     this.onCoverChanged,
     this.maxWidth,
@@ -126,6 +129,10 @@ class UiBottomSheet extends StatefulWidget {
   final Widget? actions;
   final bool expandOnFocus;
 
+  /// Pushing the body up makes the sheet taller while there's a taller snap, before the content
+  /// scrolls. Off by default (0.69): the body scrolls, and the handle and header resize the sheet.
+  final bool bodyExpands;
+
   /// The height it came to rest at, in px.
   final ValueChanged<double>? onHeightChanged;
 
@@ -151,6 +158,12 @@ class UiBottomSheet extends StatefulWidget {
 
 class UiBottomSheetState extends State<UiBottomSheet> {
   final DraggableScrollableController _sheet = DraggableScrollableController();
+
+  /// The body's own scroll, when it doesn't drive the sheet (without [UiBottomSheet.bodyExpands]).
+  final ScrollController _bodyScroll = ScrollController();
+
+  /// A body drag that is pulling the sheet down from the content's top.
+  bool _bodyPull = false;
   final FocusScopeNode _scope = FocusScopeNode(debugLabel: 'UiBottomSheet');
   final FocusNode _handle = FocusNode(debugLabel: 'UiBottomSheet handle');
   late int _snap = widget.snap;
@@ -283,6 +296,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     _sheet.removeListener(_onSheetMoved);
     _refocus?.cancel();
     _sheet.dispose();
+    _bodyScroll.dispose();
     _scope.dispose();
     _handle.dispose();
     super.dispose();
@@ -485,6 +499,24 @@ class UiBottomSheetState extends State<UiBottomSheet> {
     _goTo(target);
   }
 
+  /// Without [UiBottomSheet.bodyExpands] the body scrolls on its own: a finger pulling down past the
+  /// top of the content pulls the sheet down instead (and it settles as a header drag would).
+  bool _onBodyScroll(ScrollNotification n) {
+    if (widget.bodyExpands || n.metrics.axis != Axis.vertical) return false;
+    if (n is OverscrollNotification && n.dragDetails != null && n.overscroll < 0) {
+      _bodyPull = true;
+      _dragUpdate(DragUpdateDetails(globalPosition: n.dragDetails!.globalPosition, delta: Offset(0, -n.overscroll)));
+    } else if (n is ScrollUpdateNotification && n.dragDetails != null && (n.scrollDelta ?? 0) < 0 && n.metrics.pixels <= n.metrics.minScrollExtent) {
+      // A bouncing scroll view goes past its top instead of overscrolling.
+      _bodyPull = true;
+      _dragUpdate(DragUpdateDetails(globalPosition: n.dragDetails!.globalPosition, delta: Offset(0, -n.scrollDelta!)));
+    } else if (n is ScrollEndNotification && _bodyPull) {
+      _bodyPull = false;
+      _dragEnd(n.dragDetails ?? DragEndDetails());
+    }
+    return false;
+  }
+
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape && _collapsible) {
       close();
@@ -681,15 +713,27 @@ class UiBottomSheetState extends State<UiBottomSheet> {
         ],
       ),
     ));
-    final body = widget.builder != null
-        ? widget.builder!(context, scroll)
+    // Without bodyExpands the body scrolls on its own controller, so pushing it up never grows the sheet.
+    final own = !widget.bodyExpands;
+    final bodyScroll = own ? _bodyScroll : scroll;
+    final content = widget.builder != null
+        ? widget.builder!(context, bodyScroll)
         : SingleChildScrollView(
-            controller: scroll,
-            physics: const AlwaysScrollableScrollPhysics(),
+            controller: bodyScroll,
+            // Clamping on its own: a pull past the top overscrolls, which pulls the sheet down.
+            physics: own ? const AlwaysScrollableScrollPhysics(parent: ClampingScrollPhysics()) : const AlwaysScrollableScrollPhysics(),
             // Same body padding as UiModal and UiDrawer, so content lines up with the title.
             padding: UiBottomSheet.bodyPadding(context).copyWith(bottom: t.space3 + bottomPad),
             child: widget.child,
           );
+    final body = own
+        ? Stack(children: [
+            Positioned.fill(child: NotificationListener<ScrollNotification>(onNotification: _onBodyScroll, child: content)),
+            // The sheet only resizes (header drags, the handle, snaps) while its own controller is on
+            // a scroll view: give it an empty one that never scrolls.
+            SizedBox.shrink(child: SingleChildScrollView(controller: scroll, physics: const NeverScrollableScrollPhysics())),
+          ])
+        : content;
     return Semantics(
       container: true,
       explicitChildNodes: true,

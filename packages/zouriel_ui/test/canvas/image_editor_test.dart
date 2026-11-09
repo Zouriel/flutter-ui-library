@@ -51,16 +51,17 @@ _View _frame(UiImageEditorController c) {
 }
 
 class _Host extends StatelessWidget {
-  const _Host({required this.controller, this.onChanged, this.fingerDraws});
+  const _Host({required this.controller, this.onChanged, this.fingerDraws, this.loupe = true});
   final UiImageEditorController controller;
   final VoidCallback? onChanged;
   final bool? fingerDraws;
+  final bool loupe;
 
   @override
   Widget build(BuildContext context) => SizedBox(
         width: 400,
         height: 300,
-        child: UiImageEditor(controller: controller, raster: _raster, onChanged: onChanged, fingerDraws: fingerDraws),
+        child: UiImageEditor(controller: controller, raster: _raster, onChanged: onChanged, fingerDraws: fingerDraws, loupe: loupe),
       );
 }
 
@@ -85,10 +86,10 @@ void main() {
   late UiImageEditorController c;
   late int changes;
 
-  Future<_View> pump(WidgetTester tester, {UiImageEditorMode mode = UiImageEditorMode.erase, double size = 20, double softness = 0, bool? fingerDraws}) async {
+  Future<_View> pump(WidgetTester tester, {UiImageEditorMode mode = UiImageEditorMode.erase, double size = 20, double softness = 0, bool? fingerDraws, bool loupe = true}) async {
     c = UiImageEditorController(mode: mode, brushSize: size, brushSoftness: softness);
     changes = 0;
-    await pumpUi(tester, _Host(controller: c, onChanged: () => changes++, fingerDraws: fingerDraws), size: const Size(800, 600));
+    await pumpUi(tester, _Host(controller: c, onChanged: () => changes++, fingerDraws: fingerDraws, loupe: loupe), size: const Size(800, 600));
     return _frame(c);
   }
 
@@ -657,6 +658,100 @@ void main() {
     } finally {
       debugDisableShadows = true;
     }
+  });
+  group('loupe', () {
+    Finder paint() => find.descendant(of: find.byType(UiImageEditor), matching: find.byType(CustomPaint)).first;
+    Offset? loupe(WidgetTester tester) => (tester.widget<CustomPaint>(paint()).painter as dynamic).loupe as Offset?;
+
+    testWidgets('shows beside a finger while it erases or restores, magnified, and goes when it lifts', (tester) async {
+      final v = await pump(tester);
+      final origin = tester.getTopLeft(find.byType(UiImageEditor));
+      final g = await tester.startGesture(v.at(100, 50), kind: PointerDeviceKind.touch);
+      await tester.pump();
+      expect(loupe(tester), v.at(100, 50) - origin);
+      await g.moveTo(v.at(130, 60));
+      await tester.pump();
+      final finger = v.at(130, 60) - origin;
+      expect(loupe(tester), finger);
+      // Up and to the left of the finger, clear of it; the brush ring (10 image px) at twice the zoom.
+      final place = uiLoupePlace(finger, const Size(400, 300));
+      expect(place.center.dx, lessThan(finger.dx));
+      expect(place.center.dy, lessThan(finger.dy));
+      expect((place.center - finger).distance - place.size / 2, greaterThanOrEqualTo(39));
+      // The editor's own brush circle at the finger (its shadow, then its line), then the loupe's.
+      expect(
+          tester.renderObject(paint()),
+          paints
+            ..circle(x: finger.dx, y: finger.dy)
+            ..circle(x: finger.dx, y: finger.dy)
+            ..circle(x: place.center.dx, y: place.center.dy, radius: 10 * v.px * 2));
+      await g.up();
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      expect(changes, 1);
+
+      await setMode(tester, UiImageEditorMode.restore);
+      final h = await tester.startGesture(v.at(100, 50), kind: PointerDeviceKind.touch, pointer: 2);
+      await tester.pump();
+      expect(loupe(tester), isNotNull);
+      await h.up();
+      await tester.pump();
+      expect(loupe(tester), isNull);
+    });
+
+    testWidgets('never for a mouse or while cropping; a second finger puts it away', (tester) async {
+      final v = await pump(tester);
+      final m = await tester.startGesture(v.at(100, 50), kind: PointerDeviceKind.mouse);
+      await m.moveTo(v.at(120, 50));
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await m.up();
+
+      final a = await tester.startGesture(v.at(100, 50), kind: PointerDeviceKind.touch, pointer: 2);
+      await tester.pump();
+      expect(loupe(tester), isNotNull);
+      final b = await tester.startGesture(v.at(150, 50), kind: PointerDeviceKind.touch, pointer: 3);
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await b.up();
+      await a.up();
+      await tester.pump();
+
+      final cv = await setMode(tester, UiImageEditorMode.crop);
+      final cr = await tester.startGesture(cv.at(100, 50), kind: PointerDeviceKind.touch, pointer: 4);
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await cr.up();
+      await tester.pump();
+    });
+
+    testWidgets('loupe: false turns it off', (tester) async {
+      final v = await pump(tester, loupe: false);
+      final g = await tester.startGesture(v.at(100, 50), kind: PointerDeviceKind.touch);
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await g.up();
+      await tester.pump();
+      expect(changes, 1);
+    });
+
+    test('uiLoupePlace flips near the left and top edges and stays inside', () {
+      const s = Size(400, 700);
+      final left = uiLoupePlace(const Offset(30, 400), s);
+      expect(left.center.dx, greaterThan(30));
+      expect(left.center.dy, lessThan(400));
+      final top = uiLoupePlace(const Offset(300, 30), s);
+      expect(top.center.dx, lessThan(300));
+      expect(top.center.dy, greaterThan(30));
+      for (final p in [left, top, uiLoupePlace(const Offset(20, 20), s), uiLoupePlace(const Offset(395, 695), s)]) {
+        expect(p.center.dx - p.size / 2, greaterThanOrEqualTo(0));
+        expect(p.center.dy - p.size / 2, greaterThanOrEqualTo(0));
+        expect(p.center.dx + p.size / 2, lessThanOrEqualTo(400));
+        expect(p.center.dy + p.size / 2, lessThanOrEqualTo(700));
+      }
+      expect(uiLoupePlace(const Offset(100, 100), const Size(200, 200)).size, 84);
+      expect(uiLoupePlace(const Offset(50, 50), const Size(100, 100)).size, 64);
+    });
   });
 }
 

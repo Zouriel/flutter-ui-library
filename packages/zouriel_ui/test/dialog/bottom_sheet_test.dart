@@ -23,6 +23,7 @@ Future<_Harness> _sheet(
   Widget? child,
   FocusNode? pageNode,
   ScrollController? pageScroll,
+  bool bodyExpands = false,
 }) async {
   tester.view.physicalSize = const Size(390, 844) * tester.view.devicePixelRatio;
   addTearDown(tester.view.reset);
@@ -46,6 +47,7 @@ Future<_Harness> _sheet(
             }),
             onHeightChanged: h.heights.add,
             onCoverChanged: h.covers.add,
+            bodyExpands: bodyExpands,
             child: child ?? Column(children: [for (var i = 0; i < 40; i++) SizedBox(height: 40, child: Text('Row $i'))]),
           ),
         ])),
@@ -129,8 +131,31 @@ void main() {
     expect(h.snap, 0);
   });
 
-  testWidgets('pushing the body up grows the sheet before the content scrolls', (tester) async {
+  testWidgets('pushing the body up scrolls the content; the sheet stays the size it was (0.69)', (tester) async {
     final h = await _sheet(tester, snap: 1);
+    final top = _top(tester);
+    await tester.timedDrag(find.text('Row 1'), const Offset(0, -300), const Duration(milliseconds: 800));
+    await tester.pumpAndSettle();
+    expect(h.snap, 1);
+    expect(h.log, isEmpty);
+    expect(_top(tester), top);
+    expect(find.text('Row 0').hitTestable(), findsNothing, reason: 'the content scrolled');
+  });
+
+  testWidgets('after scrolling the body, pulling it back down scrolls back first, then lowers the sheet', (tester) async {
+    final h = await _sheet(tester, snap: 2);
+    await tester.timedDrag(find.text('Row 3'), const Offset(0, -200), const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    expect(h.snap, 2);
+    // 200 px back to the top, then 300 more pull the sheet down a snap.
+    await tester.timedDrag(find.text('Row 8'), const Offset(0, 500), const Duration(milliseconds: 1500));
+    await tester.pumpAndSettle();
+    expect(find.text('Row 0').hitTestable(), findsOneWidget);
+    expect(h.snap, 1);
+  });
+
+  testWidgets('with bodyExpands, pushing the body up grows the sheet before the content scrolls', (tester) async {
+    final h = await _sheet(tester, snap: 1, bodyExpands: true);
     await tester.timedDrag(find.text('Row 1'), const Offset(0, -300), const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
     expect(h.snap, 2);

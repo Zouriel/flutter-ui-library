@@ -29,6 +29,7 @@ class _HostState extends State<_Host> {
   late String? selectedId = widget.selectedId;
   late UiBrush brush = widget.brush;
   bool straight = false;
+  bool loupe = true;
   UiPointRef? point;
   List<UiPointRef> points = const [];
   final strokes = <UiInkStroke>[];
@@ -49,6 +50,7 @@ class _HostState extends State<_Host> {
           mode: mode,
           brush: brush,
           straightLine: straight,
+          loupe: loupe,
           selectedId: selectedId,
           onSelectedIdChanged: (v) => setState(() => selectedId = v),
           selectedPoint: point,
@@ -540,5 +542,59 @@ void main() {
             child: UiPathEditor(items: items, mode: UiPathEditorMode.points, selectedId: 'a', selectedPoint: const UiPointRef(0, 1), selectedPoints: const [UiPointRef(0, 0), UiPointRef(0, 1)]),
           ),
         ]));
+  });
+  group('loupe', () {
+    Finder paint() => find.descendant(of: find.byType(UiPathEditor), matching: find.byType(CustomPaint)).first;
+    Offset? loupe(WidgetTester tester) => (tester.widget<CustomPaint>(paint()).painter as dynamic).loupe as Offset?;
+
+    testWidgets('shows what a painting finger hides, magnified, beside it, and goes when it lifts', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw, brush: UiBrush(kind: UiBrushKind.marker, size: 6)), size: const Size(800, 600));
+      final origin = tester.getTopLeft(find.byType(UiPathEditor));
+      final g = await tester.startGesture(_screen(50, 50), kind: PointerDeviceKind.touch);
+      await tester.pump();
+      expect(loupe(tester), _screen(50, 50) - origin);
+      await g.moveTo(_screen(60, 55));
+      await tester.pump();
+      final finger = _screen(60, 55) - origin;
+      expect(loupe(tester), finger);
+      final place = uiLoupePlace(finger, const Size(400, 300));
+      expect(place.center.dx, lessThan(finger.dx));
+      expect(place.center.dy, lessThan(finger.dy));
+      // The brush's outline (6 units across) at twice the zoom, in the middle of the loupe.
+      expect(tester.renderObject(paint()), paints..circle(x: place.center.dx, y: place.center.dy, radius: 3 * _px * 2));
+      await g.up();
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      expect(_host(tester).strokes, hasLength(1));
+    });
+
+    testWidgets('never for a mouse, nor with loupe off, and a second finger (a pinch) puts it away', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      final m = await tester.startGesture(_screen(50, 50), kind: PointerDeviceKind.mouse);
+      await m.moveTo(_screen(60, 50));
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await m.up();
+      await tester.pump();
+
+      final a = await tester.startGesture(_screen(50, 50), kind: PointerDeviceKind.touch, pointer: 2);
+      await tester.pump();
+      expect(loupe(tester), isNotNull);
+      final b = await tester.startGesture(_screen(80, 50), kind: PointerDeviceKind.touch, pointer: 3);
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await b.up();
+      await a.up();
+      await tester.pump();
+
+      final h = _host(tester);
+      h.update(() => h.loupe = false);
+      await tester.pump();
+      final c = await tester.startGesture(_screen(50, 50), kind: PointerDeviceKind.touch, pointer: 4);
+      await tester.pump();
+      expect(loupe(tester), isNull);
+      await c.up();
+      await tester.pump();
+    });
   });
 }

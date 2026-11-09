@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import '../core/interactive.dart';
 import '../theme/theme.dart';
 import 'ink.dart';
+import 'loupe.dart';
 import 'path.dart';
 
 /// What a press does in a [UiPathEditor].
@@ -92,6 +93,7 @@ class UiPathEditor extends StatefulWidget {
     this.snapToShape = true,
     this.freeHandles = false,
     this.straightLine = false,
+    this.loupe = true,
     this.onPointTap,
     this.onStroke,
     this.onPenDetected,
@@ -142,6 +144,12 @@ class UiPathEditor extends StatefulWidget {
   /// In draw mode, every press after the first strokes straight from where the last stroke ended,
   /// as Shift does: for touch screens, where there's no Shift key (a "straight line" button).
   final bool straightLine;
+
+  /// While a finger paints in draw mode, show what's under it in a round magnifier beside it (twice
+  /// the editor's zoom, with the brush's outline in the middle): up and to the left of the finger,
+  /// flipping to the other side near an edge ([uiLoupePlace]). A mouse or pen doesn't hide the spot
+  /// and gets none.
+  final bool loupe;
 
   /// A point was tapped (not dragged), e.g. to pick ends to join.
   final ValueChanged<UiPointRef>? onPointTap;
@@ -230,6 +238,9 @@ class UiPathEditorState extends State<UiPathEditor> {
   late List<UiPointRef> _selectedPoints = widget.selectedPoints;
 
   _Ink? _ink;
+
+  /// A finger painting, where it is: the loupe shows what's under it.
+  Offset? _loupe;
   List<List<Offset>>? _inkSnapPieces;
   Timer? _holdTimer;
   bool _penSeen = false;
@@ -525,7 +536,10 @@ class UiPathEditorState extends State<UiPathEditor> {
       g = _editDown(e, units);
     }
     _drag = _Drag(gesture: g, pointer: e.pointer, kind: e.kind, startLocal: e.localPosition, startUnits: units, startCenter: _center, origin: widget.items);
-    if (g.kind == _G.ink) _startInk(e, units);
+    if (g.kind == _G.ink) {
+      _startInk(e, units);
+      if (e.kind == PointerDeviceKind.touch && widget.loupe) _loupe = e.localPosition;
+    }
     if (g.kind == _G.point && e.kind != PointerDeviceKind.mouse) {
       // Long press adds the point to the selection (or takes it out): the touch Shift-click.
       _pressTimer = Timer(_longPress, _longPressPoint);
@@ -633,6 +647,7 @@ class UiPathEditorState extends State<UiPathEditor> {
     final g = d.gesture;
     if (g.kind == _G.ink) {
       _addInk(e);
+      if (_loupe != null) setState(() => _loupe = e.localPosition);
       return;
     }
     if (!d.moved) {
@@ -1009,6 +1024,7 @@ class UiPathEditorState extends State<UiPathEditor> {
 
   void _dropInk() {
     _ink = null;
+    _loupe = null;
     _inkSnapPieces = null;
     _holdTimer?.cancel();
     _holdTimer = null;
@@ -1152,6 +1168,8 @@ class UiPathEditorState extends State<UiPathEditor> {
         inkFill: widget.fill,
         linePreview: linePreview,
         ring: _ring,
+        loupe: mode == UiPathEditorMode.draw ? _loupe : null,
+        loupeBrush: widget.brush.size / 2 * _px,
       );
       final drawing = mode == UiPathEditorMode.pen || mode == UiPathEditorMode.draw;
       return Semantics(
@@ -1258,6 +1276,8 @@ class _EditorPainter extends CustomPainter {
     required this.inkFill,
     required this.linePreview,
     required this.ring,
+    this.loupe,
+    this.loupeBrush = 0,
   });
 
   final UiTokens tokens;
@@ -1280,6 +1300,10 @@ class _EditorPainter extends CustomPainter {
   final Color? inkFill;
   final (Offset, Offset)? linePreview;
   final bool ring;
+
+  /// A finger painting (see [uiPaintLoupe]), and the brush's radius on screen.
+  final Offset? loupe;
+  final double loupeBrush;
 
   /// A stroke that looks the same width at any zoom (the web `vector-effect: non-scaling-stroke`).
   Paint _stroke(Color c, double w) => Paint()
@@ -1314,6 +1338,13 @@ class _EditorPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size s) {
+    _scene(canvas, s);
+    final l = loupe;
+    if (l != null) uiPaintLoupe(canvas, tokens, finger: l, surface: s, scene: (c) => _scene(c, s, chrome: false), brushRadius: loupeBrush);
+  }
+
+  /// Everything the editor draws; without [chrome], no focus ring.
+  void _scene(Canvas canvas, Size s, {bool chrome = true}) {
     final t = tokens;
     canvas.drawRect(Offset.zero & s, _fill(t.surfaceSubtle));
     canvas.save();
@@ -1436,7 +1467,7 @@ class _EditorPainter extends CustomPainter {
     }
     canvas.restore();
 
-    if (ring) {
+    if (ring && chrome) {
       canvas.drawRect((Offset.zero & s).deflate(1), Paint()
         ..color = t.borderFocus
         ..style = PaintingStyle.stroke
