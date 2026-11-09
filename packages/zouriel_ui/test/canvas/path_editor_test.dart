@@ -325,6 +325,19 @@ void main() {
       await dotAt(40, 80);
     });
 
+    testWidgets('keeps the point when the host reshapes the stroke it kept a moment later (as a tidied outline)', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      final h = _host(tester);
+      await _tap(tester, _screen(10, 10));
+      h.update(() => h.items = [...h.items, UiPathItem(id: 'kept', contours: [rectContour(9, 9, 2, 2)])]);
+      await tester.pump();
+      // A beat later the host swaps in a cleaner outline for the same item.
+      h.update(() => h.items = [for (final i in h.items) i.id == 'kept' ? UiPathItem(id: 'kept', contours: [rectContour(8, 8, 4, 4)]) : i]);
+      await tester.pump();
+      await shiftTap(tester, _screen(60, 10));
+      along(h.strokes[1], const Offset(10, 10), const Offset(60, 10));
+    });
+
     testWidgets('Shift + drag strokes straight to where the drag starts, then carries on freehand in the same stroke', (tester) async {
       await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
       await _tap(tester, _screen(10, 10));

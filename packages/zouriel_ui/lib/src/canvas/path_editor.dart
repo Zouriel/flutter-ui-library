@@ -290,13 +290,15 @@ class UiPathEditorState extends State<UiPathEditor> {
   void didUpdateWidget(UiPathEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
-    // Another brush or mode forgets where the last stroke ended; so does any change to the items
-    // that isn't the host keeping a stroke (an undo, say).
+    // Another brush or mode forgets where the last stroke ended. The host keeping a stroke changes the
+    // items, and so does tidying the items it has (a stroke's outline swapped in a moment later, an
+    // erase): both keep the point. Any other change that adds or removes items (an undo, Clear)
+    // forgets it.
     if (widget.mode != old.mode || widget.brush.kind != old.brush.kind) _lineStart = null;
     if (!listEquals(widget.items, old.items)) {
       if (_strokePending) {
         _strokePending = false;
-      } else {
+      } else if (!_sameIds(widget.items, old.items)) {
         _lineStart = null;
       }
     }
@@ -1444,4 +1446,13 @@ class _EditorPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_EditorPainter old) => true;
+}
+
+/// The same items by id, in the same order, though some may have been reshaped.
+bool _sameIds(List<UiPathItem> a, List<UiPathItem> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i].id != b[i].id) return false;
+  }
+  return true;
 }
