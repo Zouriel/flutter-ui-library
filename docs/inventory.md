@@ -364,9 +364,9 @@ File: `data/src/tree-table.ts`
 ### UiTree (component, `ui-tree`)
 File: `data/src/tree.ts`  
 `ui-tree` — expandable hierarchy with single selection, following the WAI-ARIA tree view pattern: one tab stop (roving tabindex), arrow-key navigation, nested `role="group"` containers and type-ahead by first letter.  
-- Inputs: `nodes`: UiTreeNode[] = []; `label` = ''; `multiple` = false; `reorderable` = false
+- Inputs: `nodes`: UiTreeNode[] = []; `label` = ''; `multiple` = false; `reorderable` = false; `renamable` = false
 - Two-way: `selected`: string | null = null; `selectedValues`: string[] = []; `expanded`: string[] = []
-- Outputs: `nodeSelect`: UiTreeNode; `nodeMove`: UiTreeMove; `nodeActivate`: UiTreeNode
+- Outputs: `nodeSelect`: UiTreeNode; `nodeMove`: UiTreeMove; `nodeActivate`: UiTreeNode; `nodeRename`: UiTreeRename
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTreeNodeEnd (directive, `ng-template[uiTreeNodeEnd]`)

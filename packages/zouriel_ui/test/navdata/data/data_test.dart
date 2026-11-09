@@ -76,10 +76,11 @@ const _layers = [
 
 /// A layers panel: multiple selection, open nodes and moves held by the test.
 class _Layers extends StatefulWidget {
-  const _Layers({required this.log, this.multiple = true, this.reorderable = true});
+  const _Layers({required this.log, this.multiple = true, this.reorderable = true, this.renamable = true});
   final _LayersLog log;
   final bool multiple;
   final bool reorderable;
+  final bool renamable;
   @override
   State<_Layers> createState() => _LayersState();
 }
@@ -90,6 +91,7 @@ class _LayersLog {
   Set<String> open = {'group'};
   final moves = <UiTreeMove>[];
   final activated = <String>[];
+  final renames = <(String, String)>[];
   final eyes = <String>[];
 }
 
@@ -104,6 +106,7 @@ class _LayersState extends State<_Layers> {
         nodes: _layers,
         multiple: widget.multiple,
         reorderable: widget.reorderable,
+        renamable: widget.renamable,
         selected: log.selected,
         onSelect: (n) => setState(() => log.selected = n.value),
         selectedValues: log.values,
@@ -112,6 +115,7 @@ class _LayersState extends State<_Layers> {
         onExpandedChanged: (v) => setState(() => log.open = v),
         onMove: log.moves.add,
         onActivate: (n) => log.activated.add(n.value),
+        onRename: (value, label) => log.renames.add((value, label)),
         trailingBuilder: (context, n) => UiButton(size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => log.eyes.add(n.value), child: Text('Eye ${n.label}')),
       ),
     );
@@ -513,6 +517,97 @@ void main() {
       await _focusRow(tester, 'Frame');
       await _press(tester, LogicalKeyboardKey.f2);
       expect(log.activated, ['photo', 'frame']);
+    });
+
+    testWidgets('F2 and double tap start a focused rename with all text selected', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await _focusRow(tester, 'Title');
+      await _press(tester, LogicalKeyboardKey.f2);
+      var edit = tester.widget<EditableText>(find.byType(EditableText));
+      expect(edit.controller.text, 'Title');
+      expect(edit.controller.selection, const TextSelection(baseOffset: 0, extentOffset: 5));
+      expect(edit.focusNode.hasPrimaryFocus, isTrue);
+      expect(find.bySemanticsLabel('Rename Title'), findsOneWidget);
+      expect(log.activated, ['title']);
+      await _press(tester, LogicalKeyboardKey.escape);
+      await tester.tap(find.text('Photo'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Photo'));
+      await tester.pump();
+      edit = tester.widget<EditableText>(find.byType(EditableText));
+      expect(edit.controller.text, 'Photo');
+      expect(log.activated, ['title', 'photo']);
+    });
+
+    testWidgets('Enter commits once with a trimmed label; unchanged and empty emit nothing', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      Future<void> edit(String label, String text) async {
+        await _focusRow(tester, label);
+        await _press(tester, LogicalKeyboardKey.f2);
+        await tester.enterText(find.byType(EditableText), text);
+        await _press(tester, LogicalKeyboardKey.enter);
+      }
+
+      await edit('Title', '  New title  ');
+      expect(log.renames, [('title', 'New title')]);
+      await edit('Photo', ' Photo ');
+      await edit('Hidden', '   ');
+      expect(log.renames, [('title', 'New title')]);
+    });
+
+    testWidgets('blur commits a changed label', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await _focusRow(tester, 'Title');
+      await _press(tester, LogicalKeyboardKey.f2);
+      await tester.enterText(find.byType(EditableText), '  Heading  ');
+      FocusManager.instance.primaryFocus!.unfocus();
+      await tester.pump();
+      expect(log.renames, [('title', 'Heading')]);
+      expect(find.byType(EditableText), findsNothing);
+    });
+
+    testWidgets('Escape cancels and refocuses the row', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await _focusRow(tester, 'Title');
+      await _press(tester, LogicalKeyboardKey.f2);
+      await tester.enterText(find.byType(EditableText), 'Changed');
+      await _press(tester, LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(log.renames, isEmpty);
+      expect(find.byType(EditableText), findsNothing);
+      expect(_focused, 'title');
+    });
+
+    testWidgets('editing owns Space and arrows, and tapping it does not select or drag', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await _focusRow(tester, 'Title');
+      await _press(tester, LogicalKeyboardKey.f2);
+      await tester.tap(find.byType(EditableText));
+      await _press(tester, LogicalKeyboardKey.space);
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+      expect(log.values, isEmpty);
+      expect(log.selected, isNull);
+      expect(log.moves, isEmpty);
+      expect(find.byType(EditableText), findsOneWidget);
+      expect(FocusManager.instance.primaryFocus?.debugLabel, 'tree rename');
+    });
+
+    testWidgets('renamable false never shows an editor but still activates', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log, renamable: false));
+      await _focusRow(tester, 'Title');
+      await _press(tester, LogicalKeyboardKey.f2);
+      await tester.tap(find.text('Photo'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Photo'));
+      await tester.pump();
+      expect(find.byType(EditableText), findsNothing);
+      expect(log.activated, ['title', 'photo']);
     });
   });
 

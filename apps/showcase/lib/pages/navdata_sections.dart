@@ -219,12 +219,27 @@ class _TreeSectionState extends State<_TreeSection> {
 
   void _toggleIn(Set<String> set, String v) => setState(() => set.contains(v) ? set.remove(v) : set.add(v));
 
+  void _renameLayer(String value, String label) {
+    List<UiTreeNode> rename(List<UiTreeNode> list) => [
+          for (final n in list)
+            UiTreeNode(
+              label: n.value == value ? label : n.label,
+              value: n.value,
+              icon: n.icon,
+              muted: n.muted,
+              container: n.container,
+              children: rename(n.children),
+            ),
+        ];
+    setState(() => _layers = rename(_layers));
+  }
+
   @override
   Widget build(BuildContext context) => DocSection(
         name: 'Tree',
         widget: 'UiTree',
         summary: 'An expandable hierarchy. A tap on a row selects it; a tap on the chevron opens or closes it without selecting. Rows are read with their level and position, expanded and selected state, and offer expand/collapse actions to screen readers. Keyboard: one tab stop; Up/Down, Home/End move; Right opens then enters; Left closes then goes to the parent; Enter/Space select; * opens every sibling; typing a letter jumps to the next item starting with it. '
-            'expanded + onExpandedChanged let the app hold the open nodes (to open the ancestors of a node it selects). For a layers panel (second demo): muted draws a label dimmed (a hidden layer); multiple makes selectedValues the selection (a tap selects one, Ctrl/Cmd-tap toggles, Shift-tap selects the visible range from the last tap, Space toggles; onSelect still reports each tapped node); trailingBuilder puts controls at the end of each row, and taps on them never select the row; reorderable lets a mouse or pen drag rows (after 4px) and touch long-press then drag, with a line where the row will land or an outline when it goes into a node with children or a container, never into itself or its descendants; Alt+Up/Down moves the focused node among its siblings. The tree calls onMove (move value to child number index of parent, null for the top level, counted after taking it out) and the app moves the node. A double tap on a label or F2 calls onActivate (to rename).',
+            'expanded + onExpandedChanged let the app hold the open nodes (to open the ancestors of a node it selects). For a layers panel (second demo): muted draws a label dimmed (a hidden layer); multiple makes selectedValues the selection (a tap selects one, Ctrl/Cmd-tap toggles, Shift-tap selects the visible range from the last tap, Space toggles; onSelect still reports each tapped node); trailingBuilder puts controls at the end of each row, and taps on them never select the row; reorderable lets a mouse or pen drag rows (after 4px) and touch long-press then drag, with a line where the row will land or an outline when it goes into a node with children or a container, never into itself or its descendants; Alt+Up/Down moves the focused node among its siblings. The tree calls onMove (move value to child number index of parent, null for the top level, counted after taking it out) and the app moves the node. A double tap on a label or F2 always calls onActivate; with renamable it also opens an in-place editor and onRename reports a committed changed label.',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space2, children: [
           UiTree(label: 'Files', nodes: _files, selected: _sel, initiallyExpanded: const {'src'}, onSelect: (n) => setState(() => _sel = n.value)),
           UiText('Selected: ${_sel ?? 'nothing'}', variant: UiTextVariant.caption),
@@ -242,6 +257,7 @@ class _TreeSectionState extends State<_TreeSection> {
                     nodes: _withMuted(_layers),
                     multiple: true,
                     reorderable: true,
+                    renamable: true,
                     selected: _layerLast,
                     onSelect: (n) => setState(() => _layerLast = n.value),
                     selectedValues: _layerSel,
@@ -254,6 +270,7 @@ class _TreeSectionState extends State<_TreeSection> {
                       _lastMove = '${m.value} to ${m.parent ?? 'top'} #${m.index}';
                     }),
                     onActivate: (n) => setState(() => _activated = n.label),
+                    onRename: _renameLayer,
                     trailingBuilder: (context, n) => Row(mainAxisSize: MainAxisSize.min, children: [
                       UiIconButton(
                         size: UiSize.sm,
@@ -275,7 +292,7 @@ class _TreeSectionState extends State<_TreeSection> {
           ),
           UiText('Selected: ${_layerSel.isEmpty ? 'nothing' : _layerSel.join(', ')} · last moved: $_lastMove · activated: ${_activated ?? 'nothing'}', variant: UiTextVariant.caption),
         ]),
-        code: "UiTree(\n  label: 'Files',\n  nodes: [\n    UiTreeNode(label: 'src', value: 'src', icon: HugeIcons.strokeRoundedFolder01, children: [...]),\n  ],\n  selected: selected,\n  onSelect: (node) => setState(() => selected = node.value),\n)",
+        code: "UiTree(\n  label: 'Layers',\n  nodes: layers,\n  renamable: true,\n  onRename: (value, label) => setState(() => renameLayer(value, label)),\n)",
         api: const [
           ApiRow('nodes', 'List<UiTreeNode>', 'label, value, icon, children.'),
           ApiRow('selected', 'String?', 'Value of the selected node.'),
@@ -288,6 +305,7 @@ class _TreeSectionState extends State<_TreeSection> {
           ApiRow('trailingBuilder', 'Widget? Function(BuildContext, UiTreeNode)?', 'Controls at the end of each row; their taps do not select it.'),
           ApiRow('reorderable / onMove', 'bool / ValueChanged<UiTreeMove>?', 'Drag (mouse, pen; long-press on touch) and Alt+Up/Down to move nodes.', def: 'false'),
           ApiRow('onActivate', 'ValueChanged<UiTreeNode>?', 'Double tap on a label, or F2 (e.g. rename).'),
+          ApiRow('renamable / onRename', 'bool / void Function(String, String)?', 'Edit in place after double tap or F2; reports value and a non-empty changed label.', def: 'false'),
           ApiRow('UiTreeNode.muted / container', 'bool', 'Dimmed label (hidden layer) / takes dropped children with none yet.', def: 'false'),
         ],
       );

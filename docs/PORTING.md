@@ -1,5 +1,13 @@
 # Porting @zouriel/ui to Flutter
 
+## UiTree in-place rename
+
+`UiTree.renamable` is opt-in. The existing double-tap/F2 activation still calls `onActivate`, then
+opens a widgets-layer `EditableText` with the whole 80-character label selected. Enter or blur
+commits a trimmed, non-empty change through `onRename(value, label)`; Escape cancels and restores
+row focus. The editor disables the row tap/drag target while it is present, so text-editing keys and
+pointer input stay with the field. This mirrors `ui-tree`'s `renamable` and `nodeRename`.
+
 The Angular library (`/home/zouriel/personal/angularUiLib/ui-workspace/projects/ui`, v0.20.0) is the
 source of truth. This repo recreates it for Flutter mobile. `docs/inventory.md` is the per-class
 checklist (generated from the Angular source by `tool/angular_inventory.py`); this file holds the
@@ -1149,4 +1157,3 @@ UiDeviceFrame: `zoom` (0.25–8) multiplies the fitted scale; `onScale` reports 
 Above zoom 1 the frame sits in a horizontal + vertical `SingleChildScrollView` pair (optional controllers) with a
 viewport-sized minimum and centring, so an axis that still fits stays centred. The web exposes `pointAt` /
 `scrollPointTo` for zooming around the cursor; Flutter has the static `UiDeviceFrame.anchoredOffset` per axis instead.
-

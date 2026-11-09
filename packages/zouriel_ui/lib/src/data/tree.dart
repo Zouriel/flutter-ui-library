@@ -96,6 +96,7 @@ class _ToggleIntent extends Intent {
 /// - [expanded] + [onExpandedChanged]: the open nodes, held by the app (to open the ancestors of a
 ///   node it selects). Left null, the tree keeps its own, starting from [initiallyExpanded].
 /// - [onActivate]: a double tap on a label, or F2 (to rename).
+/// - [renamable]: those same triggers open an in-place editor; [onRename] reports a committed label.
 class UiTree extends StatefulWidget {
   const UiTree({
     super.key,
@@ -113,6 +114,8 @@ class UiTree extends StatefulWidget {
     this.reorderable = false,
     this.onMove,
     this.onActivate,
+    this.renamable = false,
+    this.onRename,
   });
 
   final List<UiTreeNode> nodes;
@@ -148,6 +151,12 @@ class UiTree extends StatefulWidget {
   /// A double tap on a label, or F2.
   final ValueChanged<UiTreeNode>? onActivate;
 
+  /// Let F2 or a double tap replace a label with an in-place editor.
+  final bool renamable;
+
+  /// A non-empty changed label committed by the user: `(value, label)`.
+  final void Function(String value, String label)? onRename;
+
   @override
   State<UiTree> createState() => _UiTreeState();
 }
@@ -158,6 +167,7 @@ class _UiTreeState extends State<UiTree> {
   String? _anchor;
   final Map<String, FocusNode> _nodes = {};
   final Map<String, GlobalKey> _rowKeys = {};
+  String? _editing;
 
   // Double tap on a label: the label pressed last, while a second press would still count.
   String? _labelDownValue;
@@ -298,10 +308,10 @@ class _UiTreeState extends State<UiTree> {
   }
 
   void _labelDown(String v, PointerDownEvent e) {
-    if (widget.onActivate == null) return;
+    if (widget.onActivate == null && !widget.renamable) return;
     if (_labelTimer?.isActive == true && _labelDownValue == v) {
       _labelTimer!.cancel();
-      widget.onActivate!(_index[v]!.node);
+      _activate(_index[v]!.node);
       return;
     }
     // A raw listener and a timer, not a double-tap recognizer: that would hold every single tap
@@ -309,6 +319,19 @@ class _UiTreeState extends State<UiTree> {
     _labelDownValue = v;
     _labelTimer?.cancel();
     _labelTimer = Timer(kDoubleTapTimeout, () {});
+  }
+
+  void _activate(UiTreeNode n) {
+    widget.onActivate?.call(n);
+    if (widget.renamable) setState(() => _editing = n.value);
+  }
+
+  void _finishRename(UiTreeNode n, String text, {required bool cancel, required bool refocus}) {
+    if (_editing != n.value) return;
+    final label = text.trim();
+    setState(() => _editing = null);
+    if (!cancel && label.isNotEmpty && label != n.label) widget.onRename?.call(n.value, label);
+    if (refocus) WidgetsBinding.instance.addPostFrameCallback((_) => _focus(n.value));
   }
 
   // ── Reordering ─────────────────────────────────────────────────────────────────────────
@@ -433,8 +456,8 @@ class _UiTreeState extends State<UiTree> {
     } else if (k == LogicalKeyboardKey.end) {
       _focus(vis.last);
     } else if (k == LogicalKeyboardKey.f2) {
-      if (widget.onActivate == null) return KeyEventResult.ignored;
-      widget.onActivate!(n);
+      if (widget.onActivate == null && !widget.renamable) return KeyEventResult.ignored;
+      _activate(n);
     } else if (k == LogicalKeyboardKey.arrowRight) {
       if (n.hasChildren) _expanded.contains(n.value) ? _focus(n.children.first.value) : _setOpen(n, true);
     } else if (k == LogicalKeyboardKey.arrowLeft) {
@@ -498,6 +521,7 @@ class _UiTreeState extends State<UiTree> {
                 focusNode: _node(v)..skipTraversal = v != stop,
                 open: _expanded.contains(v),
                 selected: widget.multiple ? selSet.contains(v) : v == widget.selected,
+                editing: _editing == v,
                 trailing: widget.trailingBuilder?.call(context, index[v]!.node),
                 dragging: _dragOn && _dragValue == v,
                 drop: _drop?.value == v ? _drop!.pos : null,
@@ -506,12 +530,110 @@ class _UiTreeState extends State<UiTree> {
                 onToggle: () => _toggle(index[v]!.node),
                 onFocus: () => setState(() => _active = v),
                 onLabelDown: (e) => _labelDown(v, e),
+                onRenameCommit: (text, {required bool refocus}) => _finishRename(index[v]!.node, text, cancel: false, refocus: refocus),
+                onRenameCancel: () => _finishRename(index[v]!.node, '', cancel: true, refocus: true),
                 onDragStart: reorder ? (g, {bool immediate = false}) => _dragStart(v, g, immediate: immediate) : null,
                 onDragUpdate: _dragUpdate,
                 onDragEnd: _dragEnd,
                 onDragCancel: _dragCancel
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RenameEditor extends StatefulWidget {
+  const _RenameEditor({required this.label, required this.style, required this.onCommit, required this.onCancel});
+  final String label;
+  final TextStyle style;
+  final void Function(String text, {required bool refocus}) onCommit;
+  final VoidCallback onCancel;
+
+  @override
+  State<_RenameEditor> createState() => _RenameEditorState();
+}
+
+class _RenameEditorState extends State<_RenameEditor> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.label,
+  )..selection = TextSelection(baseOffset: 0, extentOffset: widget.label.length);
+  final FocusNode _focusNode = FocusNode(debugLabel: 'tree rename');
+  bool _finished = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocus);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  void _onFocus() {
+    if (!_focusNode.hasFocus && !_finished) {
+      _finished = true;
+      widget.onCommit(_controller.text, refocus: false);
+    }
+  }
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _finished = true;
+      widget.onCancel();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+      _finished = true;
+      widget.onCommit(_controller.text, refocus: true);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_onFocus)
+      ..dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return SizedBox(
+      height: 24,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: t.surface,
+          border: Border.all(color: t.borderFocus),
+          borderRadius: BorderRadius.circular(t.radiusXs),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: t.space1),
+          child: Focus(
+            onKeyEvent: _onKey,
+            child: EditableText(
+              controller: _controller,
+              focusNode: _focusNode,
+              style: widget.style,
+              cursorColor: t.text,
+              backgroundCursorColor: t.surface,
+              selectionColor: t.selected,
+              maxLines: 1,
+              textInputAction: TextInputAction.done,
+              inputFormatters: [LengthLimitingTextInputFormatter(80)],
+              onSubmitted: (_) {
+                if (_finished) return;
+                _finished = true;
+                widget.onCommit(_controller.text, refocus: true);
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -526,6 +648,7 @@ class _TreeRow extends StatefulWidget {
     required this.focusNode,
     required this.open,
     required this.selected,
+    required this.editing,
     required this.trailing,
     required this.dragging,
     required this.drop,
@@ -534,6 +657,8 @@ class _TreeRow extends StatefulWidget {
     required this.onToggle,
     required this.onFocus,
     required this.onLabelDown,
+    required this.onRenameCommit,
+    required this.onRenameCancel,
     required this.onDragStart,
     required this.onDragUpdate,
     required this.onDragEnd,
@@ -544,6 +669,7 @@ class _TreeRow extends StatefulWidget {
   final FocusNode focusNode;
   final bool open;
   final bool selected;
+  final bool editing;
   final Widget? trailing;
   final bool dragging;
   final _DropPos? drop;
@@ -552,6 +678,8 @@ class _TreeRow extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onFocus;
   final ValueChanged<PointerDownEvent> onLabelDown;
+  final void Function(String text, {required bool refocus}) onRenameCommit;
+  final VoidCallback onRenameCancel;
   final void Function(Offset global, {bool immediate})? onDragStart;
   final bool Function(Offset global, {bool force}) onDragUpdate;
   final VoidCallback onDragEnd;
@@ -585,7 +713,7 @@ class _TreeRowState extends State<_TreeRow> {
     final animate = context.uiAnimate ? t.motionFast : Duration.zero;
 
     Widget main = UiInteractive(
-      onTap: w.onTap,
+      onTap: w.editing ? null : w.onTap,
       focusNode: w.focusNode,
       button: false,
       selected: w.selected,
@@ -605,7 +733,8 @@ class _TreeRowState extends State<_TreeRow> {
             }
           : null,
       builder: (context, s) => Semantics(
-        label: n.label,
+        label: w.editing ? 'Rename ${n.label}' : n.label,
+        textField: w.editing ? true : null,
         hint: 'level ${w.info.depth + 1}, ${w.info.index + 1} of ${w.info.count}',
         expanded: kids ? w.open : null,
         onExpand: kids && !w.open ? w.onToggle : null,
@@ -642,13 +771,20 @@ class _TreeRowState extends State<_TreeRow> {
                 ),
                 if (n.icon != null) SizedBox(width: 16, child: UiIcon(n.icon!, size: 16, color: t.textMuted)),
                 Expanded(
-                  child: Listener(
-                    onPointerDown: w.onLabelDown,
-                    child: Text(n.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: n.muted ? t.textMuted : null)),
-                  ),
+                  child: w.editing
+                      ? _RenameEditor(
+                          label: n.label,
+                          style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: n.muted ? t.textMuted : null),
+                          onCommit: w.onRenameCommit,
+                          onCancel: w.onRenameCancel,
+                        )
+                      : Listener(
+                          onPointerDown: w.onLabelDown,
+                          child: Text(n.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: n.muted ? t.textMuted : null)),
+                        ),
                 ),
               ]),
             ),
@@ -657,7 +793,7 @@ class _TreeRowState extends State<_TreeRow> {
       ),
     );
 
-    final start = w.onDragStart;
+    final start = w.editing ? null : w.onDragStart;
     if (start != null) {
       // Mouse and pen drag at once (past 4px); touch long-presses first, so the list still scrolls.
       main = GestureDetector(
