@@ -278,6 +278,25 @@ File: `canvas/src/transform-box.ts`
 - interface `UiBox` (transform-box.ts)
 - type `UiTransformMode` (transform-box.ts)
 - interface `UiTransformTap` (transform-box.ts)
+### UiImageEditor (component, `ui-image-editor`)
+File: `canvas/src/image-editor.ts`  
+`ui-image-editor` — crop a picture and erase parts of it with a soft or hard round brush. crop: a frame with eight handles; drag inside it to move it, outside is dimmed, thirds show while dragging, `aspect` keeps its shape and it stays inside the image. erase paints transparency; restore paints the original back. Erased parts show over a checkerboard. Pinch or Ctrl/⌘ + wheel zooms; two fingers, Space + drag or the middle button pan; once a pen has been used fingers only navigate. Every stroke and crop change is one undo step; `[` / `]` change the brush size. `toBlob()` gives the crop with erased pixels transparent at up to 4096 px.  
+- Inputs: `src`: string; `aspect`: number | null = null; `label` = 'Picture editor'; `fingerDraws`: boolean | 'auto' = 'auto'
+- Two-way: `mode`: UiImageEditorMode = 'erase'; `brushSize` = 40; `brushSoftness` = 0.3; `crop`: UiImageCrop | null = null
+- Outputs: `changed`: void; `loadError`: unknown
+- Methods: `undo()`, `redo()`, `reset()`, `resetCrop()`, `zoomBy(factor: number)`, `fit()`, `toBlob(type = 'image/png', quality?: number)`
+- Flutter: `UiImageEditor(controller:, image: | bytes: | raster:)` + `UiImageEditorController` (mode, brushSize, brushSoftness, aspect, crop, naturalSize, loaded, canUndo, canRedo, dirty, undo/redo/reset/resetCrop/zoomBy/fit, toPng/toRgba)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- interface `UiImageCrop` (image-edit.ts)
+- type `UiImageEditorMode` (image-edit.ts)
+- interface `UiImageRaster` (image-edit.ts)
+- type `UiCropHandle` (image-edit.ts)
+- class `UiImageEdit` (image-edit.ts)
+- function `brushFalloff` (image-edit.ts)
+- function `rleEncode` / `rleDecode` (image-edit.ts)
+- function `clampCrop` / `fitAspect` / `dragCrop` / `fullCrop` (image-edit.ts)
+- const `UI_IMAGE_EDITOR_BACKEND` (image-editor.ts) — Angular only: swaps the `<img>` + `<canvas>` decoding (Flutter takes `raster:` instead)
 
 ## card
 

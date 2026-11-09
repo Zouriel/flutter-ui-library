@@ -1,5 +1,29 @@
 # Porting @zouriel/ui to Flutter
 
+## UiImageEditor (0.67.0)
+
+`ui-image-editor` / `UiImageEditor` crop a picture and erase or restore parts of it. The pixel work
+is shared code in spirit: `image-edit.ts` and `image_edit.dart` are line-for-line twins (same mask,
+same brush falloff, same crop maths and JavaScript-style rounding), and `image_edit_test.dart` checks
+the same numbers as `image-edit.spec.ts`.
+
+- **Model**: original straight-RGBA pixels + a one-byte mask (255 keep, 0 erased) + a crop. Brushes
+  only change the mask, so restore always brings back the original. A stroke paints capsules
+  (distance to each piece of a smoothed curve through the pointer positions), not stamped dabs, so
+  soft edges have no scallops.
+- **Undo**: per-stroke diffs of the 64 x 64 mask tiles a stroke touched, before and after,
+  run-length encoded; crop steps keep the two rectangles; 100 steps within 64 MB.
+- **Two fingers**: the first finger's stroke starts at once; a second finger cancels it (the saved
+  tiles are written back) and the gesture becomes pan + pinch, so nothing is painted.
+- **API shape**: Angular `model()`s (`mode`, `brushSize`, `brushSoftness`, `crop`) and the read-only
+  signals live on `UiImageEditorController` (a `ChangeNotifier`) in Flutter, with `toPng()` in
+  place of `toBlob()` (plus `toRgba()`). The picture is `image` (ImageProvider), `bytes` or a
+  decoded `raster`; Angular takes `src` and can swap decoding with `UI_IMAGE_EDITOR_BACKEND`.
+- **Display**: Angular puts the composed pixels in a `<canvas>` (dirty rectangles once a frame)
+  transformed with CSS; Flutter keeps 256 px tiles as `ui.Image`s. `decodeImageFromPixels` reads
+  raw pixels as premultiplied, so the composed straight RGBA is premultiplied first (otherwise an
+  erased pixel still adds its colour); the golden caught that.
+
 ## UiTree in-place rename
 
 `UiTree.renamable` is opt-in. The existing double-tap/F2 activation still calls `onActivate`, then

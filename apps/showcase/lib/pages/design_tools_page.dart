@@ -1,11 +1,12 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../docs/doc.dart';
 
-/// The pieces of a visual editor: transform box, path editor and helpers, sequencer, scrubber.
+/// The pieces of a visual editor: transform box, path editor and helpers, image editor, sequencer, scrubber.
 class DesignToolsPage extends StatelessWidget {
   const DesignToolsPage({super.key});
 
@@ -17,7 +18,7 @@ class DesignToolsPage extends StatelessWidget {
       lead: 'The pieces of a visual editor, as used by the invites.blog designer: handles for placing things on a stage, a vector '
           'editor for drawing and reshaping outlines, a timeline for when things move, and a scrubber for phones. Built for tablets '
           'and touch first (48dp handles, pinch to zoom), and still usable on a phone.',
-      children: [_TransformSection(), _PathEditorSection(), _HelpersSection(), _SequencerSection(), _ScrubberSection()],
+      children: [_TransformSection(), _PathEditorSection(), _ImageEditorSection(), _HelpersSection(), _SequencerSection(), _ScrubberSection()],
     );
   }
 }
@@ -126,6 +127,201 @@ class _TransformSectionState extends State<_TransformSection> {
           'class UiGuide { UiGuideOrientation orientation; double at, from, to; }',
     );
   }
+}
+
+// ----- Image editor ----------------------------------------------------------------------------------
+
+/// The picture used by the image editor demo.
+const imageEditorDemoPicture = AssetImage('assets/demo/sunset.jpg');
+
+class _ImageEditorSection extends StatefulWidget {
+  const _ImageEditorSection();
+  @override
+  State<_ImageEditorSection> createState() => _ImageEditorSectionState();
+}
+
+class _ImageEditorSectionState extends State<_ImageEditorSection> {
+  final _c = UiImageEditorController(brushSize: 60);
+  String _aspect = 'free';
+  Uint8List? _png;
+  String _result = '';
+
+  static const _hints = {
+    UiImageEditorMode.crop: 'Drag the handles or the frame. Pick an aspect to keep its shape.',
+    UiImageEditorMode.erase: 'Drag to erase; two fingers move and zoom the view.',
+    UiImageEditorMode.restore: 'Drag over erased parts to bring the picture back.',
+  };
+  static const _aspects = {'free': null, '1:1': 1.0, '4:5': 0.8, '16:9': 16 / 9};
+
+  @override
+  void initState() {
+    super.initState();
+    _c.addListener(_update);
+  }
+
+  void _update() => setState(() {});
+
+  @override
+  void dispose() {
+    _c
+      ..removeListener(_update)
+      ..dispose();
+    super.dispose();
+  }
+
+  Future<void> _export() async {
+    final png = await _c.toPng();
+    final crop = _c.crop!;
+    if (!mounted) return;
+    setState(() {
+      _png = png;
+      _result = 'Exported: ${crop.width} x ${crop.height} PNG, ${(png.length / 1024).round()} KB';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final crop = _c.crop;
+    final cropping = _c.mode == UiImageEditorMode.crop;
+    return DocSection(
+      name: 'Image editor',
+      widget: 'UiImageEditor',
+      summary: 'Crop a picture and erase parts of it, the picture counterpart of the path editor. Crop shows a frame with eight '
+          'handles (drag inside to move it; outside is dimmed, thirds show while dragging, and it keeps to the aspect when one is '
+          'set). Erase paints transparency with a round brush, hard or soft; Restore paints the original back. Erased parts show '
+          'over a checkerboard. One finger paints or drags the crop; two fingers pan and pinch-zoom; Ctrl/Cmd + wheel zooms about '
+          'the pointer and Space + drag pans; once a pen has been used, fingers only navigate. Every stroke and crop change is one '
+          'undo step (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z); [ and ] change the brush size. The controller exports the crop with erased '
+          'pixels transparent (toPng), at up to 4096 px on the long side.',
+      demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+        Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          UiSegmented<UiImageEditorMode>(
+            label: 'Mode',
+            size: UiSize.sm,
+            value: _c.mode,
+            onChanged: (m) => _c.mode = m,
+            options: const [
+              UiSegmentedOption(value: UiImageEditorMode.crop, label: 'Crop'),
+              UiSegmentedOption(value: UiImageEditorMode.erase, label: 'Erase'),
+              UiSegmentedOption(value: UiImageEditorMode.restore, label: 'Restore'),
+            ],
+          ),
+          if (cropping)
+            UiSegmented<String>(
+              label: 'Aspect',
+              size: UiSize.sm,
+              value: _aspect,
+              onChanged: (a) {
+                setState(() => _aspect = a);
+                _c.aspect = _aspects[a];
+              },
+              options: [for (final a in _aspects.keys) UiSegmentedOption(value: a, label: a == 'free' ? 'Free' : a)],
+            ),
+        ]),
+        Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          Wrap(spacing: t.space2, children: [
+            UiButton(label: 'Undo', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _c.canUndo ? _c.undo : null),
+            UiButton(label: 'Redo', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _c.canRedo ? _c.redo : null),
+            UiButton(label: 'Reset', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _c.dirty ? _c.reset : null),
+          ]),
+          Wrap(spacing: t.space2, children: [
+            UiButton(label: 'Fit', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _c.fit),
+            UiButton(label: 'Export', size: UiSize.sm, onPressed: _c.loaded ? _export : null),
+          ]),
+        ]),
+        if (!cropping)
+          Wrap(spacing: t.space6, runSpacing: t.space2, children: [
+            SizedBox(
+              width: 300,
+              child: Row(spacing: t.space2, children: [
+                const UiText('Size', variant: UiTextVariant.caption),
+                Expanded(child: UiSlider(label: 'Brush size', min: 4, max: 300, value: _c.brushSize, onChanged: (v) => _c.brushSize = v)),
+              ]),
+            ),
+            SizedBox(
+              width: 300,
+              child: Row(spacing: t.space2, children: [
+                const UiText('Softness', variant: UiTextVariant.caption),
+                Expanded(
+                  child: UiSlider(
+                    label: 'Brush softness',
+                    value: (_c.brushSoftness * 100).roundToDouble(),
+                    onChanged: (v) => _c.brushSoftness = v / 100,
+                  ),
+                ),
+              ]),
+            ),
+          ]),
+        Container(
+          height: 340,
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+          child: UiImageEditor(controller: _c, image: imageEditorDemoPicture, label: 'Picture editor demo'),
+        ),
+        UiText('${_hints[_c.mode]}${crop == null ? '' : ' Crop ${crop.width} x ${crop.height} at ${crop.x}, ${crop.y}.'}', variant: UiTextVariant.caption),
+        if (_png != null)
+          Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space1, children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360, maxHeight: 240),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(t.radiusSm),
+                child: CustomPaint(painter: _Checker(t.surface, Color.lerp(t.surface, t.text, 0.14)!), child: Image.memory(_png!, gaplessPlayback: true)),
+              ),
+            ),
+            UiText(_result, variant: UiTextVariant.caption),
+          ]),
+      ]),
+      code: 'final editor = UiImageEditorController(mode: UiImageEditorMode.erase, brushSize: 60);\n'
+          'UiImageEditor(controller: editor, image: const AssetImage(\'photo.jpg\'), onChanged: () => saved = false);\n'
+          'editor.aspect = 4 / 5;           // the crop keeps this shape\n'
+          'editor.undo();\n'
+          'final png = await editor.toPng(); // the crop, erased parts transparent',
+      api: const [
+        ApiRow('controller', 'UiImageEditorController', 'Mode, brush, aspect, crop, history and the export (below).'),
+        ApiRow('image / bytes / raster', 'ImageProvider / Uint8List / UiImageRaster', 'The picture: a provider or encoded bytes (scaled down to 4096 px on the long side), or decoded straight RGBA, used as given.'),
+        ApiRow('label', 'String', 'Accessible name.', def: "'Picture editor'"),
+        ApiRow('fingerDraws', 'bool?', 'Whether a finger paints; null: until a pen is used, then fingers only pan and zoom.'),
+        ApiRow('onChanged', 'VoidCallback?', 'After each committed stroke or crop change, and after undo, redo and reset.'),
+        ApiRow('onLoadError', 'ValueChanged<Object>?', 'The picture could not be loaded.'),
+        ApiRow('controller.mode', 'UiImageEditorMode', 'crop, erase or restore.', def: 'erase'),
+        ApiRow('controller.brushSize / brushSoftness', 'double', 'Diameter in image pixels; 0 hard to 1 very soft.', def: '40 / 0.3'),
+        ApiRow('controller.aspect', 'double?', 'Width / height the crop keeps; setting it reshapes the crop around its centre, as an undo step.'),
+        ApiRow('controller.crop', 'UiImageCrop?', 'In image pixels; null until loaded, then the whole picture unless set. Setting it is not an undo step.'),
+        ApiRow('controller.naturalSize / loaded / canUndo / canRedo / dirty', 'read-only', 'dirty: anything erased or cropped compared with the original.'),
+        ApiRow('controller.undo() / redo() / reset() / resetCrop()', 'void', 'reset() goes back to the original picture, uncropped, as one undo step.'),
+        ApiRow('controller.zoomBy(f) / fit()', 'void', 'fit() frames the whole picture in crop mode and the crop otherwise.'),
+        ApiRow('controller.toPng() / toRgba()', 'Future<Uint8List> / UiImageRaster', 'The crop with erased pixels transparent, at the working resolution.'),
+      ],
+      shapes: 'class UiImageCrop { int x, y, width, height; }  // image pixels\n'
+          'enum UiImageEditorMode { crop, erase, restore }\n'
+          'class UiImageRaster { int width, height; Uint8List data; }  // straight RGBA\n'
+          '// Undo keeps per-stroke diffs: the 64 x 64 mask tiles a stroke touched, before and after,\n'
+          '// run-length encoded; up to 100 steps within 64 MB.',
+    );
+  }
+}
+
+/// A checkerboard behind an exported picture, so its erased parts read as see-through.
+class _Checker extends CustomPainter {
+  _Checker(this.light, this.dark);
+  final Color light;
+  final Color dark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = light);
+    final p = Paint()..color = dark;
+    const sq = 8.0;
+    for (var y = 0; y * sq < size.height; y++) {
+      for (var x = y.isOdd ? 1 : 0; x * sq < size.width; x += 2) {
+        canvas.drawRect(Rect.fromLTWH(x * sq, y * sq, sq, sq), p);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Checker old) => old.light != light || old.dark != dark;
 }
 
 // ----- Path editor -----------------------------------------------------------------------------------
