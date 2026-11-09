@@ -19,7 +19,9 @@ class UiImageEditorController extends ChangeNotifier {
     double brushSoftness = 0.3,
     double? aspect,
     UiImageCrop? crop,
+    bool straightLine = false,
   }) {
+    _straightLine = straightLine;
     _mode = mode;
     _brushSize = brushSize;
     _brushSoftness = brushSoftness;
@@ -33,6 +35,10 @@ class UiImageEditorController extends ChangeNotifier {
   double _brushSoftness = 0.3;
   double? _aspect;
   UiImageCrop? _pendingCrop;
+  bool _straightLine = false;
+
+  /// Where the last stroke ended (image pixels): a Shift-press paints a straight line from here.
+  Offset? _lineStart;
   int _loadSeq = 0;
   _UiImageEditorState? _view;
 
@@ -46,9 +52,24 @@ class UiImageEditorController extends ChangeNotifier {
     final crossed = (v == UiImageEditorMode.crop) != (_mode == UiImageEditorMode.crop);
     _view?._abort();
     _mode = v;
+    _lineStart = null;
     if (crossed) _view?._fit();
     notifyListeners();
   }
+
+  /// Every press after the first paints straight from where the last stroke ended, as Shift-click
+  /// does: for touch screens, where there's no Shift key (a "straight line" button).
+  bool get straightLine => _straightLine;
+  set straightLine(bool v) {
+    if (v == _straightLine) return;
+    _straightLine = v;
+    notifyListeners();
+  }
+
+  /// While Shift is held (or [straightLine] is on): the line from where the last stroke ended to
+  /// the pointer, on screen, as the editor shows it.
+  @visibleForTesting
+  (Offset, Offset)? get linePreview => _view?._linePreview;
 
   /// The brush's diameter, in image pixels.
   double get brushSize => _brushSize;
@@ -113,10 +134,12 @@ class UiImageEditorController extends ChangeNotifier {
   UiImageEdit? get edit => _edit;
 
   void undo() {
+    _lineStart = null;
     if (_edit?.undo() ?? false) _changed();
   }
 
   void redo() {
+    _lineStart = null;
     if (_edit?.redo() ?? false) _changed();
   }
 
@@ -125,6 +148,7 @@ class UiImageEditorController extends ChangeNotifier {
     final e = _edit;
     if (e == null) return;
     _view?._abort();
+    _lineStart = null;
     final a = _aspect;
     final whole = fullCrop(e.width, e.height);
     if (e.reset(a != null && a > 0 ? fitAspect(whole, a, e.width, e.height) : whole)) _changed();
@@ -232,6 +256,7 @@ class UiImageEditorController extends ChangeNotifier {
   }
 
   void _detach() {
+    _lineStart = null;
     if (_edit == null) return;
     _view?._abort();
     _edit = null;
@@ -241,6 +266,7 @@ class UiImageEditorController extends ChangeNotifier {
 
   void _attach(UiImageRaster raster) {
     _view?._abort();
+    _lineStart = null;
     final e = UiImageEdit(raster);
     final given = _pendingCrop;
     if (given != null && given.x >= 0 && given.y >= 0 && given.x + given.width <= e.width && given.y + given.height <= e.height) e.setCrop(given);
@@ -289,6 +315,14 @@ Uint8List uiPremultiply(Uint8List rgba) {
 /// - **erase**: drag to paint transparency; **restore** paints the original back.
 ///   [UiImageEditorController.brushSize] is the diameter in image pixels and
 ///   [UiImageEditorController.brushSoftness] runs from a hard edge (0) to very soft (1).
+///
+/// Shift-click draws a straight line: the editor remembers where the last stroke ended (a click
+/// paints a dot there), and a press with Shift held paints straight from that point to the new one
+/// with the current brush, as one undo step; the new point is then remembered, so Shift-clicks chain.
+/// While Shift is held a faint line shows where it will go. Dragging after a Shift-press carries on
+/// freehand from the new point (the same stroke). [UiImageEditorController.straightLine] does the
+/// same without Shift, for touch screens. Undo, redo, reset, a new picture or another mode forget
+/// the point.
 ///
 /// Erased parts show over a checkerboard. One finger (or a mouse or pen) paints or drags the crop;
 /// two fingers pan and pinch-zoom; Ctrl/Cmd + wheel zooms about the pointer; Space + drag or the
@@ -366,6 +400,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
   bool _cropping = false;
   bool _penSeen = false;
   bool _penPainting = false;
+  bool _shift = false;
   _Drag? _drag;
   final Map<int, Offset> _pointers = {};
   ({double dist, double zoom, Offset world})? _pinch;
@@ -382,6 +417,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
   @override
   void initState() {
     super.initState();
+    HardwareKeyboard.instance.addHandler(_onKeyboard);
     _c._view = this;
     _c.addListener(_onController);
     _c._changeListeners.add(_onChanged);
@@ -409,8 +445,22 @@ class _UiImageEditorState extends State<UiImageEditor> {
     if (old.image != widget.image || old.bytes != widget.bytes || old.raster != widget.raster) _loadAfterFrame();
   }
 
+  /// Follows Shift wherever focus is, for the straight-line preview.
+  bool _onKeyboard(KeyEvent e) {
+    final shift = HardwareKeyboard.instance.isShiftPressed;
+    if (shift != _shift && mounted) setState(() => _shift = shift);
+    return false;
+  }
+
+  (Offset, Offset)? get _linePreview {
+    final from = _c._lineStart, to = _hover;
+    if (from == null || to == null || _c.mode == UiImageEditorMode.crop || _space || _drag?.kind == _G.paint || !(_shift || _c.straightLine)) return null;
+    return (_toLocal(from), to);
+  }
+
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyboard);
     _c.removeListener(_onController);
     _c._changeListeners.remove(_onChanged);
     if (_c._view == this) _c._view = null;
@@ -570,7 +620,12 @@ class _UiImageEditorState extends State<UiImageEditor> {
     _drag = drag;
     _penPainting = drag.kind == _G.paint && _isStylus(e);
     if (drag.kind == _G.paint) {
-      ed.beginStroke(_c.mode, u.dx, u.dy, math.max(1, _c.brushSize), _c.brushSoftness);
+      // Shift (or straightLine) with a remembered point: straight from there to here, then on as usual.
+      final from = _c._lineStart;
+      final straight = from != null && (HardwareKeyboard.instance.isShiftPressed || _c.straightLine);
+      final start = straight ? from : u;
+      ed.beginStroke(_c.mode, start.dx, start.dy, math.max(1, _c.brushSize), _c.brushSoftness);
+      if (straight) ed.lineTo(u.dx, u.dy);
       if (e.kind == PointerDeviceKind.touch) _hover = e.localPosition;
     }
     if (drag.kind == _G.crop) _cropping = true;
@@ -663,6 +718,8 @@ class _UiImageEditorState extends State<UiImageEditor> {
       if (d.kind == _G.paint) {
         final u = _toUnits(e.localPosition);
         ed.strokeTo(u.dx, u.dy);
+        // Where it lifted is where the next Shift-click's line starts (even if nothing changed).
+        _c._lineStart = u;
         if (ed.endStroke()) _c._changed();
       } else if (d.kind == _G.crop) {
         if (ed.commitCrop(ed.crop, d.start)) {
@@ -766,6 +823,7 @@ class _UiImageEditorState extends State<UiImageEditor> {
         mode: mode,
         cropping: _cropping,
         brush: painting && !_space && _hover != null ? (at: _hover!, r: _c.brushSize / 2 * _px, softness: _c.brushSoftness) : null,
+        linePreview: _linePreview,
         ring: _ring,
       );
       return Semantics(
@@ -843,6 +901,7 @@ class _ImageEditorPainter extends CustomPainter {
     required this.mode,
     required this.cropping,
     required this.brush,
+    required this.linePreview,
     required this.ring,
   });
 
@@ -856,6 +915,7 @@ class _ImageEditorPainter extends CustomPainter {
   final UiImageEditorMode mode;
   final bool cropping;
   final ({Offset at, double r, double softness})? brush;
+  final (Offset, Offset)? linePreview;
   final bool ring;
 
   Offset _screen(double x, double y) => Offset(size.width / 2 + (x - center.dx) * px, size.height / 2 + (y - center.dy) * px);
@@ -965,6 +1025,25 @@ class _ImageEditorPainter extends CustomPainter {
         }
       } else {
         _dashedRect(canvas, f, line..color = t.mediaOnScrim.withValues(alpha: 0.7));
+      }
+    }
+    final line = linePreview;
+    if (line != null) {
+      final (a, z) = line;
+      canvas.drawLine(a, z, Paint()
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round
+        ..color = t.mediaScrim.withValues(alpha: 0.35));
+      final len = (z - a).distance;
+      if (len > 0) {
+        final dir = (z - a) / len;
+        final dash = Paint()
+          ..strokeWidth = 1.25
+          ..strokeCap = StrokeCap.round
+          ..color = t.mediaOnScrim.withValues(alpha: 0.75);
+        for (var d = 0.0; d < len; d += 9) {
+          canvas.drawLine(a + dir * d, a + dir * math.min(len, d + 5), dash);
+        }
       }
     }
     final b = brush;

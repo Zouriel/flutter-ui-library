@@ -50,7 +50,14 @@ int _itemSeq = 0;
 /// - **draw**: paint with [brush]. Pens report pressure; a finger or mouse gets it from speed. Once
 ///   a pen has been used, fingers move the view instead of drawing (palm rejection, [fingerDraws]
 ///   null = auto). Hold still at the end of a stroke to snap it to a line, circle, ellipse,
-///   rectangle or triangle. Each finished stroke is reported through [onStroke].
+///   rectangle or triangle. Each finished stroke is reported through [onStroke]. Shift-click draws
+///   a straight stroke: the editor remembers where the last stroke ended (a click is a dot there),
+///   and a press with Shift held strokes straight from that point to the new one with the current
+///   brush (eraser included), reported as one stroke; the new point is remembered, so Shift-clicks
+///   chain. While Shift is held a faint line shows where it will go. Dragging after a Shift-press
+///   carries on freehand from the new point, in the same stroke. [straightLine] does it without
+///   Shift (touch screens). Another brush or mode, or any change to [items] that isn't a stroke
+///   being kept (an undo), forgets the point; [UiPathEditorState.clearLineStart] does it by hand.
 ///
 /// The view zooms with a two-finger pinch or Ctrl/Cmd + wheel (a plain wheel scrolls the page), and
 /// pans by dragging empty space (or with two fingers). It never changes [items]: a finished gesture
@@ -84,6 +91,7 @@ class UiPathEditor extends StatefulWidget {
     this.fingerDraws,
     this.snapToShape = true,
     this.freeHandles = false,
+    this.straightLine = false,
     this.onPointTap,
     this.onStroke,
     this.onPenDetected,
@@ -130,6 +138,10 @@ class UiPathEditor extends StatefulWidget {
 
   /// Handles move independently (what Alt does once), for touch where there's no Alt key.
   final bool freeHandles;
+
+  /// In draw mode, every press after the first strokes straight from where the last stroke ended,
+  /// as Shift does: for touch screens, where there's no Shift key (a "straight line" button).
+  final bool straightLine;
 
   /// A point was tapped (not dragged), e.g. to pick ends to join.
   final ValueChanged<UiPointRef>? onPointTap;
@@ -196,6 +208,9 @@ class _Ink {
   UiInkShape? snapped;
   Offset holdFrom;
   final bool pen;
+
+  /// Started as a Shift-click line (it doesn't snap to a shape).
+  bool straight = false;
 }
 
 class UiPathEditorState extends State<UiPathEditor> {
@@ -219,6 +234,14 @@ class UiPathEditorState extends State<UiPathEditor> {
   Timer? _holdTimer;
   bool _penSeen = false;
 
+  /// Where the last stroke ended: a Shift-press strokes straight from here.
+  UiInkSample? _lineStart;
+
+  /// A stroke was reported and the host hasn't changed [UiPathEditor.items] since.
+  bool _strokePending = false;
+  Offset? _lineHover;
+  bool _shift = false;
+
   List<UiPathPoint> _pen = const [];
   ({String itemId, int contour})? _penTarget;
   Offset? _hover;
@@ -239,9 +262,44 @@ class UiPathEditorState extends State<UiPathEditor> {
   int get penCount => _pen.length;
 
   @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKeyboard);
+  }
+
+  /// Follows Shift wherever focus is, for the straight-line preview.
+  bool _onKeyboard(KeyEvent e) {
+    final shift = HardwareKeyboard.instance.isShiftPressed;
+    if (shift != _shift && mounted) setState(() => _shift = shift);
+    return false;
+  }
+
+  /// Forgets where the last stroke ended, so the next Shift-press starts a new stroke there.
+  void clearLineStart() => setState(() => _lineStart = null);
+
+  /// While Shift is held (or [UiPathEditor.straightLine] is on) in draw mode: where the next press
+  /// would stroke, in editor units.
+  @visibleForTesting
+  (Offset, Offset)? get linePreview {
+    final from = _lineStart, to = _lineHover;
+    if (from == null || to == null || widget.mode != UiPathEditorMode.draw || _ink != null || !(_shift || widget.straightLine)) return null;
+    return (from.offset, to);
+  }
+
+  @override
   void didUpdateWidget(UiPathEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     final old = oldWidget;
+    // Another brush or mode forgets where the last stroke ended; so does any change to the items
+    // that isn't the host keeping a stroke (an undo, say).
+    if (widget.mode != old.mode || widget.brush.kind != old.brush.kind) _lineStart = null;
+    if (!listEquals(widget.items, old.items)) {
+      if (_strokePending) {
+        _strokePending = false;
+      } else {
+        _lineStart = null;
+      }
+    }
     if (widget.selectedId != old.selectedId) _selectedId = widget.selectedId;
     if (!listEquals(widget.selectedPoints, old.selectedPoints)) _selectedPoints = widget.selectedPoints;
     if (widget.selectedPoint != old.selectedPoint) {
@@ -270,6 +328,7 @@ class UiPathEditorState extends State<UiPathEditor> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyboard);
     _holdTimer?.cancel();
     _pressTimer?.cancel();
     _focus.dispose();
@@ -742,7 +801,9 @@ class UiPathEditorState extends State<UiPathEditor> {
   }
 
   void _hoverAt(PointerHoverEvent e) {
-    if (widget.mode == UiPathEditorMode.pen) {
+    if (widget.mode == UiPathEditorMode.draw && e.kind != PointerDeviceKind.touch) {
+      setState(() => _lineHover = _toUnits(e.localPosition));
+    } else if (widget.mode == UiPathEditorMode.pen) {
       setState(() => _hover = _constrained(_toUnits(e.localPosition)));
     } else if (widget.mode == UiPathEditorMode.objects) {
       final id = _itemAt(_toUnits(e.localPosition))?.id;
@@ -880,8 +941,23 @@ class UiPathEditorState extends State<UiPathEditor> {
     final brush = widget.brush;
     final pen = e.kind == PointerDeviceKind.stylus || e.kind == PointerDeviceKind.invertedStylus;
     final sample = UiInkSample(u.dx, u.dy, pen && e.pressure > 0 ? e.pressure.clamp(0.0, 1.0) : simulatedPressure(brush.kind, 0.5, 0, brush.size));
-    final r = inkRadiusAt(sample, 0, brush);
-    _ink = _Ink(brush: brush, samples: [sample], radii: [r], pieces: [inkPiece(sample.offset, r, null, 0, brush)], raw: sample, holdFrom: e.localPosition, pen: pen);
+    // Shift (or straightLine) with a remembered point: a straight stroke from there to here.
+    final from = _lineStart;
+    final straight = from != null && (HardwareKeyboard.instance.isShiftPressed || widget.straightLine);
+    final samples = straight ? _lineSamples(from, sample, brush, pen, math.max(1.5 / _px, brush.size * 0.5)) : [sample];
+    final radii = <double>[];
+    final pieces = <List<Offset>>[];
+    var along = 0.0;
+    for (var i = 0; i < samples.length; i++) {
+      final s = samples[i];
+      if (i > 0) along += (s.offset - samples[i - 1].offset).distance;
+      final r = inkRadiusAt(s, along, brush);
+      pieces.add(i > 0 ? inkPiece(samples[i - 1].offset, radii[i - 1], s.offset, r, brush) : inkPiece(s.offset, r, null, 0, brush));
+      radii.add(r);
+    }
+    _ink = _Ink(brush: brush, samples: samples, radii: radii, pieces: pieces, raw: samples.last, holdFrom: e.localPosition, pen: pen)
+      ..along = along
+      ..straight = straight;
     _inkSnapPieces = null;
     _armHold();
   }
@@ -923,6 +999,9 @@ class UiPathEditorState extends State<UiPathEditor> {
       // Finish where the pointer actually lifted, not where the steadied line had got to.
       if ((ink.raw.offset - samples.last.offset).distance > ink.brush.size * 0.1) samples = [...samples, ink.raw];
     }
+    // The next Shift-press strokes straight from where this one ended.
+    _lineStart = samples.last;
+    _strokePending = true;
     widget.onStroke?.call(UiInkStroke(samples: samples, brush: ink.brush, pieces: inkArea(samples, ink.brush), shape: ink.snapped));
   }
 
@@ -944,7 +1023,7 @@ class UiPathEditorState extends State<UiPathEditor> {
   void _snapInk() {
     _holdTimer = null;
     final ink = _ink;
-    if (ink == null || ink.snapped != null || ink.samples.length < 4 || !mounted) return;
+    if (ink == null || ink.snapped != null || ink.straight || ink.samples.length < 4 || !mounted) return;
     final shape = recognizeShape([for (final s in ink.samples) s.offset, ink.raw.offset]);
     if (shape == null) return;
     setState(() {
@@ -1069,6 +1148,7 @@ class UiPathEditorState extends State<UiPathEditor> {
         ink: _inkSnapPieces ?? _ink?.pieces,
         eraser: _ink?.brush.kind == UiBrushKind.eraser,
         inkFill: widget.fill,
+        linePreview: linePreview,
         ring: _ring,
       );
       final drawing = mode == UiPathEditorMode.pen || mode == UiPathEditorMode.draw;
@@ -1086,6 +1166,7 @@ class UiPathEditorState extends State<UiPathEditor> {
             onExit: (_) => setState(() {
               _hover = null;
               _hoverItem = null;
+              _lineHover = null;
             }),
             child: RawGestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -1106,6 +1187,21 @@ class UiPathEditorState extends State<UiPathEditor> {
       );
     });
   }
+}
+
+/// The samples of a straight stroke from [from] to [to], about [spacing] apart. A pen's pressure
+/// runs evenly from one end's to the other's; a mouse or finger gets the pressure of a steady stroke.
+List<UiInkSample> _lineSamples(UiInkSample from, UiInkSample to, UiBrush brush, bool pen, double spacing) {
+  final len = (to.offset - from.offset).distance;
+  final n = (len / math.max(1e-6, spacing)).ceil().clamp(1, 256);
+  final out = [UiInkSample(from.x, from.y, from.pressure)];
+  var pressure = from.pressure;
+  for (var i = 1; i <= n; i++) {
+    final t = i / n;
+    pressure = pen ? from.pressure + (to.pressure - from.pressure) * t : simulatedPressure(brush.kind, pressure, len / n, brush.size);
+    out.add(UiInkSample(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, pressure));
+  }
+  return out;
 }
 
 /// Keeps a movement to the nearest 45 degree direction, the way Shift does in drawing apps,
@@ -1158,6 +1254,7 @@ class _EditorPainter extends CustomPainter {
     required this.ink,
     required this.eraser,
     required this.inkFill,
+    required this.linePreview,
     required this.ring,
   });
 
@@ -1179,6 +1276,7 @@ class _EditorPainter extends CustomPainter {
   final List<List<Offset>>? ink;
   final bool eraser;
   final Color? inkFill;
+  final (Offset, Offset)? linePreview;
   final bool ring;
 
   /// A stroke that looks the same width at any zoom (the web `vector-effect: non-scaling-stroke`).
@@ -1264,6 +1362,13 @@ class _EditorPainter extends CustomPainter {
       } else {
         canvas.drawPath(p, _fill(inkFill ?? t.textMuted));
       }
+    }
+
+    final line = linePreview;
+    if (line != null) {
+      _dashed(canvas, Path()
+        ..moveTo(line.$1.dx, line.$1.dy)
+        ..lineTo(line.$2.dx, line.$2.dy), _stroke(t.primary.withValues(alpha: 0.7), 1.25)..strokeCap = StrokeCap.round, const [5, 4]);
     }
 
     final selected = items.where((i) => i.id == selectedId).firstOrNull;

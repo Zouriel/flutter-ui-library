@@ -396,6 +396,152 @@ void main() {
     });
   });
 
+  group('Shift-click straight lines', () {
+    Future<void> tap(WidgetTester tester, _View v, double x, double y, {PointerDeviceKind kind = PointerDeviceKind.mouse}) => _drag(tester, v, [(x, y)], kind: kind);
+    Future<void> shiftTap(WidgetTester tester, _View v, double x, double y) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tap(tester, v, x, y);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    }
+
+    /// Whether everything along a-b (every 4 px) is erased.
+    bool lineGone(UiImageRaster r, (double, double) a, (double, double) b) {
+      final n = (math.sqrt(math.pow(b.$1 - a.$1, 2) + math.pow(b.$2 - a.$2, 2)) / 4).ceil();
+      for (var i = 0; i <= n; i++) {
+        final x = (a.$1 + (b.$1 - a.$1) * i / n).round(), y = (a.$2 + (b.$2 - a.$2) * i / n).round();
+        if (_alpha(r, math.min(_w - 1, x), math.min(_h - 1, y)) != 0) return false;
+      }
+      return true;
+    }
+
+    testWidgets('a Shift-click erases straight from where the last stroke ended, as one undo step', (tester) async {
+      final v = await pump(tester);
+      await tap(tester, v, 20, 20);
+      await shiftTap(tester, v, 180, 80);
+      expect(changes, 2);
+      var r = c.toRgba();
+      expect(lineGone(r, (20, 20), (180, 80)), isTrue);
+      // Off the line (brush 20: 10 px either side) nothing changes.
+      for (final (x, y) in const [(180, 20), (20, 80), (100, 25), (100, 75), (5, 5), (195, 95)]) {
+        expect(_alpha(r, x, y), 255, reason: '($x, $y)');
+      }
+      c.undo();
+      r = c.toRgba();
+      expect(_alpha(r, 100, 50), 255);
+      expect(_alpha(r, 180, 80), 255);
+      // The dot before it stays.
+      expect(_alpha(r, 20, 20), 0);
+    });
+
+    testWidgets('Shift-clicks chain from point to point', (tester) async {
+      final v = await pump(tester);
+      await tap(tester, v, 20, 20);
+      await shiftTap(tester, v, 100, 20);
+      await shiftTap(tester, v, 100, 80);
+      expect(changes, 3);
+      var r = c.toRgba();
+      expect(lineGone(r, (20, 20), (100, 20)), isTrue);
+      expect(lineGone(r, (100, 20), (100, 80)), isTrue);
+      expect(_alpha(r, 60, 60), 255);
+      c.undo();
+      r = c.toRgba();
+      expect(_alpha(r, 100, 60), 255);
+      expect(lineGone(r, (20, 20), (100, 20)), isTrue);
+    });
+
+    testWidgets('restore paints the original back along the line', (tester) async {
+      var v = await pump(tester);
+      for (final y in const [35.0, 45.0, 55.0, 65.0]) {
+        await _drag(tester, v, [(0, y), (100, y), (199, y)]);
+      }
+      v = await setMode(tester, UiImageEditorMode.restore);
+      c.brushSize = 6;
+      await tap(tester, v, 30, 50);
+      await shiftTap(tester, v, 170, 50);
+      final r = c.toRgba();
+      for (final x in const [30, 60, 100, 140, 170]) {
+        expect(_alpha(r, x, 50), 255, reason: '$x');
+      }
+      expect(_alpha(r, 100, 40), 0);
+      expect(_alpha(r, 100, 60), 0);
+    });
+
+    testWidgets('with no point remembered (fresh, after undo, another mode or reset), a Shift-click is a plain dot', (tester) async {
+      var v = await pump(tester);
+      Future<void> dotOnly(double x, double y, (int, int) far) async {
+        await shiftTap(tester, v, x, y);
+        final r = c.toRgba();
+        expect(_alpha(r, x.round(), y.round()), 0);
+        expect(_alpha(r, far.$1, far.$2), 255);
+      }
+
+      await dotOnly(100, 50, (60, 50));
+      c.undo();
+      await dotOnly(180, 80, (140, 65));
+      await setMode(tester, UiImageEditorMode.restore);
+      v = await setMode(tester, UiImageEditorMode.erase);
+      await dotOnly(20, 80, (100, 80));
+      c.reset();
+      await tester.pump();
+      await dotOnly(20, 20, (60, 20));
+    });
+
+    testWidgets('Shift + drag goes straight to where the drag starts, then on freehand: one undo step', (tester) async {
+      final v = await pump(tester);
+      await tap(tester, v, 20, 50);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await _drag(tester, v, [(100, 20), (100, 40), (100, 60), (100, 80)]);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      expect(changes, 2);
+      var r = c.toRgba();
+      expect(lineGone(r, (20, 50), (100, 20)), isTrue);
+      expect(lineGone(r, (100, 20), (100, 80)), isTrue);
+      c.undo();
+      r = c.toRgba();
+      expect(_alpha(r, 60, 35), 255);
+      expect(_alpha(r, 100, 70), 255);
+      expect(_alpha(r, 20, 50), 0);
+    });
+
+    testWidgets('shows a faint line to the pointer while Shift is held, and drops it on release', (tester) async {
+      final v = await pump(tester);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: v.at(150, 70));
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await mouse.moveTo(v.at(150, 72));
+      await tester.pump();
+      expect(c.linePreview, isNull); // nothing remembered yet
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tap(tester, v, 20, 20);
+      await mouse.moveTo(v.at(150, 70));
+      await tester.pump();
+      expect(c.linePreview, isNull); // no Shift
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      final line = c.linePreview!;
+      expect(line.$1.dx, closeTo(v.at(20, 20).dx, 1e-6));
+      expect(line.$1.dy, closeTo(v.at(20, 20).dy, 1e-6));
+      expect(line.$2, v.at(150, 70));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(c.linePreview, isNull);
+      await mouse.removePointer();
+    });
+
+    testWidgets('straightLine connects every press after the first, without Shift', (tester) async {
+      final v = await pump(tester);
+      c.straightLine = true;
+      await tap(tester, v, 20, 20, kind: PointerDeviceKind.touch);
+      await tap(tester, v, 180, 80, kind: PointerDeviceKind.touch);
+      await tap(tester, v, 180, 20, kind: PointerDeviceKind.touch);
+      expect(changes, 3);
+      final r = c.toRgba();
+      expect(lineGone(r, (20, 20), (180, 80)), isTrue);
+      expect(lineGone(r, (180, 80), (180, 20)), isTrue);
+      expect(_alpha(r, 100, 25), 255);
+    });
+  });
+
   testWidgets('a plain wheel scrolls the page; Ctrl + wheel zooms the editor', (tester) async {
     c = UiImageEditorController();
     final scroll = ScrollController();

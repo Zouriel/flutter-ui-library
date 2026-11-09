@@ -1,5 +1,26 @@
 # Porting @zouriel/ui to Flutter
 
+## Shift-click straight lines (0.68.0)
+
+`UiPathEditor` (draw mode) and `UiImageEditor` (erase/restore) remember where the last stroke ended;
+a press with Shift held strokes straight from there to the press with the current brush, as one
+stroke (path editor: one `onStroke`, samples about half a nib apart along the segment; image editor:
+`UiImageEdit.lineTo`, one undo step). Shift + drag goes straight to the press and then carries on
+freehand in the same stroke (neither editor did anything with Shift in a draw stroke before).
+
+- **Shift**: the web reads `shiftKey` on the pointer events plus keydown/keyup on the focused host;
+  Flutter reads `HardwareKeyboard.instance.isShiftPressed` at the press and follows Shift for the
+  preview with a `HardwareKeyboard` handler, so it works whatever has focus.
+- **Touch**: Angular `straightLine` input on both components; Flutter `UiPathEditor.straightLine`
+  and `UiImageEditorController.straightLine` (the image editor's settings live on its controller).
+- **Forgetting the point**: image editor on undo, redo, reset, a new picture and any mode change.
+  The path editor's host owns undo, so it forgets on a mode or brush-kind change and on any `items`
+  change that isn't the host keeping the stroke just reported; `clearLineStart()` (on
+  `UiPathEditorState` in Flutter) does it by hand.
+- **Preview**: a dashed line from the point to a hovering mouse or pen. Tests read it through the
+  `@visibleForTesting` `UiPathEditorState.linePreview` (editor units) and
+  `UiImageEditorController.linePreview` (local pixels); Angular renders `.line-preview`.
+
 ## UiImageEditor (0.67.0)
 
 `ui-image-editor` / `UiImageEditor` crop a picture and erase or restore parts of it. The pixel work

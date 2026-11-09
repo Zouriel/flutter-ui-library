@@ -27,6 +27,8 @@ class _HostState extends State<_Host> {
   late UiPathEditorMode mode = widget.mode;
   late List<UiPathItem> items = widget.items;
   late String? selectedId = widget.selectedId;
+  late UiBrush brush = widget.brush;
+  bool straight = false;
   UiPointRef? point;
   List<UiPointRef> points = const [];
   final strokes = <UiInkStroke>[];
@@ -35,6 +37,7 @@ class _HostState extends State<_Host> {
   int pens = 0;
 
   void setMode(UiPathEditorMode m) => setState(() => mode = m);
+  void update(VoidCallback f) => setState(f);
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -44,7 +47,8 @@ class _HostState extends State<_Host> {
           key: key,
           items: items,
           mode: mode,
-          brush: widget.brush,
+          brush: brush,
+          straightLine: straight,
           selectedId: selectedId,
           onSelectedIdChanged: (v) => setState(() => selectedId = v),
           selectedPoint: point,
@@ -207,6 +211,182 @@ void main() {
       await g.up();
       final s = _host(tester).strokes.single;
       expect(s.shape, isA<UiInkEllipse>());
+    });
+  });
+
+  group('Shift-click straight strokes', () {
+    Future<void> shiftTap(WidgetTester tester, Offset at) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await _tap(tester, at);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    }
+
+    /// How far [p] is from the segment a-b.
+    double off(UiInkSample p, Offset a, Offset b) {
+      final v = b - a;
+      final t = (((p.x - a.dx) * v.dx + (p.y - a.dy) * v.dy) / (v.dx * v.dx + v.dy * v.dy)).clamp(0.0, 1.0);
+      return (p.offset - (a + v * t)).distance;
+    }
+
+    void along(UiInkStroke s, Offset a, Offset b) {
+      expect(s.samples.first.x, closeTo(a.dx, 1e-6));
+      expect(s.samples.first.y, closeTo(a.dy, 1e-6));
+      expect(s.samples.last.x, closeTo(b.dx, 1e-6));
+      expect(s.samples.last.y, closeTo(b.dy, 1e-6));
+      expect(s.samples.length, greaterThan(2));
+      for (final p in s.samples) {
+        expect(off(p, a, b), lessThan(1e-6));
+      }
+      expect(s.pieces, hasLength(s.samples.length - 1));
+    }
+
+    testWidgets('a Shift-click strokes straight from where the last stroke ended, with the current brush', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw, brush: UiBrush(kind: UiBrushKind.brush, size: 6)), size: const Size(800, 600));
+      final g = await tester.startGesture(_screen(10, 50), kind: PointerDeviceKind.mouse);
+      for (var x = 14.0; x <= 30; x += 4) {
+        await g.moveTo(_screen(x, 50));
+      }
+      await g.up();
+      final end = _host(tester).strokes.single.samples.last.offset;
+      await shiftTap(tester, _screen(70, 20));
+      final strokes = _host(tester).strokes;
+      expect(strokes, hasLength(2));
+      expect(strokes[1].brush, const UiBrush(kind: UiBrushKind.brush, size: 6));
+      expect(strokes[1].shape, isNull);
+      along(strokes[1], end, const Offset(70, 20));
+    });
+
+    testWidgets('Shift-clicks chain, each one stroke from the point before', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      await _tap(tester, _screen(10, 10));
+      await shiftTap(tester, _screen(60, 10));
+      await shiftTap(tester, _screen(60, 70));
+      final strokes = _host(tester).strokes;
+      expect(strokes, hasLength(3));
+      along(strokes[1], const Offset(10, 10), const Offset(60, 10));
+      along(strokes[2], const Offset(60, 10), const Offset(60, 70));
+    });
+
+    testWidgets('the eraser erases along the line', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw, brush: UiBrush(kind: UiBrushKind.eraser, size: 8)), size: const Size(800, 600));
+      await _tap(tester, _screen(10, 30));
+      await shiftTap(tester, _screen(90, 30));
+      final s = _host(tester).strokes[1];
+      expect(s.brush.kind, UiBrushKind.eraser);
+      along(s, const Offset(10, 30), const Offset(90, 30));
+    });
+
+    testWidgets('with no point remembered, a Shift-click is a plain dot (and is remembered)', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      await shiftTap(tester, _screen(40, 40));
+      final strokes = _host(tester).strokes;
+      expect(strokes.single.samples, hasLength(1));
+      expect(strokes.single.samples.single.x, closeTo(40, 1e-6));
+      await shiftTap(tester, _screen(80, 40));
+      along(strokes[1], const Offset(40, 40), const Offset(80, 40));
+    });
+
+    testWidgets('another brush, another mode, an undo by the host or clearLineStart() forget the point', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      final h = _host(tester);
+      Future<void> dotAt(double x, double y) async {
+        await shiftTap(tester, _screen(x, y));
+        expect(h.strokes.last.samples.every((p) => (p.x - x).abs() < 1e-6 && (p.y - y).abs() < 1e-6), isTrue, reason: '($x, $y)');
+      }
+
+      // The host keeps each stroke as an item: that change keeps the point.
+      Future<void> keep() async {
+        h.update(() => h.items = [...h.items, UiPathItem(id: 's${h.strokes.length}', contours: [rectContour(0, 0, 1, 1)])]);
+        await tester.pump();
+      }
+
+      await _tap(tester, _screen(10, 10));
+      await keep();
+      await shiftTap(tester, _screen(50, 10));
+      await keep();
+      along(h.strokes[1], const Offset(10, 10), const Offset(50, 10));
+      // Undo: the host takes the line back.
+      h.update(() => h.items = h.items.sublist(0, 1));
+      await tester.pump();
+      await dotAt(50, 50);
+
+      h.update(() => h.brush = const UiBrush(kind: UiBrushKind.marker, size: 4));
+      await tester.pump();
+      await dotAt(20, 80);
+
+      h.setMode(UiPathEditorMode.objects);
+      await tester.pump();
+      h.setMode(UiPathEditorMode.draw);
+      await tester.pump();
+      await dotAt(30, 80);
+
+      h.key.currentState!.clearLineStart();
+      await tester.pump();
+      await dotAt(40, 80);
+    });
+
+    testWidgets('Shift + drag strokes straight to where the drag starts, then carries on freehand in the same stroke', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      await _tap(tester, _screen(10, 10));
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      final g = await tester.startGesture(_screen(50, 10), kind: PointerDeviceKind.mouse);
+      for (final y in const [20.0, 30.0, 40.0]) {
+        await g.moveTo(_screen(50, y));
+      }
+      await g.up();
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      final s = _host(tester).strokes;
+      expect(s, hasLength(2));
+      expect(s[1].samples.first.offset, const Offset(10, 10));
+      final corner = s[1].samples.indexWhere((p) => (p.x - 50).abs() < 1e-6 && (p.y - 10).abs() < 1e-6);
+      expect(corner, greaterThan(1));
+      for (final p in s[1].samples.take(corner + 1)) {
+        expect(p.y, closeTo(10, 1e-6));
+      }
+      expect(s[1].samples.last.y, closeTo(40, 1e-6));
+    });
+
+    testWidgets('shows a faint line from the point to the pointer while Shift is held, and drops it on release', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      final state = _host(tester).key.currentState!;
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: _screen(70, 70));
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await mouse.moveTo(_screen(70, 72));
+      await tester.pump();
+      expect(state.linePreview, isNull); // nothing remembered yet
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await _tap(tester, _screen(20, 20));
+      await mouse.moveTo(_screen(70, 60));
+      await tester.pump();
+      expect(state.linePreview, isNull); // no Shift
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      var (a, b) = state.linePreview!;
+      expect((a - const Offset(20, 20)).distance, lessThan(1e-6));
+      expect((b - const Offset(70, 60)).distance, lessThan(1e-6));
+      await mouse.moveTo(_screen(80, 30));
+      await tester.pump();
+      (a, b) = state.linePreview!;
+      expect((b - const Offset(80, 30)).distance, lessThan(1e-6));
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.pump();
+      expect(state.linePreview, isNull);
+      await mouse.removePointer();
+    });
+
+    testWidgets('straightLine connects every press after the first, without Shift', (tester) async {
+      await pumpUi(tester, const _Host(mode: UiPathEditorMode.draw), size: const Size(800, 600));
+      final h = _host(tester);
+      h.update(() => h.straight = true);
+      await tester.pump();
+      await _tap(tester, _screen(10, 90), kind: PointerDeviceKind.touch);
+      await _tap(tester, _screen(90, 90), kind: PointerDeviceKind.touch);
+      await _tap(tester, _screen(90, 10), kind: PointerDeviceKind.touch);
+      expect(h.strokes, hasLength(3));
+      expect(h.strokes[0].samples, hasLength(1));
+      along(h.strokes[1], const Offset(10, 90), const Offset(90, 90));
+      along(h.strokes[2], const Offset(90, 90), const Offset(90, 10));
     });
   });
 

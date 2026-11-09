@@ -148,8 +148,8 @@ class _ImageEditorSectionState extends State<_ImageEditorSection> {
 
   static const _hints = {
     UiImageEditorMode.crop: 'Drag the handles or the frame. Pick an aspect to keep its shape.',
-    UiImageEditorMode.erase: 'Drag to erase; two fingers move and zoom the view.',
-    UiImageEditorMode.restore: 'Drag over erased parts to bring the picture back.',
+    UiImageEditorMode.erase: 'Drag to erase; Shift-click (or turn on Straight lines) to erase in a straight line from the last point. Two fingers move and zoom the view.',
+    UiImageEditorMode.restore: 'Drag over erased parts to bring the picture back; Shift-click restores in a straight line.',
   };
   static const _aspects = {'free': null, '1:1': 1.0, '4:5': 0.8, '16:9': 16 / 9};
 
@@ -189,7 +189,10 @@ class _ImageEditorSectionState extends State<_ImageEditorSection> {
       widget: 'UiImageEditor',
       summary: 'Crop a picture and erase parts of it, the picture counterpart of the path editor. Crop shows a frame with eight '
           'handles (drag inside to move it; outside is dimmed, thirds show while dragging, and it keeps to the aspect when one is '
-          'set). Erase paints transparency with a round brush, hard or soft; Restore paints the original back. Erased parts show '
+          'set). Erase paints transparency with a round brush, hard or soft; Restore paints the original back. Shift-click paints '
+          'a straight line from where the last stroke ended (or the last click) to the click, as one undo step, and the next '
+          'Shift-click carries it on; a faint line shows where it will go while Shift is held, and controller.straightLine does '
+          'the same without Shift for phones. Erased parts show '
           'over a checkerboard. One finger paints or drags the crop; two fingers pan and pinch-zoom; Ctrl/Cmd + wheel zooms about '
           'the pointer and Space + drag pans; once a pen has been used, fingers only navigate. Every stroke and crop change is one '
           'undo step (Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z); [ and ] change the brush size. The controller exports the crop with erased '
@@ -217,7 +220,9 @@ class _ImageEditorSectionState extends State<_ImageEditorSection> {
                 _c.aspect = _aspects[a];
               },
               options: [for (final a in _aspects.keys) UiSegmentedOption(value: a, label: a == 'free' ? 'Free' : a)],
-            ),
+            )
+          else
+            UiSwitch(value: _c.straightLine, label: 'Straight lines', size: UiSize.sm, onChanged: (v) => _c.straightLine = v),
         ]),
         Wrap(spacing: t.space2, runSpacing: t.space2, children: [
           Wrap(spacing: t.space2, children: [
@@ -286,6 +291,7 @@ class _ImageEditorSectionState extends State<_ImageEditorSection> {
         ApiRow('onLoadError', 'ValueChanged<Object>?', 'The picture could not be loaded.'),
         ApiRow('controller.mode', 'UiImageEditorMode', 'crop, erase or restore.', def: 'erase'),
         ApiRow('controller.brushSize / brushSoftness', 'double', 'Diameter in image pixels; 0 hard to 1 very soft.', def: '40 / 0.3'),
+        ApiRow('controller.straightLine', 'bool', 'Every press after the first paints straight from where the last stroke ended, as Shift-click does (a "straight line" button for phones). Undo, redo, reset and another mode forget the point.', def: 'false'),
         ApiRow('controller.aspect', 'double?', 'Width / height the crop keeps; setting it reshapes the crop around its centre, as an undo step.'),
         ApiRow('controller.crop', 'UiImageCrop?', 'In image pixels; null until loaded, then the whole picture unless set. Setting it is not an undo step.'),
         ApiRow('controller.naturalSize / loaded / canUndo / canRedo / dirty', 'read-only', 'dirty: anything erased or cropped compared with the original.'),
@@ -341,6 +347,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
   final List<List<UiPathItem>> _history = [];
   UiPathEditorMode _mode = UiPathEditorMode.objects;
   UiBrushKind _brush = UiBrushKind.pen;
+  bool _straight = false;
   String? _selected;
   UiPointRef? _point;
   List<UiPointRef> _points = const [];
@@ -350,7 +357,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
     UiPathEditorMode.objects: 'Tap a shape to select it; drag to move; corner knobs scale, the top knob rotates. Pinch to zoom.',
     UiPathEditorMode.points: 'Drag points and handles; tap an edge to add a point; double-tap a point for corner or curve; long-press to select several.',
     UiPathEditorMode.pen: 'Tap for corners, drag for curves; tap the first point to close, the last to finish.',
-    UiPathEditorMode.draw: 'Draw with a finger or pen; hold still at the end to snap to a line, circle or rectangle.',
+    UiPathEditorMode.draw: 'Draw with a finger or pen; hold still at the end to snap to a line, circle or rectangle. Shift-click (or turn on Straight lines) to draw straight from the last point.',
   };
 
   void _commit(List<UiPathItem> next) => setState(() {
@@ -379,7 +386,9 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
           'and curve handles (tap an edge to add one, double-tap to switch corner and curve, long-press or Shift-tap to select '
           'several, Alt-drag or freeHandles to bend one side); Pen places points (drag for a curve, tap the first point to close); '
           'Draw paints with pressure-sensitive brushes, and holding still at the end of a stroke snaps it to a line, circle, '
-          'rectangle or triangle. Once a pen is used, fingers pan instead of drawing. Pinch or Ctrl/Cmd + wheel zooms; a plain wheel scrolls the page. Keyboard: ] and [ step '
+          'rectangle or triangle. In Draw, Shift-click strokes straight from where the last stroke ended to the click, with the '
+          'current brush (the eraser too), and the next Shift-click carries the line on; a faint line shows where it will go '
+          'while Shift is held, and straightLine does the same without Shift for phones. Once a pen is used, fingers pan instead of drawing. Pinch or Ctrl/Cmd + wheel zooms; a plain wheel scrolls the page. Keyboard: ] and [ step '
           'through the items, Escape clears points then the item, arrows nudge (Shift for 10), Delete removes selected points, '
           'Ctrl+A selects every point, and in Pen mode Enter or Escape finishes and Backspace takes back the last point. It never '
           'changes items itself: each finished edit comes back once through onItemsChanged, so the host owns undo.',
@@ -399,6 +408,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
             onChanged: (b) => setState(() => _brush = b),
             options: [for (final b in UiBrushKind.values) UiSegmentedOption(value: b, label: '${b.name[0].toUpperCase()}${b.name.substring(1)}')],
           ),
+        if (_mode == UiPathEditorMode.draw) UiSwitch(value: _straight, label: 'Straight lines', size: UiSize.sm, onChanged: (v) => setState(() => _straight = v)),
         // One button style; the groups wrap as a whole on narrow screens, so the shapes stay together.
         Wrap(spacing: t.space2, runSpacing: t.space2, children: [
           Wrap(spacing: t.space2, children: [
@@ -428,6 +438,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
             height: 260,
             mode: _mode,
             brush: UiBrush(kind: _brush, size: _brush == UiBrushKind.marker ? 12 : 5),
+            straightLine: _straight,
             selectedId: _selected,
             onSelectedIdChanged: (v) => setState(() => _selected = v),
             selectedPoint: _point,
@@ -458,6 +469,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
         ApiRow('fill', 'Color?', 'Paint for ink as it goes down and for items the pen makes.'),
         ApiRow('fingerDraws', 'bool?', 'null (auto): after a pen is seen, fingers pan instead of drawing.'),
         ApiRow('snapToShape / freeHandles / lockAspect', 'bool', 'Hold-to-snap strokes; handles move independently; keep proportions when scaling.', def: 'true / false / false'),
+        ApiRow('straightLine', 'bool', 'Draw mode: every press after the first strokes straight from where the last stroke ended, as Shift-click does (a "straight line" button for phones). Shift + drag goes straight to where the drag starts, then on freehand in the same stroke.', def: 'false'),
         ApiRow('showArtboard / label', 'bool / String', 'Draw the artboard; accessible name.', def: "true / 'Shape editor'"),
       ],
       callbacks: const [
@@ -467,6 +479,7 @@ class _PathEditorSectionState extends State<_PathEditorSection> {
         ApiRow('onPenDetected / onPenCountChanged', 'callbacks', 'A pen touched the surface for the first time; points the pen has placed so far.'),
         ApiRow('fit() / zoomBy(f) / selectAllPoints()', 'UiPathEditorState', 'Frame the artboard and drawing; zoom about the centre; select every point.'),
         ApiRow('finishPen(closed) / undoPenPoint() / cancelPen()', 'UiPathEditorState', 'Pen controls for a toolbar.'),
+        ApiRow('clearLineStart()', 'UiPathEditorState', 'Forget where the last stroke ended (also forgotten on another brush or mode, and on any items change that is not a stroke being kept, such as an undo).'),
       ],
       shapes: 'enum UiPathEditorMode { objects, points, pen, draw }\n'
           'class UiPathPoint { double x, y; Offset? handleIn, handleOut; }\n'
