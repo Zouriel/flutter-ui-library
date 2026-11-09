@@ -358,11 +358,9 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Device frame',
           widget: 'UiDeviceFrame',
-          summary: 'A phone-shaped frame whose screen is exactly width × height logical px, scaled down to fit. The child lays out at true phone size (and sees a phone-sized MediaQuery) and is only scaled visually. onScale reports the scale, for overlays that must line up with the screen.',
-          demo: SizedBox(
-            height: 320,
-            child: UiDeviceFrame(
-              child: ColoredBox(
+          summary: 'A phone-shaped frame whose screen is exactly width × height logical px, scaled down to fit. The child lays out at true phone size (and sees a phone-sized MediaQuery) and is only scaled visually. onScale reports the scale drawn, for overlays that must line up with the screen, and onFitScale the scale at zoom 1. zoom multiplies the fitted scale (1 fits; kept within 0.25–8, not capped by maxScale): zoomed past the space the frame scrolls both ways to every edge, smaller it stays centred. To zoom around a point, pass horizontalController / verticalController and after the new zoom lays out jump each to UiDeviceFrame.anchoredOffset(...).',
+          demo: _DeviceFrameDemo(
+            child: ColoredBox(
                 color: t.bg,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(t.space6, 80, t.space6, t.space6),
@@ -373,15 +371,20 @@ class _MediaPageState extends State<MediaPage> {
                   ]),
                 ),
               ),
-            ),
           ),
-          code: 'UiDeviceFrame(width: 390, height: 844, child: preview)',
+          code: 'UiDeviceFrame(width: 390, height: 844, zoom: zoom, horizontalController: h, verticalController: v, child: preview)\n\n'
+              '// keep the point under the cursor still:\n'
+              'h.jumpTo(UiDeviceFrame.anchoredOffset(offset: h.offset, focal: x, viewport: w, extent: frame.outerSize.width, oldScale: s0, newScale: s1));',
           api: const [
             ApiRow('width / height', 'double', 'The screen in logical px.', def: '390 × 844'),
             ApiRow('bezel', 'bool', 'The dark rim.', def: 'true'),
             ApiRow('island', 'bool', 'The camera cut-out.', def: 'true'),
-            ApiRow('maxScale', 'double', 'Never scale up past this.', def: '1'),
-            ApiRow('onScale', 'ValueChanged<double>?', 'The current scale.'),
+            ApiRow('maxScale', 'double', 'Never fit up past this (zoom is not capped by it).', def: '1'),
+            ApiRow('zoom', 'double', 'Multiplies the fitted scale; 0.25–8. Above 1 the frame scrolls both ways.', def: '1'),
+            ApiRow('onScale', 'ValueChanged<double>?', 'The scale drawn (fit × zoom).'),
+            ApiRow('onFitScale', 'ValueChanged<double>?', 'The scale at zoom 1.'),
+            ApiRow('horizontalController / verticalController', 'ScrollController?', 'Scroll positions while zoomed in.'),
+            ApiRow('UiDeviceFrame.anchoredOffset(...)', 'static double', 'The offset that keeps a point still across a zoom change.'),
           ],
         ),
       ],
@@ -389,6 +392,39 @@ class _MediaPageState extends State<MediaPage> {
   }
 }
 
+
+/// The device frame demo: zoom out / percentage / zoom in / Fit, above a frame that scrolls when zoomed.
+class _DeviceFrameDemo extends StatefulWidget {
+  const _DeviceFrameDemo({required this.child});
+  final Widget child;
+
+  @override
+  State<_DeviceFrameDemo> createState() => _DeviceFrameDemoState();
+}
+
+class _DeviceFrameDemoState extends State<_DeviceFrameDemo> {
+  static const _steps = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0];
+  double _zoom = 1;
+
+  void _step(int dir) {
+    final next = dir > 0 ? _steps.where((s) => s > _zoom + 1e-6).firstOrNull : _steps.reversed.where((s) => s < _zoom - 1e-6).firstOrNull;
+    if (next != null) setState(() => _zoom = next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+      Row(spacing: t.space2, children: [
+        UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMinusSign), label: 'Zoom out', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _zoom <= 0.25 ? null : () => _step(-1)),
+        SizedBox(width: 48, child: UiText('${(_zoom * 100).round()}%', textAlign: TextAlign.center)),
+        UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedPlusSign), label: 'Zoom in', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _zoom >= 8 ? null : () => _step(1)),
+        UiButton(label: 'Fit', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: _zoom == 1 ? null : () => setState(() => _zoom = 1)),
+      ]),
+      SizedBox(height: 320, child: UiDeviceFrame(zoom: _zoom, child: widget.child)),
+    ]);
+  }
+}
 
 /// The masonry grid demo: 60 coloured tiles in a scroll box, pinch or pick a column count.
 class _MasonryDemo extends StatefulWidget {

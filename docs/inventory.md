@@ -364,12 +364,18 @@ File: `data/src/tree-table.ts`
 ### UiTree (component, `ui-tree`)
 File: `data/src/tree.ts`  
 `ui-tree` — expandable hierarchy with single selection, following the WAI-ARIA tree view pattern: one tab stop (roving tabindex), arrow-key navigation, nested `role="group"` containers and type-ahead by first letter.  
-- Inputs: `nodes`: UiTreeNode[] = []; `label` = ''
-- Two-way: `selected`: string | null = null
-- Outputs: `nodeSelect`: UiTreeNode
+- Inputs: `nodes`: UiTreeNode[] = []; `label` = ''; `multiple` = false; `reorderable` = false
+- Two-way: `selected`: string | null = null; `selectedValues`: string[] = []; `expanded`: string[] = []
+- Outputs: `nodeSelect`: UiTreeNode; `nodeMove`: UiTreeMove; `nodeActivate`: UiTreeNode
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiTreeNodeEnd (directive, `ng-template[uiTreeNodeEnd]`)
+File: `data/src/tree.ts`  
+Content at the end of every ui-tree row. Flutter: `UiTree.trailingBuilder`.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiTreeNode` (tree.ts)
+- interface `UiTreeMove` (tree.ts)
 
 ## datepicker
 
@@ -1272,7 +1278,7 @@ File: `media/src/carousel.ts`
 ### UiDeviceFrame (component, `ui-device-frame`)
 File: `media/src/device-frame.ts`  
 `ui-device-frame` — a phone-shaped frame whose screen is exactly `width` × `height` CSS pixels, scaled to fit the space it's given. What you project renders at true phone size (so a 390px-wide page lays out as it would on a phone) and is scaled down only visually. `scale` is readable from a template reference, for overlays that have to line up with the screen.  
-- Inputs: `width` = 390; `height` = 844; `bezel` = true; `island` = true; `maxScale` = 1
+- Inputs: `width` = 390; `height` = 844; `bezel` = true; `island` = true; `maxScale` = 1; `zoom` = 1
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiGallery (component, `ui-gallery`)

@@ -1127,3 +1127,26 @@ out at the painted size and takes hits over its child's whole area, and the bloc
 a slop box's area but outside the 28px line holding it (which only takes hits inside its own bounds) straight to that box. The
 messenger stack's overlapping hit areas still split down the middle (`_HitBand`). Both layouts share `_buttonStack`. The
 compact layout measures its width with a LayoutBuilder, so it can't sit inside intrinsic sizing; `columns` is unchanged.
+
+## UiTree for layers panels, UiDeviceFrame zoom (0.65.0)
+
+UiTree: `UiTreeNode.muted` (label in `textMuted`) and `container` (accepts drops with no children). `multiple` +
+`selectedValues`/`onSelectedValuesChanged` (web `[(selectedValues)]`); modifier taps read `HardwareKeyboard` (Ctrl/Meta
+toggle, Shift range from the last plain or toggled tap); Space toggles through a `_ToggleIntent` shortcut on the row's
+`UiInteractive`, Enter still selects only. `expanded`/`onExpandedChanged` (web `[(expanded)]`, string[] there, Set here);
+null keeps the old internal state from `initiallyExpanded`. `trailingBuilder` is the web's `ng-template uiTreeNodeEnd`:
+it sits beside the row's `UiInteractive`, not inside it, so its controls are separate semantics nodes and their taps never
+reach the row; the row's background, hover and keyboard focus ring are therefore drawn by an outer box (MouseRegion,
+Listener for pressed, the row focus node + `uiFocusVisible`), which is pixel-identical to before for rows with no
+trailing content (the `data` golden is unchanged). `reorderable` + `onMove(UiTreeMove)`: mouse/pen drag through a pan
+detector limited to those devices (4px threshold of our own; a pan that never passed it is treated as a tap), touch
+through long-press then drag, so the list keeps scrolling under a plain finger drag; drop target found from each row's
+render box. Alt+Up/Down moves among siblings. `onActivate`: a second press on the same label within
+`kDoubleTapTimeout` (a raw Listener plus a timer, not a double-tap recognizer, which would delay every single tap), or F2.
+Not ported: screen-reader Move up/Move down custom actions (would need new UiStrings in both libraries).
+
+UiDeviceFrame: `zoom` (0.25–8) multiplies the fitted scale; `onScale` reports the drawn scale, `onFitScale` the fit.
+Above zoom 1 the frame sits in a horizontal + vertical `SingleChildScrollView` pair (optional controllers) with a
+viewport-sized minimum and centring, so an axis that still fits stays centred. The web exposes `pointAt` /
+`scrollPointTo` for zooming around the cursor; Flutter has the static `UiDeviceFrame.anchoredOffset` per axis instead.
+

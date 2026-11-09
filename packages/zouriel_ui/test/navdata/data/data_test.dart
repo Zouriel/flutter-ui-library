@@ -1,4 +1,4 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show PointerDeviceKind, Tristate;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -63,6 +63,89 @@ Future<void> _focusRow(WidgetTester tester, String label) async {
   node.requestFocus();
   await tester.pump();
 }
+
+const _layers = [
+  UiTreeNode(label: 'Title', value: 'title'),
+  UiTreeNode(label: 'Group', value: 'group', children: [
+    UiTreeNode(label: 'Photo', value: 'photo'),
+    UiTreeNode(label: 'Frame', value: 'frame', children: [UiTreeNode(label: 'Shape', value: 'shape')]),
+  ]),
+  UiTreeNode(label: 'Empty', value: 'empty', container: true),
+  UiTreeNode(label: 'Hidden', value: 'hidden', muted: true),
+];
+
+/// A layers panel: multiple selection, open nodes and moves held by the test.
+class _Layers extends StatefulWidget {
+  const _Layers({required this.log, this.multiple = true, this.reorderable = true});
+  final _LayersLog log;
+  final bool multiple;
+  final bool reorderable;
+  @override
+  State<_Layers> createState() => _LayersState();
+}
+
+class _LayersLog {
+  String? selected;
+  List<String> values = [];
+  Set<String> open = {'group'};
+  final moves = <UiTreeMove>[];
+  final activated = <String>[];
+  final eyes = <String>[];
+}
+
+class _LayersState extends State<_Layers> {
+  @override
+  Widget build(BuildContext context) {
+    final log = widget.log;
+    return SizedBox(
+      width: 390,
+      child: UiTree(
+        label: 'Layers',
+        nodes: _layers,
+        multiple: widget.multiple,
+        reorderable: widget.reorderable,
+        selected: log.selected,
+        onSelect: (n) => setState(() => log.selected = n.value),
+        selectedValues: log.values,
+        onSelectedValuesChanged: (v) => setState(() => log.values = v),
+        expanded: log.open,
+        onExpandedChanged: (v) => setState(() => log.open = v),
+        onMove: log.moves.add,
+        onActivate: (n) => log.activated.add(n.value),
+        trailingBuilder: (context, n) => UiButton(size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => log.eyes.add(n.value), child: Text('Eye ${n.label}')),
+      ),
+    );
+  }
+}
+
+Future<void> _tapWith(WidgetTester tester, String label, List<LogicalKeyboardKey> keys) async {
+  for (final k in keys) {
+    await tester.sendKeyDownEvent(k);
+  }
+  await tester.tap(find.text(label));
+  for (final k in keys.reversed) {
+    await tester.sendKeyUpEvent(k);
+  }
+  await tester.pump();
+}
+
+/// Drags the row [from] with a mouse to [dy] (0..1) of the row [to]'s height, checking the drop
+/// indicator half way with [during].
+Future<void> _mouseDrag(WidgetTester tester, String from, String to, double dy, {void Function()? during}) async {
+  final start = tester.getCenter(find.text(from));
+  final rect = tester.getRect(_rowBox(to));
+  final g = await tester.startGesture(start, kind: PointerDeviceKind.mouse);
+  await g.moveBy(const Offset(0, 6));
+  await tester.pump();
+  await g.moveTo(Offset(rect.left + 60, rect.top + rect.height * dy));
+  await tester.pump();
+  during?.call();
+  await g.up();
+  await tester.pump();
+}
+
+/// The box a row draws its background in (the drop target).
+Finder _rowBox(String label) => find.ancestor(of: find.text(label), matching: find.byType(AnimatedContainer)).first;
 
 void main() {
   group('UiTree', () {
@@ -206,6 +289,230 @@ void main() {
       await tester.pump();
       expect(find.text('guide.md'), findsNothing);
       handle.dispose();
+    });
+  });
+
+  group('UiTree layers', () {
+    testWidgets('muted labels are drawn dimmed', (tester) async {
+      await pumpUi(tester, _Layers(log: _LayersLog()));
+      final t = tester.element(find.text('Hidden')).ui;
+      final muted = tester.renderObject<RenderParagraph>(find.text('Hidden')).text.style!.color;
+      final plain = tester.renderObject<RenderParagraph>(find.text('Title')).text.style!.color;
+      expect(muted, t.textMuted);
+      expect(plain, isNot(t.textMuted));
+    });
+
+    testWidgets('multiple: tap selects one, Ctrl/Meta toggles, Shift selects the visible range', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await tester.tap(find.text('Title'));
+      await tester.pump();
+      expect(log.values, ['title']);
+      await _tapWith(tester, 'Frame', [LogicalKeyboardKey.controlLeft]);
+      expect(log.values, ['title', 'frame']);
+      expect(log.selected, 'frame');
+      await _tapWith(tester, 'Title', [LogicalKeyboardKey.metaLeft]);
+      expect(log.values, ['frame']);
+      await tester.tap(find.text('Photo'));
+      await tester.pump();
+      await _tapWith(tester, 'Empty', [LogicalKeyboardKey.shiftLeft]);
+      // Shape sits under the closed Frame, so it's not in the range.
+      expect(log.values, ['photo', 'frame', 'empty']);
+      expect(log.selected, 'empty');
+      expect(tester.getSemantics(_row('Frame')).getSemanticsData().flagsCollection.isSelected, Tristate.isTrue);
+      expect(tester.getSemantics(_row('Title')).getSemanticsData().flagsCollection.isSelected, isNot(Tristate.isTrue));
+      await tester.tap(find.text('Title'));
+      await tester.pump();
+      await _tapWith(tester, 'Photo', [LogicalKeyboardKey.shiftLeft, LogicalKeyboardKey.controlLeft]);
+      expect(log.values, ['title', 'group', 'photo']);
+    });
+
+    testWidgets('multiple: Space toggles the focused node, Enter selects only it', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await _focusRow(tester, 'Title');
+      await _press(tester, LogicalKeyboardKey.space);
+      await _focusRow(tester, 'Hidden');
+      await _press(tester, LogicalKeyboardKey.space);
+      expect(log.values, ['title', 'hidden']);
+      await _press(tester, LogicalKeyboardKey.space);
+      expect(log.values, ['title']);
+      await _press(tester, LogicalKeyboardKey.enter);
+      expect(log.values, ['hidden']);
+    });
+
+    testWidgets('single mode: modifiers do nothing special and selectedValues is untouched', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log, multiple: false));
+      await tester.tap(find.text('Title'));
+      await _tapWith(tester, 'Photo', [LogicalKeyboardKey.controlLeft]);
+      expect(log.selected, 'photo');
+      expect(log.values, isEmpty);
+    });
+
+    testWidgets('trailing content on every row; tapping it does not select', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      expect(find.textContaining('Eye '), findsNWidgets(6));
+      await tester.tap(find.text('Eye Photo'));
+      await tester.pump();
+      expect(log.eyes, ['photo']);
+      expect(log.values, isEmpty);
+      expect(log.selected, isNull);
+      // The button is its own control for screen readers, not merged into the row.
+      expect(tester.getSemantics(_row('Photo')).getSemanticsData().label, 'Photo');
+      // The trailing slot sits at the row's end.
+      expect(tester.getTopRight(find.text('Eye Photo')).dx, greaterThan(300));
+    });
+
+    testWidgets('expanded is held by the app: changes come back through onExpandedChanged', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      expect(find.text('Photo'), findsOneWidget);
+      await tester.tap(find.descendant(of: _row('Group'), matching: find.byType(GestureDetector)).last);
+      await tester.pump();
+      expect(log.open, isEmpty);
+      expect(find.text('Photo'), findsNothing);
+    });
+
+    testWidgets('Alt+Up/Down moves the focused node among its siblings, stopping at the ends', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await _focusRow(tester, 'Photo');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await _press(tester, LogicalKeyboardKey.arrowUp); // already first in its group
+      expect(log.moves, isEmpty);
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      expect(log.moves, [const UiTreeMove(value: 'photo', parent: 'group', index: 1)]);
+      expect(_focused, 'photo');
+    });
+
+    testWidgets('Alt+Down is a plain Down when not reorderable', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log, reorderable: false));
+      await _focusRow(tester, 'Title');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
+      expect(log.moves, isEmpty);
+      expect(_focused, 'group');
+    });
+
+    testWidgets('mouse drag shows where the row lands and reports the move', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      Finder line() => find.descendant(of: find.byType(UiTree), matching: find.byType(PositionedDirectional));
+      // Top of Title: before it.
+      await _mouseDrag(tester, 'Hidden', 'Title', 0.1, during: () {
+        expect(line(), findsOneWidget);
+        expect(tester.widget<Opacity>(find.ancestor(of: find.text('Hidden'), matching: find.byType(Opacity)).first).opacity, 0.5);
+      });
+      expect(log.moves.last, const UiTreeMove(value: 'hidden', parent: null, index: 0));
+      expect(line(), findsNothing);
+      expect(log.values, isEmpty, reason: 'a drag does not select');
+      // Middle of an empty container: into it, outlined.
+      await _mouseDrag(tester, 'Title', 'Empty', 0.5, during: () {
+        expect(line(), findsNothing);
+        expect(tester.widget<AnimatedContainer>(_rowBox('Empty')).foregroundDecoration, isNotNull);
+      });
+      expect(log.moves.last, const UiTreeMove(value: 'title', parent: 'empty', index: 0));
+      // Lower part of an open parent: its first child.
+      await _mouseDrag(tester, 'Hidden', 'Group', 0.9);
+      expect(log.moves.last, const UiTreeMove(value: 'hidden', parent: 'group', index: 0));
+      // A leaf has no inside: lower half of Photo is after it.
+      await _mouseDrag(tester, 'Title', 'Photo', 0.7);
+      expect(log.moves.last, const UiTreeMove(value: 'title', parent: 'group', index: 1));
+      expect(log.moves, hasLength(4));
+    });
+
+    testWidgets('never into itself or its descendants, nor where it already is', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      for (final target in ['Group', 'Photo', 'Frame']) {
+        await _mouseDrag(tester, 'Group', target, 0.5, during: () {
+          expect(find.descendant(of: find.byType(UiTree), matching: find.byType(PositionedDirectional)), findsNothing);
+        });
+      }
+      await _mouseDrag(tester, 'Group', 'Title', 0.9); // just below Title is where Group is
+      expect(log.moves, isEmpty);
+    });
+
+    testWidgets('a mouse press that barely moves still selects; Escape cancels a drag', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      final g = await tester.startGesture(tester.getCenter(find.text('Title')), kind: PointerDeviceKind.mouse);
+      // Past the pointer's pan slop but under the tree's 4px.
+      await g.moveBy(const Offset(0, 3));
+      await g.moveBy(const Offset(0, 0.5));
+      await g.up();
+      await tester.pump();
+      expect(log.values, ['title']);
+      expect(log.moves, isEmpty);
+      final g2 = await tester.startGesture(tester.getCenter(find.text('Hidden')), kind: PointerDeviceKind.mouse);
+      await g2.moveBy(const Offset(0, 6));
+      await g2.moveTo(tester.getRect(_rowBox('Title')).topCenter + const Offset(0, 2));
+      await tester.pump();
+      Finder line() => find.descendant(of: find.byType(UiTree), matching: find.byType(PositionedDirectional));
+      expect(line(), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(line(), findsNothing);
+      await tester.pump();
+      await g2.up();
+      await tester.pump();
+      expect(log.moves, isEmpty);
+    });
+
+    testWidgets('touch: long-press then drag moves; a plain drag scrolls instead', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      final target = tester.getRect(_rowBox('Title'));
+      final g = await tester.startGesture(tester.getCenter(find.text('Hidden')));
+      await tester.pump(const Duration(milliseconds: 600));
+      await g.moveTo(Offset(target.left + 60, target.top + 3));
+      await tester.pump();
+      await g.up();
+      await tester.pump();
+      expect(log.moves, [const UiTreeMove(value: 'hidden', parent: null, index: 0)]);
+      await tester.drag(find.text('Hidden'), Offset(0, -(tester.getCenter(find.text('Hidden')).dy - target.top)));
+      await tester.pump();
+      expect(log.moves, hasLength(1));
+    });
+
+    testWidgets('golden: a layers panel (muted layer, eye/lock buttons, two selected)', (tester) async {
+      await expectThemedGolden(tester, 'tree_layers', height: 380, (context) => UiTree(
+        label: 'Layers',
+        nodes: _layers,
+        multiple: true,
+        reorderable: true,
+        onMove: (_) {},
+        selectedValues: const ['photo', 'empty'],
+        expanded: const {'group', 'frame'},
+        trailingBuilder: (context, n) => Row(mainAxisSize: MainAxisSize.min, children: [
+          UiIconButton(size: UiSize.sm, icon: UiIcon(n.muted ? HugeIcons.strokeRoundedViewOffSlash : HugeIcons.strokeRoundedView), label: 'Hide ${n.label}', onPressed: () {}),
+          UiIconButton(size: UiSize.sm, icon: const UiIcon(HugeIcons.strokeRoundedSquareUnlock02), label: 'Lock ${n.label}', onPressed: () {}),
+        ]),
+      ));
+    });
+
+    testWidgets('double tap on a label, or F2, activates', (tester) async {
+      final log = _LayersLog();
+      await pumpUi(tester, _Layers(log: log));
+      await tester.tap(find.text('Photo'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Photo'));
+      await tester.pump();
+      expect(log.activated, ['photo']);
+      // Two taps far apart in time are two single taps.
+      await tester.tap(find.text('Title'));
+      await tester.pump(const Duration(milliseconds: 800));
+      await tester.tap(find.text('Title'));
+      await tester.pump();
+      expect(log.activated, ['photo']);
+      await _focusRow(tester, 'Frame');
+      await _press(tester, LogicalKeyboardKey.f2);
+      expect(log.activated, ['photo', 'frame']);
     });
   });
 

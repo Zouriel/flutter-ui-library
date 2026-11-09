@@ -157,17 +157,123 @@ class _TreeSection extends StatefulWidget {
   State<_TreeSection> createState() => _TreeSectionState();
 }
 
+const _layerStart = [
+  UiTreeNode(label: 'Names', value: 'names', icon: HugeIcons.strokeRoundedText),
+  UiTreeNode(label: 'Photo group', value: 'photos', icon: HugeIcons.strokeRoundedLayers01, children: [
+    UiTreeNode(label: 'Couple photo', value: 'photo', icon: HugeIcons.strokeRoundedImage01),
+    UiTreeNode(label: 'Frame', value: 'frame', icon: HugeIcons.strokeRoundedSquare),
+  ]),
+  UiTreeNode(label: 'Empty group', value: 'empty', icon: HugeIcons.strokeRoundedLayers01, container: true),
+  UiTreeNode(label: 'Background', value: 'bg', icon: HugeIcons.strokeRoundedSquare),
+];
+
+/// Takes [m.value] out of [nodes] and puts it back at [m.index] under [m.parent]: what an app does
+/// with UiTree.onMove.
+List<UiTreeNode> applyTreeMove(List<UiTreeNode> nodes, UiTreeMove m) {
+  UiTreeNode? taken;
+  List<UiTreeNode> without(List<UiTreeNode> list) {
+    final out = <UiTreeNode>[];
+    for (final n in list) {
+      if (n.value == m.value) {
+        taken = n;
+      } else {
+        out.add(UiTreeNode(label: n.label, value: n.value, icon: n.icon, muted: n.muted, container: n.container, children: without(n.children)));
+      }
+    }
+    return out;
+  }
+
+  final rest = without(nodes);
+  final node = taken;
+  if (node == null) return nodes;
+  List<UiTreeNode> insert(List<UiTreeNode> list) => [
+        for (final n in list)
+          UiTreeNode(
+            label: n.label,
+            value: n.value,
+            icon: n.icon,
+            muted: n.muted,
+            container: n.container,
+            children: n.value == m.parent ? ([...n.children]..insert(m.index, node)) : insert(n.children),
+          ),
+      ];
+  return m.parent == null ? ([...rest]..insert(m.index, node)) : insert(rest);
+}
+
 class _TreeSectionState extends State<_TreeSection> {
   String? _sel = 'app';
+  // Layers demo.
+  List<UiTreeNode> _layers = _layerStart;
+  final Set<String> _hidden = {'bg'};
+  final Set<String> _locked = {'bg'};
+  List<String> _layerSel = ['names'];
+  String? _layerLast = 'names';
+  Set<String> _layerOpen = {'photos'};
+  String _lastMove = 'none';
+  String? _activated;
+
+  List<UiTreeNode> _withMuted(List<UiTreeNode> list) => [
+        for (final n in list)
+          UiTreeNode(label: n.label, value: n.value, icon: n.icon, container: n.container, muted: _hidden.contains(n.value), children: _withMuted(n.children)),
+      ];
+
+  void _toggleIn(Set<String> set, String v) => setState(() => set.contains(v) ? set.remove(v) : set.add(v));
 
   @override
   Widget build(BuildContext context) => DocSection(
         name: 'Tree',
         widget: 'UiTree',
-        summary: 'An expandable hierarchy with single selection. A tap on a row selects it; a tap on the chevron opens or closes it without selecting. Rows are read with their level and position, expanded and selected state, and offer expand/collapse actions to screen readers. Keyboard: one tab stop; Up/Down, Home/End move; Right opens then enters; Left closes then goes to the parent; Enter/Space select; * opens every sibling; typing a letter jumps to the next item starting with it.',
+        summary: 'An expandable hierarchy. A tap on a row selects it; a tap on the chevron opens or closes it without selecting. Rows are read with their level and position, expanded and selected state, and offer expand/collapse actions to screen readers. Keyboard: one tab stop; Up/Down, Home/End move; Right opens then enters; Left closes then goes to the parent; Enter/Space select; * opens every sibling; typing a letter jumps to the next item starting with it. '
+            'expanded + onExpandedChanged let the app hold the open nodes (to open the ancestors of a node it selects). For a layers panel (second demo): muted draws a label dimmed (a hidden layer); multiple makes selectedValues the selection (a tap selects one, Ctrl/Cmd-tap toggles, Shift-tap selects the visible range from the last tap, Space toggles; onSelect still reports each tapped node); trailingBuilder puts controls at the end of each row, and taps on them never select the row; reorderable lets a mouse or pen drag rows (after 4px) and touch long-press then drag, with a line where the row will land or an outline when it goes into a node with children or a container, never into itself or its descendants; Alt+Up/Down moves the focused node among its siblings. The tree calls onMove (move value to child number index of parent, null for the top level, counted after taking it out) and the app moves the node. A double tap on a label or F2 calls onActivate (to rename).',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space2, children: [
           UiTree(label: 'Files', nodes: _files, selected: _sel, initiallyExpanded: const {'src'}, onSelect: (n) => setState(() => _sel = n.value)),
           UiText('Selected: ${_sel ?? 'nothing'}', variant: UiTextVariant.caption),
+          SizedBox(height: context.ui.space4),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: DecoratedBox(
+                decoration: BoxDecoration(border: Border.all(color: context.ui.border), borderRadius: BorderRadius.circular(context.uiTheme.radius())),
+                child: Padding(
+                  padding: EdgeInsets.all(context.ui.space2),
+                  child: UiTree(
+                    label: 'Layers',
+                    nodes: _withMuted(_layers),
+                    multiple: true,
+                    reorderable: true,
+                    selected: _layerLast,
+                    onSelect: (n) => setState(() => _layerLast = n.value),
+                    selectedValues: _layerSel,
+                    onSelectedValuesChanged: (v) => setState(() => _layerSel = v),
+                    expanded: _layerOpen,
+                    onExpandedChanged: (v) => setState(() => _layerOpen = v),
+                    onMove: (m) => setState(() {
+                      _layers = applyTreeMove(_layers, m);
+                      if (m.parent != null) _layerOpen = {..._layerOpen, m.parent!};
+                      _lastMove = '${m.value} to ${m.parent ?? 'top'} #${m.index}';
+                    }),
+                    onActivate: (n) => setState(() => _activated = n.label),
+                    trailingBuilder: (context, n) => Row(mainAxisSize: MainAxisSize.min, children: [
+                      UiIconButton(
+                        size: UiSize.sm,
+                        icon: UiIcon(_hidden.contains(n.value) ? HugeIcons.strokeRoundedViewOffSlash : HugeIcons.strokeRoundedView),
+                        label: '${_hidden.contains(n.value) ? 'Show' : 'Hide'} ${n.label}',
+                        onPressed: () => _toggleIn(_hidden, n.value),
+                      ),
+                      UiIconButton(
+                        size: UiSize.sm,
+                        icon: UiIcon(_locked.contains(n.value) ? HugeIcons.strokeRoundedSquareLock02 : HugeIcons.strokeRoundedSquareUnlock02),
+                        label: '${_locked.contains(n.value) ? 'Unlock' : 'Lock'} ${n.label}',
+                        onPressed: () => _toggleIn(_locked, n.value),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          UiText('Selected: ${_layerSel.isEmpty ? 'nothing' : _layerSel.join(', ')} · last moved: $_lastMove · activated: ${_activated ?? 'nothing'}', variant: UiTextVariant.caption),
         ]),
         code: "UiTree(\n  label: 'Files',\n  nodes: [\n    UiTreeNode(label: 'src', value: 'src', icon: HugeIcons.strokeRoundedFolder01, children: [...]),\n  ],\n  selected: selected,\n  onSelect: (node) => setState(() => selected = node.value),\n)",
         api: const [
@@ -176,6 +282,13 @@ class _TreeSectionState extends State<_TreeSection> {
           ApiRow('onSelect', 'ValueChanged<UiTreeNode>?', 'A node was chosen.'),
           ApiRow('label', 'String?', 'Accessible name.'),
           ApiRow('initiallyExpanded', 'Set<String>', 'Values open at first.', def: '{}'),
+          ApiRow('expanded / onExpandedChanged', 'Set<String>? / ValueChanged<Set<String>>?', 'Open nodes held by the app; null keeps them inside the tree.'),
+          ApiRow('multiple', 'bool', 'Select several: tap, Ctrl/Cmd-tap toggles, Shift-tap a range, Space toggles.', def: 'false'),
+          ApiRow('selectedValues / onSelectedValuesChanged', 'List<String> / ValueChanged<List<String>>?', 'The selection with multiple, in tree order.', def: '[]'),
+          ApiRow('trailingBuilder', 'Widget? Function(BuildContext, UiTreeNode)?', 'Controls at the end of each row; their taps do not select it.'),
+          ApiRow('reorderable / onMove', 'bool / ValueChanged<UiTreeMove>?', 'Drag (mouse, pen; long-press on touch) and Alt+Up/Down to move nodes.', def: 'false'),
+          ApiRow('onActivate', 'ValueChanged<UiTreeNode>?', 'Double tap on a label, or F2 (e.g. rename).'),
+          ApiRow('UiTreeNode.muted / container', 'bool', 'Dimmed label (hidden layer) / takes dropped children with none yet.', def: 'false'),
         ],
       );
 }

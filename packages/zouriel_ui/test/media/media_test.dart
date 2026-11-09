@@ -131,6 +131,82 @@ void main() {
     expect(UiDeviceFrame.fitScale(const Size(2000, 2000), const Size(414, 868), 1), 1, reason: 'never scales up past maxScale');
   });
 
+  group('UiDeviceFrame zoom', () {
+    Future<({List<double> scales, List<double> fits, ScrollController h, ScrollController v})> pumpFrame(WidgetTester tester, double zoom) async {
+      final scales = <double>[], fits = <double>[];
+      final h = ScrollController(), v = ScrollController();
+      addTearDown(h.dispose);
+      addTearDown(v.dispose);
+      await pumpUi(tester, SizedBox(width: 207, height: 434, child: UiDeviceFrame(
+        zoom: zoom,
+        onScale: scales.add,
+        onFitScale: fits.add,
+        horizontalController: h,
+        verticalController: v,
+        child: const SizedBox(),
+      )));
+      await tester.pump();
+      return (scales: scales, fits: fits, h: h, v: v);
+    }
+
+    Rect device(WidgetTester tester) => tester.getRect(find.byType(FittedBox));
+
+    testWidgets('zoom 1 fits as before; fitScale is reported; nothing scrolls', (tester) async {
+      final r = await pumpFrame(tester, 1);
+      expect(r.scales.last, closeTo(0.5, 0.001));
+      expect(r.fits.last, closeTo(0.5, 0.001));
+      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(device(tester).size, const Size(207, 434));
+    });
+
+    testWidgets('zoom multiplies the fitted scale, beyond maxScale, and scrolls to every edge', (tester) async {
+      final r = await pumpFrame(tester, 6);
+      expect(r.fits.last, closeTo(0.5, 0.001));
+      expect(r.scales.last, closeTo(3, 0.001), reason: 'maxScale 1 caps the fit only');
+      expect(device(tester).size, const Size(414 * 3, 868 * 3));
+      expect(r.h.position.maxScrollExtent, closeTo(414 * 3 - 207, 0.01));
+      expect(r.v.position.maxScrollExtent, closeTo(868 * 3 - 434, 0.01));
+      // Top-left edge in view at offset 0, bottom-right at the end.
+      expect(device(tester).topLeft, Offset.zero);
+      r.h.jumpTo(r.h.position.maxScrollExtent);
+      r.v.jumpTo(r.v.position.maxScrollExtent);
+      await tester.pump();
+      expect(device(tester).bottomRight.dx, closeTo(207, 0.01));
+      expect(device(tester).bottomRight.dy, closeTo(434, 0.01));
+    });
+
+    testWidgets('zoomed in on one axis only: the other stays centred', (tester) async {
+      // fit 0.5, zoom 1.2: 248 wide in 207 (scrolls), 521 tall in 434 (scrolls). Use a wide box instead.
+      final scales = <double>[];
+      await pumpUi(tester, SizedBox(width: 380, height: 434, child: UiDeviceFrame(zoom: 1.5, onScale: scales.add, child: const SizedBox())));
+      await tester.pump();
+      expect(scales.last, closeTo(0.75, 0.001));
+      final rect = device(tester);
+      expect(rect.width, closeTo(414 * 0.75, 0.01));
+      expect(rect.left, closeTo((380 - 414 * 0.75) / 2, 0.01), reason: 'narrower than the space: centred');
+      expect(rect.top, 0);
+    });
+
+    testWidgets('zoom is kept within 0.25–8', (tester) async {
+      expect(UiDeviceFrame.clampZoom(100), 8);
+      expect(UiDeviceFrame.clampZoom(0.01), 0.25);
+      expect(UiDeviceFrame.clampZoom(double.nan), 1);
+      final r = await pumpFrame(tester, 0.1);
+      expect(r.scales.last, closeTo(0.125, 0.001));
+    });
+
+    test('anchoredOffset keeps the point under the cursor', () {
+      // 414 wide, viewport 207, scale 1 -> 2, offset 100, cursor at 50: the point is 150 into the frame.
+      expect(UiDeviceFrame.anchoredOffset(offset: 100, focal: 50, viewport: 207, extent: 414, oldScale: 1, newScale: 2), 250);
+      // From centred (scale 0.25: 103.5 wide, padded 51.75) to scrolling.
+      final o = UiDeviceFrame.anchoredOffset(offset: 0, focal: 103.5, viewport: 207, extent: 414, oldScale: 0.25, newScale: 1);
+      expect(o, closeTo((103.5 - 51.75) / 0.25 - 103.5, 0.001));
+      // Clamped to the scroll range.
+      expect(UiDeviceFrame.anchoredOffset(offset: 0, focal: 0, viewport: 207, extent: 414, oldScale: 1, newScale: 0.25), 0);
+      expect(UiDeviceFrame.anchoredOffset(offset: 207, focal: 207, viewport: 207, extent: 414, oldScale: 1, newScale: 8), 414 * 8 - 207);
+    });
+  });
+
   group('UiImagePicker', () {
     List<UiImagePickerItem> items(int n, {bool disabledFirst = false}) => [
           for (var i = 0; i < n; i++)
