@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -182,9 +184,60 @@ class _ChipRemove extends StatelessWidget {
   }
 }
 
+/// A rectangle inside an image, as fractions (0-1) of its width and height.
+class UiAvatarCrop {
+  const UiAvatarCrop({required this.x, required this.y, required this.w, required this.h});
+
+  /// From a `Rect.fromLTWH(x, y, w, h)` in fractions.
+  UiAvatarCrop.fromRect(Rect r) : this(x: r.left, y: r.top, w: r.width, h: r.height);
+
+  final double x, y, w, h;
+
+  @override
+  bool operator ==(Object other) => other is UiAvatarCrop && other.x == x && other.y == y && other.w == w && other.h == h;
+  @override
+  int get hashCode => Object.hash(x, y, w, h);
+}
+
+/// Where the whole image sits inside the avatar, in percent of the avatar's size.
+class UiAvatarCropLayout {
+  const UiAvatarCropLayout({required this.width, required this.height, required this.left, required this.top});
+  final double width, height, left, top;
+}
+
+/// Works out how to place an image so [crop] (grown by [padding] of its size on every side, kept
+/// inside the image) fills a round avatar, centred. [aspect] is the image's width over its height.
+/// A box that is not square in pixels is covered by its larger side. Null for no crop.
+UiAvatarCropLayout? uiAvatarCropLayout(UiAvatarCrop? crop, {double padding = 0.25, double aspect = 1}) {
+  if (crop == null || !(crop.w > 0) || !(crop.h > 0)) return null;
+  final a = aspect > 0 && aspect.isFinite ? aspect : 1.0;
+  final pad = padding > 0 ? padding : 0.0;
+  double clamp(double v, double lo, double hi) => math.min(hi, math.max(lo, v));
+  final x0 = clamp(crop.x - crop.w * pad, 0, 1), x1 = clamp(crop.x + crop.w * (1 + pad), 0, 1);
+  final y0 = clamp(crop.y - crop.h * pad, 0, 1), y1 = clamp(crop.y + crop.h * (1 + pad), 0, 1);
+  final w = x1 - x0, h = y1 - y0;
+  if (!(w > 0) || !(h > 0)) return null;
+  final width = 100 / math.max(w, h / a);
+  final height = 100 / math.max(w * a, h);
+  // Keep the image covering the circle when it can; otherwise centre it.
+  double place(double centre, double size) => size >= 100 ? clamp(50 - centre * size, 100 - size, 0) : (100 - size) / 2;
+  return UiAvatarCropLayout(width: width, height: height, left: place((x0 + x1) / 2, width), top: place((y0 + y1) / 2, height));
+}
+
 /// `ui-avatar`: an image with an initials fallback (also used when the image fails to load).
+/// [crop] shows just a box of the image (a face from a photo) filling the avatar, so no cropped file
+/// is needed.
 class UiAvatar extends StatefulWidget {
-  const UiAvatar({super.key, this.image, this.name, this.alt, this.size = UiSize.md, this.square = false, this.dimension});
+  const UiAvatar({super.key, this.image, this.name, this.alt, this.size = UiSize.md, this.square = false, this.dimension, this.crop, this.cropPadding = 0.25});
+
+  /// A box of the image, as fractions, to fill the avatar (e.g. a face); null shows the whole image.
+  /// A box that is not square in pixels is covered by its larger side. The image is read first to
+  /// keep it undistorted, and nothing is drawn until it has loaded.
+  final UiAvatarCrop? crop;
+
+  /// How much of the box's size to add on every side so the whole face and hair show, kept inside
+  /// the image; 0 fits the box exactly.
+  final double cropPadding;
 
   /// A size in dp, for a profile photo bigger than xl (96, 128); overrides [size], and the initials
   /// scale with it.
@@ -205,11 +258,45 @@ class UiAvatar extends StatefulWidget {
 
 class _UiAvatarState extends State<UiAvatar> {
   bool _failed = false;
+  double? _aspect;
+  ImageStream? _stream;
+  late final ImageStreamListener _listener = ImageStreamListener(_onImage, onError: (_, __) {
+    if (mounted && !_failed) setState(() => _failed = true);
+  });
+
+  void _onImage(ImageInfo info, bool _) {
+    final a = info.image.width / info.image.height;
+    if (mounted && a != _aspect) setState(() => _aspect = a);
+  }
+
+  /// Reads the image's size, but only while a crop needs it.
+  void _watch() {
+    final stream = widget.crop == null || widget.image == null ? null : widget.image!.resolve(createLocalImageConfiguration(context));
+    if (stream?.key == _stream?.key && stream != null) return;
+    _stream?.removeListener(_listener);
+    _stream = stream?..addListener(_listener);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _watch();
+  }
 
   @override
   void didUpdateWidget(UiAvatar old) {
     super.didUpdateWidget(old);
-    if (old.image != widget.image) _failed = false;
+    if (old.image != widget.image) {
+      _failed = false;
+      _aspect = null;
+    }
+    _watch();
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    super.dispose();
   }
 
   String get _initials {
@@ -218,6 +305,31 @@ class _UiAvatarState extends State<UiAvatar> {
     final first = parts.first.characters.first;
     final last = parts.length > 1 ? parts.last.characters.first : '';
     return (first + last).toUpperCase();
+  }
+
+  Widget _fail(Widget initials) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_failed) setState(() => _failed = true);
+    });
+    return initials;
+  }
+
+  /// The image placed so the crop box fills the avatar; nothing until its size is known.
+  Widget _cropped(Widget initials) {
+    final layout = _aspect == null ? null : uiAvatarCropLayout(widget.crop, padding: widget.cropPadding, aspect: _aspect!);
+    if (layout == null) return const SizedBox.expand();
+    return LayoutBuilder(builder: (context, box) {
+      final w = box.maxWidth, h = box.maxHeight;
+      return Stack(clipBehavior: Clip.hardEdge, children: [
+        Positioned(
+          left: layout.left / 100 * w,
+          top: layout.top / 100 * h,
+          width: layout.width / 100 * w,
+          height: layout.height / 100 * h,
+          child: Image(image: widget.image!, fit: BoxFit.fill, errorBuilder: (context, error, stack) => _fail(initials)),
+        ),
+      ]);
+    });
   }
 
   @override
@@ -242,16 +354,9 @@ class _UiAvatarState extends State<UiAvatar> {
           clipBehavior: Clip.antiAlias,
           child: widget.image == null || _failed
               ? initials
-              : Image(
-                  image: widget.image!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stack) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && !_failed) setState(() => _failed = true);
-                    });
-                    return initials;
-                  },
-                ),
+              : widget.crop != null && uiAvatarCropLayout(widget.crop) != null
+                  ? _cropped(initials)
+                  : Image(image: widget.image!, fit: BoxFit.cover, errorBuilder: (context, error, stack) => _fail(initials)),
         ),
       ),
     );

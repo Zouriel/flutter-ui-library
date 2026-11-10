@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -169,6 +170,69 @@ void main() {
       ],
     ));
   });
+
+  group('avatar crop', () {
+    // A 300x200 image; the face box is off-centre and not square (90 x 40 px).
+    const box = UiAvatarCrop(x: 0.5, y: 0.1, w: 0.2, h: 0.2);
+
+    testWidgets('maps a known box to the expected size and position', (tester) async {
+      final l = uiAvatarCropLayout(box, padding: 0.25, aspect: 1.5)!;
+      // padded box x 0.45-0.75, y 0.05-0.35 -> 0.3 x 0.3; 90 x 60 px, so the 90px side fills
+      expect([l.width, l.height].map((v) => v.round()), [333, 222]);
+      expect(l.left.round(), -150);
+      expect(l.top, 0); // centre would be 5.6; kept inside the image edge
+      final z = uiAvatarCropLayout(const UiAvatarCrop(x: 0.4, y: 0.4, w: 0.2, h: 0.2), padding: 0, aspect: 1)!;
+      expect([z.width, z.left, z.top].map((v) => v.round()), [500, -200, -200]);
+      expect(uiAvatarCropLayout(const UiAvatarCrop(x: 0.4, y: 0.4, w: 0.2, h: 0.2), padding: 0.5)!.width, closeTo(250, 1e-9));
+      final e = uiAvatarCropLayout(const UiAvatarCrop(x: 0, y: 0, w: 0.4, h: 0.4))!;
+      expect([e.width, e.left, e.top], [200, 0, 0]);
+      expect(uiAvatarCropLayout(const UiAvatarCrop(x: 0.1, y: 0.1, w: 0, h: 0.2)), isNull);
+      final r = UiAvatarCrop.fromRect(const Rect.fromLTWH(0.5, 0.1, 0.2, 0.2));
+      expect([r.x, r.y, r.w, r.h], [closeTo(0.5, 1e-9), closeTo(0.1, 1e-9), closeTo(0.2, 1e-9), closeTo(0.2, 1e-9)]);
+    });
+
+    testWidgets('paints the image at that place inside the avatar, and waits for the size', (tester) async {
+      final img = (await tester.runAsync(() => createTestImage(width: 300, height: 200)))!;
+      await pumpUi(tester, Center(child: UiAvatar(image: _SizedImage(img), crop: box, dimension: 100, name: 'Ada Lovelace')));
+      await tester.pump();
+      final avatar = tester.getRect(find.byType(UiAvatar));
+      final picture = tester.getRect(find.byType(Image));
+      // inside the 1px border the avatar is 98 wide: 333.3% x 222.2%, left -150%, top 0
+      expect(picture.width, closeTo(98 * 10 / 3, 0.01));
+      expect(picture.height, closeTo(98 * 200 / 90, 0.01));
+      expect(picture.left - avatar.left - 1, closeTo(-1.5 * 98, 0.01));
+      expect(picture.top - avatar.top - 1, closeTo(0, 0.01));
+    });
+
+    testWidgets('without a crop the image fills the avatar as before', (tester) async {
+      final img = (await tester.runAsync(() => createTestImage(width: 300, height: 200)))!;
+      await pumpUi(tester, Center(child: UiAvatar(image: _SizedImage(img), dimension: 100)));
+      await tester.pump();
+      expect(tester.getSize(find.byType(Image)), const Size(98, 98));
+      expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.cover);
+    });
+
+    testWidgets('falls back to initials when a cropped image fails', (tester) async {
+      await pumpUi(tester, const UiAvatar(image: _FailingImage(), crop: box, name: 'Ali Zahir'));
+      await tester.pumpAndSettle();
+      expect(find.text('AZ'), findsOneWidget);
+    });
+  });
+}
+
+/// A decoded test image of a given size, handed out as is.
+class _SizedImage extends ImageProvider<_SizedImage> {
+  const _SizedImage(this.image);
+  final ui.Image image;
+  @override
+  Future<_SizedImage> obtainKey(ImageConfiguration configuration) => Future.value(this);
+  @override
+  ImageStreamCompleter loadImage(_SizedImage key, ImageDecoderCallback decode) =>
+      OneFrameImageStreamCompleter(Future.value(ImageInfo(image: image.clone())));
+  @override
+  bool operator ==(Object other) => other is _SizedImage && identical(other.image, image);
+  @override
+  int get hashCode => identityHashCode(image);
 }
 
 /// An image that always fails to load.

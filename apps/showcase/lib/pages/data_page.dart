@@ -165,7 +165,7 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Avatar',
           widget: 'UiAvatar · UiAvatarGroup',
-          summary: 'An image with an initials fallback, also used when the image fails to load. Named by alt, else name. UiAvatarGroup overlaps them and shows "+N" past max.',
+          summary: 'An image with an initials fallback, also used when the image fails to load. Named by alt, else name. crop shows one box of the image, given as fractions (x, y, w, h, each 0 to 1), filling the circle, so a face from a photo needs no cropped file; cropPadding adds room around the box (0.25 of its size per side) and the box is kept inside the image. UiAvatarGroup overlaps them and shows "+N" past max.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Row(spacing: t.space2, children: const [
               UiAvatar(name: 'Aminath Shareef', size: UiSize.sm),
@@ -176,6 +176,13 @@ class _DataPageState extends State<DataPage> {
               UiAvatar(image: NetworkImage('https://invalid.example/missing.png'), name: 'Broken Image'),
             ]),
             const UiAvatar(name: 'Aminath Hassan', dimension: 96),
+            Row(spacing: t.space2, children: const [
+              UiAvatar(image: AssetImage('assets/demo/sunset.jpg'), name: 'Whole photo', dimension: 64),
+              UiAvatar(image: AssetImage('assets/demo/sunset.jpg'), name: 'Cropped to a box', dimension: 64, crop: UiAvatarCrop(x: 0.55, y: 0.2, w: 0.2, h: 0.3)),
+              UiAvatar(image: AssetImage('assets/demo/sunset.jpg'), name: 'Cropped, no padding', dimension: 64, cropPadding: 0, crop: UiAvatarCrop(x: 0.55, y: 0.2, w: 0.2, h: 0.3)),
+              UiAvatar(image: AssetImage('assets/demo/sunset.jpg'), name: 'Cropped', size: UiSize.sm, crop: UiAvatarCrop(x: 0.55, y: 0.2, w: 0.2, h: 0.3)),
+              UiAvatar(image: AssetImage('assets/demo/sunset.jpg'), name: 'Cropped', size: UiSize.xl, crop: UiAvatarCrop(x: 0.55, y: 0.2, w: 0.2, h: 0.3)),
+            ]),
             const UiAvatarGroup(max: 3, children: [
               UiAvatar(name: 'Aminath Shareef'),
               UiAvatar(name: 'Ali Zahir'),
@@ -184,13 +191,15 @@ class _DataPageState extends State<DataPage> {
               UiAvatar(name: 'Fathimath Ali'),
             ]),
           ]),
-          code: "UiAvatar(image: NetworkImage(url), name: 'Ali Zahir')\nUiAvatarGroup(max: 3, children: [...])",
+          code: "UiAvatar(image: NetworkImage(url), name: 'Ali Zahir')\nUiAvatar(image: NetworkImage(photoUrl), dimension: 96, crop: UiAvatarCrop(x: 0.42, y: 0.18, w: 0.12, h: 0.2))\nUiAvatarGroup(max: 3, children: [...])",
           api: const [
             ApiRow('image', 'ImageProvider?', 'Photo; initials show if it is missing or fails.'),
             ApiRow('name', 'String?', 'For initials and the accessible name.'),
             ApiRow('alt', 'String?', 'Accessible name override.'),
             ApiRow('size', 'UiSize', '26 / 30 / 38 / 56.', def: 'md'),
             ApiRow('dimension', 'double?', 'Any size in dp (a profile photo: 96, 128); overrides size, initials scale with it.'),
+            ApiRow('crop', 'UiAvatarCrop?', 'A box of the image as fractions of its width and height (UiAvatarCrop(x:, y:, w:, h:), or UiAvatarCrop.fromRect of a Rect.fromLTWH) that fills the avatar, centred; a box that is not square in pixels is covered by its larger side. Null shows the whole image. The image is read first to keep it undistorted and nothing is drawn until it has loaded.', def: 'null'),
+            ApiRow('cropPadding', 'double', 'Room added around the crop box on every side, as a fraction of its size, kept inside the image; 0 fits the box exactly.', def: '0.25'),
             ApiRow('square', 'bool', 'Rounded square instead of a circle.', def: 'false'),
           ],
         ),
