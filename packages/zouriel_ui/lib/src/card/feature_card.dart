@@ -152,7 +152,7 @@ class UiFeatureCard extends StatelessWidget {
         ? null
         : UiGradientSpec(angle: 160, colors: [Color.lerp(ground, toneColor, 0.03)!, ground], stops: const [0, 0.55]).toGradient();
     // Tinted (web surface="tinted"): 8% of the tone over the surface with 4% of the text (so a pale
-    // tone, Winter's sun accent, still shows); neutral is 5% of the text. The muted and primary words
+    // tone, a pale accent, still shows); neutral is 5% of the text. The muted and primary words
     // are deepened 25% towards the text colour (text-muted fails 4.5:1 on an 8% wash in lightPink).
     final tintFill = !tinted
         ? null

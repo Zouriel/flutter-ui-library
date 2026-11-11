@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
-/// Pumps [child] inside a themed app (default Winter Dark) at phone width.
+/// Pumps [child] inside a themed app (default dark, Navy Dark) at phone width.
 Future<void> pumpUi(WidgetTester tester, Widget child, {UiThemeName theme = UiThemeName.dark, Size size = const Size(390, 844)}) async {
   tester.view.physicalSize = size * tester.view.devicePixelRatio;
   addTearDown(tester.view.reset);
@@ -10,7 +10,7 @@ Future<void> pumpUi(WidgetTester tester, Widget child, {UiThemeName theme = UiTh
   await tester.pumpAndSettle();
 }
 
-/// A golden of [build] rendered side by side in Winter Dark and Winter Light (plus any [extra]
+/// A golden of [build] rendered side by side in Navy Dark and Navy Light (plus any [extra]
 /// themes), each on its own background, so one image covers both modes.
 Future<void> expectThemedGolden(
   WidgetTester tester,

@@ -1,7 +1,7 @@
 // Generates packages/zouriel_ui/lib/src/theme/tokens.g.dart from the Angular library's CSS tokens.
 //
 // A real browser resolves the cascade (var(), color-mix(), per-theme overrides, derived defaults),
-// so the Dart values are exactly what the web components render with, for all 15 themes.
+// so the Dart values are exactly what the web components render with, for every built-in theme.
 //
 //   node tool/gen_tokens.mjs <angular styles dir> <output .dart> <chromium executable>
 //
@@ -13,18 +13,51 @@ const [stylesDir, outFile, chrome] = process.argv.slice(2);
 const pw = process.env.PLAYWRIGHT ?? '/home/zouriel/personal/uilibraries/angular/node_modules/playwright-core/index.mjs';
 const { chromium } = await import(pw);
 
-const files = ['tokens.css', 'theme-palettes.css', 'theme-dark-orange.css', 'theme-maldives.css'];
+const files = ['tokens.css', 'theme-palettes.css', 'theme-dark-orange.css', 'theme-maldives.css', 'theme-liquid.css'];
 // Web fonts are fetched at runtime on the web; the Flutter package bundles its own, so drop the import.
 const css = files.map((f) => readFileSync(join(stylesDir, f), 'utf8').replace(/@import url\([^)]*\);/g, '')).join('\n');
 
 // The web data-theme names. A hyphenated web name becomes a camelCase enum value
 // (maldives-dark -> UiThemeName.maldivesDark).
+// New names are appended, so existing enum indexes keep their meaning.
 const THEMES = ['dark', 'light', 'lightOrange', 'lightPink', 'lightTeal', 'lightPurple', 'lightPurpleGold',
-  'darkPink', 'darkTeal', 'darkPurple', 'goldBlack', 'goldRed', 'darkOrange', 'maldives', 'maldives-dark'];
+  'darkPink', 'darkTeal', 'darkPurple', 'goldBlack', 'goldRed', 'darkOrange', 'maldives', 'maldives-dark',
+  'navy', 'navy-dark',
+  'rugged', 'rugged-dark', 'glacier', 'glacier-dark', 'oxblood', 'oxblood-dark',
+  'graphite', 'graphite-dark', 'cocoa', 'cocoa-dark', 'violet', 'violet-dark',
+  'winterDark', 'winterLight'];
+// One line of doc per enum value (current themes first in the web's UI_CURRENT_THEMES; legacy ones say so).
+const LEGACY_DOC = 'Legacy: still supported and unchanged, but new work should use a current theme.';
+const DOCS = {
+  dark: 'Navy Dark, the library default (the web `dark`; the same tokens as [navyDark]).',
+  light: 'Navy Light (the web `light`; the same tokens as [navy]).',
+  navy: 'Navy Light by its explicit name: a Mist canvas, Midnight Navy ink, Sunflower deepened to a dark gold for the primary.',
+  'navy-dark': 'Navy Dark by its explicit name: Midnight Navy stepped up for surfaces, Powder Blue ink, Sunflower primary.',
+  darkOrange: 'The cinematic ink/ember theme (theme-dark-orange.css).',
+  maldives: 'The calm, light sea theme (theme-maldives.css).',
+  'maldives-dark': 'The maldives sea at night.',
+  rugged: 'Liquid: Desert Sand, Olive Drab and Signal Yellow (theme-liquid.css).',
+  'rugged-dark': 'Liquid: rugged at night.',
+  glacier: 'Liquid: Ice White, Glacier Blue and Signal Red.',
+  'glacier-dark': 'Liquid: glacier at night.',
+  oxblood: 'Liquid: Bone, Charcoal and Oxblood.',
+  'oxblood-dark': 'Liquid: oxblood at night.',
+  graphite: 'Liquid: Light Grey, Slate and Safety Orange.',
+  'graphite-dark': 'Liquid: graphite at night.',
+  cocoa: 'Liquid: Cream, Cocoa and Raspberry.',
+  'cocoa-dark': 'Liquid: cocoa at night.',
+  violet: 'Liquid: Mist, Ink and Electric Violet.',
+  'violet-dark': 'Liquid: violet at night.',
+  winterDark: 'Deprecated: the retired Winter name, an alias with the same tokens as [navyDark]. ' + LEGACY_DOC,
+  winterLight: 'Deprecated: the retired Winter name, an alias with the same tokens as [navy]. ' + LEGACY_DOC,
+};
+const docFor = (t) => DOCS[t] ?? LEGACY_DOC;
 const enumName = (t) => t.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
 const names = [...new Set([...css.matchAll(/(--ui-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))]
-  .filter((n) => !n.startsWith('--ui-winter-') && !n.startsWith('--ui-z-'))
+  .filter((n) => !n.startsWith('--ui-navy-') && !n.startsWith('--ui-z-'))
+  // The glass rim is two colours (--ui-glass-highlight-top / -edge); the inset-shadow composite is CSS only.
+  .filter((n) => n !== '--ui-glass-highlight')
   // CSS filter lists; UiTokens carries their inputs (glassSheet*/glassClear* floor, ceiling, blur,
   // saturate) and the widgets build them.
   .filter((n) => n !== '--ui-glass-sheet-filter' && n !== '--ui-glass-clear-filter');
@@ -32,6 +65,8 @@ const names = [...new Set([...css.matchAll(/(--ui-[a-z0-9-]+)\s*:/g)].map((m) =>
 function kind(n) {
   // Density scales (0.45.0): plain numbers, checked before the --ui-font- family names.
   if (n === '--ui-font-scale' || n === '--ui-density-scale') return 'number';
+  if (n === '--ui-gradient-brand-contrast') return 'color';
+  if (/^--ui-liquid-.*-strength$/.test(n)) return 'percent';
   if (n.startsWith('--ui-gradient-')) return 'gradient';
   if (/^--ui-(shadow-\d|glow-|focus-ring)/.test(n)) return 'shadow';
   if (/^--ui-(size|space|font-size|radius)/.test(n) || n === '--ui-glass-blur' || n === '--ui-glass-sheet-blur' || n === '--ui-glass-clear-blur') return 'length';
@@ -70,6 +105,24 @@ for (const theme of THEMES) {
     return out;
   }, { theme, names, kinds: Object.fromEntries(names.map((n) => [n, kind(n)])) });
 }
+// darkOrange, maldives, maldives-dark and the legacy palette skins must look exactly as they did before
+// Navy replaced Winter. Resolved here as islands under an un-themed root, the few tokens they never set
+// themselves were inherited from the Winter Dark root block; where they would now inherit Navy's, pin
+// the Winter value they always had (computed CSS form).
+const KEPT = ['lightOrange', 'lightPink', 'lightTeal', 'lightPurple', 'lightPurpleGold', 'darkPink', 'darkTeal',
+  'darkPurple', 'goldBlack', 'goldRed', 'darkOrange', 'maldives', 'maldives-dark'];
+const WINTER_INHERITED = {
+  '--ui-gradient-frost': 'linear-gradient(135deg, rgb(27, 61, 89) 0%, rgb(106, 151, 192) 100%)',
+  '--ui-gradient-snow': 'linear-gradient(135deg, rgb(11, 15, 18) 0%, rgb(17, 23, 28) 100%)',
+  '--ui-glass-bg': 'rgba(179, 213, 241, 0.06)',
+  '--ui-glass-border': 'rgba(179, 213, 241, 0.13)',
+};
+for (const t of KEPT) {
+  for (const [n, v] of Object.entries(WINTER_INHERITED)) {
+    if (data[t][n] === data['navy-dark'][n]) data[t][n] = v; // inherited from the root, not the theme's own
+  }
+}
+
 // Compact density (0.45.0): the tokens tokens.css's [data-density="compact"] block changes. They
 // are theme-independent sizes and scales, resolved under the base theme.
 const compactNames = [...new Set([...(/\[data-density="compact"\] \{([^}]*)\}/.exec(css)?.[1] ?? '').matchAll(/(--ui-[a-z0-9-]+)\s*:/g)].map((m) => m[1]))];
@@ -175,7 +228,7 @@ const fields = names.map((n) => {
   const k = kind(n);
   const present = THEMES.every((t) => data[t][n] !== null);
   const type = { color: 'Color', gradient: 'UiGradientSpec', shadow: 'List<BoxShadow>', length: 'double', em: 'double',
-    number: 'double', duration: 'Duration', curve: 'Cubic', font: 'String' }[k];
+    number: 'double', percent: 'double', duration: 'Duration', curve: 'Cubic', font: 'String' }[k];
   const nullable = !present || k === 'font';
   return { n, k, name: dartName(n), type: nullable ? type + '?' : type, nullable };
 });
@@ -190,6 +243,7 @@ function value(f, theme) {
     case 'length': return lengthPx(f.n, v);
     case 'em': return String(parseFloat(v));
     case 'number': return String(parseFloat(v));
+    case 'percent': return String(parseFloat(v) / 100); // a 0-1 fraction
     case 'duration': return `Duration(milliseconds: ${ms(v)})`;
     case 'curve': return dartCurve(v);
     case 'font': return dartFont(v);
@@ -202,7 +256,7 @@ function lerpExpr(f) {
     case 'color': return f.nullable ? `Color.lerp(${a}, ${b}, t)` : `Color.lerp(${a}, ${b}, t)!`;
     case 'gradient': return f.nullable ? `UiGradientSpec.lerp(${a}, ${b}, t)` : `UiGradientSpec.lerp(${a}, ${b}, t)!`;
     case 'shadow': return f.nullable ? `UiRingShadow.lerpList(${a}, ${b}, t)` : `UiRingShadow.lerpList(${a}, ${b}, t)!`;
-    case 'length': case 'em': case 'number':
+    case 'length': case 'em': case 'number': case 'percent':
       return f.nullable ? `lerpDouble(${a}, ${b}, t)` : `lerpDouble(${a}, ${b}, t)!`;
     default: return `t < 0.5 ? ${a} : ${b}`;
   }
@@ -210,14 +264,16 @@ function lerpExpr(f) {
 
 const out = [];
 out.push(`// GENERATED by tool/gen_tokens.mjs from the @zouriel/ui (Angular) stylesheets. Do not edit by hand.
-// Re-run the generator after changing tokens.css, theme-palettes.css, theme-dark-orange.css or theme-maldives.css.
+// Re-run the generator after changing tokens.css, theme-palettes.css, theme-dark-orange.css, theme-maldives.css or theme-liquid.css.
 // ignore_for_file: lines_longer_than_80_chars, prefer_const_constructors
 
 part of 'tokens.dart';
 
-/// The ${THEMES.length} built-in themes, in the same order and with the same names as the web library
-/// (a hyphenated web name camelCased: maldives-dark is maldivesDark).
-enum UiThemeName { ${THEMES.map(enumName).join(', ')} }
+/// The ${THEMES.length} built-in themes, with the same names as the web library (a hyphenated web name
+/// camelCased: maldives-dark is maldivesDark). See [uiCurrentThemes] and [uiLegacyThemes].
+enum UiThemeName {
+${THEMES.map((t) => `  /// ${docFor(t)}\n  ${enumName(t)},`).join('\n')}
+}
 
 /// Every design token of one theme, resolved. Components read these and nothing else.
 @immutable

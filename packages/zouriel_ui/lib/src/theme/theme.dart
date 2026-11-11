@@ -255,13 +255,81 @@ class UiThemeData {
   int get hashCode => Object.hash(name, baseTokens, config, compact);
 }
 
+/// The current built-in themes, in the order a theme picker lists them (the web `UI_CURRENT_THEMES`).
+const List<UiThemeName> uiCurrentThemes = [
+  UiThemeName.dark,
+  UiThemeName.light,
+  UiThemeName.navy,
+  UiThemeName.navyDark,
+  UiThemeName.darkOrange,
+  UiThemeName.maldives,
+  UiThemeName.maldivesDark,
+  UiThemeName.rugged,
+  UiThemeName.ruggedDark,
+  UiThemeName.glacier,
+  UiThemeName.glacierDark,
+  UiThemeName.oxblood,
+  UiThemeName.oxbloodDark,
+  UiThemeName.graphite,
+  UiThemeName.graphiteDark,
+  UiThemeName.cocoa,
+  UiThemeName.cocoaDark,
+  UiThemeName.violet,
+  UiThemeName.violetDark,
+];
+
+/// The legacy built-in themes (the web `UI_LEGACY_THEMES`): still supported (the ten palette skins
+/// unchanged, the two Winter names as aliases of the Navy themes), but new work should use one of
+/// [uiCurrentThemes]. Pickers list them in a separate "Legacy" group.
+const List<UiThemeName> uiLegacyThemes = [
+  UiThemeName.winterDark,
+  UiThemeName.winterLight,
+  UiThemeName.lightOrange,
+  UiThemeName.lightPink,
+  UiThemeName.darkPink,
+  UiThemeName.goldBlack,
+  UiThemeName.goldRed,
+  UiThemeName.lightTeal,
+  UiThemeName.darkTeal,
+  UiThemeName.lightPurple,
+  UiThemeName.darkPurple,
+  UiThemeName.lightPurpleGold,
+];
+
+/// Whether [name] is one of the legacy built-in themes ([uiLegacyThemes]).
+bool isLegacyTheme(UiThemeName name) => uiLegacyThemes.contains(name);
+
+/// The day/night pairs [uiToggledTheme] flips, day first.
+const Map<UiThemeName, UiThemeName> _uiDayNight = {
+  UiThemeName.light: UiThemeName.dark,
+  UiThemeName.navy: UiThemeName.navyDark,
+  UiThemeName.winterLight: UiThemeName.winterDark,
+  UiThemeName.maldives: UiThemeName.maldivesDark,
+  UiThemeName.rugged: UiThemeName.ruggedDark,
+  UiThemeName.glacier: UiThemeName.glacierDark,
+  UiThemeName.oxblood: UiThemeName.oxbloodDark,
+  UiThemeName.graphite: UiThemeName.graphiteDark,
+  UiThemeName.cocoa: UiThemeName.cocoaDark,
+  UiThemeName.violet: UiThemeName.violetDark,
+};
+
+/// The other half of [theme]'s day/night pair, or dark for a theme without one (what
+/// [UiThemeController.toggle] switches to).
+UiThemeName uiToggledTheme(UiThemeName theme) {
+  for (final e in _uiDayNight.entries) {
+    if (e.key == theme) return e.value;
+    if (e.value == theme) return e.key;
+  }
+  return UiThemeName.dark;
+}
+
 /// Provides a [UiThemeData] to the subtree. Use [UiThemeScope] for a scoped theme inside a page.
 class UiTheme extends InheritedWidget {
   const UiTheme({super.key, required this.data, required super.child});
 
   final UiThemeData data;
 
-  /// The nearest theme. Falls back to Winter Dark, the library's base, when none is provided.
+  /// The nearest theme. Falls back to dark (Navy Dark), the library's base, when none is provided.
   static UiThemeData of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<UiTheme>()?.data ?? _fallback;
 
@@ -402,8 +470,10 @@ class UiThemeController extends ChangeNotifier {
   /// `UiStringsService.set`).
   void setStrings(UiStrings strings) => setConfig(_config.copyWith(strings: strings));
 
-  /// Flips between the Winter dark and light themes (from any other theme it goes to dark).
-  void toggle() => set(_theme == UiThemeName.dark ? UiThemeName.light : UiThemeName.dark);
+  /// Flips day and night (the web `UiThemeService.toggle`): dark <-> light, a built-in `x` / `xDark`
+  /// pair (navy, maldives and the liquid themes) to its other half, and the deprecated winterDark <->
+  /// winterLight; from any other theme it goes to dark.
+  void toggle() => set(uiToggledTheme(_theme));
 }
 
 /// Draws a subtree in another density (0.45.0), the web `data-density` on an element:
