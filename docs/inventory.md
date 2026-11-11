@@ -1161,6 +1161,12 @@ File: `fx/src/sea.ts`
 - Inputs: `theme`: string | null = 'maldives'; `waves` = true; `waveLayers` = 3; `waveHeight` = 120; `waveOpacity` = 0.5; `coral`, `palm`: UiDecorCorner | null = null; `decorScale` = 1
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiLiquidBackdrop (component, `ui-liquid-backdrop`)
+File: `fx/src/liquid.ts`  
+`ui-liquid-backdrop` — the liquid themes' flowing satin backdrop: blurred pools of the theme's second and accent colours drifting over its main colour, with a sheen of the glass highlight. Decorative; still under reduced motion and with animations off.  
+- Inputs: `fixed` = false; `opacity` = 1
+- [x] Flutter port (`fixed` has no Flutter equivalent: it fills the space it is given, `Positioned.fill` in a Stack)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiTide (directive, `[uiTide]`)
 File: `fx/src/sea.ts`  
 `[uiTide]` — staggered fade + 8px slide-up for list items (ui-slide-up-enter).  

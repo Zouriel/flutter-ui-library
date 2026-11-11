@@ -17,7 +17,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(UiTheme.of(tester.element(find.byType(DocPage))).compact, isFalse);
 
-    await tester.tap(find.text('Winter Dark'));
+    await tester.tap(find.text('Navy Dark')); // the theme button shows the current theme
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Compact'));

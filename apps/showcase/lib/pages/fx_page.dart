@@ -127,7 +127,7 @@ class _FxPageState extends State<FxPage> {
         DocSection(
           name: 'Section label',
           widget: 'UiSectionLabel',
-          summary: 'A section marker above a heading. eyebrow is a short accent bar and the label in small caps, in the theme\'s own font, with the index in the primary colour; bracket is the editorial mono marker made for Dark Orange, [ 00 · INDEX ]. auto (the default) picks bracket on Dark Orange and eyebrow everywhere else. The accent is the theme\'s sectionLabelBracket: its primary by default, the warm accent in Winter, blood red in Dark Orange, coral in Maldives. The index is left out when empty.',
+          summary: 'A section marker above a heading. eyebrow is a short accent bar and the label in small caps, in the theme\'s own font, with the index in the primary colour; bracket is the editorial mono marker made for Dark Orange, [ 00 · INDEX ]. auto (the default) picks bracket on Dark Orange and eyebrow everywhere else. The accent is the theme\'s sectionLabelBracket: its primary by default, Sunflower in Navy, blood red in Dark Orange, coral in Maldives. The index is left out when empty.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: const [
             UiSectionLabel(index: '00', label: 'Index'),
             UiSectionLabel(index: '01', label: 'Eyebrow', variant: UiSectionLabelVariant.eyebrow),
@@ -373,6 +373,42 @@ class _FxPageState extends State<FxPage> {
             ApiRow('coral', 'UiDecorCorner?', 'Corner for the coral, or none.'),
             ApiRow('palm', 'UiDecorCorner?', 'Corner for the palms, or none.'),
             ApiRow('decorScale', 'double', 'Scale of both decor silhouettes.', def: '1'),
+          ],
+        ),
+        DocSection(
+          name: 'Liquid backdrop',
+          widget: 'UiLiquidBackdrop',
+          summary: 'The liquid themes\' backdrop: a slow, flowing satin surface for glass panels to float over. Blurred pools of the theme\'s second and accent colours drift over its main colour, and a soft sheen of the glass highlight slides across. Decorative (no touches, hidden from screen readers); it fills the space it is given. Only position, scale and opacity move, at full motion only: under reduced motion or with animations off it stands still. It paints from the liquid tokens, which the liquid themes and Navy set; elsewhere it pools the secondary and primary colours.',
+          demo: DocGrid(minWidth: 200, minColumns: 1, children: [
+            for (final th in const [UiThemeName.glacier, UiThemeName.ruggedDark, UiThemeName.cocoa, UiThemeName.violetDark, UiThemeName.navy])
+              UiThemeScope(
+                theme: th,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radiusLg),
+                  child: SizedBox(
+                    height: 200,
+                    child: Stack(children: [
+                      const Positioned.fill(child: UiLiquidBackdrop()),
+                      Center(
+                        child: Builder(builder: (context) => UiCard(
+                          glass: true,
+                          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: context.ui.space2, children: [
+                            UiText(th.name, variant: UiTextVariant.label),
+                            const UiText('Glass over the flow.', variant: UiTextVariant.caption),
+                            UiButton(label: 'Continue', size: UiSize.sm, onPressed: () {}),
+                          ]),
+                        )),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+          ]),
+          code: 'Stack(children: [\n  const Positioned.fill(child: UiLiquidBackdrop()),\n  UiCard(glass: true, child: content),\n])',
+          api: const [
+            ApiRow('opacity', 'double', 'Opacity of the whole backdrop, 0-1.', def: '1'),
+            ApiRow('liquidMain / liquidSecond / liquidAccent', 'UiTokens', 'The ground and the two pooled colours (the liquid themes and Navy set them).'),
+            ApiRow('liquidSecondStrength / liquidAccentStrength', 'UiTokens', 'How strongly each colour pools, 0-1.'),
           ],
         ),
         DocSection(

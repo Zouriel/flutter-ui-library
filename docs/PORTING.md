@@ -1202,3 +1202,43 @@ UiDeviceFrame: `zoom` (0.25–8) multiplies the fitted scale; `onScale` reports 
 Above zoom 1 the frame sits in a horizontal + vertical `SingleChildScrollView` pair (optional controllers) with a
 viewport-sized minimum and centring, so an axis that still fits stays centred. The web exposes `pointAt` /
 `scrollPointTo` for zooming around the cursor; Flutter has the static `UiDeviceFrame.anchoredOffset` per axis instead.
+
+## Navy, the liquid themes and legacy themes
+
+**Navy replaces Winter.** The web's default `dark` / `light` are now Navy (`navy-dark` / `navy`), and
+`winterDark` / `winterLight` are deprecated aliases of the same CSS blocks. `gen_tokens.mjs` resolves
+all of them, so `UiThemeName.dark`, `.navyDark` and `.winterDark` (and the light three) carry identical
+tokens; the token map is const, so they are the very same `UiTokens` object (the roster test checks this
+with `identical`). New enum values are appended (navy, navyDark, the twelve liquid themes, winterDark,
+winterLight) so the existing indexes keep their meaning. The winter names carry a doc comment, not
+`@Deprecated`, so apps get no analyzer warnings.
+
+**Kept themes stay exactly as they were.** The generator resolves each theme as an island under an
+un-themed root, so the few tokens darkOrange, maldives(-dark) and the legacy skins never set came from
+the Winter Dark root block (the frost and snow gradients, and for five dark skins glassBg and
+glassBorder). Those four are pinned to their Winter values in the generator, and the liquid colours are
+left unset for these themes (on the web a page in them has none; the backdrop falls back to bg,
+secondary and primary). A diff of every kept theme's tokens before and after shows no change.
+
+**Current and legacy.** `uiCurrentThemes`, `uiLegacyThemes` and `isLegacyTheme` mirror the web
+`UI_CURRENT_THEMES`, `UI_LEGACY_THEMES` and `isLegacyTheme`, in the same order. `uiToggledTheme` (used by
+`UiThemeController.toggle`) flips dark/light and every built-in `x` / `xDark` pair, as the web `toggle()`.
+
+**The glass rim.** The web draws `--ui-glass-highlight` as two inset box-shadows; `BoxShadow` has no
+inset, so `UiGlassRim` paints them: the edge band (the box minus itself 1px smaller) and the top band
+(the box minus itself moved 1px down), inside the border (`inset` is the border width). One difference:
+CSS paints inset shadows under the content and Flutter paints the rim over it, so on a window the top
+band shows over the title bar's opaque strip (1px, only in the liquid themes). When both colours are
+transparent (every non-liquid theme) it returns its child, so goldens of other themes do not change.
+
+**UiLiquidBackdrop.** The web pools are 90vmax / 70vmax discs at fixed offsets drifting by transform;
+here vmax is the larger side of the backdrop's own box (the web's is the viewport). A rotated disc looks
+the same, so the keyframes' rotation is left out. The CSS `blur(48px)` is a Gaussian sigma of 24.
+`ease-in-out infinite alternate` is a cosine 0-1-0 over the duration each way. At rest (reduced motion,
+animations off) it paints the keyframe-free positions and opacities, as the CSS does with `animation:
+none`. There is no `fixed` input: put it in `Positioned.fill` behind the content (the showcase shell
+does, in the liquid themes).
+
+**Brand label.** `UiTokens.gradientBrandContrast` (the web `--ui-gradient-brand-contrast`) labels brand
+buttons and their hover wash when a theme sets it, else `primaryContrast`.
+

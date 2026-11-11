@@ -7,21 +7,45 @@ import 'docs/doc.dart' show DocGrid;
 import 'pages/registry.dart';
 
 const themeLabels = {
-  UiThemeName.dark: 'Winter Dark',
-  UiThemeName.light: 'Winter Light',
-  UiThemeName.lightOrange: 'Light Orange',
-  UiThemeName.lightPink: 'Light Pink',
-  UiThemeName.lightTeal: 'Light Teal',
-  UiThemeName.lightPurple: 'Light Purple',
-  UiThemeName.lightPurpleGold: 'Light Purple Gold',
-  UiThemeName.darkPink: 'Dark Pink',
-  UiThemeName.darkTeal: 'Dark Teal',
-  UiThemeName.darkPurple: 'Dark Purple',
-  UiThemeName.goldBlack: 'Gold Black',
-  UiThemeName.goldRed: 'Gold Red',
+  UiThemeName.dark: 'Navy Dark',
+  UiThemeName.light: 'Navy Light',
+  UiThemeName.navy: 'Navy (light)',
+  UiThemeName.navyDark: 'Navy (dark)',
   UiThemeName.darkOrange: 'Dark Orange',
   UiThemeName.maldives: 'Maldives',
   UiThemeName.maldivesDark: 'Maldives Dark',
+  UiThemeName.rugged: 'Rugged',
+  UiThemeName.ruggedDark: 'Rugged Dark',
+  UiThemeName.glacier: 'Glacier',
+  UiThemeName.glacierDark: 'Glacier Dark',
+  UiThemeName.oxblood: 'Oxblood',
+  UiThemeName.oxbloodDark: 'Oxblood Dark',
+  UiThemeName.graphite: 'Graphite',
+  UiThemeName.graphiteDark: 'Graphite Dark',
+  UiThemeName.cocoa: 'Cocoa',
+  UiThemeName.cocoaDark: 'Cocoa Dark',
+  UiThemeName.violet: 'Violet',
+  UiThemeName.violetDark: 'Violet Dark',
+  // Legacy: still supported, not for new work.
+  UiThemeName.winterDark: 'Winter Dark (legacy)',
+  UiThemeName.winterLight: 'Winter Light (legacy)',
+  UiThemeName.lightOrange: 'Light Orange (legacy)',
+  UiThemeName.lightPink: 'Light Pink (legacy)',
+  UiThemeName.lightTeal: 'Light Teal (legacy)',
+  UiThemeName.lightPurple: 'Light Purple (legacy)',
+  UiThemeName.lightPurpleGold: 'Light Purple Gold (legacy)',
+  UiThemeName.darkPink: 'Dark Pink (legacy)',
+  UiThemeName.darkTeal: 'Dark Teal (legacy)',
+  UiThemeName.darkPurple: 'Dark Purple (legacy)',
+  UiThemeName.goldBlack: 'Gold Black (legacy)',
+  UiThemeName.goldRed: 'Gold Red (legacy)',
+};
+
+/// The liquid themes (theme-liquid.css): the showcase puts UiLiquidBackdrop behind the page in them.
+const liquidThemes = {
+  UiThemeName.rugged, UiThemeName.ruggedDark, UiThemeName.glacier, UiThemeName.glacierDark,
+  UiThemeName.oxblood, UiThemeName.oxbloodDark, UiThemeName.graphite, UiThemeName.graphiteDark,
+  UiThemeName.cocoa, UiThemeName.cocoaDark, UiThemeName.violet, UiThemeName.violetDark,
 };
 
 /// The density picker's options (0.45.0), shared by the theme sheet and the Foundation page.
@@ -54,8 +78,32 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
     _menuOpen.value = false;
   }
 
+  // The theme's fx layers (the sea waves, the liquid backdrop) follow the controller directly, so a
+  // theme set from code (not just from the sheet) adds or drops them.
+  late UiThemeName _theme = widget.controller.theme;
+  void _onController() {
+    if (widget.controller.theme != _theme) setState(() => _theme = widget.controller.theme);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onController);
+  }
+
+  @override
+  void didUpdateWidget(ShowcaseShell old) {
+    super.didUpdateWidget(old);
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_onController);
+      widget.controller.addListener(_onController);
+      _theme = widget.controller.theme;
+    }
+  }
+
   @override
   void dispose() {
+    widget.controller.removeListener(_onController);
     _menuOpen.dispose();
     super.dispose();
   }
@@ -98,11 +146,14 @@ class _ShowcaseShellState extends State<ShowcaseShell> {
     // Always a Stack with a keyed page layer, so switching theme only adds or drops the waves: had the
     // page moved in the tree it would be rebuilt from scratch, and Find Doctor (which switches the
     // theme on opening and back on leaving) then flipped the theme every frame.
-    final sea = widget.controller.theme == UiThemeName.maldives || widget.controller.theme == UiThemeName.maldivesDark;
+    final sea = _theme == UiThemeName.maldives || _theme == UiThemeName.maldivesDark;
+    // The liquid themes' backdrop, the same way: one more layer behind the keyed page.
+    final liquid = liquidThemes.contains(_theme);
     final body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       bar,
       Expanded(child: Stack(children: [
         if (sea) const Positioned.fill(child: UiWaveFooter(height: 96, opacity: 0.35)),
+        if (liquid) const Positioned.fill(child: UiLiquidBackdrop()),
         Positioned.fill(key: const ValueKey('page'), child: page),
       ])),
     ]);
@@ -271,7 +322,7 @@ class _MenuItem extends StatelessWidget {
   }
 }
 
-/// Opens a sheet listing all 14 themes, each with a swatch.
+/// Opens a sheet listing every theme, each with a swatch: the current ones, then the legacy ones.
 class _ThemeButton extends StatelessWidget {
   const _ThemeButton({required this.controller});
   final UiThemeController controller;
@@ -309,7 +360,7 @@ class _ThemeSheet extends StatelessWidget {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        // Scrolls when the density row and the 15 themes are taller than a phone screen.
+        // Scrolls when the density row and the themes are taller than a phone screen.
         constraints: BoxConstraints(maxWidth: 560, maxHeight: MediaQuery.sizeOf(context).height * 0.9),
         decoration: BoxDecoration(color: t.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(t.radiusLg)), boxShadow: t.shadow3),
         padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, t.space4 + MediaQuery.paddingOf(context).bottom),
@@ -327,17 +378,20 @@ class _ThemeSheet extends StatelessWidget {
             ),
           ),
           const UiText('Theme', variant: UiTextVariant.h4, heading: true),
-          DocGrid(minWidth: 150, minColumns: 2, maxColumns: 3, children: [
-            for (final th in UiThemeName.values)
-              _ThemeTile(
-                theme: th,
-                selected: th == controller.theme,
-                onTap: () {
-                  controller.set(th);
-                  Navigator.of(context).pop();
-                },
-              ),
-          ]),
+          for (final (i, group) in [uiCurrentThemes, uiLegacyThemes].indexed) ...[
+            if (i == 1) const UiText('Legacy', variant: UiTextVariant.label),
+            DocGrid(minWidth: 150, minColumns: 2, maxColumns: 3, children: [
+              for (final th in group)
+                _ThemeTile(
+                  theme: th,
+                  selected: th == controller.theme,
+                  onTap: () {
+                    controller.set(th);
+                    Navigator.of(context).pop();
+                  },
+                ),
+            ]),
+          ],
         ])),
       ),
     );

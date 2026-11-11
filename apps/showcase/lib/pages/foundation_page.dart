@@ -38,9 +38,12 @@ class FoundationPage extends StatelessWidget {
         DocSection(
           name: 'Themes',
           widget: 'UiThemeController',
-          summary: 'Fifteen themes: Winter Dark and Winter Light (the defaults), ten colour palettes, Dark Orange with its own fonts, and Maldives and Maldives Dark, the sea theme by day and by night with Poppins and its own sea backdrops (see Motion & FX). Each tile below renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
-          demo: DocGrid(minWidth: 168, minColumns: 2, children: [
-            for (final th in UiThemeName.values)
+          summary: 'Nineteen current themes: Navy Dark and Navy Light (dark and light, the defaults; also navyDark and navy), Dark Orange with its own fonts, Maldives and Maldives Dark (the sea theme by day and by night, with Poppins and its own sea backdrops), and twelve liquid themes (rugged, glacier, oxblood, graphite, cocoa and violet, each with a dark twin) made for glass over UiLiquidBackdrop (see Motion & FX). The legacy themes below them still work unchanged but are not for new work; winterDark and winterLight are the retired Winter names, now aliases of the Navy themes. Each tile renders in its own theme with UiThemeScope. Tap one to switch the whole app; theme changes animate.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            for (final (i, group) in [uiCurrentThemes, uiLegacyThemes].indexed) ...[
+              if (i == 1) const UiText('Legacy themes', variant: UiTextVariant.h5),
+              DocGrid(minWidth: 168, minColumns: 2, children: [
+            for (final th in group)
               UiThemeScope(
                 theme: th,
                 child: Builder(builder: (context) {
@@ -56,14 +59,18 @@ class FoundationPage extends StatelessWidget {
                   );
                 }),
               ),
+              ]),
+            ],
           ]),
-          code: 'final themes = UiThemeController(theme: UiThemeName.dark);\nUiApp(controller: themes, home: ...);\nthemes.set(UiThemeName.lightTeal);\nthemes.toggle(); // Winter dark <-> light\n\n// A different theme for one part of a page:\nUiThemeScope(theme: UiThemeName.light, child: ...)',
+          code: 'final themes = UiThemeController(theme: UiThemeName.dark);\nUiApp(controller: themes, home: ...);\nthemes.set(UiThemeName.glacier);\nthemes.toggle(); // glacier <-> glacierDark, dark <-> light\n\n// A different theme for one part of a page:\nUiThemeScope(theme: UiThemeName.light, child: ...)',
           api: const [
             ApiRow('set(theme)', 'method', 'Switch the app theme.'),
-            ApiRow('toggle()', 'method', 'Winter dark and light; from any other theme goes to dark.'),
+            ApiRow('toggle()', 'method', 'Day <-> night: dark and light, and every x / xDark pair (navy, maldives, the liquid themes); from any other theme goes to dark.'),
+            ApiRow('uiCurrentThemes / uiLegacyThemes', 'List<UiThemeName>', 'The built-in themes, current (for new work, in picker order) and legacy (still supported).'),
+            ApiRow('isLegacyTheme(name)', 'bool', 'Whether a theme is one of the legacy ones.'),
             ApiRow('setConfig(config)', 'method', 'Change UiConfig (glass, radius, animations, font).'),
           ],
-          shapes: 'enum UiThemeName { dark, light, lightOrange, lightPink, lightTeal, lightPurple,\n  lightPurpleGold, darkPink, darkTeal, darkPurple, goldBlack, goldRed, darkOrange,\n  maldives, maldivesDark }',
+          shapes: 'enum UiThemeName { dark, light, lightOrange, lightPink, lightTeal, lightPurple,\n  lightPurpleGold, darkPink, darkTeal, darkPurple, goldBlack, goldRed, darkOrange,\n  maldives, maldivesDark, navy, navyDark, rugged, ruggedDark, glacier, glacierDark,\n  oxblood, oxbloodDark, graphite, graphiteDark, cocoa, cocoaDark, violet, violetDark,\n  winterDark, winterLight }',
         ),
         DocSection(
           name: 'Density',
