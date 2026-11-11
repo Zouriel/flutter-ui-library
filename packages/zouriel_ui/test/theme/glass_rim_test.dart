@@ -25,8 +25,11 @@ void main() {
       seen++;
       if (!src.contains('UiGlassRim(')) missing.add(rel);
     }
-    expect(seen, greaterThanOrEqualTo(13));
+    expect(seen, greaterThanOrEqualTo(12));
     expect(missing, isEmpty);
+    // Glass buttons keep their variant's fill (no glass tint, as on the web) but draw the rim: UiButton
+    // and UiIconButton.
+    expect(RegExp(r'UiGlassRim\(').allMatches(File('lib/src/button/button.dart').readAsStringSync()).length, 2);
   });
 
   testWidgets('paints a 1px edge and a brighter top band inside the border', (tester) async {
