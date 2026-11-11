@@ -53,7 +53,7 @@ commits a trimmed, non-empty change through `onRename(value, label)`; Escape can
 row focus. The editor disables the row tap/drag target while it is present, so text-editing keys and
 pointer input stay with the field. This mirrors `ui-tree`'s `renamable` and `nodeRename`.
 
-The Angular library (`/home/zouriel/personal/angularUiLib/ui-workspace/projects/ui`, v0.20.0) is the
+The Angular library (`/home/zouriel/personal/uilibraries/angular/projects/ui`, v0.20.0) is the
 source of truth. This repo recreates it for Flutter mobile. `docs/inventory.md` is the per-class
 checklist (generated from the Angular source by `tool/angular_inventory.py`); this file holds the
 decisions and the plan.
@@ -79,7 +79,7 @@ Flutter 3.47 facts that shape the design:
 ## Repo layout
 
 ```
-flutterUiLib/
+flutter/
   pubspec.yaml               # pub workspace root
   packages/zouriel_ui/       # the library (package:zouriel_ui)
     lib/zouriel_ui.dart      # barrel; also one library per area (lib/button.dart ...)

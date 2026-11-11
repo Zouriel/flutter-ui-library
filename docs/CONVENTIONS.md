@@ -1,7 +1,7 @@
 # How to port a component
 
 Read `docs/PORTING.md` first (decisions, toolchain). The Angular source of truth is
-`/home/zouriel/personal/angularUiLib/ui-workspace/projects/ui/<entry>/src/*.ts` (template + styles +
+`/home/zouriel/personal/uilibraries/angular/projects/ui/<entry>/src/*.ts` (template + styles +
 inputs), its spec files, and its docs page `projects/showcase/src/app/pages/*.page.ts` (summaries say
 exactly what each component does). `docs/inventory.md` lists every class to port.
 

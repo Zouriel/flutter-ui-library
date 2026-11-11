@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const [stylesDir, outFile, chrome] = process.argv.slice(2);
-const pw = process.env.PLAYWRIGHT ?? '/home/zouriel/personal/angularUiLib/ui-workspace/node_modules/playwright-core/index.mjs';
+const pw = process.env.PLAYWRIGHT ?? '/home/zouriel/personal/uilibraries/angular/node_modules/playwright-core/index.mjs';
 const { chromium } = await import(pw);
 
 const files = ['tokens.css', 'theme-palettes.css', 'theme-dark-orange.css', 'theme-maldives.css'];
