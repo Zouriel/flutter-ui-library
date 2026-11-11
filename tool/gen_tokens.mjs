@@ -121,6 +121,11 @@ for (const t of KEPT) {
   for (const [n, v] of Object.entries(WINTER_INHERITED)) {
     if (data[t][n] === data['navy-dark'][n]) data[t][n] = v; // inherited from the root, not the theme's own
   }
+  // On the web these themes never set the liquid backdrop's colours (it falls back to bg / secondary /
+  // primary there); leave them unset here too rather than inherit Navy's.
+  for (const n of names.filter((x) => x.startsWith('--ui-liquid-'))) {
+    if (data[t][n] === data['navy-dark'][n]) data[t][n] = null;
+  }
 }
 
 // Compact density (0.45.0): the tokens tokens.css's [data-density="compact"] block changes. They
