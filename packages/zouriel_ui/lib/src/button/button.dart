@@ -336,12 +336,15 @@ class UiButton extends StatelessWidget {
           height: isLink ? null : size.height(t),
           padding: EdgeInsets.symmetric(horizontal: isLink ? 0 : padding ?? padX),
           decoration: BoxDecoration(
-            color: glass && metal == null && !isBrand && !isLink ? t.glassBg : look.fill,
+            // As on the web, where every variant's background rule follows .ui-btn.glass: glass keeps the
+            // variant's own fill (a glass tint under a filled variant's label lost it) and adds the blur
+            // and, on outline buttons, the glass edge.
+            color: look.fill,
             gradient: look.gradient,
             borderRadius: shape,
             border: isBrand || isLink
                 ? null
-                : Border.all(color: glass && metal == null ? t.glassBorder : (look.border ?? (look.fill == null && variant == UiButtonVariant.ghost ? const Color(0x00000000) : look.fill ?? t.border))),
+                : Border.all(color: glass && metal == null && variant == UiButtonVariant.outline ? t.glassBorder : (look.border ?? (look.fill == null && variant == UiButtonVariant.ghost ? const Color(0x00000000) : look.fill ?? t.border))),
             boxShadow: shadows,
           ),
           foregroundDecoration: brandWash
@@ -451,10 +454,11 @@ class UiIconButton extends StatelessWidget {
             width: dim,
             height: dim,
             decoration: BoxDecoration(
-              color: glass ? t.glassBg : (look.fill ?? (v == UiButtonVariant.outline || v == UiButtonVariant.ghost ? null : t.surface)),
+              // Glass keeps the variant's fill, as on the web (see UiButton).
+              color: look.fill ?? (v == UiButtonVariant.outline || v == UiButtonVariant.ghost ? null : t.surface),
               gradient: look.gradient,
               borderRadius: shape,
-              border: Border.all(color: glass ? t.glassBorder : transparentBorder ? const Color(0x00000000) : t.border),
+              border: Border.all(color: glass && v == UiButtonVariant.outline ? t.glassBorder : transparentBorder ? const Color(0x00000000) : t.border),
               boxShadow: s.focused ? t.focusRing : const [],
             ),
             foregroundDecoration: v == UiButtonVariant.brand && (s.hovered || s.pressed)

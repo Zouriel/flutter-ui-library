@@ -6,15 +6,16 @@ void main() {
   test('tokens match the web themes (values resolved from the Angular stylesheets)', () {
     final dark = uiThemeTokens[UiThemeName.dark]!;
     final light = uiThemeTokens[UiThemeName.light]!;
-    expect(dark.bg, const Color(0xff000000));
-    expect(dark.text, const Color(0xffb3cbdc));
-    expect(light.primary, const Color(0xff1b3d59));
+    // Navy: Midnight Navy canvas and Powder Blue ink on dark; Sunflower deepened to a dark gold primary on light.
+    expect(dark.bg, const Color(0xff0f1433));
+    expect(dark.text, const Color(0xffc9d6ff));
+    expect(light.primary, const Color(0xff7a5800));
     expect(uiThemeTokens[UiThemeName.lightTeal]!.textMuted, const Color(0xff365e57));
     expect(dark.space6, 24);
     expect(dark.sizeMd, 30);
     expect(dark.motionBase, const Duration(milliseconds: 200));
     expect(uiThemeTokens[UiThemeName.darkOrange]!.fontDefault, 'Space Grotesk');
-    expect(uiThemeTokens.length, 15);
+    expect(uiThemeTokens.length, 31);
     // The maldives theme and its brand tokens (theme-maldives.css).
     final m = uiThemeTokens[UiThemeName.maldives]!;
     expect(m.bg, const Color(0xfff3f8fb));
