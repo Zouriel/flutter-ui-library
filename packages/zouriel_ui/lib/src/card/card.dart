@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
 import '../core/types.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// `ui-card`: a surface with optional [header] and [footer] (the web `[card-header]` /
@@ -51,7 +52,12 @@ class UiCard extends StatelessWidget {
           border: Border.all(color: isGlass ? t.glassBorder : (onTap != null && lifted ? t.borderStrong : t.border)),
           boxShadow: [...(onTap != null && lifted ? t.shadow2 : t.shadow1), if (s.focused) ...t.focusRing],
         ),
-        child: ClipRRect(
+        // The rim inside the border, so it lifts with the card.
+        child: UiGlassRim(
+          enabled: isGlass,
+          inset: 0,
+          borderRadius: BorderRadius.circular(r > 1 ? r - 1 : 0),
+          child: ClipRRect(
           borderRadius: BorderRadius.circular(r),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -62,6 +68,7 @@ class UiCard extends StatelessWidget {
               if (footer != null) _Section(pad: pad, border: Border(top: BorderSide(color: t.border)), child: footer!),
             ],
           ),
+        ),
         ),
       );
       if (isGlass) {

@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../feedback/spinner.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// Where a button sits in a joined row ([UiButtonGroup], [UiSplitButton]): only the outer corners
@@ -68,7 +69,8 @@ _Look _look(UiButtonVariant v, UiTokens t, UiStates s) {
       return _Look(fill: hover ? Color.lerp(t.accent, t.accentContrast, 0.12) : t.accent, fg: t.accentContrast);
     case UiButtonVariant.brand:
       final g = t.gradientBrand.toGradient();
-      return _Look(gradient: g, fg: t.primaryContrast, shadow: t.glowAmber);
+      // The label colour a theme pairs with its brand gradient (the liquid themes), else primary-contrast.
+      return _Look(gradient: g, fg: t.gradientBrandContrast ?? t.primaryContrast, shadow: t.glowAmber);
   }
 }
 
@@ -343,7 +345,7 @@ class UiButton extends StatelessWidget {
             boxShadow: shadows,
           ),
           foregroundDecoration: brandWash
-              ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
+              ? BoxDecoration(color: (t.gradientBrandContrast ?? t.primaryContrast).withValues(alpha: 0.12), borderRadius: shape)
               : null,
           clipBehavior: sweep ? Clip.antiAlias : Clip.none,
           child: sweep
@@ -360,6 +362,7 @@ class UiButton extends StatelessWidget {
               : Center(widthFactor: 1, heightFactor: 1, child: row),
         );
         if (glass && metal == null && !isBrand && !isLink) {
+          box = UiGlassRim(borderRadius: shape, child: box);
           box = ClipRRect(
             borderRadius: shape,
             child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: box),
@@ -439,7 +442,10 @@ class UiIconButton extends StatelessWidget {
         return _withBadge(AnimatedOpacity(
           opacity: s.disabled ? 0.5 : 1,
           duration: t.motionBase,
-          child: AnimatedContainer(
+          child: UiGlassRim(
+            enabled: glass,
+            borderRadius: shape,
+            child: AnimatedContainer(
             duration: context.uiAnimate ? t.motionBase : Duration.zero,
             curve: t.easeStandard,
             width: dim,
@@ -452,9 +458,10 @@ class UiIconButton extends StatelessWidget {
               boxShadow: s.focused ? t.focusRing : const [],
             ),
             foregroundDecoration: v == UiButtonVariant.brand && (s.hovered || s.pressed)
-                ? BoxDecoration(color: t.primaryContrast.withValues(alpha: 0.12), borderRadius: shape)
+                ? BoxDecoration(color: (t.gradientBrandContrast ?? t.primaryContrast).withValues(alpha: 0.12), borderRadius: shape)
                 : null,
             child: Center(child: IconTheme.merge(data: IconThemeData(color: iconColor != null ? (s.hovered || s.pressed ? look.fg : iconColor!) : _neutral(v) ? (t.icon ?? look.fg) : look.fg, size: iconSize), child: icon)),
+          ),
           ),
         ), badge, badgeTone);
       },

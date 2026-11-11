@@ -24,6 +24,7 @@ export 'src/plans/plans.dart';
 export 'src/text/text.dart';
 export 'src/theme/app.dart';
 export 'src/theme/glass_sheet.dart';
+export 'src/theme/glass_rim.dart';
 export 'src/theme/theme.dart';
 
 // Areas ported in parallel; each file exports its area's widgets.

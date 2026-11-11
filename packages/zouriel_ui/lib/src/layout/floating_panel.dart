@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../theme/glass_sheet.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// Which edge of its Stack a [UiFloatingPanel] floats over.
@@ -86,6 +87,7 @@ class UiFloatingPanel extends StatelessWidget {
       ),
     );
     if (isGlass) {
+      surface = UiGlassRim(borderRadius: BorderRadius.circular(r), child: surface);
       surface = UiOutsetShadow(
         shadows: t.shadow3,
         borderRadius: BorderRadius.circular(r),

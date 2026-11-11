@@ -12,6 +12,7 @@ import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/modal.dart';
 import '../dialog/route.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// One thing the palette can run, the web `UiCommand`.
@@ -276,6 +277,7 @@ class _UiCommandPaletteState extends State<UiCommandPalette> {
       ),
     );
     if (isGlass) {
+      panel = UiGlassRim(borderRadius: BorderRadius.circular(r), child: panel);
       panel = ClipRRect(
         borderRadius: BorderRadius.circular(r),
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur, sigmaY: t.glassBlur), child: panel),

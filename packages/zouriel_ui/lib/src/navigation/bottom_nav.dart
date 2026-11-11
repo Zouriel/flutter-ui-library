@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/icon.dart';
 import '../core/interactive.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// One destination in a [UiBottomNav].
@@ -78,6 +79,7 @@ class UiBottomNav extends StatelessWidget {
       ),
     );
     if (isGlass) {
+      bar = UiGlassRim(borderRadius: BorderRadius.circular(r), child: bar);
       bar = ClipRRect(
         borderRadius: BorderRadius.circular(r),
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: bar),

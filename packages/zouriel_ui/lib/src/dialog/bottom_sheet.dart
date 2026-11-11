@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import '../core/interactive.dart';
 import '../overlay/backdrop.dart';
 import '../theme/glass_sheet.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 
@@ -818,9 +819,12 @@ class UiBottomSheetState extends State<UiBottomSheet> {
         borderRadius: radius,
         child: BackdropFilter(
           filter: uiGlassSheetFilter(t, strength: widget.glassStrength),
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: uiGlassSheetTint(t, strength: widget.glassStrength), borderRadius: radius, border: Border.all(color: t.glassBorder)),
-            child: child,
+          child: UiGlassRim(
+            borderRadius: radius,
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: uiGlassSheetTint(t, strength: widget.glassStrength), borderRadius: radius, border: Border.all(color: t.glassBorder)),
+              child: child,
+            ),
           ),
         ),
       ),

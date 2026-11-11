@@ -9,6 +9,7 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../theme/app.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 import 'route.dart';
 
@@ -146,6 +147,7 @@ class UiModal extends StatelessWidget {
       ),
     );
     if (isGlass) {
+      panel = UiGlassRim(borderRadius: BorderRadius.circular(r), child: panel);
       panel = ClipRRect(
         borderRadius: BorderRadius.circular(r),
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur, sigmaY: t.glassBlur), child: panel),

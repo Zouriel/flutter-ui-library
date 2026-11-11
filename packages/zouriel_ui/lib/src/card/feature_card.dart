@@ -6,6 +6,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 import 'feature_colors.dart';
 
@@ -364,6 +365,7 @@ class UiFeatureCard extends StatelessWidget {
             : inner,
       );
       if (isGlass) {
+        card = UiGlassRim(borderRadius: BorderRadius.circular(r), child: card);
         card = ClipRRect(
           borderRadius: BorderRadius.circular(r),
           child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: card),

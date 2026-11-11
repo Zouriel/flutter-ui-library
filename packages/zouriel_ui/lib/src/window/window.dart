@@ -8,6 +8,7 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../core/icon.dart';
 import '../core/interactive.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 import 'window_manager.dart';
 
@@ -550,6 +551,7 @@ class UiWindowState extends State<UiWindow> with SingleTickerProviderStateMixin 
       ),
     );
     if (glass) {
+      frame = UiGlassRim(borderRadius: radius, child: frame);
       frame = ClipRRect(
         borderRadius: radius,
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: frame),

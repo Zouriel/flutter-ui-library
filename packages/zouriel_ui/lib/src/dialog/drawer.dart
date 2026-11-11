@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../layout/pinned_edges.dart';
 import '../theme/app.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 import 'modal.dart';
 import 'route.dart';
@@ -297,6 +298,7 @@ class UiDrawer extends StatelessWidget {
       ),
     );
     if (isGlass) {
+      panel = UiGlassRim(borderRadius: shape, child: panel);
       panel = ClipRRect(
         borderRadius: shape,
         child: BackdropFilter(

@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// Which way a [UiStatCard] delta went.
@@ -67,6 +68,7 @@ class UiStatCard extends StatelessWidget {
       ),
     );
     if (isGlass) {
+      card = UiGlassRim(borderRadius: BorderRadius.circular(r), child: card);
       card = ClipRRect(
         borderRadius: BorderRadius.circular(r),
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: card),

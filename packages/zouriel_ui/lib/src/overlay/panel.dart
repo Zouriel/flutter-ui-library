@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// The raised surface that menus, popovers and context menus float on: the web `.ui-menu` /
@@ -47,6 +48,7 @@ class UiOverlayPanel extends StatelessWidget {
       child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
     );
     if (isGlass) {
+      box = UiGlassRim(borderRadius: BorderRadius.circular(r), child: box);
       box = ClipRRect(
         borderRadius: BorderRadius.circular(r),
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: box),

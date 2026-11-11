@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
+import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// `ui-navbar`: the top bar of an app or page (an app bar): [brand] on the left, [links] in the
@@ -111,6 +112,7 @@ class UiNavbar extends StatelessWidget {
       child: content,
     );
     if (isGlass) {
+      bar = UiGlassRim(borderRadius: BorderRadius.circular(r), child: bar);
       bar = ClipRRect(
         borderRadius: BorderRadius.circular(r),
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: bar),
