@@ -24,7 +24,7 @@ class UiPosterMark {
 /// One tile of a [UiPosterGrid] (the web `UiPoster`).
 @immutable
 class UiPoster {
-  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details});
+  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner});
 
   /// The picture. Without one (or when it fails to load) the tile shows [colors] as a gradient.
   final ImageProvider? image;
@@ -40,6 +40,12 @@ class UiPoster {
   /// `uiPosterDetails` template). Keep it short (a title and a line or two, with ellipsis) and
   /// non-interactive: the whole tile is the target.
   final Widget? details;
+
+  /// Drawn over the top-start corner of the picture (top-left in a left-to-right app), e.g. a
+  /// venue's [UiAvatarTag] at size xs (the web's `uiPosterCorner` template). It sits inside the
+  /// picture with a `space2` inset, above the picture and the details, never grows wider than the
+  /// picture (less the room for the [mark]'s dot) and takes no taps: the whole tile is the target.
+  final Widget? corner;
 }
 
 /// Which part of a picture survives a poster's crop.
@@ -63,7 +69,8 @@ Gradient uiPosterFallback(BuildContext context, List<Color>? colors) {
 /// [UiPoster.details] carries them over the bottom of its picture on a compact [UiScrim] that fades
 /// from clear to dark, so the words stay readable on any picture; without details a tile is the
 /// picture alone, named by its semantic label. A tile with no picture shows a gradient, and a small dot
-/// ([UiPoster.mark]) can flag it, named for screen readers. Tapping a tile calls [onSelect] with its
+/// ([UiPoster.mark]) can flag it, named for screen readers. [UiPoster.corner] draws something small
+/// (a [UiAvatarTag]) over the picture's top-start corner. Tapping a tile calls [onSelect] with its
 /// index. It doesn't scroll: put it in a scroll view. (The web's `href` link tiles have no meaning
 /// here: a tap is the only way to open a tile.)
 class UiPosterGrid extends StatelessWidget {
@@ -152,6 +159,15 @@ class _Tile extends StatelessWidget {
                     if (mark != null) Semantics(label: mark.label, child: const SizedBox.shrink()),
                   ]),
                 ),
+              ),
+            if (poster.corner case final corner?)
+              // Inside the picture: start and end inset so it can never grow past it (nor over the dot).
+              PositionedDirectional(
+                key: const ValueKey('ui-poster-corner'),
+                top: t.space2,
+                start: t.space2,
+                end: mark != null ? t.space2 * 3 + 10 : t.space2,
+                child: IgnorePointer(child: Align(alignment: AlignmentDirectional.topStart, child: corner)),
               ),
           ]),
         ),

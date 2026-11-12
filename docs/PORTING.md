@@ -1270,3 +1270,13 @@ name is a `Flexible` single-line `Text` with an ellipsis inside a `Row(mainAxisS
 a short name and ellipsises within whatever width the parent gives. Read as one image node
 (`Semantics(image: true, excludeSemantics: true)`), the web's `role="img"` with `aria-label`.
 
+**Poster corner (0.74.0).** Something small over each poster's top-start corner (owner: a venue's
+avatar tag belongs on the picture's top-left, not in the details). Web: a
+`ng-template[uiPosterCorner]` (context: poster and index, as `uiPosterDetails`) in a `.corner` span
+at `top`/`inset-inline-start: space2`, `max-width: calc(100% - 2 * space2)` (less 10px + space2 more
+when the tile has a `mark`, so it stops before the dot), `pointer-events: none`, and the tile gets
+`isolation: isolate` so its `z-index: 1` stays inside the tile. Flutter: `UiPoster.corner`, a
+`PositionedDirectional(top, start, end)` with the same insets wrapping
+`IgnorePointer(Align(topStart))`, the last child of the tile's Stack so it paints above the picture
+and the details. Both sit inside the tile's clip and focus ring, and are read with the tile when it
+has details (named by its words); without details the tile's label stands alone, as before.

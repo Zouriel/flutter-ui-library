@@ -115,6 +115,88 @@ void main() {
       handle.dispose();
     });
 
+    group('corner', () {
+      const long = 'Coco Palm Dhuni Kolhu Maldives Resort and Spa, the long name';
+      List<UiPoster> withCorner() => [
+            const UiPoster(label: 'Aisha and Ali', details: Text('Aisha and Ali'), corner: UiAvatarTag(name: long, prefix: 'At', size: UiAvatarTagSize.xs)),
+            const UiPoster(label: 'Eid party', details: Text('Eid party'), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'), corner: UiAvatarTag(name: long, size: UiAvatarTagSize.xs)),
+            const UiPoster(label: 'Birthday', details: Text('Birthday'), corner: UiAvatarTag(name: 'Bandos', size: UiAvatarTagSize.xs)),
+          ];
+      Finder tiles() => find.descendant(of: find.byType(UiPosterGrid), matching: find.byType(AspectRatio));
+
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        testWidgets('sits inside the picture at its top-start corner, a long name ellipsized, at 360 wide ($dir)', (tester) async {
+          await pumpUi(tester, Directionality(textDirection: dir, child: SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withCorner(), onSelect: (_) {})))), size: const Size(360, 800));
+          final t = tester.element(find.byType(UiPosterGrid)).ui;
+          for (var i = 0; i < 3; i++) {
+            final pic = tester.getRect(tiles().at(i));
+            final tag = tester.getRect(find.descendant(of: tiles().at(i), matching: find.byType(UiAvatarTag)));
+            expect(tag.top, closeTo(pic.top + t.space2, 0.5), reason: 'tile $i top');
+            if (dir == TextDirection.ltr) {
+              expect(tag.left, closeTo(pic.left + t.space2, 0.5), reason: 'tile $i start');
+            } else {
+              expect(tag.right, closeTo(pic.right - t.space2, 0.5), reason: 'tile $i start (rtl)');
+            }
+            expect(tag.left, greaterThanOrEqualTo(pic.left + t.space2 - 0.5));
+            expect(tag.right, lessThanOrEqualTo(pic.right - t.space2 + 0.5));
+            expect(tag.bottom, lessThan(pic.center.dy));
+          }
+          // A long name fills the room it has and no more; with a mark it stops short of the dot.
+          final pic0 = tester.getRect(tiles().at(0));
+          expect(tester.getRect(find.descendant(of: tiles().at(0), matching: find.byType(UiAvatarTag))).width, closeTo(pic0.width - 2 * t.space2, 0.5));
+          final tag1 = tester.getRect(find.descendant(of: tiles().at(1), matching: find.byType(UiAvatarTag)));
+          final dot = tester.getRect(find.descendant(of: tiles().at(1), matching: find.byType(UiPosterDot)));
+          expect(tag1.overlaps(dot.inflate(2)), isFalse);
+          // A short name keeps its own width.
+          expect(tester.getRect(find.descendant(of: tiles().at(2), matching: find.byType(UiAvatarTag))).width, lessThan(pic0.width / 2));
+          expect(tester.takeException(), isNull);
+        });
+      }
+
+      testWidgets('paints above the picture and the details', (tester) async {
+        await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withCorner(), onSelect: (_) {}))), size: const Size(360, 800));
+        final stack = tester.widget<Stack>(find.descendant(of: tiles().first, matching: find.byType(Stack)).first);
+        expect((stack.children.last.key), const ValueKey('ui-poster-corner'));
+      });
+
+      testWidgets('golden: corner tags on light, dark and fallback posters', (tester) async {
+        final light = await solid(tester, const Color(0xFFFFFFFF));
+        final dark = await solid(tester, const Color(0xFF101418));
+        await tester.runAsync(() async {
+          await pumpUi(tester, const SizedBox());
+          await precacheImage(light, tester.element(find.byType(UiApp)));
+          await precacheImage(dark, tester.element(find.byType(UiApp)));
+        });
+        Widget title(BuildContext c, String a) => Text(a, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.uiText.label.copyWith(color: c.ui.mediaOnScrim));
+        await expectThemedGolden(tester, 'poster_grid_corner', (c) => UiPosterGrid(onSelect: (_) {}, posters: [
+              UiPoster(label: 'Aisha and Ali', image: light, mark: const UiPosterMark(tone: UiStatus.primary, label: 'New'), details: title(c, 'Aisha and Ali'),
+                  corner: const UiAvatarTag(name: long, prefix: 'At', size: UiAvatarTagSize.xs)),
+              UiPoster(label: 'Eid party', image: dark, details: title(c, 'Eid party'), corner: const UiAvatarTag(name: 'Bandos', size: UiAvatarTagSize.xs)),
+              UiPoster(label: 'Birthday', details: title(c, 'Birthday'), corner: const UiAvatarTag(name: long, size: UiAvatarTagSize.xs)),
+              UiPoster(label: 'Dinner', image: light, details: title(c, 'Dinner')),
+            ]), width: 360, height: 560);
+      });
+
+      testWidgets('is absent when the poster has none', (tester) async {
+        await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withDetails(), onSelect: (_) {}))), size: const Size(360, 800));
+        expect(find.byKey(const ValueKey('ui-poster-corner')), findsNothing);
+        expect(find.byType(UiAvatarTag), findsNothing);
+      });
+
+      testWidgets('a tap on the corner still selects the tile, and the corner is read with it', (tester) async {
+        final handle = tester.ensureSemantics();
+        final picked = <int>[];
+        await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withCorner(), onSelect: picked.add))), size: const Size(360, 800));
+        // The corner takes no pointer of its own (IgnorePointer): the tap lands on the tile under it.
+        await tester.tapAt(tester.getCenter(find.descendant(of: tiles().at(2), matching: find.byType(UiAvatarTag))));
+        await tester.tapAt(tester.getCenter(find.descendant(of: tiles().at(0), matching: find.byType(UiAvatarTag))));
+        expect(picked, [2, 0]);
+        final label = tester.getSemantics(find.descendant(of: tiles().at(0), matching: find.byType(UiInteractive)).first).getSemanticsData().label;
+        expect(label, contains('At $long'));
+        handle.dispose();
+      });
+    });
+
     testWidgets('a compact scrim reaches 60% at space8', (tester) async {
       await pumpUi(tester, const SizedBox(width: 200, child: UiScrim(compact: true, child: SizedBox(height: 40))));
       final p = tester.widget<CustomPaint>(find.descendant(of: find.byType(UiScrim), matching: find.byType(CustomPaint)).first).painter!;
