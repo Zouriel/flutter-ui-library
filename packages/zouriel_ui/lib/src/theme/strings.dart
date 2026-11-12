@@ -208,6 +208,7 @@ class UiStrings {
     this.filterShow = 'Show {n}',
     this.filterDone = 'Done',
     this.filterAll = 'All',
+    this.refresh = 'Refresh',
     this.locale = '',
     this.months = const [],
     this.monthsShort = const [],
@@ -416,6 +417,7 @@ class UiStrings {
     filterShow: '{n} ދައްކާ',
     filterDone: 'ނިމުނީ',
     filterAll: 'ހުރިހާ',
+    refresh: 'ރިފްރެޝް ކުރޭ',
     locale: 'dv',
     months: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
     monthsShort: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
@@ -1003,6 +1005,9 @@ class UiStrings {
   /// Filter: a section's "all" row when the section gives no allLabel.
   final String filterAll;
 
+  /// Pull to refresh: the screen reader action (0.72.0, Flutter only).
+  final String refresh;
+
   /// The locale for date names and formats, e.g. 'dv'; empty uses the app's locale.
   final String locale;
 
@@ -1215,6 +1220,7 @@ class UiStrings {
     String? filterShow,
     String? filterDone,
     String? filterAll,
+    String? refresh,
     String? locale,
     List<String>? months,
     List<String>? monthsShort,
@@ -1418,6 +1424,7 @@ class UiStrings {
         filterShow: filterShow ?? this.filterShow,
         filterDone: filterDone ?? this.filterDone,
         filterAll: filterAll ?? this.filterAll,
+        refresh: refresh ?? this.refresh,
         locale: locale ?? this.locale,
         months: months ?? this.months,
         monthsShort: monthsShort ?? this.monthsShort,
@@ -1623,6 +1630,7 @@ class UiStrings {
         'filterShow': filterShow,
         'filterDone': filterDone,
         'filterAll': filterAll,
+        'refresh': refresh,
       };
 
   @override

@@ -11,6 +11,7 @@ export '../behaviors/gestures.dart';
 export '../behaviors/intersect.dart';
 export '../behaviors/misc.dart';
 export '../behaviors/pinch.dart';
+export '../behaviors/pull_to_refresh.dart' show UiPullToRefresh;
 export '../behaviors/scrolling.dart';
 export '../behaviors/swipe.dart';
 export '../media/carousel.dart';

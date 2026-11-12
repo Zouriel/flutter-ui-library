@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatf
 import 'package:flutter/gestures.dart' show HorizontalDragGestureRecognizer;
 import 'package:flutter/widgets.dart';
 
+import '../behaviors/pull_to_refresh.dart' show UiShutterOverscroll;
 import 'theme.dart';
 
 /// The app root for a @zouriel/ui app: theme, text, navigation, focus and scrolling defaults.
@@ -359,8 +360,34 @@ class _UiSwipeBackState extends State<_UiSwipeBack> {
 
 /// Platform-appropriate scrolling (bouncing on iOS, clamping with stretch on Android) without the
 /// Material glow, and mouse-drag scrolling for the web build.
+///
+/// With `UiConfig(overscroll: UiOverscrollStyle.shutter)` (0.72.0) vertical scroll views show the
+/// shutter ball past their ends instead, on every platform; horizontal ones keep the platform's.
 class UiScrollBehavior extends ScrollBehavior {
   const UiScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    final style = UiTheme.of(context).config.overscroll;
+    if (style == UiOverscrollStyle.shutter && axisDirectionToAxis(details.direction) == Axis.vertical) {
+      return UiShutterOverscroll(axisDirection: details.direction, child: child);
+    }
+    switch (getPlatform(context)) {
+      // The stretch, as this comment always said (before 0.72.0 Android fell back to the glow).
+      case TargetPlatform.android:
+      case TargetPlatform.fuchsia:
+        return StretchingOverscrollIndicator(
+          axisDirection: details.direction,
+          clipBehavior: details.decorationClipBehavior ?? Clip.hardEdge,
+          child: child,
+        );
+      case TargetPlatform.iOS:
+      case TargetPlatform.linux:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+        return child;
+    }
+  }
 
   @override
   Set<PointerDeviceKind> get dragDevices => {

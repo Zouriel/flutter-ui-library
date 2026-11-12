@@ -1242,3 +1242,22 @@ does, in the liquid themes).
 **Brand label.** `UiTokens.gradientBrandContrast` (the web `--ui-gradient-brand-contrast`) labels brand
 buttons and their hover wash when a theme sets it, else `primaryContrast`.
 
+**Shutter loader (0.72.0).** Drawn in the 10-unit box of the web SVG and scaled to `size`, so the
+stroke widths (ring 1.1, blades 0.75) scale too. One `AnimationController` loops 2.1 s; the blade
+distance is computed per frame from the same burst formula as the web (`uiShutterClosedAt`). Under
+`context.uiAnimate == false` the blades stay open and the whole mark fades 1 -> 0.55 -> 1 through a
+saveLayer (so joins don't darken), the web's opacity pulse. `UiSpinner` is now a stateless switch:
+with `UiConfig.spinner == shutter` it returns a `UiShutterLoader` with the same size, colour, label
+and decorative; `strokeWidth` applies to the ring only.
+
+**Overscroll and pull to refresh (0.72.0, Flutter only).** Both read scroll notifications, never a
+gesture recognizer, so nothing competes with the content's gestures. The pull is the finger's travel
+past an end: `OverscrollNotification.dragDetails` on clamping physics, `ScrollUpdateNotification`
+while the position is past its ends on bouncing physics; flings and their bounces don't count. The
+ball's drop is `110 * (1 - exp(-pull / 70))`; it springs back over 300 ms (instantly with motion off).
+`UiShutterOverscroll` asks above with an `OverscrollIndicatorNotification`, like the platform
+indicators, so `UiPullToRefresh` disallows the leading one and only one ball shows. The refresh starts
+when the pull crosses the threshold (iOS-style, while the finger is still down), not on release; the
+same drag can't start a second. With `UiOverscrollStyle.platform`, Android now gets the
+`StretchingOverscrollIndicator` the UiScrollBehavior comment always promised (it fell back to the
+glow before). The "Refresh" semantics action uses a new `UiStrings.refresh` key (Flutter only).
