@@ -164,13 +164,15 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Poster grid',
           widget: 'UiPosterGrid',
-          summary: "One grid of same-shape picture tiles (ratio): 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A poster's details are drawn on its tile over the bottom of the picture on a compact UiScrim that fades from clear to dark, so the words stay readable on any picture; keep them short and non-interactive, since the whole tile is the target. Without details a tile is the picture alone, named by its label. No picture, or one that fails to load, shows a gradient of its colors (or the theme's primary and accent). A small dot (mark) can flag a tile; screen readers hear its label. It doesn't scroll, so put it in a scroll view.",
+          summary: "One grid of same-shape picture tiles (ratio): 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A poster's details are drawn on its tile over the bottom of the picture on a compact UiScrim that fades from clear to dark, so the words stay readable on any picture; keep them short and non-interactive, since the whole tile is the target. Without details a tile is the picture alone, named by its label. No picture, or one that fails to load, shows a gradient of its colors (or the theme's primary and accent). A small dot (mark) can flag a tile; screen readers hear its label. A poster's corner draws something small, such as a venue's UiAvatarTag at size xs, over its picture's top-start corner (top-left in a left-to-right app): inset by space2, above the picture, never wider than it (nor over the dot), and it takes no taps, so the whole tile stays the target. The Avatar tag demo shows it. It doesn't scroll, so put it in a scroll view.",
           demo: const _PosterDemo(),
           code: "UiPosterGrid(\n  focus: UiPosterFocus.top,\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'),\n    details: Text('Aisha and Ali', maxLines: 1, overflow: TextOverflow.ellipsis))],\n  onSelect: (i) => openEvent(i),\n)",
           api: const [
             ApiRow('posters', 'List<UiPoster>', 'The tiles: picture, semantic label, fallback colours, optional dot.'),
             ApiRow('ratio', 'double', 'Width / height of every tile.', def: '0.75'),
             ApiRow('focus', 'UiPosterFocus', "Which part of a picture survives the crop; top keeps a poster's heading.", def: 'center'),
+            ApiRow('UiPoster.details', 'Widget?', 'Drawn over the bottom of the picture on a compact scrim.'),
+            ApiRow('UiPoster.corner', 'Widget?', "Something small (a UiAvatarTag, size xs) over the picture's top-start corner, inside it with a space2 inset; no taps of its own. 0.74.0."),
           ],
           callbacks: const [ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.')],
           shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details})\nUiPosterMark({required UiStatus tone, required String label})',
@@ -252,7 +254,7 @@ class _MediaPageState extends State<MediaPage> {
           name: 'Avatar tag',
           widget: 'UiAvatarTag',
           summary: 'A tiny round picture and a name in small text, for a venue or a person on the corner of an album tile or a feed post. The picture is decorative; without one, or when it fails to load, the circle shows the name\'s first letter on the primary colour. A long name ends in an ellipsis inside the width the tag is given; it never grows past it, so give the corner a width (Positioned with start and end, or a ConstrainedBox). The overlay variant (the default) is the dark see-through pill of UiLikeCount, readable on any picture, white included; with glass (the theme\'s glass config by default) it also blurs the photo behind it and lights its rim. The plain variant sits on an ordinary surface. Size xs (16dp picture) is for a small tile\'s corner, sm (20dp) for a post. Read as prefix + name ("At Coco Palm"); it takes no tap of its own.',
-          code: "Stack(fit: StackFit.expand, children: [\n  Image(image: album.cover, fit: BoxFit.cover),\n  PositionedDirectional(\n    top: 4, start: 4, end: 4,\n    child: Align(\n      alignment: AlignmentDirectional.centerStart,\n      child: UiAvatarTag(name: venue.name, image: NetworkImage(venue.logo), prefix: 'At', size: UiAvatarTagSize.xs),\n    ),\n  ),\n])\nUiAvatarTag(name: venue.name, image: logo, prefix: 'At', variant: UiAvatarTagVariant.plain)",
+          code: "UiPosterGrid(\n  posters: [UiPoster(\n    label: album.name,\n    image: NetworkImage(album.cover),\n    details: Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis),\n    // Over the picture's top-left corner, inside it\n    corner: UiAvatarTag(name: venue.name, image: NetworkImage(venue.logo), prefix: 'At', size: UiAvatarTagSize.xs),\n  )],\n  onSelect: (i) => openAlbum(i),\n)\nUiAvatarTag(name: venue.name, image: logo, prefix: 'At', variant: UiAvatarTagVariant.plain)",
           api: const [
             ApiRow('name', 'String', 'The name shown, ellipsised when long; its first letter is the fallback picture.'),
             ApiRow('image', 'ImageProvider?', 'The picture (the web\'s src), decorative. Missing or failing: the first letter.'),
@@ -822,8 +824,10 @@ class AvatarTagDemo extends StatelessWidget {
     ('Coco Palm', DemoArt(Color(0xFF3D5AFE), Color(0xFFE5484D))),
     ('The Sunset Ballroom at Kurumba Maldives Resort', DemoArt(Color(0xFFF7F3EA), Color(0xFFFFFFFF), sun: -1)),
     ('Bandos Hall', DemoArt(Color(0xFF2FAA6E), Color(0xFFD9A521), sun: 0.7)),
-    ('Dharubaaruge', DemoArt(Color(0xFF7A4FA0), Color(0xFF99D8E2), sun: 0.2)),
+    ('Dharubaaruge', null),
   ];
+  /// The events the albums belong to, as the poster grid's tiles name them (the web demo's posters).
+  static const events = ['Aisha and Ali', 'Hawwa turns 30', 'Eid get-together', 'Office dinner'];
   static const logo = DemoArt(Color(0xFF1F6F8B), Color(0xFF66C2A5), width: 64, height: 64, sun: -1);
   static const logo2 = DemoArt(Color(0xFFB34A3C), Color(0xFFF2E1C2), width: 64, height: 64, sun: -1);
 
@@ -842,24 +846,22 @@ class AvatarTagDemo extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 390),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
-          LayoutBuilder(builder: (context, box) {
-            final size = (box.maxWidth - t.space2) / 2;
-            return Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+          UiPosterGrid(
+            ratio: 1,
+            focus: UiPosterFocus.top,
+            posters: [
               for (var i = 0; i < albums.length; i++)
-                SizedBox(
-                  key: ValueKey('avatar-tag-tile-$i'),
-                  width: size,
-                  height: size,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(t.radius),
-                    child: Stack(fit: StackFit.expand, children: [
-                      Image(image: albums[i].$2, fit: BoxFit.cover, excludeFromSemantics: true),
-                      corner(UiAvatarTag(name: albums[i].$1, image: logos[i], prefix: 'At', size: UiAvatarTagSize.xs)),
-                    ]),
-                  ),
+                UiPoster(
+                  label: events[i],
+                  image: albums[i].$2,
+                  colors: albums[i].$2 == null ? const [Color(0xFF5B2A86), Color(0xFFE5484D)] : null,
+                  mark: i == 0 ? const UiPosterMark(tone: UiStatus.primary, label: 'New') : null,
+                  details: Text(events[i], maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(color: t.mediaOnScrim)),
+                  corner: UiAvatarTag(key: ValueKey('avatar-tag-corner-$i'), name: albums[i].$1, image: logos[i], prefix: 'At', size: UiAvatarTagSize.xs),
                 ),
-            ]);
-          }),
+            ],
+            onSelect: (_) {},
+          ),
           DecoratedBox(
             decoration: BoxDecoration(
               color: t.surface,

@@ -1323,8 +1323,8 @@ File: `media/src/masonry-grid.ts`
 - function `uiMasonryLayout`, `uiMasonryHeight`
 ### UiPosterGrid (component, `ui-poster-grid`)
 File: `media/src/poster-grid.ts`  
-`ui-poster-grid` — a grid of same-shape picture tiles, 2/3/4/5 columns by the grid's own width (544/992/1280), with each poster's details (a `uiPosterDetails` template; Flutter `UiPoster.details`) over the bottom of its picture on a compact scrim, link tiles (`href`, `handleClicks`; web only), a gradient fallback, and an optional dot (`mark`) named for screen readers.  
-- Inputs: `posters`: UiPoster[] = []; `ratio` = 0.75; `focus`: 'top' | 'center' = 'center'; `handleClicks` = false; content: `ng-template[uiPosterDetails]`
+`ui-poster-grid` — a grid of same-shape picture tiles, 2/3/4/5 columns by the grid's own width (544/992/1280), with each poster's details (a `uiPosterDetails` template; Flutter `UiPoster.details`) over the bottom of its picture on a compact scrim, something small over each picture's top-start corner (a `uiPosterCorner` template; Flutter `UiPoster.corner`, 0.74.0), link tiles (`href`, `handleClicks`; web only), a gradient fallback, and an optional dot (`mark`) named for screen readers.  
+- Inputs: `posters`: UiPoster[] = []; `ratio` = 0.75; `focus`: 'top' | 'center' = 'center'; `handleClicks` = false; content: `ng-template[uiPosterDetails]`, `ng-template[uiPosterCorner]`
 - Outputs: `select`: number
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
