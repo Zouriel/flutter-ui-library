@@ -249,6 +249,21 @@ class _MediaPageState extends State<MediaPage> {
           demo: const _LikeDemo(),
         ),
         DocSection(
+          name: 'Avatar tag',
+          widget: 'UiAvatarTag',
+          summary: 'A tiny round picture and a name in small text, for a venue or a person on the corner of an album tile or a feed post. The picture is decorative; without one, or when it fails to load, the circle shows the name\'s first letter on the primary colour. A long name ends in an ellipsis inside the width the tag is given; it never grows past it, so give the corner a width (Positioned with start and end, or a ConstrainedBox). The overlay variant (the default) is the dark see-through pill of UiLikeCount, readable on any picture, white included; with glass (the theme\'s glass config by default) it also blurs the photo behind it and lights its rim. The plain variant sits on an ordinary surface. Size xs (16dp picture) is for a small tile\'s corner, sm (20dp) for a post. Read as prefix + name ("At Coco Palm"); it takes no tap of its own.',
+          code: "Stack(fit: StackFit.expand, children: [\n  Image(image: album.cover, fit: BoxFit.cover),\n  PositionedDirectional(\n    top: 4, start: 4, end: 4,\n    child: Align(\n      alignment: AlignmentDirectional.centerStart,\n      child: UiAvatarTag(name: venue.name, image: NetworkImage(venue.logo), prefix: 'At', size: UiAvatarTagSize.xs),\n    ),\n  ),\n])\nUiAvatarTag(name: venue.name, image: logo, prefix: 'At', variant: UiAvatarTagVariant.plain)",
+          api: const [
+            ApiRow('name', 'String', 'The name shown, ellipsised when long; its first letter is the fallback picture.'),
+            ApiRow('image', 'ImageProvider?', 'The picture (the web\'s src), decorative. Missing or failing: the first letter.'),
+            ApiRow('prefix', 'String?', 'Words read before the name, e.g. "At" for "At Coco Palm". Not shown.'),
+            ApiRow('variant', 'UiAvatarTagVariant', 'overlay: dark see-through pill for photos; plain: for a normal surface.', def: 'overlay'),
+            ApiRow('size', 'UiAvatarTagSize', 'sm: 20dp picture (a post); xs: 16dp picture (a small tile corner).', def: 'sm'),
+            ApiRow('glass', 'bool?', 'Blur what is behind the tag and light its rim; null follows the theme config.'),
+          ],
+          demo: const AvatarTagDemo(),
+        ),
+        DocSection(
           name: 'Selection bar',
           widget: 'UiSelectionBar',
           summary: 'The bar shown while selecting: Cancel (an X) at the start, "12 selected", a Select all toggle that reads Clear once count reaches total (each side hidden when its callback is null), then the actions. Actions are off while nothing is selected or when not enabled; danger draws the destructive style. When the labels don\'t all fit (a 360 phone with three actions) the toggle and the actions with an icon become icon buttons that keep their label for screen readers and as a tooltip, and the count falls back to the number alone, so nothing overflows at 320. Count changes are announced politely. The demo is in Selectable above.',
@@ -797,4 +812,105 @@ class _LikeDemoState extends State<_LikeDemo> {
       ),
     ]);
   }
+}
+
+/// The album tiles, feed post and plain tags of the Avatar tag section, at phone width.
+class AvatarTagDemo extends StatelessWidget {
+  const AvatarTagDemo({super.key});
+
+  static const albums = [
+    ('Coco Palm', DemoArt(Color(0xFF3D5AFE), Color(0xFFE5484D))),
+    ('The Sunset Ballroom at Kurumba Maldives Resort', DemoArt(Color(0xFFF7F3EA), Color(0xFFFFFFFF), sun: -1)),
+    ('Bandos Hall', DemoArt(Color(0xFF2FAA6E), Color(0xFFD9A521), sun: 0.7)),
+    ('Dharubaaruge', DemoArt(Color(0xFF7A4FA0), Color(0xFF99D8E2), sun: 0.2)),
+  ];
+  static const logo = DemoArt(Color(0xFF1F6F8B), Color(0xFF66C2A5), width: 64, height: 64, sun: -1);
+  static const logo2 = DemoArt(Color(0xFFB34A3C), Color(0xFFF2E1C2), width: 64, height: 64, sun: -1);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final logos = <ImageProvider?>[logo, logo2, null, const _BrokenArt()];
+    Widget corner(Widget tag, {bool end = false}) => PositionedDirectional(
+          top: end ? t.space2 : t.space1,
+          start: t.space1,
+          end: end ? t.space2 : t.space1,
+          child: Align(alignment: end ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart, child: tag),
+        );
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 390),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
+          LayoutBuilder(builder: (context, box) {
+            final size = (box.maxWidth - t.space2) / 2;
+            return Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+              for (var i = 0; i < albums.length; i++)
+                SizedBox(
+                  key: ValueKey('avatar-tag-tile-$i'),
+                  width: size,
+                  height: size,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(t.radius),
+                    child: Stack(fit: StackFit.expand, children: [
+                      Image(image: albums[i].$2, fit: BoxFit.cover, excludeFromSemantics: true),
+                      corner(UiAvatarTag(name: albums[i].$1, image: logos[i], prefix: 'At', size: UiAvatarTagSize.xs)),
+                    ]),
+                  ),
+                ),
+            ]);
+          }),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: t.surface,
+              border: Border.all(color: t.border),
+              borderRadius: BorderRadius.circular(t.radius),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(t.radius),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space2),
+                  child: Row(spacing: t.space2, children: [
+                    Expanded(
+                      child: Text("Aisha and Ali's wedding",
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.body.copyWith(fontWeight: FontWeight.w600, fontSize: t.fontSizeSm)),
+                    ),
+                    Flexible(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: UiAvatarTag(name: 'Coco Palm Dhuni Kolhu', image: logo, prefix: 'At', variant: UiAvatarTagVariant.plain),
+                      ),
+                    ),
+                  ]),
+                ),
+                AspectRatio(
+                  aspectRatio: 4 / 3,
+                  child: Stack(fit: StackFit.expand, children: [
+                    Image(image: DemoArt.palette[4], fit: BoxFit.cover, excludeFromSemantics: true),
+                    corner(const UiAvatarTag(name: 'Coco Palm Dhuni Kolhu', image: logo, prefix: 'At'), end: true),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+          Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: const [
+            UiAvatarTag(name: 'Bandos Hall', variant: UiAvatarTagVariant.plain),
+            UiAvatarTag(name: 'Bandos Hall', variant: UiAvatarTagVariant.plain, size: UiAvatarTagSize.xs),
+            UiAvatarTag(name: 'Glass, plain', image: logo, variant: UiAvatarTagVariant.plain, glass: true),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+/// A picture that fails to load, to show the first-letter fallback.
+class _BrokenArt extends ImageProvider<_BrokenArt> {
+  const _BrokenArt();
+  @override
+  Future<_BrokenArt> obtainKey(ImageConfiguration configuration) => SynchronousFuture(this);
+  @override
+  ImageStreamCompleter loadImage(_BrokenArt key, ImageDecoderCallback decode) =>
+      OneFrameImageStreamCompleter(Future<ImageInfo>.error(StateError('broken demo picture')));
 }

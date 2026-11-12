@@ -1261,3 +1261,12 @@ when the pull crosses the threshold (iOS-style, while the finger is still down),
 same drag can't start a second. With `UiOverscrollStyle.platform`, Android now gets the
 `StretchingOverscrollIndicator` the UiScrollBehavior comment always promised (it fell back to the
 glow before). The "Refresh" semantics action uses a new `UiStrings.refresh` key (Flutter only).
+
+**Avatar tag (0.73.0).** `UiAvatarTag` takes an `ImageProvider` (`image`) where the web takes a URL
+(`src`), as `UiAvatar` does. The fallback letter is the `Image.errorBuilder`, so a new `image` tries
+again without state. The plain variant's 1px edge is a foreground `DecoratedBox` border, so it
+takes no layout space, like the web's inset box-shadow, and both variants are the same size. The
+name is a `Flexible` single-line `Text` with an ellipsis inside a `Row(mainAxisSize: min)`: it hugs
+a short name and ellipsises within whatever width the parent gives. Read as one image node
+(`Semantics(image: true, excludeSemantics: true)`), the web's `role="img"` with `aria-label`.
+

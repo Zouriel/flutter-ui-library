@@ -1612,6 +1612,15 @@ Pull to refresh with the shutter ball; `UiOverscrollStyle.platform` / `shutter` 
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
+## avatar-tag
+
+### UiAvatarTag (component, `ui-avatar-tag`, 0.73.0)
+File: `avatar-tag/src/avatar-tag.ts`  
+A tiny round picture and a name for a photo tile's corner or a feed post.
+- Inputs: `name` = ''; `src` (Flutter `image`); `prefix`; `variant`: 'overlay' | 'plain' = 'overlay'; `size`: 'sm' | 'xs' = 'sm'; `glass` = config.glass
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+
 ## src
 
 - const `UI_ANIM` (animations.ts)
