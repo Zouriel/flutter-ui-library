@@ -13,6 +13,7 @@ import 'forms_page.dart';
 import 'map_page.dart';
 import 'foundation_page.dart';
 import 'fx_page.dart';
+import 'guidance_page.dart';
 import 'layout_page.dart';
 import 'media_page.dart';
 import 'navigation_page.dart';
@@ -44,6 +45,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('forms', 'Components', 'Form controls', HugeIcons.strokeRoundedPencilEdit02, (_) => const FormsPage()),
   ShowcasePage('overlays', 'Components', 'Overlays & dialogs', HugeIcons.strokeRoundedLayers01, (_) => const OverlaysPage()),
   ShowcasePage('feedback', 'Components', 'Feedback & status', HugeIcons.strokeRoundedNotification01, (_) => const FeedbackPage()),
+  ShowcasePage('guidance', 'Components', 'Guidance', HugeIcons.strokeRoundedIdea01, (_) => const GuidancePage()),
   ShowcasePage('shutter-loader', 'Components', 'Shutter loader', HugeIcons.strokeRoundedCamera01, (_) => const ShutterPage()),
   ShowcasePage('navigation', 'Components', 'Navigation', HugeIcons.strokeRoundedNavigation03, (_) => const NavigationPage()),
   ShowcasePage('data', 'Components', 'Data display', HugeIcons.strokeRoundedTable01, (_) => const DataPage()),

@@ -1,5 +1,29 @@
 # Porting @zouriel/ui to Flutter
 
+## Guidance: tour, offer card, checklist, starters, UiGuidance (0.75.0)
+
+- **UiGuidance** is line-for-line the web class (same refusal order, same day key, claim before the
+  first await). It is a `ChangeNotifier` (listen for `active`); `UiGuidanceScope` replaces
+  `provideUiGuidance` / `UI_GUIDANCE`. The store's optional day count is two methods with defaults
+  (`readDayCount` returns null = kept in memory) instead of optional members.
+- **Tour**: `UiTour.start(context, spec)` inserts an entry in the root `Overlay`. Anchors are found
+  through a registry of `UiTourAnchor` states; an anchor must be built and laid out, so an unbuilt
+  row of a lazy list (`ListView.builder` far below) counts as missing and its step is left out (the
+  web finds any element in the DOM). The scrim is a painted even-odd path; the bubble is placed by
+  a `SingleChildLayoutDelegate` that ports the web `layout()` (same sides, gap 12, margin 12, plus
+  the safe area). The anchor is followed by a post-frame callback rather than a ticker, so an open
+  tour asks for no frames while nothing moves (the breathing ring does, unless animations are off).
+  Focus stays in a `FocusScope`; Escape goes through `HardwareKeyboard`; `BlockSemantics` hides the
+  page; the step is announced with `SemanticsService.sendAnnouncement`. The first step's cut-out
+  appears in place (the web's grows from its first box); later steps glide unless calm.
+- **Touch targets**: the web's coarse-pointer `::before` areas become `UiInteractive` touch padding,
+  so on phones the tour's head row and the offer card's link take more height; the 28px × buttons
+  are positioned so their drawn box stays where the web draws it.
+- **Starters**: `UiStarterGrid` ports `repeat(auto-fit, minmax(min(100%, 200px), 1fr))` (columns =
+  how many 200px tracks fit, at most the number of cards; rows as tall as their tallest card).
+- **Not ported**: `ui-starter-card`'s `href` (apps navigate in `onTap`). `UiOfferVariant.standard`
+  is the web's `'default'` (a reserved word in Dart).
+
 ## Shift-click straight lines (0.68.0)
 
 `UiPathEditor` (draw mode) and `UiImageEditor` (erase/restore) remember where the last stroke ended;

@@ -208,6 +208,17 @@ class UiStrings {
     this.filterShow = 'Show {n}',
     this.filterDone = 'Done',
     this.filterAll = 'All',
+    this.tourBack = 'Back',
+    this.tourNext = 'Next',
+    this.tourDone = 'Done',
+    this.tourSkip = 'Skip',
+    this.tourStep = '{n} of {total}',
+    this.tourStepAnnounce = 'Step {n} of {total}: {text}',
+    this.tipsOff = 'Turn off tips',
+    this.checklistCount = '{done} of {total}',
+    this.checklistAllDone = 'All set',
+    this.checklistItemDone = 'Done',
+    this.checklistItemToDo = 'Not done yet',
     this.refresh = 'Refresh',
     this.locale = '',
     this.months = const [],
@@ -417,6 +428,17 @@ class UiStrings {
     filterShow: '{n} ދައްކާ',
     filterDone: 'ނިމުނީ',
     filterAll: 'ހުރިހާ',
+    tourBack: 'ފަހަތަށް',
+    tourNext: 'ކުރިއަށް',
+    tourDone: 'ނިމުނީ',
+    tourSkip: 'ދޫކޮށްލާ',
+    tourStep: '{total} އިން {n}',
+    tourStepAnnounce: '{total} ފިޔަވަޅުގެ {n} ވަނަ: {text}',
+    tipsOff: 'ޓިޕްސް ނިއްވާލާ',
+    checklistCount: '{total} އިން {done}',
+    checklistAllDone: 'ހުރިހާ ކަމެއް ނިމިއްޖެ',
+    checklistItemDone: 'ނިމިފައި',
+    checklistItemToDo: 'އަދި ނުނިމޭ',
     refresh: 'ރިފްރެޝް ކުރޭ',
     locale: 'dv',
     months: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
@@ -1005,6 +1027,39 @@ class UiStrings {
   /// Filter: a section's "all" row when the section gives no allLabel.
   final String filterAll;
 
+  /// Tour (0.75.0): the coach-mark bubble's Back button.
+  final String tourBack;
+
+  /// Tour: the Next button.
+  final String tourNext;
+
+  /// Tour: the last step's button.
+  final String tourDone;
+
+  /// Tour: the Skip action.
+  final String tourSkip;
+
+  /// Tour: the step count (`{n}`, `{total}`), "2 of 4".
+  final String tourStep;
+
+  /// Tour: what a screen reader hears on each step (`{n}`, `{total}`, `{text}`).
+  final String tourStepAnnounce;
+
+  /// Tour, offer card (0.75.0): the small action that turns every tip off.
+  final String tipsOff;
+
+  /// Checklist (0.75.0): the count in its header (`{done}`, `{total}`).
+  final String checklistCount;
+
+  /// Checklist: its finished state.
+  final String checklistAllDone;
+
+  /// Checklist: a done item's state for screen readers.
+  final String checklistItemDone;
+
+  /// Checklist: an item still to do, for screen readers.
+  final String checklistItemToDo;
+
   /// Pull to refresh: the screen reader action (0.72.0, Flutter only).
   final String refresh;
 
@@ -1220,6 +1275,17 @@ class UiStrings {
     String? filterShow,
     String? filterDone,
     String? filterAll,
+    String? tourBack,
+    String? tourNext,
+    String? tourDone,
+    String? tourSkip,
+    String? tourStep,
+    String? tourStepAnnounce,
+    String? tipsOff,
+    String? checklistCount,
+    String? checklistAllDone,
+    String? checklistItemDone,
+    String? checklistItemToDo,
     String? refresh,
     String? locale,
     List<String>? months,
@@ -1424,6 +1490,17 @@ class UiStrings {
         filterShow: filterShow ?? this.filterShow,
         filterDone: filterDone ?? this.filterDone,
         filterAll: filterAll ?? this.filterAll,
+        tourBack: tourBack ?? this.tourBack,
+        tourNext: tourNext ?? this.tourNext,
+        tourDone: tourDone ?? this.tourDone,
+        tourSkip: tourSkip ?? this.tourSkip,
+        tourStep: tourStep ?? this.tourStep,
+        tourStepAnnounce: tourStepAnnounce ?? this.tourStepAnnounce,
+        tipsOff: tipsOff ?? this.tipsOff,
+        checklistCount: checklistCount ?? this.checklistCount,
+        checklistAllDone: checklistAllDone ?? this.checklistAllDone,
+        checklistItemDone: checklistItemDone ?? this.checklistItemDone,
+        checklistItemToDo: checklistItemToDo ?? this.checklistItemToDo,
         refresh: refresh ?? this.refresh,
         locale: locale ?? this.locale,
         months: months ?? this.months,
@@ -1630,6 +1707,17 @@ class UiStrings {
         'filterShow': filterShow,
         'filterDone': filterDone,
         'filterAll': filterAll,
+        'tourBack': tourBack,
+        'tourNext': tourNext,
+        'tourDone': tourDone,
+        'tourSkip': tourSkip,
+        'tourStep': tourStep,
+        'tourStepAnnounce': tourStepAnnounce,
+        'tipsOff': tipsOff,
+        'checklistCount': checklistCount,
+        'checklistAllDone': checklistAllDone,
+        'checklistItemDone': checklistItemDone,
+        'checklistItemToDo': checklistItemToDo,
         'refresh': refresh,
       };
 

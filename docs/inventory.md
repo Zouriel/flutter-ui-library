@@ -528,8 +528,17 @@ File: `divider/src/divider.ts`
 
 ### UiEmptyState (component, `ui-empty-state`)
 File: `feedback/src/empty-state.ts`  
-`ui-empty-state` — placeholder for empty content. Slots: `[empty-icon]`, `[empty-actions]`.  
+`ui-empty-state` — placeholder for empty content. Slots: `[empty-art]` (0.75), `[empty-icon]`, `[empty-actions]`, `[empty-starters]` (0.75).  
 - Inputs: `heading` = 'Nothing here yet'; `description`: string
+- Flutter: `art` (max 320 x 200), `starters` (laid out by `UiStarterGrid`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiStarterCard (component, `ui-starter-card`) (0.75)
+File: `feedback/src/starter-card.ts`  
+One way to start, for `[empty-starters]`: icon tile, heading, one line, the whole card one button (or a link with `href`).  
+- Inputs: `heading`; `description`; `href`; `disabled`; slot `[starter-icon]`
+- Outputs: `pressed`
+- Flutter: `UiStarterCard(heading, description, icon, onTap, enabled)`; no `href` (apps navigate in `onTap`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiLoadingOverlay (component, `ui-loading-overlay`)
@@ -1923,4 +1932,40 @@ E.164 phone value: country button (flag, dial code, searchable list of 245 count
 File: `table/src/table.ts`  
 A template for one column's cells inside `ui-table`; sorting still uses the value.  
 - Flutter: `UiColumn.cellBuilder: Widget Function(BuildContext, T row)?`
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase
+
+## guidance (0.75)
+
+### UiGuidance (class) + UiGuidanceStore, UiMemoryGuidanceStore, provideUiGuidance / injectUiGuidance
+File: `guidance/src/guidance.ts`  
+Pacing and memory for tips, tours and offers: tips off / seen / skipWhen / one on screen / one offer a session / 3 tips a day; any outcome marks seen; turnedOff turns tips off.  
+- Flutter: `UiGuidance` (a `ChangeNotifier`, `active`), `UiGuidanceStore`, `UiMemoryGuidanceStore`, `UiGuidanceScope` (instead of the injection token), `UiGuidanceKind`, `UiTourOutcome`
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase
+
+### UiTourService + UiTourAnchor (directive, `[uiTourAnchor]`) + UiTourPanel
+File: `guidance/src/tour.ts`  
+Coach-mark tour: dimmed page, rounded cut-out round each anchor with a breathing ring, a bubble with "2 of 4", Back / Next / Done, Skip, Turn off tips.  
+- Flutter: `UiTour.start(context, UiTourSpec)`, `UiTour.stop()`, `UiTour.active`, `UiTourAnchor(id:, child:)`, `UiTourStep`, `UiTourLabels`, `UiTourPlacement`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check (screenshots)  - [x] showcase
+
+### UiOfferCard (component, `ui-offer-card`)
+File: `guidance/src/offer-card.ts`  
+- Inputs: `heading`; `body`; `variant` 'default' | 'role'; `primaryLabel`; `secondaryLabel`; `dismissible` = true; `tipsOff` = false; `tipsOffLabel`; slot `[offer-art]`
+- Outputs: `primaryClick`; `secondaryClick`; `dismissed`; `tipsOffClick`
+- Flutter: `UiOfferCard` (`UiOfferVariant.standard` / `.role`, `art`, `onPrimary`, `onSecondary`, `onDismiss` shows the ×, `onTipsOff` shows the link, `child`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiChecklist (component, `ui-checklist`)
+File: `guidance/src/checklist.ts`  
+- Inputs: `heading`; `items`: UiChecklistItem[]; `dismissible` = false; `allDoneText`
+- Outputs: `itemClick`; `dismissed`
+- Flutter: `UiChecklist` (`onItemTap`, `onDismiss` shows the ×), `UiChecklistItem`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiHintOnce (directive, `[uiHintOnce]`)
+File: `guidance/src/hint-once.ts`  
+A one-off uiHint through UiGuidance.  
+- Inputs: `uiHintOnce`; `uiHintOnceText`; `uiHintOnceSkipWhen`; `uiHintOnceWhen`; `uiHintOncePlacement` / `Duration` / `Dismissible`
+- Outputs: `uiHintOnceDone`
+- Flutter: `UiHintOnce(id, message, child, placement, duration, dismissible, skipWhen, when, onDone, guidance)`
 - [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase
