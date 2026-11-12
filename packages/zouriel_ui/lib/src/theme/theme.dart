@@ -50,6 +50,27 @@ enum UiChatBubbleSide {
   right,
 }
 
+/// What [UiSpinner] draws (0.72.0), the web `UiConfig.spinner`.
+enum UiSpinnerStyle {
+  /// The turning ring. The default.
+  ring,
+
+  /// The camera shutter ([UiShutterLoader]): every spinner in the library (button loading states,
+  /// loading overlays, image picker, PDF viewer, map…) draws it instead, same size and colour.
+  shutter,
+}
+
+/// What a vertical scroll view shows when pulled past its end (0.72.0). Flutter only: browsers own
+/// overscroll on the web.
+enum UiOverscrollStyle {
+  /// The platform's own: the stretch on Android, the bounce on iOS. The default.
+  platform,
+
+  /// A small shutter ball drops in from the edge, following the finger, and springs back on release
+  /// (every platform; horizontal scroll views keep the platform's).
+  shutter,
+}
+
 /// Library-wide defaults, the Flutter twin of the web library's `provideUiConfig`.
 @immutable
 class UiConfig {
@@ -62,6 +83,8 @@ class UiConfig {
     this.density = UiDensity.comfortable,
     this.fontFamilyFallback,
     this.chatMineSide = UiChatBubbleSide.end,
+    this.spinner = UiSpinnerStyle.ring,
+    this.overscroll = UiOverscrollStyle.platform,
   });
 
   /// Frosted, translucent surfaces on components that support them (navbar, bottom nav, cards).
@@ -93,6 +116,12 @@ class UiConfig {
   /// `chatMineSide`). [UiChatBubbleSide.right] keeps them on the right in RTL too.
   final UiChatBubbleSide chatMineSide;
 
+  /// What every [UiSpinner] draws (0.72.0, the web `spinner`): the ring, or the shutter.
+  final UiSpinnerStyle spinner;
+
+  /// What vertical scroll views under [UiApp] show past their ends (0.72.0, Flutter only).
+  final UiOverscrollStyle overscroll;
+
   UiConfig copyWith({
     bool? glass,
     bool? radius,
@@ -102,6 +131,8 @@ class UiConfig {
     UiDensity? density,
     List<String>? fontFamilyFallback,
     UiChatBubbleSide? chatMineSide,
+    UiSpinnerStyle? spinner,
+    UiOverscrollStyle? overscroll,
   }) =>
       UiConfig(
         glass: glass ?? this.glass,
@@ -112,6 +143,8 @@ class UiConfig {
         density: density ?? this.density,
         fontFamilyFallback: fontFamilyFallback ?? this.fontFamilyFallback,
         chatMineSide: chatMineSide ?? this.chatMineSide,
+        spinner: spinner ?? this.spinner,
+        overscroll: overscroll ?? this.overscroll,
       );
 }
 

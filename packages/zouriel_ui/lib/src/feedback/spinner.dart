@@ -3,10 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import '../theme/theme.dart';
+import 'shutter_loader.dart';
 
 /// `ui-spinner`: an indeterminate loading ring. Announced as "Loading" unless [label] says otherwise;
 /// set [decorative] when something nearby already announces the busy state.
-class UiSpinner extends StatefulWidget {
+///
+/// With `UiConfig(spinner: UiSpinnerStyle.shutter)` it draws a [UiShutterLoader] instead (0.72.0),
+/// at the same size and colour; [strokeWidth] applies to the ring only.
+class UiSpinner extends StatelessWidget {
   const UiSpinner({super.key, this.size = 16, this.strokeWidth = 2, this.color, this.label, this.decorative = false});
 
   final double size;
@@ -17,10 +21,28 @@ class UiSpinner extends StatefulWidget {
   final bool decorative;
 
   @override
-  State<UiSpinner> createState() => _UiSpinnerState();
+  Widget build(BuildContext context) {
+    if (context.uiTheme.config.spinner == UiSpinnerStyle.shutter) {
+      return UiShutterLoader(size: size, color: color, label: label, decorative: decorative);
+    }
+    return _UiRing(size: size, strokeWidth: strokeWidth, color: color, label: label, decorative: decorative);
+  }
 }
 
-class _UiSpinnerState extends State<UiSpinner> with SingleTickerProviderStateMixin {
+class _UiRing extends StatefulWidget {
+  const _UiRing({required this.size, required this.strokeWidth, this.color, this.label, required this.decorative});
+
+  final double size;
+  final double strokeWidth;
+  final Color? color;
+  final String? label;
+  final bool decorative;
+
+  @override
+  State<_UiRing> createState() => _UiRingState();
+}
+
+class _UiRingState extends State<_UiRing> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
 
   @override

@@ -90,7 +90,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
         DocSection(
           name: 'Spinner',
           widget: 'UiSpinner',
-          summary: 'An indeterminate loading ring, announced as "Loading". Under reduced motion it keeps turning, slower: a frozen spinner reads as a hang.',
+          summary: 'An indeterminate loading ring, announced as "Loading". Under reduced motion it keeps turning, slower: a frozen spinner reads as a hang. With UiConfig(spinner: UiSpinnerStyle.shutter) every spinner draws the camera shutter instead (see Shutter loader).',
           demo: Row(spacing: t.space4, children: [
             const UiSpinner(),
             const UiSpinner(size: 24, strokeWidth: 2.5),

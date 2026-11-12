@@ -1603,6 +1603,14 @@ File: `spinner/src/spinner.ts`
 - Inputs: `size`: UiSize = 'md'; `label` = 'Loading'
 - [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
+### UiShutterLoader (component, `ui-shutter-loader`, 0.72.0)
+The camera-shutter loader; `UiConfig.spinner` (`UiSpinnerStyle.ring` / `shutter`) makes every UiSpinner draw it.
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiPullToRefresh, UiConfig.overscroll (Flutter only, 0.72.0)
+Pull to refresh with the shutter ball; `UiOverscrollStyle.platform` / `shutter` for the overscroll indicator. No web counterpart: browsers own overscroll.
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 
 ## src
 

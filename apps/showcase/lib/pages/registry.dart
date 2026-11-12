@@ -19,6 +19,7 @@ import 'navigation_page.dart';
 import 'overlays_page.dart';
 import 'overview_page.dart';
 import 'plans_page.dart';
+import 'shutter_page.dart';
 import 'typography_page.dart';
 import 'window_page.dart';
 import 'workflow_builder_page.dart';
@@ -43,6 +44,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('forms', 'Components', 'Form controls', HugeIcons.strokeRoundedPencilEdit02, (_) => const FormsPage()),
   ShowcasePage('overlays', 'Components', 'Overlays & dialogs', HugeIcons.strokeRoundedLayers01, (_) => const OverlaysPage()),
   ShowcasePage('feedback', 'Components', 'Feedback & status', HugeIcons.strokeRoundedNotification01, (_) => const FeedbackPage()),
+  ShowcasePage('shutter-loader', 'Components', 'Shutter loader', HugeIcons.strokeRoundedCamera01, (_) => const ShutterPage()),
   ShowcasePage('navigation', 'Components', 'Navigation', HugeIcons.strokeRoundedNavigation03, (_) => const NavigationPage()),
   ShowcasePage('data', 'Components', 'Data display', HugeIcons.strokeRoundedTable01, (_) => const DataPage()),
   ShowcasePage('plans', 'Components', 'Plans', HugeIcons.strokeRoundedCrown, (_) => const PlansPage()),

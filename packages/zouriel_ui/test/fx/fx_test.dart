@@ -32,7 +32,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       final mid = opacityOf(tester, find.text('Hello'));
       expect(mid, inExclusiveRange(0, 1));
-      expect(tester.widget<Transform>(find.ancestor(of: find.text('Hello'), matching: find.byType(Transform)).last).transform.getTranslation().y, greaterThan(0));
+      // The reveal's own outer transform (the translate), in tree order: since 0.72.0 the scroll view's
+      // Android stretch adds a Transform above it, so the last ancestor is no longer the reveal's.
+      final own = find.descendant(of: find.byType(UiReveal), matching: find.ancestor(of: find.text('Hello'), matching: find.byType(Transform)));
+      expect(tester.widget<Transform>(own.first).transform.getTranslation().y, greaterThan(0));
       await tester.pumpAndSettle();
       expect(opacityOf(tester, find.text('Hello')), 1);
     });
