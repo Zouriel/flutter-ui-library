@@ -2,6 +2,7 @@
 library;
 
 export 'src/badge/badge.dart';
+export 'src/badge/avatar_tag.dart';
 export 'src/button/button.dart';
 export 'src/button/apple_sign_in_button.dart';
 export 'src/button/google_sign_in_button.dart';
