@@ -1946,6 +1946,7 @@ Pacing and memory for tips, tours and offers: tips off / seen / skipWhen / one o
 File: `guidance/src/tour.ts`  
 Coach-mark tour: dimmed page, rounded cut-out round each anchor with a breathing ring, a bubble with "2 of 4", Back / Next / Done, Skip, Turn off tips.  
 - Flutter: `UiTour.start(context, UiTourSpec)`, `UiTour.stop()`, `UiTour.active`, `UiTourAnchor(id:, child:)`, `UiTourStep`, `UiTourLabels`, `UiTourPlacement`
+- 0.75.1: anchors on library-built buttons: `UiBottomNavItem.anchor`, `UiTab.anchor` (web: `UiBottomNavItem.anchor`, `ui-tab [anchor]`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check (screenshots)  - [x] showcase
 
 ### UiOfferCard (component, `ui-offer-card`)

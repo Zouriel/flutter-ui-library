@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/icon.dart';
 import '../core/interactive.dart';
+import '../guidance/tour.dart';
 import '../theme/theme.dart';
 
 /// One tab of a [UiTabs]: its [label] and its panel [child].
@@ -12,13 +13,17 @@ import '../theme/theme.dart';
 /// still the tab's accessible name.
 @immutable
 class UiTab {
-  const UiTab({required this.label, required this.child, this.icon, this.iconOnly = false, this.disabled = false});
+  const UiTab({required this.label, required this.child, this.icon, this.iconOnly = false, this.disabled = false, this.anchor});
 
   final String label;
   final Widget child;
   final UiIconData? icon;
   final bool iconOnly;
   final bool disabled;
+
+  /// A tour anchor id ([UiTourAnchor]) for this tab's button, so a [UiTour] step can point at it.
+  /// Null: no anchor.
+  final String? anchor;
 }
 
 /// `ui-tabs`: tabs over panels. [selectedIndex] is the open tab; [onChanged] reports a new one.
@@ -132,12 +137,15 @@ class _UiTabsState extends State<UiTabs> {
           includeSemantics: false,
           skipTraversal: true,
           onKeyEvent: (_, e) => _onKey(i, e),
-          child: _TabButton(
-            key: _keys[i],
-            tab: widget.tabs[i],
-            selected: i == widget.selectedIndex,
-            focusNode: _nodes[i],
-            onTap: () => _select(i),
+          child: _anchored(
+            widget.tabs[i].anchor,
+            _TabButton(
+              key: _keys[i],
+              tab: widget.tabs[i],
+              selected: i == widget.selectedIndex,
+              focusNode: _nodes[i],
+              onTap: () => _select(i),
+            ),
           ),
         ),
     ];
@@ -170,6 +178,9 @@ class _UiTabsState extends State<UiTabs> {
     );
   }
 }
+
+/// Wraps [child] in a [UiTourAnchor] when [id] is set; otherwise returns it unchanged.
+Widget _anchored(String? id, Widget child) => id == null || id.isEmpty ? child : UiTourAnchor(id: id, child: child);
 
 class _TabButton extends StatelessWidget {
   const _TabButton({super.key, required this.tab, required this.selected, required this.focusNode, required this.onTap});
