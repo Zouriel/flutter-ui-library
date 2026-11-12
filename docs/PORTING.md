@@ -1,5 +1,16 @@
 # Porting @zouriel/ui to Flutter
 
+## Tour anchors on bottom-nav items and tabs (0.75.1)
+
+`UiBottomNavItem.anchor` and `UiTab.anchor` (web: `UiBottomNavItem.anchor`, `ui-tab [anchor]`) let a
+tour step point at one destination or one tab, which apps can't wrap because the library builds those
+buttons. When set, the item's tile (inside its `Expanded`, so the anchor box is the whole tile) or the
+tab's `_TabButton` is wrapped in `UiTourAnchor`; null or empty adds nothing. The web puts
+`[uiTourAnchor]` on the `<button>`, whose id now accepts null/empty and then registers nothing; the
+directive and its registry (`UiTourAnchors`) moved to the core entry point (still re-exported from
+`@zouriel/ui/guidance`), because importing guidance from navigation pulled the whole tour into every
+app's first paint (+125 kB). Flutter has no such cost: Dart tree-shakes per class.
+
 ## Guidance: tour, offer card, checklist, starters, UiGuidance (0.75.0)
 
 - **UiGuidance** is line-for-line the web class (same refusal order, same day key, claim before the

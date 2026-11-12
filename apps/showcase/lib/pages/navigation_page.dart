@@ -126,7 +126,8 @@ class _NavigationPageState extends State<NavigationPage> {
           ]),
           code: "UiTabs(\n  selectedIndex: tab,\n  onChanged: (i) => setState(() => tab = i),\n  tabs: [\n    UiTab(label: 'Overview', child: OverviewPanel()),\n    UiTab(label: 'Billing', disabled: true, child: BillingPanel()),\n  ],\n)",
           api: const [
-            ApiRow('tabs', 'List<UiTab>', 'label, child, icon, iconOnly, disabled.'),
+            ApiRow('tabs', 'List<UiTab>', 'label, child, icon, iconOnly, disabled, anchor.'),
+            ApiRow('tab.anchor', 'String?', "A UiTourAnchor id for this tab's button, so a tour step can point at it.", def: 'null'),
             ApiRow('selectedIndex', 'int', 'The open tab.', def: '0'),
             ApiRow('onChanged', 'ValueChanged<int>?', 'A new tab was chosen.'),
             ApiRow('label', 'String', 'Accessible name of the strip.', def: "'Tabs'"),
@@ -282,7 +283,8 @@ class _NavigationPageState extends State<NavigationPage> {
           ),
           code: "UiBottomNav(\n  active: tab,\n  onChanged: (v) => setState(() => tab = v),\n  items: [\n    UiBottomNavItem(label: 'Home', value: 'home', icon: HugeIcons.strokeRoundedHome01),\n    UiBottomNavItem(label: 'Alerts', value: 'alerts', icon: HugeIcons.strokeRoundedNotification01, badge: '3'),\n  ],\n)",
           api: const [
-            ApiRow('items', 'List<UiBottomNavItem>', 'label, value, icon, badge.'),
+            ApiRow('items', 'List<UiBottomNavItem>', 'label, value, icon, badge, anchor.'),
+            ApiRow('item.anchor', 'String?', 'A UiTourAnchor id for this destination, so a tour step can point at it (the whole tile).', def: 'null'),
             ApiRow('active', 'String?', 'Value of the current item.'),
             ApiRow('onChanged', 'ValueChanged<String>?', 'An item was tapped.'),
             ApiRow('label', 'String?', 'Landmark name; set it when a screen has two navigations.'),

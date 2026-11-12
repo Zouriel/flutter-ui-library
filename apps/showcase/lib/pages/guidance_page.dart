@@ -170,6 +170,7 @@ UiTourStep(String anchor, String text, {String? title, UiTourPlacement placement
 UiTourLabels({String? back, next, done, skip, turnOff, step})''',
             api: const [
               ApiRow('UiTourAnchor(id:, child:)', 'String', 'The anchor id a step points at (shared with the other app). Several widgets may share one; the first laid out wins.'),
+              ApiRow('UiBottomNavItem(anchor:) · UiTab(anchor:)', 'String?', 'Anchors for buttons the library builds itself: one bottom-nav destination or one tab.', def: 'null'),
               ApiRow('UiTour.start(context, spec)', 'Future<UiTourOutcome>', 'Runs a tour (1 to 5 steps) in the root overlay. A tour already running ends with closed; no step on screen completes closed at once.'),
               ApiRow('UiTour.stop()', 'void', 'Ends the running tour with closed.'),
               ApiRow('UiTour.active', 'String?', 'The id of the tour on screen.', def: 'null'),

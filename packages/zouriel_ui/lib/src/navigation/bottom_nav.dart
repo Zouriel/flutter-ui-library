@@ -5,13 +5,14 @@ import 'package:flutter/widgets.dart';
 
 import '../core/icon.dart';
 import '../core/interactive.dart';
+import '../guidance/tour.dart';
 import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// One destination in a [UiBottomNav].
 @immutable
 class UiBottomNavItem {
-  const UiBottomNavItem({required this.label, required this.value, this.icon, this.badge});
+  const UiBottomNavItem({required this.label, required this.value, this.icon, this.badge, this.anchor});
 
   final String label;
   final String value;
@@ -21,6 +22,10 @@ class UiBottomNavItem {
 
   /// A count or short tag shown on the icon in the danger colour ("3", "New").
   final String? badge;
+
+  /// A tour anchor id ([UiTourAnchor]) for this destination, so a [UiTour] step can point at it.
+  /// The anchor's box is the item's whole tile. Null: no anchor.
+  final String? anchor;
 }
 
 /// `ui-bottom-nav`: the mobile bottom navigation bar: equal-width destinations with an icon over a
@@ -74,7 +79,7 @@ class UiBottomNav extends StatelessWidget {
         height: 56,
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           for (final item in items)
-            Expanded(child: _BottomNavTile(item: item, active: item.value == active, iconSize: iconSize, onTap: () => onChanged?.call(item.value))),
+            Expanded(child: _anchored(item.anchor, _BottomNavTile(item: item, active: item.value == active, iconSize: iconSize, onTap: () => onChanged?.call(item.value)))),
         ]),
       ),
     );
@@ -94,6 +99,9 @@ class UiBottomNav extends StatelessWidget {
     );
   }
 }
+
+/// Wraps [child] in a [UiTourAnchor] when [id] is set; otherwise returns it unchanged.
+Widget _anchored(String? id, Widget child) => id == null || id.isEmpty ? child : UiTourAnchor(id: id, child: child);
 
 class _BottomNavTile extends StatelessWidget {
   const _BottomNavTile({required this.item, required this.active, required this.iconSize, required this.onTap});
