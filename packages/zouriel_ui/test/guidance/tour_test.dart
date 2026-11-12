@@ -165,6 +165,19 @@ void main() {
     expect(await f, UiTourOutcome.finished);
   });
 
+  testWidgets('Next on the first step finishes when every later anchor has gone', (tester) async {
+    final withC = ValueNotifier(true);
+    await _pumpApp(tester, ValueListenableBuilder<bool>(valueListenable: withC, builder: (_, c, _) => _page(withC: c)));
+    const spec = UiTourSpec('tour.first', [UiTourStep('a', 'First.'), UiTourStep('c', 'Second.')]);
+    final f = UiTour.start(_ctx.currentContext!, spec);
+    await _steps(tester);
+    withC.value = false;
+    await tester.pump();
+    await tester.tap(find.text('Next'));
+    await tester.pump();
+    expect(await f, UiTourOutcome.finished);
+  });
+
   testWidgets('moves focus into the bubble (Next), keeps Tab inside, and gives it back afterwards', (tester) async {
     final field = FocusNode();
     addTearDown(field.dispose);

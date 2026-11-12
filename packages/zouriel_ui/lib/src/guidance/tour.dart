@@ -273,7 +273,8 @@ class _UiTourViewState extends State<_UiTourView> with TickerProviderStateMixin 
       i += dir;
     }
     if (i < 0) i = _index;
-    if (i >= steps.length) return _finish(dir == 1 && _index > 0 ? UiTourOutcome.finished : UiTourOutcome.closed);
+    // Past the last step still on the page: the tour was gone through to its end.
+    if (i >= steps.length) return _finish(UiTourOutcome.finished);
     final anchor = _findAnchor(steps[i].anchor)!;
     final moving = _shown != null && !_calm;
     setState(() {
