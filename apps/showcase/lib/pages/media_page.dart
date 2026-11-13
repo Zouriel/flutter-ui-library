@@ -164,18 +164,19 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Poster grid',
           widget: 'UiPosterGrid',
-          summary: "One grid of same-shape picture tiles (ratio): 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A poster's details are drawn on its tile over the bottom of the picture on a compact UiScrim that fades from clear to dark, so the words stay readable on any picture; keep them short and non-interactive, since the whole tile is the target. Without details a tile is the picture alone, named by its label. No picture, or one that fails to load, shows a gradient of its colors (or the theme's primary and accent). A small dot (mark) can flag a tile; screen readers hear its label. A poster's corner draws something small, such as a venue's UiAvatarTag at size xs, over its picture's top-start corner (top-left in a left-to-right app): inset by space2, above the picture, never wider than it (nor over the dot), and it takes no taps, so the whole tile stays the target. The Avatar tag demo shows it. It doesn't scroll, so put it in a scroll view.",
-          demo: const _PosterDemo(),
-          code: "UiPosterGrid(\n  focus: UiPosterFocus.top,\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'),\n    details: Text('Aisha and Ali', maxLines: 1, overflow: TextOverflow.ellipsis))],\n  onSelect: (i) => openEvent(i),\n)",
+          summary: "One grid of same-shape picture tiles (ratio): 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A poster's details are drawn on its tile over the bottom of the picture on a compact UiScrim that fades from clear to dark, so the words stay readable on any picture; keep them short and non-interactive, since the whole tile is the target. Without details a tile is the picture alone, named by its label. No picture, or one that fails to load, shows a gradient of its colors (or the theme's primary and accent). A small dot (mark) can flag a tile; screen readers hear its label. A poster's corner draws something small, such as a venue's UiAvatarTag at size xs, over its picture's top-start corner (top-left in a left-to-right app): inset by space2, above the picture, never wider than it (nor over the dot), and it takes no taps, so the whole tile stays the target. The Avatar tag demo shows it. A poster's action gives its tile one small action of its own, such as a ghost UiIconButton to view the invitation (the eye below), at the picture's top-end corner on a round scrim backdrop: it is laid over the tile but outside its tap handling, so tapping it never selects the tile, and a mark's dot moves beside it. It doesn't scroll, so put it in a scroll view.",
+          demo: const PosterDemo(),
+          code: "UiPosterGrid(\n  focus: UiPosterFocus.top,\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'),\n    details: Text('Aisha and Ali', maxLines: 1, overflow: TextOverflow.ellipsis),\n    // Top-end corner, outside the tile's tap: never calls onSelect\n    action: UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedView), label: 'View Aisha and Ali', size: UiSize.sm, onPressed: () => viewInvite(0)))],\n  onSelect: (i) => openEvent(i),\n)",
           api: const [
             ApiRow('posters', 'List<UiPoster>', 'The tiles: picture, semantic label, fallback colours, optional dot.'),
             ApiRow('ratio', 'double', 'Width / height of every tile.', def: '0.75'),
             ApiRow('focus', 'UiPosterFocus', "Which part of a picture survives the crop; top keeps a poster's heading.", def: 'center'),
             ApiRow('UiPoster.details', 'Widget?', 'Drawn over the bottom of the picture on a compact scrim.'),
             ApiRow('UiPoster.corner', 'Widget?', "Something small (a UiAvatarTag, size xs) over the picture's top-start corner, inside it with a space2 inset; no taps of its own. 0.74.0."),
+            ApiRow('UiPoster.action', 'Widget?', "One small action (a UiIconButton, size sm or md) at the picture's top-end corner on a round scrim backdrop, outside the tile's tap handling: tapping it never calls onSelect. A mark's dot moves beside it. 0.77.0."),
           ],
           callbacks: const [ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.')],
-          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details})\nUiPosterMark({required UiStatus tone, required String label})',
+          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details, Widget? corner, Widget? action})\nUiPosterMark({required UiStatus tone, required String label})',
         ),
         DocSection(
           name: 'Poster view',
@@ -492,14 +493,14 @@ class _MasonryDemoState extends State<_MasonryDemo> {
 }
 
 /// The poster grid demo: tap a tile for the view with its details.
-class _PosterDemo extends StatefulWidget {
-  const _PosterDemo();
+class PosterDemo extends StatefulWidget {
+  const PosterDemo({super.key});
 
   @override
-  State<_PosterDemo> createState() => _PosterDemoState();
+  State<PosterDemo> createState() => PosterDemoState();
 }
 
-class _PosterDemoState extends State<_PosterDemo> {
+class PosterDemoState extends State<PosterDemo> {
   static const _when = ['Sat 12 Dec · Malé', 'Sun 20 Dec · Hulhumalé', 'Not finished', 'Fri 1 Jan · Addu', '12 guests', 'Tue 5 Jan'];
   static final _posters = [
     UiPoster(label: 'Aisha and Ali', image: DemoArt.palette[0], mark: const UiPosterMark(tone: UiStatus.primary, label: 'New')),
@@ -510,12 +511,14 @@ class _PosterDemoState extends State<_PosterDemo> {
     UiPoster(label: 'Housewarming', image: DemoArt.palette[4]),
   ];
   int _picked = 0;
+  int? _viewed;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       UiPosterGrid(
+        key: const ValueKey('poster-grid-demo'),
         focus: UiPosterFocus.top,
         posters: [
           for (var i = 0; i < _posters.length; i++)
@@ -528,12 +531,18 @@ class _PosterDemoState extends State<_PosterDemo> {
                 Text(_posters[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(color: t.mediaOnScrim)),
                 Text(_when[i], maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.caption.copyWith(color: t.mediaOnScrim)),
               ]),
+              action: UiIconButton(
+                icon: const UiIcon(HugeIcons.strokeRoundedView),
+                label: 'View ${_posters[i].label}',
+                size: UiSize.sm,
+                onPressed: () => setState(() => _viewed = i),
+              ),
             ),
         ],
         onSelect: (i) => setState(() => _picked = i),
       ),
       SizedBox(height: t.space2),
-      Text('Last picked: ${_posters[_picked].label}', style: context.uiText.caption),
+      Text('Last picked: ${_posters[_picked].label} · Last viewed: ${_viewed == null ? 'none' : _posters[_viewed!].label}', style: context.uiText.caption),
     ]);
   }
 }

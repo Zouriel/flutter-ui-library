@@ -327,8 +327,14 @@ class RenderUiTouchTarget extends RenderShiftedBox {
     final w = c.size.width < _minSize.width ? _minSize.width : c.size.width;
     final h = c.size.height < _minSize.height ? _minSize.height : c.size.height;
     size = constraints.constrain(Size(w, h));
-    (c.parentData! as BoxParentData).offset = _alignment.resolve(_textDirection ?? TextDirection.ltr).alongOffset(size - c.size as Offset);
+    final at = _alignment.resolve(_textDirection ?? TextDirection.ltr).alongOffset(size - c.size as Offset);
+    (c.parentData! as BoxParentData).offset = at;
+    visualRect = at & c.size;
   }
+
+  /// Where the visual (the child) sits inside the padded area, set by layout (0.77.0): lets a parent
+  /// such as ui-poster-grid's action backdrop hug the visual while the padding overflows.
+  Rect visualRect = Rect.zero;
 
   @override
   bool hitTest(BoxHitTestResult result, {required Offset position}) {

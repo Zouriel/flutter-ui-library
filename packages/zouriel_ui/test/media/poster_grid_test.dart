@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -194,6 +195,122 @@ void main() {
         final label = tester.getSemantics(find.descendant(of: tiles().at(0), matching: find.byType(UiInteractive)).first).getSemanticsData().label;
         expect(label, contains('At $long'));
         handle.dispose();
+      });
+    });
+
+    group('action', () {
+      const long = 'Coco Palm Dhuni Kolhu Maldives Resort and Spa, the long name';
+      List<UiPoster> withAction(List<int> viewed) => [
+            UiPoster(label: 'Aisha and Ali', details: const Text('Aisha and Ali'), mark: const UiPosterMark(tone: UiStatus.primary, label: 'New'),
+                corner: const UiAvatarTag(name: long, size: UiAvatarTagSize.xs),
+                action: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedView), label: 'View Aisha and Ali', size: UiSize.sm, onPressed: () => viewed.add(0))),
+            UiPoster(label: 'Eid party', details: const Text('Eid party'), corner: const UiAvatarTag(name: long, size: UiAvatarTagSize.xs),
+                action: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedView), label: 'View Eid party', size: UiSize.sm, onPressed: () => viewed.add(1))),
+            const UiPoster(label: 'Birthday', details: Text('Birthday'), mark: UiPosterMark(tone: UiStatus.warning, label: 'Not finished')),
+          ];
+      Finder tiles() => find.descendant(of: find.byType(UiPosterGrid), matching: find.byType(AspectRatio));
+      Finder tileTap(int i) => find.descendant(of: tiles().at(i), matching: find.byType(UiInteractive)).first;
+
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        testWidgets('sits at the picture\'s top-end corner on a round scrim, the dot beside it, clear of the corner ($dir)', (tester) async {
+          await pumpUi(tester, Directionality(textDirection: dir, child: SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withAction([]), onSelect: (_) {})))), size: const Size(360, 800));
+          final t = tester.element(find.byType(UiPosterGrid)).ui;
+          for (var i = 0; i < 2; i++) {
+            final pic = tester.getRect(tiles().at(i));
+            final back = tester.getRect(find.descendant(of: tiles().at(i), matching: find.byKey(const ValueKey('ui-poster-action-backdrop'))));
+            expect(back.top, closeTo(pic.top + t.space2, 0.5), reason: 'tile $i top');
+            if (dir == TextDirection.ltr) {
+              expect(back.right, closeTo(pic.right - t.space2, 0.5), reason: 'tile $i end');
+            } else {
+              expect(back.left, closeTo(pic.left + t.space2, 0.5), reason: 'tile $i end (rtl)');
+            }
+            // The corner keeps clear of the action (and the dot) on the other side.
+            final tag = tester.getRect(find.descendant(of: tiles().at(i), matching: find.byType(UiAvatarTag)));
+            expect(tag.overlaps(back), isFalse, reason: 'tile $i corner vs action');
+          }
+          // Tile 0 has a mark: its dot sits beside the action, before it, on the same row, never over it.
+          final back0 = tester.getRect(find.descendant(of: tiles().at(0), matching: find.byKey(const ValueKey('ui-poster-action-backdrop'))));
+          final dot = tester.getRect(find.descendant(of: tiles().at(0), matching: find.byType(UiPosterDot)));
+          expect(dot.overlaps(back0.inflate(2)), isFalse);
+          expect(dot.center.dy, closeTo(back0.center.dy, 0.5));
+          expect(dir == TextDirection.ltr ? dot.right <= back0.left : dot.left >= back0.right, isTrue);
+          expect(tester.getRect(find.descendant(of: tiles().at(0), matching: find.byType(UiAvatarTag))).overlaps(dot.inflate(2)), isFalse);
+          // The backdrop hugs the sm button's visual (its 44 touch padding overflows, like the web's
+          // hit-slop), and the ghost button inside draws in the on-scrim colour.
+          expect(back0.size, Size(t.sizeSm, t.sizeSm));
+          final visual = tester.getRect(find.descendant(of: tiles().at(0), matching: find.byType(AnimatedContainer)).last);
+          expect(visual, back0);
+          final icon = find.descendant(of: tiles().at(0), matching: find.byType(UiIcon));
+          expect(IconTheme.of(tester.element(icon)).color, t.mediaOnScrim);
+          // A poster without an action keeps its dot inside the tile at the top-end corner.
+          final pic2 = tester.getRect(tiles().at(2));
+          final dot2 = tester.getRect(find.descendant(of: tiles().at(2), matching: find.byType(UiPosterDot)));
+          expect(dot2.top, closeTo(pic2.top + t.space2, 0.5));
+          expect(find.descendant(of: tiles().at(2), matching: find.byKey(const ValueKey('ui-poster-action'))), findsNothing);
+          expect(tester.takeException(), isNull);
+        });
+      }
+
+      testWidgets('is outside the tile\'s tap handling: tapping it never selects; the tile and the dot still do', (tester) async {
+        final handle = tester.ensureSemantics();
+        final picked = <int>[];
+        final viewed = <int>[];
+        await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withAction(viewed), onSelect: picked.add))), size: const Size(360, 800));
+        for (var i = 0; i < 2; i++) {
+          final button = find.descendant(of: tiles().at(i), matching: find.byType(UiIconButton));
+          expect(find.descendant(of: tileTap(i), matching: find.byType(UiIconButton)), findsNothing, reason: 'not inside the tile');
+          expect(find.descendant(of: tileTap(i), matching: find.byType(UiPosterDot)), findsNothing, reason: 'the dot left the tile');
+          await tester.tap(button);
+        }
+        await tester.pump();
+        expect(viewed, [0, 1]);
+        expect(picked, isEmpty);
+        // The button's touch padding past the backdrop is still the action's, not the tile's.
+        final back = tester.getRect(find.descendant(of: tiles().at(1), matching: find.byKey(const ValueKey('ui-poster-action-backdrop'))));
+        await tester.tapAt(back.bottomLeft + const Offset(-4, 4));
+        expect(viewed, [0, 1, 1]);
+        expect(picked, isEmpty);
+        // Elsewhere on the tile, and on the dot beside the action, the tile is the target.
+        await tester.tapAt(tester.getCenter(tiles().at(1)));
+        await tester.tapAt(tester.getCenter(find.descendant(of: tiles().at(0), matching: find.byType(UiPosterDot))));
+        expect(picked, [1, 0]);
+        expect(viewed, [0, 1, 1]);
+        // Its own name, and the tile still reads its mark.
+        expect(find.bySemanticsLabel('View Aisha and Ali'), findsOneWidget);
+        expect(tester.getSemantics(tileTap(0)).getSemanticsData().label, contains('New'));
+        handle.dispose();
+      });
+
+      testWidgets('is its own focus stop after its tile, and Enter on it never selects', (tester) async {
+        final picked = <int>[];
+        final viewed = <int>[];
+        await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 360, child: UiPosterGrid(posters: withAction(viewed), onSelect: picked.add))), size: const Size(360, 800));
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(viewed, [0]);
+        expect(picked, isEmpty);
+      });
+
+      testWidgets('golden: actions with and without a dot on light, dark and fallback posters', (tester) async {
+        final light = await solid(tester, const Color(0xFFFFFFFF));
+        final dark = await solid(tester, const Color(0xFF101418));
+        await tester.runAsync(() async {
+          await pumpUi(tester, const SizedBox());
+          await precacheImage(light, tester.element(find.byType(UiApp)));
+          await precacheImage(dark, tester.element(find.byType(UiApp)));
+        });
+        Widget title(BuildContext c, String a) => Text(a, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.uiText.label.copyWith(color: c.ui.mediaOnScrim));
+        Widget view(String l) => UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedView), label: 'View $l', size: UiSize.sm, onPressed: () {});
+        await expectThemedGolden(tester, 'poster_grid_action', (c) => UiPosterGrid(onSelect: (_) {}, posters: [
+              UiPoster(label: 'Aisha and Ali', image: light, mark: const UiPosterMark(tone: UiStatus.primary, label: 'New'), details: title(c, 'Aisha and Ali'),
+                  corner: const UiAvatarTag(name: long, prefix: 'At', size: UiAvatarTagSize.xs), action: view('Aisha and Ali')),
+              UiPoster(label: 'Eid party', image: dark, details: title(c, 'Eid party'), action: view('Eid party')),
+              UiPoster(label: 'Birthday', details: title(c, 'Birthday'), mark: const UiPosterMark(tone: UiStatus.warning, label: 'Not finished'), action: view('Birthday')),
+              UiPoster(label: 'Dinner', image: light, details: title(c, 'Dinner'), mark: const UiPosterMark(tone: UiStatus.neutral, label: 'Seen')),
+            ]), width: 360, height: 560);
       });
     });
 
