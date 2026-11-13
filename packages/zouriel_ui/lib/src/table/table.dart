@@ -18,7 +18,7 @@ enum UiColumnAlign { start, center, end }
 /// value.
 @immutable
 class UiColumn<T> {
-  const UiColumn({required this.key, required this.header, this.sortable = false, this.align = UiColumnAlign.start, this.value, this.format, this.cellBuilder});
+  const UiColumn({required this.key, required this.header, this.sortable = false, this.align = UiColumnAlign.start, this.value, this.format, this.cellBuilder, this.nowrap = false, this.minWidth});
 
   final String key;
   final String header;
@@ -30,6 +30,13 @@ class UiColumn<T> {
   /// Builds the cell's content in place of [format]'s text (the web `UiCell` template). The cell's
   /// padding, alignment and default text style still apply.
   final Widget Function(BuildContext context, T row)? cellBuilder;
+
+  /// Keep this column's heading and cells on one line (a short label such as a status), so a crowded
+  /// table squeezes the other columns instead of breaking "Not sent yet" into one word per line.
+  final bool nowrap;
+
+  /// The width this column never gets narrower than (e.g. 144 for names), however crowded the table.
+  final double? minWidth;
 
   Object? read(T row) {
     if (value != null) return value!(row);
@@ -219,8 +226,11 @@ class _UiTableState<T> extends State<UiTable<T>> {
                 alignment: align(col.align),
                 widthFactor: 1,
                 child: col.sortable
-                    ? _SortButton(label: col.header, style: head, dir: _sortKey == col.key ? _sortDir : null, onTap: () => _sortBy(col.key))
-                    : Text(col.header, style: head, maxLines: 1, softWrap: false),
+                    ? _SortButton(label: col.header, style: head, dir: _sortKey == col.key ? _sortDir : null, nowrap: col.nowrap, onTap: () => _sortBy(col.key))
+                    // Headings wrap (unless the column is nowrap): a long one ("How many guests? (including
+                    // you)") would otherwise set its column's width, and a table with a few of them grew
+                    // wider than its box, cutting off the last columns.
+                    : Text(col.header, style: head, maxLines: col.nowrap ? 1 : null, softWrap: !col.nowrap),
               ),
             ),
           ),
@@ -249,7 +259,7 @@ class _UiTableState<T> extends State<UiTable<T>> {
                   widthFactor: 1,
                   child: col.cellBuilder != null
                       ? DefaultTextStyle(style: body, textAlign: textAlign(col.align), child: Builder(builder: (context) => col.cellBuilder!(context, rows[i])))
-                      : Text(col.text(rows[i]), style: body, textAlign: textAlign(col.align)),
+                      : Text(col.text(rows[i]), style: body, textAlign: textAlign(col.align), maxLines: col.nowrap ? 1 : null, softWrap: !col.nowrap),
                 ),
               )),
             if (hasActions)
@@ -275,7 +285,8 @@ class _UiTableState<T> extends State<UiTable<T>> {
     var c = 0;
     if (widget.selectable) widths[c++] = const IntrinsicColumnWidth();
     for (var k = 0; k < widget.columns.length; k++) {
-      widths[c++] = const IntrinsicColumnWidth(flex: 1);
+      final min = widget.columns[k].minWidth;
+      widths[c++] = min == null ? const IntrinsicColumnWidth(flex: 1) : MaxColumnWidth(FixedColumnWidth(min), const IntrinsicColumnWidth(flex: 1));
     }
     if (hasActions) widths[c++] = const IntrinsicColumnWidth();
 
@@ -389,8 +400,9 @@ class _MarkPainter extends CustomPainter {
 }
 
 class _SortButton extends StatelessWidget {
-  const _SortButton({required this.label, required this.style, required this.dir, required this.onTap});
+  const _SortButton({required this.label, required this.style, required this.dir, required this.onTap, this.nowrap = false});
   final String label;
+  final bool nowrap;
   final TextStyle style;
   final UiSortDirection? dir;
   final VoidCallback onTap;
@@ -410,7 +422,7 @@ class _SortButton extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 24, minWidth: 24),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : const []),
           child: Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: [
-            Text(label, style: style.copyWith(color: c), maxLines: 1, softWrap: false),
+            Flexible(child: Text(label, style: style.copyWith(color: c), maxLines: nowrap ? 1 : null, softWrap: !nowrap)),
             Opacity(opacity: dir == null ? 0.4 : 1, child: CustomPaint(size: const Size.square(12), painter: _SortPainter(c, dir))),
           ]),
         ));

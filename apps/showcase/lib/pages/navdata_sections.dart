@@ -82,10 +82,29 @@ class _TableSectionState extends State<_TableSection> {
         ),
         UiText('$_selected selected${_last == null ? '' : ' · $_last'}', variant: UiTextVariant.caption),
         const UiTable<_Member>(columns: [UiColumn(key: 'name', header: 'Name'), UiColumn(key: 'role', header: 'Role')], data: [], emptyText: 'No members yet'),
+        // Many columns in a box too narrow for them all: long headings wrap, the status stays on one line (nowrap) and
+        // names keep at least 144 wide (minWidth). On a phone the table scrolls instead.
+        const UiTable<_Member>(
+          selectable: true,
+          columns: [
+            UiColumn(key: 'name', header: 'Guest', minWidth: 144),
+            UiColumn(key: 'status', header: 'Status', nowrap: true),
+            UiColumn(key: 'rsvp', header: 'RSVP', nowrap: true),
+            UiColumn(key: 'count', header: 'How many guests? (including you)'),
+            UiColumn(key: 'meal', header: 'Meal preference'),
+            UiColumn(key: 'arrival', header: 'Arrival time'),
+            UiColumn(key: 'note', header: 'A note for the host'),
+          ],
+          data: [
+            {'name': 'Hassan Ibrahim', 'status': 'Not sent yet', 'rsvp': 'No reply yet', 'count': '-', 'meal': '-', 'arrival': '-', 'note': '-'},
+            {'name': 'Mariyam Naseer Abdulla Didi', 'status': 'Opened', 'rsvp': 'Coming', 'count': '3', 'meal': 'Fish', 'arrival': '7:30 pm', 'note': 'Running a little late'},
+            {'name': 'Aminath Shareef', 'status': 'Sent', 'rsvp': 'Maybe', 'count': '2', 'meal': 'Vegetarian', 'arrival': '-', 'note': '-'},
+          ],
+        ),
       ]),
       code: "UiTable<Map<String, Object?>>(\n  selectable: true,\n  columns: [\n    UiColumn(key: 'name', header: 'Name', sortable: true),\n    UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end, format: (v, _) => v == null ? '\\u2014' : '\$v'),\n  ],\n  data: rows,\n  actions: [UiRowAction(label: 'Edit', run: edit)],\n  onSelectionChanged: (rows) => setState(() => picked = rows),\n)",
       api: const [
-        ApiRow('columns', 'List<UiColumn<T>>', 'key, header, sortable, align, value (reader), format.'),
+        ApiRow('columns', 'List<UiColumn<T>>', 'key, header, sortable, align, value (reader), format; nowrap keeps a column on one line, minWidth is the width it never goes under. Long headings wrap.'),
         ApiRow('data', 'List<T>', 'Rows; maps are read by column key.'),
         ApiRow('selectable', 'bool', 'Adds a checkbox column.', def: 'false'),
         ApiRow('actions', 'List<UiRowAction<T>>', 'label, run, disabled(row), semanticLabel(row). space2 apart at the row end.'),

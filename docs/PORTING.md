@@ -1365,3 +1365,9 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
 - `UiFileUpload` picture mode (0.79): the web `preview` URL is an `ImageProvider` here (`preview`), `previewAlt` is
   `previewSemanticLabel`, `previewFit` is a `BoxFit`, `previewAspect` ('16 / 9') is `previewAspectRatio` (a double),
   and `removable` + `(remove)` collapse into `onRemove` (set = Remove button shown), like other web outputs.
+
+- `UiColumn.minWidth` (0.81) is a `double` (logical pixels); the web takes a CSS length (`'9rem'`). `nowrap` is the
+  same on both. Long headings wrap on both since 0.81.
+- `ui-list-item`'s trailing slot became a flex box on the web in 0.81 (a block slot put a trailing icon on a text line
+  box, so rows with a chevron were 4px taller). Nothing to port: `UiListItem` lays its row out with a `Row`, which has
+  no line boxes.
