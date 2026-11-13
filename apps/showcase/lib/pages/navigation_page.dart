@@ -100,7 +100,7 @@ class _NavigationPageState extends State<NavigationPage> {
         DocSection(
           name: 'Tabs',
           widget: 'UiTabs · UiTab',
-          summary: 'Tabs over panels. One tab stop; Left/Right select the next tab (wrapping, skipping disabled ones), Home/End jump to the ends. The strip scrolls sideways when the tabs do not fit and keeps the selected one in view. Inactive panels stay mounted, so their state survives, but take no space and are hidden from screen readers. A tab may carry a Hugeicons icon; with iconOnly the label stays its accessible name, and an all-icon strip shares the width evenly.',
+          summary: 'Tabs over panels. One tab stop; Left/Right select the next tab (wrapping, skipping disabled ones), Home/End jump to the ends. The strip scrolls sideways when the tabs do not fit and keeps the selected one in view. Inactive panels stay mounted, so their state survives, but take no space and are hidden from screen readers. A tab may carry a Hugeicons icon; with iconOnly the label stays its accessible name, and an all-icon strip shares the width evenly. A tab can show a count after its label with badge (nothing for null or \'0\'), read out as badgeLabel when given (0.79).',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
             UiTabs(
               selectedIndex: _tab,
@@ -108,6 +108,7 @@ class _NavigationPageState extends State<NavigationPage> {
               tabs: const [
                 UiTab(label: 'Overview', child: UiText('Everything at a glance.')),
                 UiTab(label: 'Activity', icon: HugeIcons.strokeRoundedChartLineData01, child: UiText('Recent changes.')),
+                UiTab(label: 'Messages', badge: '3', badgeLabel: '3 new', child: UiText('A tab with a count (badge).')),
                 UiTab(label: 'Billing', disabled: true, child: SizedBox()),
                 UiTab(label: 'Audit log', child: UiText('Who did what, and when.')),
                 UiTab(label: 'Settings', child: UiText('Preferences.')),
@@ -128,6 +129,8 @@ class _NavigationPageState extends State<NavigationPage> {
           api: const [
             ApiRow('tabs', 'List<UiTab>', 'label, child, icon, iconOnly, disabled, anchor.'),
             ApiRow('tab.anchor', 'String?', "A UiTourAnchor id for this tab's button, so a tour step can point at it.", def: 'null'),
+            ApiRow('tab.badge', 'String?', 'A small count after the label; nothing for null, empty or 0 (0.79).', def: 'null'),
+            ApiRow('tab.badgeLabel', 'String?', 'What screen readers hear for the badge ("3 new").', def: 'null'),
             ApiRow('selectedIndex', 'int', 'The open tab.', def: '0'),
             ApiRow('onChanged', 'ValueChanged<int>?', 'A new tab was chosen.'),
             ApiRow('label', 'String', 'Accessible name of the strip.', def: "'Tabs'"),

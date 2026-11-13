@@ -29,6 +29,8 @@ class UiStrings {
     this.moreActions = 'More actions',
     this.uploadLabel = 'Tap to upload',
     this.uploadHint = 'or drag & drop',
+    this.uploadReplace = 'Tap to change',
+    this.uploadRemove = 'Remove',
     this.holdHint = 'Press and hold to confirm',
     this.confirmTitle = 'Are you sure?',
     this.confirm = 'Confirm',
@@ -249,6 +251,8 @@ class UiStrings {
     moreActions: 'އިތުރު ކަންކަން',
     uploadLabel: 'ފިތާލާ އަޕްލޯޑް ކުރޭ',
     uploadHint: 'ނުވަތަ ދަމައިގެން ލާ',
+    uploadReplace: 'ފިތާލާ ބަދަލު ކުރޭ',
+    uploadRemove: 'ނައްތާލާ',
     holdHint: 'ކަށަވަރުކުރަން ފިތާލައިގެން ހިފަހައްޓާ',
     confirmTitle: 'ޔަގީންތޯ؟',
     confirm: 'ކަށަވަރުކުރޭ',
@@ -489,6 +493,12 @@ class UiStrings {
 
   /// File upload: what follows the action when drops are enabled.
   final String uploadHint;
+
+  /// File upload with a picture in it: what tapping the picture does.
+  final String uploadReplace;
+
+  /// File upload with a picture in it: the button under it that takes the picture away.
+  final String uploadRemove;
 
   /// Hold button: what holding does (read with the button).
   final String holdHint;
@@ -1096,6 +1106,8 @@ class UiStrings {
     String? moreActions,
     String? uploadLabel,
     String? uploadHint,
+    String? uploadReplace,
+    String? uploadRemove,
     String? holdHint,
     String? confirmTitle,
     String? confirm,
@@ -1311,6 +1323,8 @@ class UiStrings {
         moreActions: moreActions ?? this.moreActions,
         uploadLabel: uploadLabel ?? this.uploadLabel,
         uploadHint: uploadHint ?? this.uploadHint,
+        uploadReplace: uploadReplace ?? this.uploadReplace,
+        uploadRemove: uploadRemove ?? this.uploadRemove,
         holdHint: holdHint ?? this.holdHint,
         confirmTitle: confirmTitle ?? this.confirmTitle,
         confirm: confirm ?? this.confirm,
@@ -1528,6 +1542,8 @@ class UiStrings {
         'moreActions': moreActions,
         'uploadLabel': uploadLabel,
         'uploadHint': uploadHint,
+        'uploadReplace': uploadReplace,
+        'uploadRemove': uploadRemove,
         'holdHint': holdHint,
         'confirmTitle': confirmTitle,
         'confirm': confirm,

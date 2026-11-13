@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../button/button.dart';
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
@@ -74,7 +75,37 @@ class UiFileUpload extends StatefulWidget {
     this.radius,
     this.label,
     this.hint,
+    this.preview,
+    this.previewSemanticLabel,
+    this.previewFit = BoxFit.cover,
+    this.previewAspectRatio = 16 / 9,
+    this.replaceLabel,
+    this.onRemove,
+    this.removeLabel,
   });
+
+  /// A picture already uploaded (the web `preview`). The same box then shows it, and tapping it picks a
+  /// replacement ([replaceLabel], "Tap to change" by default). Null shows the empty dropzone.
+  final ImageProvider? preview;
+
+  /// What the picture shows (the web `previewAlt`); also starts the box's semantic label.
+  final String? previewSemanticLabel;
+
+  /// [BoxFit.cover] fills the box (photos); [BoxFit.contain] shows all of it with room around (logos,
+  /// transparent pictures). The web `previewFit` 'cover' / 'contain'.
+  final BoxFit previewFit;
+
+  /// The box's shape while it shows a picture (the web `previewAspect`, '16 / 9' there).
+  final double previewAspectRatio;
+
+  /// The label on the picture; defaults to [UiStrings.uploadReplace].
+  final String? replaceLabel;
+
+  /// When set, a Remove button under the picture calls it (the web `removable` + `(remove)`).
+  final VoidCallback? onRemove;
+
+  /// Its label; defaults to [UiStrings.uploadRemove].
+  final String? removeLabel;
 
   /// The action, in bold (the web `label`); defaults to [UiStrings.uploadLabel] ("Tap to upload").
   final String? label;
@@ -159,6 +190,7 @@ class UiFileUploadState extends State<UiFileUpload> {
     final r = (widget.radius ?? theme.config.radius) ? t.radius : 0.0;
     final acceptText = widget.acceptLabel ?? widget.accept;
     final body = context.uiText.body;
+    if (widget.preview != null) return _withPreview(context, widget.preview!, r);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -234,6 +266,100 @@ class UiFileUploadState extends State<UiFileUpload> {
                     ),
                 ],
               ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+extension on UiFileUploadState {
+  /// The box with the uploaded picture in it: tapping (or dropping on) it picks a replacement; Remove under it.
+  Widget _withPreview(BuildContext context, ImageProvider image, double r) {
+    final t = context.uiTheme.tokens;
+    final strings = context.uiStrings;
+    final replace = widget.replaceLabel ?? strings.uploadReplace;
+    final name = widget.previewSemanticLabel;
+    final contain = widget.previewFit == BoxFit.contain;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        UiInteractive(
+          onTap: _enabled ? _pick : null,
+          enabled: _enabled,
+          semanticLabel: name == null || name.isEmpty ? replace : '$name. $replace',
+          pressScale: false,
+          padTouchTarget: false,
+          builder: (context, s) {
+            final hot = _over || (s.hovered && !s.disabled);
+            return AnimatedOpacity(
+              opacity: s.disabled ? 0.5 : 1,
+              duration: t.motionBase,
+              child: AspectRatio(
+                aspectRatio: widget.previewAspectRatio,
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 120),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: t.surface,
+                    border: Border.all(color: hot ? t.primary : t.border),
+                    borderRadius: BorderRadius.circular(r),
+                    boxShadow: s.focused ? t.focusRing : const [],
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Padding(
+                        // A contained picture (a logo) keeps clear of the label at the bottom.
+                        padding: contain ? EdgeInsets.fromLTRB(t.space3, t.space3, t.space3, t.space3 + 32) : EdgeInsets.zero,
+                        child: Image(image: image, fit: widget.previewFit, excludeFromSemantics: true,
+                            errorBuilder: (context, _, _) => const SizedBox.shrink()),
+                      ),
+                      Positioned(
+                        left: t.space2,
+                        right: t.space2,
+                        bottom: t.space2,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: context.uiAnimate ? t.motionBase : Duration.zero,
+                            padding: EdgeInsets.symmetric(horizontal: t.space3, vertical: t.space1),
+                            decoration: BoxDecoration(
+                              color: hot ? t.primary : t.surface.withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(999),
+                              boxShadow: t.shadow1,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: t.space1,
+                              children: [
+                                UiIcon(HugeIcons.strokeRoundedCloudUpload, size: 16, color: hot ? t.primaryContrast : t.text),
+                                Flexible(
+                                  child: Text(replace,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: hot ? t.primaryContrast : t.text)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        if (widget.onRemove != null)
+          Padding(
+            padding: EdgeInsets.only(top: t.space2),
+            child: UiButton(
+              label: widget.removeLabel ?? strings.uploadRemove,
+              icon: const UiIcon(HugeIcons.strokeRoundedDelete02),
+              variant: UiButtonVariant.ghost,
+              size: UiSize.sm,
+              onPressed: _enabled ? widget.onRemove : null,
             ),
           ),
       ],

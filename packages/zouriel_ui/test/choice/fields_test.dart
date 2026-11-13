@@ -167,6 +167,68 @@ void main() {
       expect(asked, isFalse);
       expect(got, isNull);
     });
+
+    // A 1x1 transparent PNG, so the preview has a real picture to decode.
+    final pixel = MemoryImage(Uint8List.fromList(const [
+      137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137,
+      0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+    ]));
+
+    testWidgets('with a picture: the same box shows it, tapping picks a replacement, Remove sits under it (0.79)', (tester) async {
+      var asked = 0;
+      var removed = 0;
+      List<UiPickedFile>? got;
+      await pumpUi(tester, SizedBox(width: 300, child: UiFileUpload(
+        accept: 'image/*',
+        preview: pixel,
+        previewSemanticLabel: 'Your logo',
+        previewFit: BoxFit.contain,
+        previewAspectRatio: 1,
+        picker: ({required multiple, required accept}) async { asked++; return [png]; },
+        onFilesSelected: (f) => got = f,
+        onRemove: () => removed++,
+      )));
+      expect(find.text('Tap to upload'), findsNothing);
+      expect(find.text('Tap to change'), findsOneWidget);
+      final image = tester.widget<Image>(find.byType(Image));
+      expect(image.image, pixel);
+      expect(image.fit, BoxFit.contain);
+      // Square box at the given aspect ratio.
+      final box = tester.getSize(find.byType(AspectRatio));
+      expect(box.width, 300);
+      expect(box.height, 300);
+      expect(find.bySemanticsLabel('Your logo. Tap to change'), findsOneWidget);
+
+      await tester.tap(find.byType(Image));
+      await tester.pumpAndSettle();
+      expect(asked, 1);
+      expect(got, [png]);
+      // The picture is the feedback: no file list under it.
+      expect(find.text('photo.PNG'), findsNothing);
+
+      final remove = find.widgetWithText(UiButton, 'Remove');
+      expect(remove, findsOneWidget);
+      expect(tester.getTopLeft(remove).dy, greaterThanOrEqualTo(tester.getBottomLeft(find.byType(AspectRatio)).dy));
+      await tester.tap(remove);
+      await tester.pump();
+      expect(removed, 1);
+    });
+
+    testWidgets('with a picture and no onRemove there is no Remove button; no picture is the plain dropzone', (tester) async {
+      await pumpUi(tester, SizedBox(width: 300, child: UiFileUpload(
+        preview: pixel,
+        picker: ({required multiple, required accept}) async => null,
+      )));
+      expect(find.text('Remove'), findsNothing);
+      expect(find.text('Tap to change'), findsOneWidget);
+      await pumpUi(tester, SizedBox(width: 300, child: UiFileUpload(
+        picker: ({required multiple, required accept}) async => null,
+        onRemove: () {},
+      )));
+      expect(find.text('Tap to upload'), findsOneWidget);
+      expect(find.text('Remove'), findsNothing);
+      expect(find.byType(Image), findsNothing);
+    });
   });
 
   group('UiChipInput', () {
@@ -408,5 +470,33 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Pick colour'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(UiApp), matchesGoldenFile('goldens/fields_open.png'));
+  });
+
+  testWidgets('golden: file upload with a picture in it (photo + Remove, logo contained) (0.79)', (tester) async {
+    tester.view.devicePixelRatio = 2;
+    tester.view.physicalSize = const Size(390, 560) * 2;
+    addTearDown(tester.view.reset);
+    final photo = MemoryImage(Uint8List.fromList(const [
+      137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 8, 0, 0, 0, 4, 8, 6, 0, 0, 0, 179, 205, 126, 240, 0,
+      0, 0, 47, 73, 68, 65, 84, 120, 156, 99, 216, 98, 19, 245, 127, 75, 64, 212, 255, 45, 41, 81, 255, 183, 84, 68, 253, 223, 210,
+      19, 245, 127, 203, 130, 168, 255, 91, 182, 68, 253, 223, 114, 34, 234, 63, 3, 237, 21, 0, 0, 221, 96, 81, 225, 225, 53, 211,
+      73, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+    ]));
+    Future<List<UiPickedFile>?> none({required bool multiple, required List<String> accept}) async => null;
+    await tester.pumpWidget(UiApp(theme: UiThemeName.light, home: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 16, children: [
+        UiFileUpload(picker: none, preview: photo, previewSemanticLabel: 'Cover picture', onRemove: () {}),
+        Align(alignment: Alignment.centerLeft,
+            child: SizedBox(width: 140, child: UiFileUpload(picker: none, preview: photo, previewFit: BoxFit.contain, previewAspectRatio: 1))),
+      ]),
+    )));
+    await tester.runAsync(() async {
+      for (final e in find.byType(Image).evaluate()) {
+        await precacheImage(photo, e);
+      }
+    });
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(UiApp), matchesGoldenFile('goldens/fields_upload_preview.png'));
   });
 }

@@ -1361,3 +1361,7 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
   `tileBuilder` lets an app draw its own cached picture; the web takes `src` only.
 - `UiThemeSwatch` takes colours (`UiThemeSwatchColors.fromCss` reads `#hex`), not a theme name: the server sends the
   preview colours for its own named themes.
+
+- `UiFileUpload` picture mode (0.79): the web `preview` URL is an `ImageProvider` here (`preview`), `previewAlt` is
+  `previewSemanticLabel`, `previewFit` is a `BoxFit`, `previewAspect` ('16 / 9') is `previewAspectRatio` (a double),
+  and `removable` + `(remove)` collapse into `onRemove` (set = Remove button shown), like other web outputs.
