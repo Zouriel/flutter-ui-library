@@ -24,6 +24,8 @@ class _FormsChoiceSectionsState extends State<FormsChoiceSections> {
   String _colour = '#6a97c0';
   List<UiPickedFile> _files = [];
   List<UiPickedFile> _rejected = [];
+  bool _coverOn = true;
+  String _coverNote = '';
   String? _effect = 'fade';
   String _lastPicked = '';
   UiAnchor _anchor = UiAnchor.centre;
@@ -228,6 +230,20 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
             onRejected: (f) => setState(() => _rejected = f),
           ),
           Text('Selected ${_files.length}; rejected: ${_rejected.isEmpty ? 'none' : _rejected.map((f) => f.name).join(', ')}', style: caption),
+          SizedBox(height: t.space4),
+          Text('With a picture in it (0.79): tap the picture to change it; Remove under it.', style: caption),
+          UiFileUpload(
+            picker: _fakePicker,
+            enabled: enabled,
+            accept: 'image/*',
+            label: 'Upload a cover picture',
+            acceptLabel: 'JPEG, PNG or WebP',
+            preview: _coverOn ? const AssetImage('assets/demo/sunset.jpg') : null,
+            previewSemanticLabel: 'Cover picture',
+            onFilesSelected: (f) => setState(() { _coverOn = true; _coverNote = 'Picked ${f.first.name}'; }),
+            onRemove: () => setState(() { _coverOn = false; _coverNote = 'Removed'; }),
+          ),
+          if (_coverNote.isNotEmpty) Text(_coverNote, style: caption),
         ]),
         code: '''UiFileUpload(
   multiple: true,
@@ -250,6 +266,13 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
           ApiRow('label', 'String?', 'The action, in bold.', def: 'strings.uploadLabel (Tap to upload)'),
           ApiRow('hint', 'String?', 'What follows it with dropEnabled; empty hides it.', def: 'strings.uploadHint (or drag & drop)'),
           ApiRow('enabled', 'bool', 'Disable the zone.', def: 'true'),
+          ApiRow('preview', 'ImageProvider?', 'A picture already uploaded: the same box shows it and tapping it picks a replacement (0.79).'),
+          ApiRow('previewSemanticLabel', 'String?', 'What the picture shows; starts the box\'s label.'),
+          ApiRow('previewFit', 'BoxFit', 'cover fills the box; contain shows all of it (logos).', def: 'BoxFit.cover'),
+          ApiRow('previewAspectRatio', 'double', 'The box\'s shape while it shows a picture.', def: '16 / 9'),
+          ApiRow('replaceLabel', 'String?', 'The label on the picture.', def: 'strings.uploadReplace (Tap to change)'),
+          ApiRow('onRemove', 'VoidCallback?', 'Shows a Remove button under the picture.'),
+          ApiRow('removeLabel', 'String?', 'Its label.', def: 'strings.uploadRemove (Remove)'),
         ],
         callbacks: const [
           ApiRow('state.addFiles(files)', 'void', 'Dropped files: filtered by accept, rejects reported.'),

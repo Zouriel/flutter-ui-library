@@ -13,7 +13,16 @@ import '../theme/theme.dart';
 /// still the tab's accessible name.
 @immutable
 class UiTab {
-  const UiTab({required this.label, required this.child, this.icon, this.iconOnly = false, this.disabled = false, this.anchor});
+  const UiTab({
+    required this.label,
+    required this.child,
+    this.icon,
+    this.iconOnly = false,
+    this.disabled = false,
+    this.anchor,
+    this.badge,
+    this.badgeLabel,
+  });
 
   final String label;
   final Widget child;
@@ -24,6 +33,14 @@ class UiTab {
   /// A tour anchor id ([UiTourAnchor]) for this tab's button, so a [UiTour] step can point at it.
   /// Null: no anchor.
   final String? anchor;
+
+  /// A small count after the label (e.g. unread messages; the web `badge`). Nothing shows for null, '' or
+  /// '0' (0.79). Screen readers hear it after the label, or [badgeLabel] instead when given ("3 new").
+  final String? badge;
+  final String? badgeLabel;
+
+  /// The badge as shown, or null when there is none.
+  String? get badgeText => badge == null || badge!.isEmpty || badge == '0' ? null : badge;
 }
 
 /// `ui-tabs`: tabs over panels. [selectedIndex] is the open tab; [onChanged] reports a new one.
@@ -207,11 +224,26 @@ class _TabButton extends StatelessWidget {
         final content = Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
           if (tab.icon != null) UiIcon(tab.icon!, size: iconOnly ? 22 : 18, color: selected ? fg : (t.icon ?? fg)),
           if (!iconOnly) Text(tab.label, maxLines: 1, softWrap: false, style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35, color: fg)),
+          if (tab.badgeText case final b?)
+            Semantics(
+              label: tab.badgeLabel ?? b,
+              excludeSemantics: true,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: t.primary, borderRadius: BorderRadius.circular(999)),
+                child: Text(b,
+                    maxLines: 1,
+                    style: context.uiText.body.copyWith(
+                        fontSize: 12, height: 1, fontWeight: FontWeight.w600, color: t.primaryContrast, fontFeatures: const [FontFeature.tabularFigures()])),
+              ),
+            ),
         ]);
         // The role sits inside the builder so UiInteractive's merged node carries it.
         return Semantics(
           role: SemanticsRole.tab,
-          label: iconOnly ? tab.label : null,
+          label: iconOnly ? (tab.badgeText == null ? tab.label : '${tab.label}, ${tab.badgeLabel ?? tab.badgeText}') : null,
           child: Opacity(
             opacity: s.disabled ? 0.5 : 1,
             child: AnimatedContainer(

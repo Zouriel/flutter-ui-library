@@ -669,8 +669,8 @@ File: `form/src/editable-text.ts`
 ### UiFileUpload (component, `ui-file-upload`)
 File: `form/src/file-upload.ts`  
 `ui-file-upload` — drag-and-drop / click dropzone. Emits `(filesSelected)`. Dropped files are checked against `accept` the same way the file dialog filters them; files that don't match go to `(rejected)`.  
-- Inputs: `multiple` = false; `accept`: string; `acceptLabel`: string; `radius` = true; `disabled` = false
-- Outputs: `filesSelected`: File[]; `rejected`: File[]
+- Inputs: `multiple` = false; `accept`: string; `acceptLabel`: string; `radius` = true; `disabled` = false; `preview`: string | null; `previewAlt`; `previewFit`: 'cover' | 'contain'; `previewAspect` = '16 / 9'; `replaceLabel`; `removable` = false; `removeLabel` (0.79; Flutter `preview` ImageProvider, `previewSemanticLabel`, `previewFit` BoxFit, `previewAspectRatio`, `replaceLabel`, `onRemove` + `removeLabel`)
+- Outputs: `filesSelected`: File[]; `rejected`: File[]; `remove` (0.79)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - function `fileMatchesAccept` (file-upload.ts)
@@ -1659,7 +1659,7 @@ File: `table/src/table.ts`
 ### UiTab (component, `ui-tab`)
 File: `tabs/src/tabs.ts`  
 `ui-tab` — a single tab + its panel. Provide a `label` and project the panel content. Inactive panels stay in the DOM but are hidden (`[hidden]`). An optional HugeIcons `icon` draws before the label. With `iconOnly` the label is not shown, but it is still the tab's accessible name and its tooltip, so a screen reader and a hovering mouse both get the words the icon stands for.  
-- Inputs: `label`: string; `disabled` = false; `icon`: IconSvgObject | undefined = undefined; `iconOnly` = false
+- Inputs: `label`: string; `disabled` = false; `icon`: IconSvgObject | undefined = undefined; `iconOnly` = false; `badge`: string | number | null; `badgeLabel`: string (0.79; Flutter `badge` is a String?)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTabs (component, `ui-tabs`)
