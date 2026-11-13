@@ -1971,3 +1971,25 @@ A one-off uiHint through UiGuidance.
 - Outputs: `uiHintOnceDone`
 - Flutter: `UiHintOnce(id, message, child, placement, duration, dismissible, skipWhen, when, onDone, guidance)`
 - [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase
+
+## sortable (0.78.0)
+
+### UiSectionList (component, `ui-section-list`) (0.78.0)
+Cards put in order by dragging their handle (at once, device touch slop), with eye / pencil / bin; locked items keep their place; arrow keys on the handle.
+- Flutter: `UiSectionList(items, onReorder, onToggleHidden, onEdit, onRemove, label, *Label)`, `UiSectionListItem`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiReorderGrid (component, `ui-reorder-grid`) (0.78.0)
+Square photo tiles reordered by long press + drag (page autoscrolls), tap, remove x, cover star; arrow keys.
+- Flutter: `UiReorderGrid(items, onReorder, onTileTap, onRemove, coverId, minTile, tileBuilder)`, `UiReorderGridItem`, `uiReorderGridMetrics`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiHandleField (component, `ui-handle-field`) (0.78.0)
+`@handle` field: lowercases, keeps a-z 0-9 . _, debounced live check, stale answers ignored, "Use @x" suggestion.
+- Flutter: `UiHandleField(value, onChanged, check, prefix, debounce, minLength, maxLength, suggestion, hint, onStatus)`, `UiHandleCheck`, `UiHandleState`, `UiHandleFormatter`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiThemeSwatch (component, `ui-theme-swatch`) (0.78.0)
+A small page picture from colours (bg, surface, text, muted, accent) for theme picker tiles.
+- Flutter: `UiThemeSwatch(colors, accent, label)`, `UiThemeSwatchColors(.parse, .fromCss)`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase

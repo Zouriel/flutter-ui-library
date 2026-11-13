@@ -12,6 +12,7 @@ export '../datepicker/date_range_picker.dart';
 export '../forms/text/editable_text.dart';
 export '../forms/text/form_field.dart' show UiFormField, UiFieldScope, UiFieldLink, uiFieldInvalid;
 export '../forms/text/inputs.dart';
+export '../forms/text/handle_field.dart';
 export '../forms/text/number_input.dart';
 export '../forms/text/otp_input.dart';
 export '../forms/text/phone_input.dart';
