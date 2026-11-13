@@ -1,3 +1,5 @@
+import 'dart:ui' show CheckedState, Tristate;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -149,6 +151,113 @@ void main() {
     });
   });
 
+  group('UiPlanCard add-on', () {
+    Widget addOnCard({String? addOn = 'Add the AI designer', String? note = r'+MVR 77 a month, about $5', bool value = false, ValueChanged<bool>? onChanged, UiTier? tier = UiTier.premium}) => UiPlanCard(
+          name: 'Premium',
+          price: 'MVR 77',
+          period: 'a month',
+          tier: tier,
+          features: const ['3 GB per event'],
+          addOn: addOn,
+          addOnNote: note,
+          addOnValue: value,
+          onAddOnChanged: onChanged,
+          action: UiButton(label: value ? 'Get Premium · MVR 154' : 'Get Premium · MVR 77', block: true, onPressed: () {}),
+        );
+
+    testWidgets('is not rendered without addOn', (tester) async {
+      await pumpUi(tester, addOnCard(addOn: null, onChanged: (_) {}));
+      expect(find.byKey(const ValueKey('ui-plan-addon')), findsNothing);
+      expect(find.byType(UiCheckMark), findsNothing);
+      await pumpUi(tester, _card());
+      expect(find.byKey(const ValueKey('ui-plan-addon')), findsNothing);
+    });
+
+    testWidgets('shows the label and the muted note between the features and the action', (tester) async {
+      await pumpUi(tester, addOnCard(onChanged: (_) {}));
+      final t = tester.element(find.byType(UiPlanCard)).ui;
+      expect(find.text('Add the AI designer'), findsOneWidget);
+      expect(tester.renderObject<RenderParagraph>(find.text(r'+MVR 77 a month, about $5')).text.style!.color, t.textMuted);
+      final row = tester.getRect(find.byKey(const ValueKey('ui-plan-addon')));
+      expect(row.top, greaterThan(tester.getRect(find.text('3 GB per event')).bottom));
+      expect(tester.getRect(find.byType(UiButton)).top, greaterThan(row.bottom));
+      await pumpUi(tester, addOnCard(note: null, onChanged: (_) {}));
+      expect(find.text(r'+MVR 77 a month, about $5'), findsNothing);
+    });
+
+    testWidgets('toggles by tapping anywhere on the row; the caller changes its total', (tester) async {
+      var value = false;
+      await pumpUi(
+        tester,
+        StatefulBuilder(builder: (context, setState) => addOnCard(value: value, onChanged: (v) => setState(() => value = v))),
+      );
+      expect(find.text('Get Premium · MVR 77'), findsOneWidget);
+      await tester.tapAt(tester.getCenter(find.text(r'+MVR 77 a month, about $5')));
+      await tester.pumpAndSettle();
+      expect(value, isTrue);
+      expect(find.byWidgetPredicate((w) => w is UiCheckMark && w.value == true), findsOneWidget);
+      expect(find.text('Get Premium · MVR 154'), findsOneWidget);
+      // The far end of the row, away from the box and the text, toggles too.
+      final row = tester.getRect(find.byKey(const ValueKey('ui-plan-addon')));
+      await tester.tapAt(Offset(row.right - 4, row.center.dy));
+      await tester.pumpAndSettle();
+      expect(value, isFalse);
+    });
+
+    testWidgets('ticked, the border takes the tier colour (primary without a tier)', (tester) async {
+      BoxDecoration deco() => tester.widget<AnimatedContainer>(find.descendant(of: find.byKey(const ValueKey('ui-plan-addon')), matching: find.byType(AnimatedContainer)).first).decoration! as BoxDecoration;
+      await pumpUi(tester, addOnCard(onChanged: (_) {}));
+      final t = tester.element(find.byType(UiPlanCard)).ui;
+      expect((deco().border! as Border).top.color, t.border);
+      expect(deco().color, t.surfaceSubtle);
+      expect(deco().borderRadius, BorderRadius.circular(t.radius));
+      await pumpUi(tester, addOnCard(value: true, onChanged: (_) {}));
+      expect((deco().border! as Border).top.color, t.tierPremiumBorder);
+      await pumpUi(tester, addOnCard(value: true, tier: null, onChanged: (_) {}));
+      expect((deco().border! as Border).top.color, t.primary);
+    });
+
+    testWidgets('without onAddOnChanged it is disabled: greyed out and does not toggle', (tester) async {
+      await pumpUi(tester, addOnCard());
+      final opacity = tester.widget<AnimatedOpacity>(find.descendant(of: find.byKey(const ValueKey('ui-plan-addon')), matching: find.byType(AnimatedOpacity)).first);
+      expect(opacity.opacity, 0.5);
+      await tester.tap(find.text('Add the AI designer'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.byWidgetPredicate((w) => w is UiCheckMark && w.value == true), findsNothing);
+      final handle = tester.ensureSemantics();
+      final data = tester.getSemantics(find.byKey(const ValueKey('ui-plan-addon'))).getSemanticsData();
+      expect(data.flagsCollection.isEnabled, Tristate.isFalse);
+      handle.dispose();
+    });
+
+    testWidgets('one checkbox named by the label and the note', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpUi(tester, addOnCard(value: true, onChanged: (_) {}));
+      final node = tester.getSemantics(find.byKey(const ValueKey('ui-plan-addon')));
+      expect(node.label, r'Add the AI designer, +MVR 77 a month, about $5');
+      final data = node.getSemanticsData();
+      expect(data.flagsCollection.isChecked, CheckedState.isTrue);
+      expect(data.flagsCollection.isEnabled, Tristate.isTrue);
+      expect(find.bySemanticsLabel('Add the AI designer'), findsNothing, reason: 'the text is not read twice');
+      await pumpUi(tester, addOnCard(note: null, onChanged: (_) {}));
+      expect(tester.getSemantics(find.byKey(const ValueKey('ui-plan-addon'))).label, 'Add the AI designer');
+      handle.dispose();
+    });
+
+    testWidgets('meets tap target and contrast guidelines in light and dark', (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      final handle = tester.ensureSemantics();
+      for (final th in [UiThemeName.dark, UiThemeName.light]) {
+        await pumpUi(tester, Padding(padding: const EdgeInsets.all(16), child: addOnCard(value: true, onChanged: (_) {})), theme: th);
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      }
+      handle.dispose();
+      debugDefaultTargetPlatformOverride = null;
+    });
+  });
+
   group('UiPlanGrid', () {
     testWidgets('at 390px the cards stack, one per row, with room between them', (tester) async {
       await pumpUi(tester, SingleChildScrollView(child: SizedBox(width: 358, child: _cards())));
@@ -256,6 +365,23 @@ void main() {
 
   testWidgets('golden: plan cards, wide', (tester) async {
     await expectThemedGolden(tester, 'plan_cards_wide', width: 1000, height: 560, (context) => _cards());
+  });
+
+  testWidgets('golden: plan card add-on, off and ticked', (tester) async {
+    Widget premium(bool on) => UiPlanCard(
+          name: 'Premium',
+          price: 'MVR 77',
+          period: 'a month',
+          note: r'about $5',
+          tier: UiTier.premium,
+          features: const ['3 GB on every event', 'Photos kept while subscribed'],
+          addOn: 'Add the AI designer',
+          addOnNote: r'+MVR 77 a month, about $5',
+          addOnValue: on,
+          onAddOnChanged: (_) {},
+          action: UiButton(label: on ? 'Get Premium · MVR 154 a month' : 'Get Premium · MVR 77 a month', tier: UiTier.premium, block: true, onPressed: () {}),
+        );
+    await expectThemedGolden(tester, 'plan_addon', height: 860, (context) => Padding(padding: const EdgeInsets.all(16), child: Column(spacing: 24, children: [premium(false), premium(true)])));
   });
 
   testWidgets('golden: plan compare', (tester) async {

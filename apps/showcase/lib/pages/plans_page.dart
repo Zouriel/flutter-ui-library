@@ -28,6 +28,7 @@ class PlansPage extends StatefulWidget {
 
 class _PlansPageState extends State<PlansPage> {
   String _picked = '';
+  bool _designer = false;
 
   void _pick(String plan) => setState(() => _picked = plan);
 
@@ -139,8 +140,52 @@ class _PlansPageState extends State<PlansPage> {
             ApiRow('action', 'Widget?', 'Buttons at the bottom, aligned across a grid.', def: 'null'),
             ApiRow('fineprint', 'Widget?', 'Small muted text under the action.', def: 'null'),
             ApiRow('radius', 'bool?', 'Rounded corners; defaults to UiConfig.radius.'),
+            ApiRow('addOn', 'String?', 'An optional extra under the features, shown as a tick row ("Add the AI designer"). Nothing shows without it.', def: 'null'),
+            ApiRow('addOnNote', 'String?', 'A muted second line in the add-on row ("+MVR 77 a month, about \$5"); also read by screen readers.', def: 'null'),
+            ApiRow('addOnValue', 'bool', 'Whether the add-on is ticked. The card never changes its price: show the total yourself.', def: 'false'),
+            ApiRow('onAddOnChanged', 'ValueChanged<bool>?', 'Called with the new value when the row is tapped; null disables the add-on.', def: 'null'),
             ApiRow('UiPlanGrid.children', 'List<Widget>', 'The cards: 1 column under 600px, 2 under 912px, at most 3; equal heights.'),
           ],
+        ),
+        DocSection(
+          name: 'Add-on',
+          widget: 'UiPlanCard(addOn:)',
+          summary: 'addOn adds an optional extra under the features: a bordered row with a checkbox, the label in bold and addOnNote muted under it. The whole row ticks; pass addOnValue and onAddOnChanged (null disables it). Ticked, its border takes the tier colour. The card keeps its price: show the new total yourself, on the button for example. Screen readers hear one checkbox named by the label and the note.',
+          demo: SizedBox(
+            width: 360,
+            child: UiPlanCard(
+              name: 'Premium',
+              price: 'MVR 77',
+              period: 'a month',
+              note: r'about $5',
+              tagline: "Keep every event's photos",
+              tier: UiTier.premium,
+              features: const ['3 GB on every event', 'Photos kept while subscribed', 'Your own designs'],
+              addOn: 'Add the AI designer',
+              addOnNote: r'+MVR 77 a month, about $5',
+              addOnValue: _designer,
+              onAddOnChanged: (v) => setState(() => _designer = v),
+              action: UiButton(label: 'Get Premium · ${_designer ? 'MVR 154' : 'MVR 77'} a month', tier: UiTier.premium, block: true, onPressed: () => _pick('Premium')),
+              fineprint: const Text('Cancel any time'),
+            ),
+          ),
+          code: '''UiPlanCard(
+  name: 'Premium',
+  price: 'MVR 77',
+  period: 'a month',
+  tier: UiTier.premium,
+  features: ['3 GB on every event'],
+  addOn: 'Add the AI designer',
+  addOnNote: '+MVR 77 a month, about \\\$5',
+  addOnValue: designer,
+  onAddOnChanged: (v) => setState(() => designer = v),
+  action: UiButton(
+    label: 'Get Premium · \${designer ? 'MVR 154' : 'MVR 77'} a month',
+    tier: UiTier.premium,
+    block: true,
+    onPressed: buy,
+  ),
+)''',
         ),
         DocSection(
           name: 'Plan comparison',
