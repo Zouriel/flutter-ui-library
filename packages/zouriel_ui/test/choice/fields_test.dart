@@ -151,6 +151,33 @@ void main() {
       expect(UiFileUploadState.formatSize(12), '12 B');
     });
 
+    testWidgets('showFiles: false keeps the picked files out of the box (the app lists them itself)', (tester) async {
+      final key = GlobalKey<UiFileUploadState>();
+      List<UiPickedFile>? got;
+      await pumpUi(tester, SizedBox(width: 360, child: UiFileUpload(
+        key: key,
+        multiple: true,
+        showFiles: false,
+        picker: ({required multiple, required accept}) async => null,
+        onFilesSelected: (f) => got = f,
+      )));
+      key.currentState!.addFiles([png, pdf]);
+      await tester.pump();
+      expect(got, [png, pdf]);
+      expect(find.text(png.name), findsNothing);
+      expect(find.text(pdf.name), findsNothing);
+
+      final shown = GlobalKey<UiFileUploadState>();
+      await pumpUi(tester, SizedBox(width: 360, child: UiFileUpload(
+        key: shown,
+        multiple: true,
+        picker: ({required multiple, required accept}) async => null,
+      )));
+      shown.currentState!.addFiles([png]);
+      await tester.pump();
+      expect(find.text(png.name), findsOneWidget, reason: 'listed by default');
+    });
+
     testWidgets('disabled ignores taps and drops', (tester) async {
       final key = GlobalKey<UiFileUploadState>();
       var asked = false;

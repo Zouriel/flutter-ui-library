@@ -669,7 +669,7 @@ File: `form/src/editable-text.ts`
 ### UiFileUpload (component, `ui-file-upload`)
 File: `form/src/file-upload.ts`  
 `ui-file-upload` — drag-and-drop / click dropzone. Emits `(filesSelected)`. Dropped files are checked against `accept` the same way the file dialog filters them; files that don't match go to `(rejected)`.  
-- Inputs: `multiple` = false; `accept`: string; `acceptLabel`: string; `radius` = true; `disabled` = false; `preview`: string | null; `previewAlt`; `previewFit`: 'cover' | 'contain'; `previewAspect` = '16 / 9'; `replaceLabel`; `removable` = false; `removeLabel` (0.79; Flutter `preview` ImageProvider, `previewSemanticLabel`, `previewFit` BoxFit, `previewAspectRatio`, `replaceLabel`, `onRemove` + `removeLabel`)
+- Inputs: `multiple` = false; `accept`: string; `acceptLabel`: string; `radius` = true; `disabled` = false; `preview`: string | null; `previewAlt`; `previewFit`: 'cover' | 'contain'; `previewAspect` = '16 / 9'; `replaceLabel`; `removable` = false; `removeLabel` (0.79; Flutter `preview` ImageProvider, `previewSemanticLabel`, `previewFit` BoxFit, `previewAspectRatio`, `replaceLabel`, `onRemove` + `removeLabel`); `showFiles` = true (0.80)
 - Outputs: `filesSelected`: File[]; `rejected`: File[]; `remove` (0.79)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

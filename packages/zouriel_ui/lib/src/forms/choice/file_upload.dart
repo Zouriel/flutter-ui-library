@@ -82,7 +82,12 @@ class UiFileUpload extends StatefulWidget {
     this.replaceLabel,
     this.onRemove,
     this.removeLabel,
+    this.showFiles = true,
   });
+
+  /// List the picked files (name and size) under the box (the web `showFiles`). Turn it off when the app shows
+  /// its own list, such as one with each file's upload progress.
+  final bool showFiles;
 
   /// A picture already uploaded (the web `preview`). The same box then shows it, and tapping it picks a
   /// replacement ([replaceLabel], "Tap to change" by default). Null shows the empty dropzone.
@@ -238,7 +243,7 @@ class UiFileUploadState extends State<UiFileUpload> {
             );
           },
         ),
-        if (_files.isNotEmpty)
+        if (widget.showFiles && _files.isNotEmpty)
           Padding(
             padding: EdgeInsets.only(top: t.space2),
             child: Semantics(

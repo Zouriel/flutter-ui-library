@@ -273,6 +273,7 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
           ApiRow('replaceLabel', 'String?', 'The label on the picture.', def: 'strings.uploadReplace (Tap to change)'),
           ApiRow('onRemove', 'VoidCallback?', 'Shows a Remove button under the picture.'),
           ApiRow('removeLabel', 'String?', 'Its label.', def: 'strings.uploadRemove (Remove)'),
+          ApiRow('showFiles', 'bool', 'List the picked files under the box; off when the app shows its own list (upload progress) (0.80).', def: 'true'),
         ],
         callbacks: const [
           ApiRow('state.addFiles(files)', 'void', 'Dropped files: filtered by accept, rejects reported.'),
