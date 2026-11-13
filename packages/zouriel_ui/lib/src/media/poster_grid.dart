@@ -1,5 +1,6 @@
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -24,7 +25,7 @@ class UiPosterMark {
 /// One tile of a [UiPosterGrid] (the web `UiPoster`).
 @immutable
 class UiPoster {
-  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner});
+  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner, this.action});
 
   /// The picture. Without one (or when it fails to load) the tile shows [colors] as a gradient.
   final ImageProvider? image;
@@ -46,6 +47,14 @@ class UiPoster {
   /// picture with a `space2` inset, above the picture and the details, never grows wider than the
   /// picture (less the room for the [mark]'s dot) and takes no taps: the whole tile is the target.
   final Widget? corner;
+
+  /// One small action of the tile's own at the top-end corner of the picture (top-right in a
+  /// left-to-right app), e.g. a ghost [UiIconButton] to view the invitation (the web's
+  /// `uiPosterAction` template). It is laid over the tile but outside its tap handling, so tapping it
+  /// never calls [UiPosterGrid.onSelect], and a round backdrop in the media scrim colour keeps it
+  /// readable on any picture (ghost buttons inside draw in the on-scrim colour). Keep it to one small
+  /// icon button (size sm or md). The [mark]'s dot moves beside it. 0.77.0.
+  final Widget? action;
 }
 
 /// Which part of a picture survives a poster's crop.
@@ -70,8 +79,9 @@ Gradient uiPosterFallback(BuildContext context, List<Color>? colors) {
 /// from clear to dark, so the words stay readable on any picture; without details a tile is the
 /// picture alone, named by its semantic label. A tile with no picture shows a gradient, and a small dot
 /// ([UiPoster.mark]) can flag it, named for screen readers. [UiPoster.corner] draws something small
-/// (a [UiAvatarTag]) over the picture's top-start corner. Tapping a tile calls [onSelect] with its
-/// index. It doesn't scroll: put it in a scroll view. (The web's `href` link tiles have no meaning
+/// (a [UiAvatarTag]) over the picture's top-start corner and [UiPoster.action] one small action (an
+/// icon button) at its top-end corner, outside the tile's tap handling; a mark's dot then sits beside
+/// the action. Tapping a tile calls [onSelect] with its index. It doesn't scroll: put it in a scroll view. (The web's `href` link tiles have no meaning
 /// here: a tap is the only way to open a tile.)
 class UiPosterGrid extends StatelessWidget {
   const UiPosterGrid({super.key, required this.posters, required this.onSelect, this.ratio = 0.75, this.focus = UiPosterFocus.center});
@@ -117,8 +127,13 @@ class _Tile extends StatelessWidget {
     final t = context.ui;
     final r = BorderRadius.circular(context.uiTheme.radius());
     final mark = poster.mark;
+    final action = poster.action;
     final fallback = DecoratedBox(decoration: BoxDecoration(gradient: uiPosterFallback(context, poster.colors)));
-    return UiInteractive(
+    // Room the corner keeps clear at the end: the dot, the action (one sm/md icon button), or both.
+    final cornerEnd = action == null
+        ? (mark != null ? t.space2 * 3 + 10 : t.space2)
+        : (mark != null ? t.space2 * 4 + t.sizeMd + 10 : t.space2 * 3 + t.sizeMd);
+    final tile = UiInteractive(
       onTap: onTap,
       padTouchTarget: false,
       // With details the words name the tile (and the dot's meaning is read after them).
@@ -145,7 +160,7 @@ class _Tile extends StatelessWidget {
               )
             else
               fallback,
-            if (mark != null)
+            if (mark != null && action == null)
               PositionedDirectional(top: t.space2, end: t.space2, child: ExcludeSemantics(child: UiPosterDot(tone: mark.tone))),
             if (poster.details case final details?)
               Positioned(
@@ -166,13 +181,187 @@ class _Tile extends StatelessWidget {
                 key: const ValueKey('ui-poster-corner'),
                 top: t.space2,
                 start: t.space2,
-                end: mark != null ? t.space2 * 3 + 10 : t.space2,
+                end: cornerEnd,
                 child: IgnorePointer(child: Align(alignment: AlignmentDirectional.topStart, child: corner)),
               ),
           ]),
         ),
       ),
     );
+    if (action == null) return tile;
+    // The action sits beside the tile, not inside its UiInteractive: its own focus stop, and its taps
+    // never select the tile. The dot beside it takes no taps, so they still reach the tile.
+    return Stack(fit: StackFit.expand, children: [
+      tile,
+      PositionedDirectional(
+        key: const ValueKey('ui-poster-action'),
+        top: t.space2,
+        end: t.space2,
+        child: _HitPastEdges(
+          child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
+            if (mark != null) ...[
+              IgnorePointer(child: ExcludeSemantics(child: UiPosterDot(key: const ValueKey('ui-poster-action-dot'), tone: mark.tone))),
+              SizedBox(width: t.space2),
+            ],
+            _ActionBackdrop(child: action),
+          ]),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// The round scrim backdrop of a [UiPoster.action], with on-scrim colours (and a pill radius) for
+/// the buttons inside, as the web sets `--ui-color-text`, `--ui-color-icon` and `--ui-radius` on it.
+class _ActionBackdrop extends StatelessWidget {
+  const _ActionBackdrop({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.uiTheme;
+    final t = theme.tokens;
+    final on = t.mediaOnScrim;
+    final scoped = UiThemeData(
+      name: theme.name,
+      tokens: theme.baseTokens.copyWith(text: on, icon: on, surfaceHover: on.withValues(alpha: 0.18), radius: t.radiusPill),
+      config: theme.config,
+      compact: theme.compact,
+    );
+    return _VisualBackdrop(
+      key: const ValueKey('ui-poster-action-backdrop'),
+      color: t.mediaScrim.withValues(alpha: 0.55),
+      child: UiTheme(
+        data: scoped,
+        child: IconTheme.merge(
+          data: IconThemeData(color: on),
+          child: DefaultTextStyle.merge(style: TextStyle(color: on), child: child),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lays out and paints a pill backdrop around the action's *visual*: on touch platforms a button
+/// pads its hit area to 44 (UiTouchTarget), which here overflows the box instead of growing it, as
+/// the web's invisible `::before` hit-slop does. So the backdrop hugs the 26/30 button, the dot and
+/// the corner are placed against it, and the whole padded area still takes taps.
+class _VisualBackdrop extends SingleChildRenderObjectWidget {
+  const _VisualBackdrop({super.key, required this.color, super.child});
+  final Color color;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderVisualBackdrop(color);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderVisualBackdrop renderObject) => renderObject.color = color;
+}
+
+class _RenderVisualBackdrop extends RenderProxyBox {
+  _RenderVisualBackdrop(this._color);
+
+  Color _color;
+  set color(Color v) {
+    if (v == _color) return;
+    _color = v;
+    markNeedsPaint();
+  }
+
+  /// Where the child's top-left sits relative to this box (zero or negative: the overflowing padding).
+  Offset _shift = Offset.zero;
+
+  /// The visual inside the child: the child of its first [RenderUiTouchTarget], else the child itself.
+  Rect _visualIn(RenderBox c) {
+    RenderUiTouchTarget? found;
+    void visit(RenderObject o) {
+      if (found != null) return;
+      if (o is RenderUiTouchTarget) {
+        found = o;
+        return;
+      }
+      o.visitChildren(visit);
+    }
+
+    c.visitChildren(visit);
+    final target = found;
+    if (target == null) return Offset.zero & c.size;
+    final v = target.visualRect;
+    return MatrixUtils.transformRect(target.getTransformTo(c), v);
+  }
+
+  @override
+  void performLayout() {
+    final c = child;
+    if (c == null) {
+      size = constraints.smallest;
+      return;
+    }
+    c.layout(constraints.loosen(), parentUsesSize: true);
+    final visual = _visualIn(c);
+    size = constraints.constrain(visual.size);
+    _shift = -visual.topLeft;
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final r = size.shortestSide / 2;
+    context.canvas.drawRRect(RRect.fromRectAndRadius(offset & size, Radius.circular(r)), Paint()..color = _color);
+    final c = child;
+    if (c != null) context.paintChild(c, offset + _shift);
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) => transform.translateByDouble(_shift.dx, _shift.dy, 0, 1);
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final c = child;
+    if (c == null) return false;
+    // The child's whole padded area counts, past this box's edges.
+    if (!(_shift & c.size).contains(position)) return false;
+    final hit = result.addWithPaintOffset(offset: _shift, position: position, hitTest: (r, p) => c.hitTest(r, position: p));
+    if (hit) result.add(BoxHitTestEntry(this, position));
+    return hit;
+  }
+}
+
+/// Lets a tap on the action's overflowing touch padding (outside the row of dot and backdrop) reach
+/// the action: the row itself would refuse it as out of its bounds.
+class _HitPastEdges extends SingleChildRenderObjectWidget {
+  const _HitPastEdges({super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderHitPastEdges();
+}
+
+class _RenderHitPastEdges extends RenderProxyBox {
+  _RenderVisualBackdrop? _backdrop() {
+    _RenderVisualBackdrop? found;
+    void visit(RenderObject o) {
+      if (found != null) return;
+      if (o is _RenderVisualBackdrop) {
+        found = o;
+        return;
+      }
+      o.visitChildren(visit);
+    }
+
+    visitChildren(visit);
+    return found;
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (size.contains(position)) return super.hitTest(result, position: position);
+    final b = _backdrop();
+    if (b == null) return false;
+    final hit = result.addWithPaintTransform(
+      transform: b.getTransformTo(this),
+      position: position,
+      hitTest: (r, p) => b.hitTest(r, position: p),
+    );
+    if (hit) result.add(BoxHitTestEntry(this, position));
+    return hit;
   }
 }
 

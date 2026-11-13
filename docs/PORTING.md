@@ -1328,3 +1328,22 @@ when the tile has a `mark`, so it stops before the dot), `pointer-events: none`,
 `IgnorePointer(Align(topStart))`, the last child of the tile's Stack so it paints above the picture
 and the details. Both sit inside the tile's clip and focus ring, and are read with the tile when it
 has details (named by its words); without details the tile's label stands alone, as before.
+
+**Poster action (0.77.0).** One small action of a tile's own at its picture's top-end corner (owner:
+a "View invite" eye on invites.blog's Hosting tiles). Web: a `ng-template[uiPosterAction]` (context:
+poster and index) rendered in a `.top-end` div that is a sibling of the tile's `<a>`/`<button>` in
+the `li` (now `position: relative`), never inside it: nested interactive content is invalid and its
+clicks would navigate or select. `.top-end` is `top`/`inset-inline-end: space2`, a flex row with a
+`space2` gap and `pointer-events: none`; the `.action` span inside takes pointers again and is the
+round backdrop (`--ui-media-scrim` at 55%, pill radius) that sets `--ui-color-text`,
+`--ui-color-icon` (on-scrim), `--ui-color-surface-hover` and `--ui-radius` (pill) for the ghost
+`ui-icon-button` inside. With an action the mark's dot leaves the tile and sits in the row before
+the action (`.top-end .dot { position: static }`, which outranks `.dot` under emulated
+encapsulation). The corner reserves `space2 + --ui-size-md` (plus `space2 + 10px` with a dot) at the
+end. Flutter: `UiPoster.action`; the tile becomes `Stack([tile, PositionedDirectional(top, end,
+Row([dot, gap, backdrop]))])`, so the action is outside the tile's `UiInteractive`. On touch
+platforms an icon button pads its layout to 44 (`UiTouchTarget`), which would make the backdrop a
+44 disc; the backdrop is a small render object that sizes itself to the button's visual
+(`RenderUiTouchTarget.visualRect`, added for this) and lets the padding overflow, like the web's
+`::before` hit-slop, and `_HitPastEdges` lets taps on that overflowing padding through the row. The
+backdrop scopes a `UiTheme` with the same token overrides as the web.
