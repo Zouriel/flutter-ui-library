@@ -1539,6 +1539,7 @@ File: `pdf-viewer/src/pdf-viewer.ts`
 File: `plans/src/plan-card.ts`  
 `ui-plan-card` — one plan: name, price and period, note, tagline, feature check list, tier strip, highlight ribbon, current badge; `[plan-action]` and `[plan-fineprint]` slots.  
 - Inputs: `name`: string; `price`: string; `period`: string | null; `note`: string | null; `tagline`: string | null; `features`: string[]; `tier`: UiTier | null; `highlight`: string | null; `current` = false
+- 0.76.0: add-on tick row: web `addOn`, `addOnNote`, `addOnChecked` (model), `addOnDisabled`; Flutter `addOn`, `addOnNote`, `addOnValue`, `onAddOnChanged` (null = disabled)
 - [x] Flutter port (`UiPlanCard`, `action` / `fineprint`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiPlanGrid (component, `ui-plan-grid`)

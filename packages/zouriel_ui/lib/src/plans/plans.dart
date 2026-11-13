@@ -5,7 +5,9 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../badge/badge.dart';
 import '../core/icon.dart';
+import '../core/interactive.dart';
 import '../core/types.dart';
+import '../forms/choice/marks.dart';
 import '../theme/theme.dart';
 
 /// `ui-plan-card`: one plan on a plans or billing page.
@@ -18,6 +20,12 @@ import '../theme/theme.dart';
 /// caller decides the [action]. [action] sits at the bottom, aligned across cards in a [UiPlanGrid];
 /// [fineprint] is small muted text under it. Screen readers get a group named by the plan, and the
 /// price read as one phrase ("MVR 499 per event").
+///
+/// [addOn] adds an optional extra under the features ("Add the AI designer", with [addOnNote]
+/// "+MVR 77 a month" muted under it): a bordered row that ticks as a whole ([addOnValue],
+/// [onAddOnChanged]; null disables it). Ticked, its border takes the tier's colour. The card doesn't
+/// change its price; the caller shows the new total (on its button, say). Screen readers get one
+/// checkbox named by the label and the note.
 class UiPlanCard extends StatelessWidget {
   const UiPlanCard({
     super.key,
@@ -34,6 +42,10 @@ class UiPlanCard extends StatelessWidget {
     this.action,
     this.fineprint,
     this.radius,
+    this.addOn,
+    this.addOnNote,
+    this.addOnValue = false,
+    this.onAddOnChanged,
   });
 
   final String name;
@@ -65,6 +77,19 @@ class UiPlanCard extends StatelessWidget {
 
   /// Rounded corners; defaults to the library config.
   final bool? radius;
+
+  /// An optional extra under the features, shown as a tick row ("Add the AI designer").
+  /// Nothing shows without it.
+  final String? addOn;
+
+  /// A muted second line in the add-on row ("+MVR 77 a month, about $5").
+  final String? addOnNote;
+
+  /// Whether the add-on is ticked (the web `[(addOnChecked)]`).
+  final bool addOnValue;
+
+  /// Called with the new value when the row is tapped; null disables the add-on.
+  final ValueChanged<bool>? onAddOnChanged;
 
   /// The price as screen readers hear it.
   String get priceLabel => period == null || period!.isEmpty ? price : '$price $period';
@@ -140,6 +165,17 @@ class UiPlanCard extends StatelessWidget {
             ],
           ),
         ],
+        if (addOn != null) ...[
+          SizedBox(height: t.space4),
+          _AddOn(
+            label: addOn!,
+            note: addOnNote,
+            value: addOnValue,
+            onChanged: onAddOnChanged,
+            edge: metal?.border(t) ?? t.primary,
+            radius: r > 0 ? t.radius : 0,
+          ),
+        ],
       ],
     );
 
@@ -213,6 +249,66 @@ class UiPlanCard extends StatelessWidget {
               child: Center(child: _Ribbon(text: highlight!, tier: metal)),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// The add-on row: one checkbox, the whole row its tap target.
+class _AddOn extends StatelessWidget {
+  const _AddOn({required this.label, required this.note, required this.value, required this.onChanged, required this.edge, required this.radius});
+  final String label;
+  final String? note;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final Color edge;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final text = context.uiText;
+    final enabled = onChanged != null;
+    return UiInteractive(
+      key: const ValueKey('ui-plan-addon'),
+      onTap: enabled ? () => onChanged!(!value) : null,
+      enabled: enabled,
+      button: false,
+      checked: value,
+      semanticLabel: note == null || note!.isEmpty ? label : '$label, $note',
+      excludeChildSemantics: true,
+      pressScale: false,
+      builder: (context, s) => AnimatedOpacity(
+        opacity: enabled ? 1 : 0.5,
+        duration: t.motionBase,
+        child: AnimatedContainer(
+          duration: context.uiAnimate ? t.motionFast : Duration.zero,
+          curve: t.easeStandard,
+          padding: EdgeInsets.symmetric(vertical: t.space3, horizontal: t.space4),
+          decoration: BoxDecoration(
+            color: enabled && s.hovered ? t.surfaceHover : t.surfaceSubtle,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: value ? edge : t.border),
+            boxShadow: s.focused ? t.focusRing : null,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: t.space3,
+            children: [
+              Padding(padding: const EdgeInsets.only(top: 1), child: UiCheckMark(value: value, states: s)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 2,
+                  children: [
+                    Text(label, style: text.body.copyWith(fontSize: 14 * t.fontScale, fontWeight: FontWeight.w600, height: 1.35, color: t.text)),
+                    if (note != null && note!.isNotEmpty) Text(note!, style: text.body.copyWith(fontSize: 13 * t.fontScale, height: 1.35, color: t.textMuted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,5 +1,18 @@
 # Porting @zouriel/ui to Flutter
 
+## Plan card add-on (0.76.0)
+
+`UiPlanCard.addOn` / `addOnNote` / `addOnValue` / `onAddOnChanged` (web: `addOn`, `addOnNote`,
+`[(addOnChecked)]`, `addOnDisabled`): an optional tick row between the features and the action, for an
+extra like "Add the AI designer" (+MVR 77 a month). The web's two-way `model` becomes value +
+callback, and `addOnDisabled` becomes a null `onAddOnChanged`, as for every Flutter control. The whole
+row is one `UiInteractive` (checked semantics, label "label, note", child semantics excluded) painting
+a `UiCheckMark`; the web row is a `<label>` round a native checkbox whose `aria-label` is the same
+"label, note" and whose visible text is `aria-hidden`, so both read one checkbox. Look: `radius`
+corners, `surfaceSubtle` fill (hover `surfaceHover`), `border`, which turns to the tier's border
+(primary without a tier) when ticked; focus ring on the row. The card never changes its price: the
+caller shows the total, on its button for example.
+
 ## Tour anchors on bottom-nav items and tabs (0.75.1)
 
 `UiBottomNavItem.anchor` and `UiTab.anchor` (web: `UiBottomNavItem.anchor`, `ui-tab [anchor]`) let a

@@ -33,6 +33,19 @@ void main() {
     });
   }
 
+  testWidgets('the Premium add-on changes the button total', (tester) async {
+    tester.view.physicalSize = const Size(1440, 3000) * tester.view.devicePixelRatio;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const UiApp(home: PlansPage()));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Get Premium · MVR 77 a month'), findsOneWidget);
+    await tester.ensureVisible(find.text('Add the AI designer'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tapAt(tester.getCenter(find.text('Add the AI designer')));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Get Premium · MVR 154 a month'), findsOneWidget);
+  });
+
   testWidgets('a tier button picks the plan', (tester) async {
     tester.view.physicalSize = const Size(1440, 3000) * tester.view.devicePixelRatio;
     addTearDown(tester.view.reset);
