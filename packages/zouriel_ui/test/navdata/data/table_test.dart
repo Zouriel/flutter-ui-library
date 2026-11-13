@@ -298,6 +298,48 @@ void main() {
       ],
     ));
   });
+
+  // 2026-11-13 UI audit: a guest list with long question headings was wider than its box, so its last columns were cut
+  // off and names and "Not sent yet" broke onto one word per line. Headings wrap now; a column can stay on one line
+  // (nowrap) or keep a minimum width.
+  group('crowded columns', () {
+    const crowded = [
+      UiColumn<Item>(key: 'name', header: 'Guest', minWidth: 144),
+      UiColumn<Item>(key: 'status', header: 'Status', nowrap: true),
+      UiColumn<Item>(key: 'rsvp', header: 'RSVP', nowrap: true, sortable: true),
+      UiColumn<Item>(key: 'count', header: 'How many guests? (including you)'),
+      UiColumn<Item>(key: 'meal', header: 'Meal preference for the dinner'),
+      UiColumn<Item>(key: 'arrival', header: 'When you think you will arrive'),
+      UiColumn<Item>(key: 'note', header: 'A note for the host, if you have one'),
+    ];
+    final rows = <Item>[
+      {'name': 'Mariyam Naseer Abdulla Didi', 'status': 'Not sent yet', 'rsvp': 'No reply yet', 'count': '-', 'meal': '-', 'arrival': '-', 'note': '-'},
+      {'name': 'Ali', 'status': 'Sent', 'rsvp': 'Coming', 'count': '2', 'meal': 'Fish', 'arrival': '7 pm', 'note': '-'},
+    ];
+
+    testWidgets('fits a wide box: headings wrap instead of widening the table past it', (tester) async {
+      await pumpUi(tester, SizedBox(width: 760, child: UiTable<Item>(columns: crowded, data: rows, selectable: true)), size: const Size(800, 900));
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(Table)).width, lessThanOrEqualTo(760));
+      // The table's own size is clamped to the box even when its columns overflow it, so check the content: the last
+      // column's heading and cells end inside the box.
+      expect(tester.getTopRight(find.text('A note for the host, if you have one')).dx, lessThanOrEqualTo(760));
+      expect(tester.getTopRight(find.text('-').last).dx, lessThanOrEqualTo(760));
+      // The long heading took more than one line.
+      final heading = tester.getSize(find.text('How many guests? (including you)')).height;
+      expect(heading, greaterThan(tester.getSize(find.text('Guest')).height * 1.5));
+    });
+
+    testWidgets('a nowrap column stays on one line, a minWidth column keeps its width', (tester) async {
+      await pumpUi(tester, SizedBox(width: 760, child: UiTable<Item>(columns: crowded, data: rows)), size: const Size(800, 900));
+      final oneLine = tester.getSize(find.text('Sent')).height;
+      expect(tester.getSize(find.text('Not sent yet')).height, oneLine);
+      expect(tester.getSize(find.text('No reply yet')).height, oneLine);
+      // Name column = from its heading's start to the next heading's start (both start-aligned, same padding).
+      final nameColumn = tester.getTopLeft(find.text('Status')).dx - tester.getTopLeft(find.text('Guest')).dx;
+      expect(nameColumn, greaterThanOrEqualTo(144));
+    });
+  });
 }
 
 /// A table sorted by name with the first row selected, for the golden.
