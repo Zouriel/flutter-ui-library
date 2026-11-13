@@ -473,6 +473,9 @@ UiInput(leading: UiIcon(HugeIcons.strokeRoundedMail01), semanticLabel: 'Email')'
         demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
           UiEditableText(value: _title, semanticLabel: 'Board name', style: context.uiText.h4, onChanged: (v) => setState(() => _title = v)),
           _caption('Value: $_title'),
+          // flush: the text starts on the label's line.
+          Text('Event name', style: context.uiText.body.copyWith(fontWeight: FontWeight.w600)),
+          UiEditableText(value: _title, semanticLabel: 'Event name', flush: true, onChanged: (v) => setState(() => _title = v)),
         ]),
         code: "UiEditableText(value: title, semanticLabel: 'Board name', onChanged: setTitle)",
         api: const [
@@ -480,6 +483,7 @@ UiInput(leading: UiIcon(HugeIcons.strokeRoundedMail01), semanticLabel: 'Email')'
           ApiRow('placeholder', 'String', 'Shown while empty.', def: "'Empty'"),
           ApiRow('semanticLabel', 'String?', 'Accessible name, announced with the text.'),
           ApiRow('style', 'TextStyle?', 'Text style (e.g. a heading).'),
+          ApiRow('flush', 'bool', 'The text starts on the same line as the label or heading above it; the hover outline and the field reach out past it instead of indenting the text.', def: 'false'),
           _enabledRow,
         ],
       ),

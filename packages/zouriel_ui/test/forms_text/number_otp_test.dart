@@ -237,6 +237,26 @@ void main() {
       expect(find.text('Roadmap'), findsOneWidget);
     });
 
+    // UI audit 2026-11-13: an event's name sat 9px right of its heading because of the box's own padding.
+    testWidgets('flush starts its text on the line of what is around it; without it the padding indents it', (tester) async {
+      Future<double> indent({required bool flush}) async {
+        await pumpUi(tester, Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(key: Key('line'), width: 10, height: 10),
+          UiEditableText(value: 'Roadmap', semanticLabel: 'Board name', flush: flush, onChanged: (_) {}),
+        ]));
+        return tester.getTopLeft(find.text('Roadmap')).dx - tester.getTopLeft(find.byKey(const Key('line'))).dx;
+      }
+
+      final plain = await indent(flush: false);
+      final space2 = tester.element(find.byType(UiEditableText)).uiTheme.tokens.space2;
+      expect(plain, space2 + 1);
+      expect(await indent(flush: true), 0);
+      // The field opens where the text was, so nothing jumps.
+      await tester.tap(find.text('Roadmap'));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(find.byType(EditableText)).dx - tester.getTopLeft(find.byKey(const Key('line'))).dx, 0);
+    });
+
     testWidgets('is named with its label and text, and shows the pencil on touch', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, UiEditableText(value: 'Roadmap', semanticLabel: 'Board name', onChanged: (_) {}));
