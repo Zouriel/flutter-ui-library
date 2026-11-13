@@ -254,6 +254,7 @@ class _Row extends StatelessWidget {
     final muted = item.hidden;
     final textColor = muted ? t.textMuted : t.text;
     final icon = item.icon;
+    final wide = (MediaQuery.maybeSizeOf(context)?.width ?? 400) >= 360;
     return Container(
       constraints: const BoxConstraints(minHeight: uiMinTouchTarget + 8),
       padding: EdgeInsetsDirectional.only(start: t.space1, end: t.space1, top: t.space1, bottom: t.space1),
@@ -275,13 +276,14 @@ class _Row extends StatelessWidget {
             canUp: canUp,
             canDown: canDown,
           ),
-        if (icon != null) ...[
+        // Narrower than 360 the name needs the room more than the icon (as on the web).
+        if (icon != null && wide) ...[
           IconTheme.merge(data: IconThemeData(size: 20, color: muted ? t.textMuted : (t.icon ?? t.text)), child: UiIcon(icon)),
           SizedBox(width: t.space3),
         ],
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text(item.label, style: context.uiText.body.copyWith(color: textColor, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(item.label, style: context.uiText.body.copyWith(color: textColor, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
             if (item.description != null && item.description!.isNotEmpty)
               Text(item.description!, style: context.uiText.caption.copyWith(color: t.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
             // Under the text, so a narrow row never has to fit it beside the name.
