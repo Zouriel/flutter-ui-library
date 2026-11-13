@@ -124,6 +124,25 @@ void main() {
     expect(await f, UiTourOutcome.closed);
   });
 
+  // UI audit 2026-11-13 (0.82.0): on the web "Turn off tips" took a 33px finger. Here every text action is padded to the
+  // platform's 48dp touch target without being drawn bigger: a tap 20px above or below its words still turns tips off.
+  testWidgets('"Turn off tips" and "Skip" take a finger 20px above or below their words on a phone', (tester) async {
+    await _pumpApp(tester, _page());
+    for (final dy in [-20.0, 20.0]) {
+      final f = UiTour.start(_ctx.currentContext!, _spec);
+      await _steps(tester);
+      expect(tester.getSize(find.text('Turn off tips')).height, lessThan(24));
+      await tester.tapAt(tester.getCenter(find.text('Turn off tips')) + Offset(0, dy));
+      await tester.pump();
+      expect(await f, UiTourOutcome.turnedOff);
+    }
+    final f = UiTour.start(_ctx.currentContext!, _spec);
+    await _steps(tester);
+    await tester.tapAt(tester.getCenter(find.text('Skip')) + const Offset(0, 20));
+    await tester.pump();
+    expect(await f, UiTourOutcome.skipped);
+  });
+
   testWidgets('with no anchors on the page it ends closed at once; more than 5 steps are cut to 5', (tester) async {
     await _pumpApp(tester, _page());
     expect(await UiTour.start(_ctx.currentContext!, const UiTourSpec('t', [UiTourStep('nope', 'x')])), UiTourOutcome.closed);

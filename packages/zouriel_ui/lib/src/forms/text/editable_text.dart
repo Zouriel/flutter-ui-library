@@ -14,7 +14,7 @@ import 'text_core.dart';
 /// otherwise). Tapping it, or Enter/Space, opens a field with the text selected; Enter or leaving
 /// the field commits, Escape cancels.
 class UiEditableText extends StatefulWidget {
-  const UiEditableText({super.key, required this.value, this.onChanged, this.placeholder, this.enabled = true, this.semanticLabel, this.style});
+  const UiEditableText({super.key, required this.value, this.onChanged, this.placeholder, this.enabled = true, this.semanticLabel, this.style, this.flush = false});
 
   final String value;
   final ValueChanged<String>? onChanged;
@@ -28,6 +28,10 @@ class UiEditableText extends StatefulWidget {
 
   /// Text style override (defaults to body text).
   final TextStyle? style;
+
+  /// Line the text up with what's above and below it (a label, a heading): the hover outline and the field reach
+  /// out to the start instead of indenting the text by their padding and border (0.82.0). Off by default.
+  final bool flush;
 
   @override
   State<UiEditableText> createState() => _UiEditableTextState();
@@ -104,7 +108,7 @@ class _UiEditableTextState extends State<UiEditableText> {
     final label = widget.semanticLabel ?? UiFieldScope.maybeOf(context)?.label;
 
     if (_editing) {
-      return Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: IntrinsicWidth(
+      return _flushed(context, Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: IntrinsicWidth(
         child: Container(
           padding: pad,
           constraints: const BoxConstraints(minWidth: 120),
@@ -118,14 +122,14 @@ class _UiEditableTextState extends State<UiEditableText> {
             semanticLabel: label,
           ),
         ),
-      ));
+      )));
     }
 
     final touch = uiTouchPlatform(context);
     final empty = widget.value.isEmpty;
     final placeholder = widget.placeholder ?? context.uiStrings.empty;
     // Inline: it hugs its text at the start of the line, even in a stretching column.
-    return Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: UiInteractive(
+    return _flushed(context, Align(alignment: AlignmentDirectional.centerStart, widthFactor: 1, heightFactor: 1, child: UiInteractive(
       onTap: _edit,
       enabled: widget.enabled,
       focusNode: _viewFocus,
@@ -152,6 +156,14 @@ class _UiEditableTextState extends State<UiEditableText> {
           ),
         ]),
       ),
-    ));
+    )));
+  }
+
+  /// [UiEditableText.flush]: moved back by the box's padding and border, toward the start of the line.
+  Widget _flushed(BuildContext context, Widget child) {
+    if (!widget.flush) return child;
+    final x = context.uiTheme.tokens.space2 + 1;
+    final rtl = Directionality.maybeOf(context) == TextDirection.rtl;
+    return Transform.translate(offset: Offset(rtl ? x : -x, 0), child: child);
   }
 }
