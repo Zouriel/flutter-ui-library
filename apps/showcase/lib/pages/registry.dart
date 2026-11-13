@@ -22,6 +22,7 @@ import 'overview_page.dart';
 import 'plans_page.dart';
 import 'shutter_page.dart';
 import 'typography_page.dart';
+import 'sortable_page.dart';
 import 'window_page.dart';
 import 'workflow_builder_page.dart';
 import 'workflow_components_page.dart';
@@ -51,6 +52,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('data', 'Components', 'Data display', HugeIcons.strokeRoundedTable01, (_) => const DataPage()),
   ShowcasePage('plans', 'Components', 'Plans', HugeIcons.strokeRoundedCrown, (_) => const PlansPage()),
   ShowcasePage('media', 'Components', 'Media', HugeIcons.strokeRoundedImage01, (_) => const MediaPage()),
+  ShowcasePage('sortable', 'Components', 'Sortable', HugeIcons.strokeRoundedDragDropVertical, (_) => const SortablePage()),
   ShowcasePage('map', 'Components', 'Map', HugeIcons.strokeRoundedMaps, (_) => const MapPage()),
   ShowcasePage('file-viewer', 'Flagship', 'File viewer', HugeIcons.strokeRoundedFile02, (_) => const FileViewerPage()),
   ShowcasePage('form-builder', 'Flagship', 'Form builder', HugeIcons.strokeRoundedTask01, (_) => const FormBuilderPage()),

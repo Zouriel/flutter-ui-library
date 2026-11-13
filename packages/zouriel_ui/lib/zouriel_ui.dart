@@ -34,6 +34,9 @@ export 'src/theme/app.dart';
 export 'src/theme/glass_sheet.dart';
 export 'src/theme/glass_rim.dart';
 export 'src/theme/theme.dart';
+export 'src/theme/theme_swatch.dart';
+export 'src/sortable/section_list.dart' hide uiSortableMove;
+export 'src/sortable/reorder_grid.dart';
 
 // Areas ported in parallel; each file exports its area's widgets.
 export 'src/areas/forms_text.dart';

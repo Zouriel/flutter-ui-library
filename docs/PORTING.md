@@ -1347,3 +1347,17 @@ platforms an icon button pads its layout to 44 (`UiTouchTarget`), which would ma
 (`RenderUiTouchTarget.visualRect`, added for this) and lets the padding overflow, like the web's
 `::before` hit-slop, and `_HitPastEdges` lets taps on that overflowing padding through the row. The
 backdrop scopes a `UiTheme` with the same token overrides as the web.
+
+## 0.78.0: sortable pieces (UiSectionList, UiReorderGrid, UiHandleField, UiThemeSwatch)
+
+- `UiSectionList` builds on the widgets-layer `ReorderableList` with `ReorderableDragStartListener` on the handle, so a
+  drag starts at once and uses the device's touch slop from MediaQuery (it wins over the page's scroll; a swipe on the
+  rest of the row scrolls). It sizes itself (shrinkWrap) inside the page's own scroll view. The web uses CDK drag-drop.
+- Names wrap to two lines; the "Hidden" badge sits under the text; the row icon is left out below 360 wide (the web
+  decides by the list's own width, Flutter by the screen's).
+- No pressed state on the eye: its name already changes between "Hide X" and "Show X" (as on the web).
+- `UiReorderGrid` lays tiles out itself (a Stack of keyed `AnimatedPositioned`, so the long press that picked a tile up
+  survives the tile moving to the top of the paint order) and scrolls the page with `EdgeDraggingAutoScroller`.
+  `tileBuilder` lets an app draw its own cached picture; the web takes `src` only.
+- `UiThemeSwatch` takes colours (`UiThemeSwatchColors.fromCss` reads `#hex`), not a theme name: the server sends the
+  preview colours for its own named themes.
