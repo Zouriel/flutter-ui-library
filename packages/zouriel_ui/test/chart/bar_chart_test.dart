@@ -168,6 +168,17 @@ void main() {
       final chart = tester.getRect(find.byType(UiBarChart));
       expect(tip.left >= chart.left && tip.right <= chart.right, isTrue, reason: 'inside the chart');
       expect(tip.overlaps(tester.getRect(_k('ui-bar-chart-band-1'))), isFalse, reason: 'beside its band');
+      // The panel goes to the side with more room: right of the first category, left of the last.
+      await mouse.moveTo(Offset(_bar(tester, 0, 0).center.dx, plot.top + 4));
+      await tester.pumpAndSettle();
+      expect(_tipText(tester, 'title'), 'Jan');
+      expect(tester.getRect(_k('ui-bar-chart-tip')).left, greaterThanOrEqualTo(tester.getRect(_k('ui-bar-chart-band-0')).right));
+      expect(tester.getRect(_k('ui-bar-chart-tip')).right, lessThanOrEqualTo(chart.right));
+      await mouse.moveTo(Offset(_bar(tester, 2, 0).center.dx, plot.top + 4));
+      await tester.pumpAndSettle();
+      expect(_tipText(tester, 'title'), 'Mar');
+      expect(tester.getRect(_k('ui-bar-chart-tip')).right, lessThanOrEqualTo(tester.getRect(_k('ui-bar-chart-band-2')).left));
+      expect(tester.getRect(_k('ui-bar-chart-tip')).left, greaterThanOrEqualTo(chart.left));
       await mouse.moveTo(const Offset(700, 500));
       await tester.pumpAndSettle();
       expect(_k('ui-bar-chart-tip'), findsNothing);
