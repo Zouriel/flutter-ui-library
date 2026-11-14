@@ -19,6 +19,7 @@ import 'media_page.dart';
 import 'navigation_page.dart';
 import 'overlays_page.dart';
 import 'overview_page.dart';
+import 'charts_page.dart';
 import 'plans_page.dart';
 import 'shutter_page.dart';
 import 'typography_page.dart';
@@ -50,6 +51,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('shutter-loader', 'Components', 'Shutter loader', HugeIcons.strokeRoundedCamera01, (_) => const ShutterPage()),
   ShowcasePage('navigation', 'Components', 'Navigation', HugeIcons.strokeRoundedNavigation03, (_) => const NavigationPage()),
   ShowcasePage('data', 'Components', 'Data display', HugeIcons.strokeRoundedTable01, (_) => const DataPage()),
+  ShowcasePage('charts', 'Components', 'Charts', HugeIcons.strokeRoundedChartColumn, (_) => const ChartsPage()),
   ShowcasePage('plans', 'Components', 'Plans', HugeIcons.strokeRoundedCrown, (_) => const PlansPage()),
   ShowcasePage('media', 'Components', 'Media', HugeIcons.strokeRoundedImage01, (_) => const MediaPage()),
   ShowcasePage('sortable', 'Components', 'Sortable', HugeIcons.strokeRoundedDragDropVertical, (_) => const SortablePage()),

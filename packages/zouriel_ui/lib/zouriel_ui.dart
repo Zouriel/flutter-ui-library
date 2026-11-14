@@ -28,6 +28,8 @@ export 'src/guidance/hint_once.dart';
 export 'src/guidance/offer_card.dart';
 export 'src/guidance/tour.dart';
 export 'src/overlay/anchored.dart';
+export 'src/chart/bar_chart.dart';
+export 'src/chart/chart_scale.dart';
 export 'src/plans/plans.dart';
 export 'src/text/text.dart';
 export 'src/theme/app.dart';

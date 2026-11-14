@@ -1371,3 +1371,22 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
 - `ui-list-item`'s trailing slot became a flex box on the web in 0.81 (a block slot put a trailing icon on a text line
   box, so rows with a chevron were 4px taller). Nothing to port: `UiListItem` lays its row out with a `Row`, which has
   no line boxes.
+
+## 0.83.0: UiBarChart
+
+- Drawn with positioned boxes (not a CustomPaint), so tests read each bar, label and gridline as a render object by key
+  (`ui-bar-chart-bar-<category>-<series>`, `-label-<i>`, `-tick-<i>`, `-grid-zero`, `-tip`, `-scroller`, `-plot`).
+- The web `ariaLabel` is `semanticLabel`; `categorySelect` is `onCategorySelect`; `formatValue` takes a `num`. The default
+  format is intl's `NumberFormat.decimalPattern()` (the web uses `toLocaleString()`).
+- Screen readers: the web has a visually hidden table plus a live line for the arrow keys. Flutter has no hidden table;
+  the chart is one semantics node named by `semanticLabel` whose value is one category with its numbers ("Feb: Income
+  50, Spending 75"), with increase / decrease to move between categories and tap to choose one. One node rather than one
+  per category keeps the tap target large (a 14 wide band would fail the 48dp guideline).
+- The plot is a horizontal `SingleChildScrollView` with `reverse: true`, so it opens at the latest category and stays
+  there when resized (the web sets `scrollLeft` after render). A sideways drag scrolls the plot; a vertical one goes to
+  the page (tested with a phone's 8dp touch slop).
+- Hover is mouse only (`MouseRegion`); a tap shows the panel and chooses the category; a tap outside puts it away
+  (`TapRegion`). Keyboard focus (Tab) starts at the chosen or the latest category, as on the web.
+- Series colours are `t.chart1..4` from the generated tokens (`--ui-chart-1..4`). No forced-colours variant: Flutter has
+  no such mode; `MediaQuery.highContrast` is not handled.
+- Under RTL the bands, the bar order inside a group and the y axis mirror.
