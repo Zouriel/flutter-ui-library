@@ -1993,3 +1993,12 @@ Square photo tiles reordered by long press + drag (page autoscrolls), tap, remov
 A small page picture from colours (bg, surface, text, muted, accent) for theme picker tiles.
 - Flutter: `UiThemeSwatch(colors, accent, label)`, `UiThemeSwatchColors(.parse, .fromCss)`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+## chart (0.83.0)
+
+### UiBarChart (component, `ui-bar-chart`)
+File: `chart/src/bar-chart.ts`  
+`ui-bar-chart` — columns or grouped bars (one to four series) over categories from a zero baseline, with a legend, a tooltip, keyboard support, label thinning and sideways scrolling inside itself.
+- Inputs: `ariaLabel` (required); `categories`: string[]; `series`: { name, values, color? }[]; `formatValue`; `height` = 220; `showValues` = false; `selectedIndex`: number | null; `minCategoryWidth`: number | null; `emptyLabel`; output `categorySelect(index)`
+- Flutter: `UiBarChart(semanticLabel:, categories:, series: [UiBarChartSeries(name:, values:, color:)], formatValue:, height:, showValues:, selectedIndex:, onCategorySelect:, minCategoryWidth:, emptyLabel:)`; helpers `uiChartScale`, `uiChartLabels`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
