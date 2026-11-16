@@ -9,6 +9,7 @@ import 'feedback_page.dart';
 import 'file_viewer_page.dart';
 import 'find_doctor_page.dart';
 import 'form_builder_page.dart';
+import 'form_workflow_page.dart';
 import 'forms_page.dart';
 import 'map_page.dart';
 import 'foundation_page.dart';
@@ -60,6 +61,7 @@ final List<ShowcasePage> showcasePages = [
   ShowcasePage('form-builder', 'Flagship', 'Form builder', HugeIcons.strokeRoundedTask01, (_) => const FormBuilderPage()),
   ShowcasePage('workflow-builder', 'Flagship', 'Workflow builder', HugeIcons.strokeRoundedWorkflowSquare01, (_) => const WorkflowBuilderPage()),
   ShowcasePage('workflow-components', 'Flagship', 'Workflow components', HugeIcons.strokeRoundedWorkflowCircle01, (_) => const WorkflowComponentsPage()),
+  ShowcasePage('form-workflow', 'Flagship', 'Form → workflow', HugeIcons.strokeRoundedWorkflowCircle01, (_) => const FormWorkflowPage()),
   ShowcasePage('window', 'Flagship', 'Window system', HugeIcons.strokeRoundedBrowser, (_) => const WindowPage()),
   ShowcasePage('design-tools', 'Flagship', 'Design tools', HugeIcons.strokeRoundedPenTool01, (_) => const DesignToolsPage()),
   ShowcasePage('fx', 'Motion', 'Motion & FX', HugeIcons.strokeRoundedMagicWand01, (_) => const FxPage()),

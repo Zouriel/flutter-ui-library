@@ -1,0 +1,538 @@
+{
+  "kind": "engine",
+  "definition": {
+    "schemaVersion": 2,
+    "id": "bi",
+    "title": {
+      "en": "Application",
+      "dv": "ކުރެހުން"
+    },
+    "revision": 2,
+    "defaultLocale": "en",
+    "supportedLocales": [
+      {
+        "code": "en"
+      },
+      {
+        "code": "dv"
+      }
+    ],
+    "pages": [
+      {
+        "id": "p1",
+        "title": {
+          "en": "About you",
+          "dv": "ތިބާގެ ތަފްސީލް"
+        },
+        "elements": [
+          {
+            "kind": "field",
+            "id": "name",
+            "type": "text",
+            "key": "name",
+            "label": {
+              "en": "Full name",
+              "dv": "ފުރިހަމަ ނަން"
+            },
+            "required": true
+          },
+          {
+            "kind": "field",
+            "id": "nick",
+            "type": "text",
+            "key": "nick",
+            "label": "Nickname",
+            "required": true,
+            "requiredMessage": {
+              "en": "Tell us a nickname",
+              "dv": "ނަމެއް ލިޔުއްވާ"
+            }
+          },
+          {
+            "kind": "field",
+            "id": "code",
+            "type": "text",
+            "key": "code",
+            "label": {
+              "en": "Code",
+              "dv": "ކޯޑު"
+            },
+            "validators": [
+              {
+                "id": "v1",
+                "type": "minLength",
+                "params": {
+                  "min": 4
+                },
+                "message": {
+                  "en": "{label} is too short",
+                  "dv": "{label} ކުރު ވެއްޖެ"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "elements": [
+          {
+            "kind": "field",
+            "id": "city",
+            "type": "select",
+            "key": "city",
+            "label": {
+              "en": "City",
+              "dv": "ސިޓީ"
+            },
+            "options": [
+              {
+                "id": "o1",
+                "value": "male",
+                "label": {
+                  "en": "Malé",
+                  "dv": "މާލެ"
+                }
+              },
+              {
+                "id": "o2",
+                "value": "addu",
+                "label": "Addu"
+              }
+            ]
+          },
+          {
+            "kind": "group",
+            "id": "kids",
+            "key": "kids",
+            "title": {
+              "en": "Children",
+              "dv": "ކުދިން"
+            },
+            "repeat": {
+              "min": 0,
+              "itemLabel": {
+                "en": "Child {n}",
+                "dv": "ކުއްޖާ {n}"
+              }
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "age",
+                "type": "number",
+                "key": "age",
+                "label": {
+                  "en": "Age",
+                  "dv": "އުމުރު"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "errors are worded in the active language",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "expect": {
+            "locale": "en",
+            "dir": "ltr",
+            "errors": {
+              "name": [
+                "Full name is required."
+              ]
+            }
+          }
+        },
+        {
+          "setLocale": "dv"
+        },
+        {
+          "expect": {
+            "locale": "dv",
+            "dir": "rtl",
+            "errors": {
+              "name": [
+                "ފުރިހަމަ ނަން is required."
+              ]
+            }
+          }
+        },
+        {
+          "setLocale": "fr"
+        },
+        {
+          "expect": {
+            "locale": "en",
+            "dir": "ltr",
+            "errors": {
+              "name": [
+                "Full name is required."
+              ]
+            }
+          }
+        },
+        {
+          "setLocale": "dv-MV"
+        },
+        {
+          "expect": {
+            "locale": "dv"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a custom required message and a custom rule message follow the language",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "set": "code",
+          "value": "ab"
+        },
+        {
+          "expect": {
+            "errors": {
+              "nick": [
+                "Tell us a nickname"
+              ],
+              "code": [
+                "Code is too short"
+              ]
+            }
+          }
+        },
+        {
+          "setLocale": "dv"
+        },
+        {
+          "expect": {
+            "errors": {
+              "nick": [
+                "ނަމެއް ލިޔުއްވާ"
+              ],
+              "code": [
+                "ކޯޑު ކުރު ވެއްޖެ"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "switching language keeps what was typed",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "set": "name",
+          "value": "Aisha"
+        },
+        {
+          "set": "code",
+          "value": "abcd"
+        },
+        {
+          "setLocale": "dv"
+        },
+        {
+          "expect": {
+            "value": {
+              "name": "Aisha",
+              "code": "abcd"
+            },
+            "data": {
+              "name": "Aisha",
+              "nick": null,
+              "code": "abcd",
+              "city": null,
+              "kids": [
+                {
+                  "age": null
+                }
+              ]
+            }
+          }
+        },
+        {
+          "setLocale": "en"
+        },
+        {
+          "expect": {
+            "value": {
+              "name": "Aisha"
+            },
+            "errors": {
+              "name": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "repeat entry names and option labels follow the language",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "expect": {
+            "instanceLabel": {
+              "age@0": "Age (Child 1)"
+            },
+            "display": {
+              "city": ""
+            }
+          }
+        },
+        {
+          "setLocale": "dv"
+        },
+        {
+          "expect": {
+            "instanceLabel": {
+              "age@0": "އުމުރު (ކުއްޖާ 1)"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "the language can be chosen when the engine starts",
+      "locale": "dv",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "expect": {
+            "locale": "dv",
+            "dir": "rtl",
+            "errors": {
+              "name": [
+                "ފުރިހަމަ ނަން is required."
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a submission carries the language, the answers' description and the link",
+      "locale": "dv",
+      "link": {
+        "workflowId": "wf-1",
+        "serviceCode": "SVC-9"
+      },
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "set": "name",
+          "value": "Aisha"
+        },
+        {
+          "set": "nick",
+          "value": "Ai"
+        },
+        {
+          "next": true
+        },
+        {
+          "set": "city",
+          "value": "male"
+        },
+        {
+          "set": "age@0",
+          "value": 7
+        },
+        {
+          "submit": {
+            "formId": "bi",
+            "revision": 2,
+            "locale": "dv",
+            "workflowId": "wf-1",
+            "serviceCode": "SVC-9",
+            "fields": [
+              {
+                "path": "name",
+                "key": "name",
+                "label": "ފުރިހަމަ ނަން",
+                "type": "text"
+              },
+              {
+                "path": "nick",
+                "key": "nick",
+                "label": "Nickname",
+                "type": "text"
+              },
+              {
+                "path": "code",
+                "key": "code",
+                "label": "ކޯޑު",
+                "type": "text"
+              },
+              {
+                "path": "city",
+                "key": "city",
+                "label": "ސިޓީ",
+                "type": "select"
+              },
+              {
+                "path": "kids[].age",
+                "key": "age",
+                "label": "އުމުރު",
+                "type": "number"
+              }
+            ],
+            "data": {
+              "name": "Aisha",
+              "nick": "Ai",
+              "code": null,
+              "city": "male",
+              "kids": [
+                {
+                  "age": 7
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "the language at the moment of submitting is the one recorded",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "set": "name",
+          "value": "Aisha"
+        },
+        {
+          "set": "nick",
+          "value": "Ai"
+        },
+        {
+          "next": true
+        },
+        {
+          "setLocale": "dv"
+        },
+        {
+          "submit": {
+            "locale": "dv",
+            "fields": [
+              {
+                "path": "name",
+                "key": "name",
+                "label": "ފުރިހަމަ ނަން",
+                "type": "text"
+              },
+              {
+                "path": "nick",
+                "key": "nick",
+                "label": "Nickname",
+                "type": "text"
+              },
+              {
+                "path": "code",
+                "key": "code",
+                "label": "ކޯޑު",
+                "type": "text"
+              },
+              {
+                "path": "city",
+                "key": "city",
+                "label": "ސިޓީ",
+                "type": "select"
+              },
+              {
+                "path": "kids[].age",
+                "key": "age",
+                "label": "އުމުރު",
+                "type": "number"
+              }
+            ]
+          }
+        },
+        {
+          "setLocale": "en"
+        },
+        {
+          "submit": {
+            "locale": "en",
+            "fields": [
+              {
+                "path": "name",
+                "key": "name",
+                "label": "Full name",
+                "type": "text"
+              },
+              {
+                "path": "nick",
+                "key": "nick",
+                "label": "Nickname",
+                "type": "text"
+              },
+              {
+                "path": "code",
+                "key": "code",
+                "label": "Code",
+                "type": "text"
+              },
+              {
+                "path": "city",
+                "key": "city",
+                "label": "City",
+                "type": "select"
+              },
+              {
+                "path": "kids[].age",
+                "key": "age",
+                "label": "Age",
+                "type": "number"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "without a link the submission has no workflow keys",
+      "today": "2027-01-01",
+      "steps": [
+        {
+          "set": "name",
+          "value": "Aisha"
+        },
+        {
+          "set": "nick",
+          "value": "Ai"
+        },
+        {
+          "next": true
+        },
+        {
+          "submitLacks": [
+            "workflowId",
+            "serviceCode"
+          ]
+        },
+        {
+          "setLink": {
+            "workflowId": "wf-2"
+          }
+        },
+        {
+          "submit": {
+            "workflowId": "wf-2"
+          }
+        },
+        {
+          "submitLacks": [
+            "serviceCode"
+          ]
+        }
+      ]
+    }
+  ]
+}

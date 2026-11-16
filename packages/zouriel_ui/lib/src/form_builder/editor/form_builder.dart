@@ -10,6 +10,7 @@ import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
 import '../../dialog/bottom_sheet.dart';
+import '../../dialog/drawer.dart';
 import '../../dialog/modal.dart';
 import '../../dialog/snackbar.dart';
 import '../../theme/theme.dart';
@@ -17,15 +18,18 @@ import '../engine/definition.dart';
 import '../engine/global_settings.dart';
 import '../engine/http_sources.dart';
 import '../engine/option_sources.dart';
+import '../engine/revisions.dart';
 import '../engine/schema.dart';
 import '../engine/validators.dart';
 import 'builder_bits.dart';
 import 'builder_canvas.dart';
 import 'builder_dnd.dart';
+import 'builder_languages.dart';
 import 'builder_inspector.dart';
 import 'builder_logic.dart';
 import 'builder_palette.dart';
 import 'builder_preview.dart';
+import 'builder_revisions.dart';
 import 'builder_store.dart';
 
 /// Which part of the builder is showing.
@@ -81,6 +85,8 @@ class UiFormBuilder extends StatefulWidget {
     this.httpSources = const UiFbHttpSourcesOptions(),
     this.actions,
     this.showTitle = true,
+    this.revisionStore,
+    this.onRestored,
   });
 
   /// The form being built: a [UiFormDefinition] or its stored JSON (migrated on load). Handing back
@@ -117,6 +123,15 @@ class UiFormBuilder extends StatefulWidget {
 
   /// Show the form's title in the top bar. Turn off when the host's own header already names the form.
   final bool showTitle;
+
+  /// Where the form's earlier published versions are kept. With one, a History button opens them
+  /// and rolls one back into a draft (one undo step; nothing goes live until the form is published).
+  /// Save each version with [fbCreateRevision] when you publish.
+  final UiFbRevisionStore? revisionStore;
+
+  /// A past version was loaded as the new draft. It is already in the builder (and was handed to
+  /// [onChanged]); nothing is published.
+  final ValueChanged<UiFormDefinition>? onRestored;
 
   @override
   State<UiFormBuilder> createState() => UiFormBuilderState();
@@ -325,6 +340,36 @@ class UiFormBuilderState extends State<UiFormBuilder> {
     }
     setState(() => _sheetSnap = 0);
     _showToast('Deleted “$name”');
+  }
+
+  /// Opens the revision history in a drawer on the right.
+  void _openHistory(BuildContext context) {
+    final store = widget.revisionStore;
+    if (store == null) return;
+    showUiDrawer<void>(
+      context: context,
+      title: 'History',
+      builder: (ctx) => ListenableBuilder(
+        listenable: controller,
+        builder: (ctx, _) => UiFbRevisionPanel(
+          store: store,
+          formId: controller.def.id,
+          current: controller.def,
+          onRestore: (d) {
+            Navigator.of(ctx).pop();
+            _onRestore(d);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// A restored version replaces the draft as one undo step.
+  void _onRestore(UiFormDefinition d) {
+    controller.replace(d);
+    if (!mounted) return;
+    _showToast('Loaded the earlier version as a draft');
+    widget.onRestored?.call(controller.def);
   }
 
   void _showToast(String message) {
@@ -567,7 +612,7 @@ class _TopBar extends StatelessWidget {
     final narrow = state._layout == UiFormBuilderLayout.narrow;
     final errors = store.errorCount;
     final changes = store.diff?.summary ?? const <String>[];
-    final title = store.def.title.isNotEmpty ? store.def.title : 'Untitled form';
+    final title = store.shown(store.def.title).isNotEmpty ? store.shown(store.def.title) : 'Untitled form';
 
     // Pulled 6px left, its hover padding, so the words line up with the views below (the web
     // `margin-left: -6px`).
@@ -603,6 +648,35 @@ class _TopBar extends StatelessWidget {
     final tools = Wrap(alignment: WrapAlignment.end, crossAxisAlignment: WrapCrossAlignment.center, spacing: 2, runSpacing: 2, children: [
       FbIconButton(icon: HugeIcons.strokeRoundedUndo02, label: 'Undo', onPressed: store.canUndo ? store.undo : null),
       FbIconButton(icon: HugeIcons.strokeRoundedRedo02, label: 'Redo', onPressed: store.canRedo ? store.redo : null),
+      if (store.multilingual)
+        Padding(
+          padding: EdgeInsetsDirectional.only(start: t.space2),
+          child: UiSegmented<String>(
+            label: 'Language you are editing',
+            size: UiSize.sm,
+            value: store.editLocale,
+            options: [for (final l in store.locales) UiSegmentedOption(value: l.code, label: l.label)],
+            onChanged: store.setEditLocale,
+          ),
+        ),
+      if (store.multilingual)
+        FbIconButton(icon: HugeIcons.strokeRoundedTranslate, label: 'Languages', onPressed: () => _openLanguages(context, store))
+      else
+        UiButton(
+          label: 'Languages',
+          size: UiSize.sm,
+          variant: UiButtonVariant.ghost,
+          icon: const UiIcon(HugeIcons.strokeRoundedTranslate),
+          onPressed: () => _openLanguages(context, store),
+        ),
+      if (state.widget.revisionStore != null)
+        UiButton(
+          label: 'History',
+          size: UiSize.sm,
+          variant: UiButtonVariant.ghost,
+          icon: const UiIcon(HugeIcons.strokeRoundedHistory),
+          onPressed: () => state._openHistory(context),
+        ),
       if (errors > 0)
         _Pill(
           label: '$errors',
@@ -655,6 +729,16 @@ class _TopBar extends StatelessWidget {
             ]),
     );
   }
+}
+
+/// The Languages dialog: add, remove and set the direction of the form's languages.
+void _openLanguages(BuildContext context, UiFormBuilderController store) {
+  showUiModal<void>(
+    context: context,
+    title: 'Languages',
+    size: UiModalSize.md,
+    builder: (ctx) => UiFbBuilderScope(controller: store, child: const UiFbLanguages()),
+  );
 }
 
 class _Pill extends StatelessWidget {

@@ -56,6 +56,8 @@ class UiFormRenderer extends StatefulWidget {
     this.submitLabel,
     this.cancelLabel,
     this.busy = false,
+    this.locale,
+    this.link,
     this.today,
     this.onSubmitted,
     this.onCancelled,
@@ -102,6 +104,13 @@ class UiFormRenderer extends StatefulWidget {
 
   /// Shows the submit button as busy (while the host saves).
   final bool busy;
+
+  /// The language to show the form in (a locale code of the form). Falls back to the form's default
+  /// language. Changing it keeps the answers; the layout follows the language's direction.
+  final String? locale;
+
+  /// Copied onto each submission (`workflowId`, `serviceCode`).
+  final UiFbSubmissionLink? link;
 
   /// Fixes "today" (YYYY-MM-DD) for date rules and ages.
   final String Function()? today;
@@ -157,7 +166,11 @@ class UiFormRendererState extends State<UiFormRenderer> {
         !listEquals(old.optionSources, w.optionSources)) {
       _engine.dispose();
       _create();
+      return;
     }
+    // Language and link follow their inputs without restarting the form, so answers survive.
+    if (old.locale != w.locale) _engine.setLocale(w.locale);
+    if (old.link != w.link) _engine.setLink(w.link);
   }
 
   @override
@@ -181,6 +194,8 @@ class UiFormRendererState extends State<UiFormRenderer> {
       validators: w.validators,
       optionSources: [...sourcesFromSettings(w.globalSettings, w.httpSources), ...w.optionSources],
       today: w.today,
+      locale: w.locale,
+      link: w.link,
     );
     _engine.addListener(_onEngine);
     _lastData = _engine.data;
@@ -250,7 +265,10 @@ class UiFormRendererState extends State<UiFormRenderer> {
     if (_engine.back()) _pageChanged();
   }
 
-  String _entryLabel(UiFbGroup g, int n) => (g.repeat?.itemLabel ?? 'Entry {n}').replaceFirst('{n}', '${n + 1}');
+  String _entryLabel(UiFbGroup g, int n) {
+    final text = _engine.text(g.repeat?.itemLabel);
+    return (text.isEmpty ? 'Entry {n}' : text).replaceFirst('{n}', '${n + 1}');
+  }
 
   void _addRow(UiFbGroup g) {
     if (_engine.addRow(g.id) == null) return;
@@ -307,8 +325,8 @@ class UiFormRendererState extends State<UiFormRenderer> {
 
   void _pageChanged() {
     final e = _engine;
-    final page = e.page;
-    setState(() => _announce = 'Step ${e.step + 1} of ${e.path.length}${page.title != null && page.title!.isNotEmpty ? ': ${page.title}' : ''}');
+    final title = e.text(e.page.title);
+    setState(() => _announce = 'Step ${e.step + 1} of ${e.path.length}${title.isNotEmpty ? ': $title' : ''}');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Bring the top of the form back into view if the page was scrolled past it.
@@ -335,7 +353,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
       }
     }
     if (field != null) {
-      final s = formatValue(field, v);
+      final s = formatValue(field, v, textLocale: _engine.locale, defaultLocale: _engine.defaultLocale);
       return s.isEmpty ? 'Empty' : s;
     }
     return v is Map || v is List ? jsonStringify(v) : jsString(v);
@@ -352,15 +370,17 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final s = def.settings;
     final viewing = e.mode == UiFormMode.view;
     final children = <Widget>[];
+    final title = e.text(def.title);
+    final description = e.text(def.description);
 
-    if (widget.showTitle && (def.title.isNotEmpty || (def.description ?? '').isNotEmpty)) {
+    if (widget.showTitle && (title.isNotEmpty || description.isNotEmpty)) {
       children.add(Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space1, children: [
-        if (def.title.isNotEmpty)
+        if (title.isNotEmpty)
           Semantics(
             header: true,
-            child: Text(def.title, style: ty.h3.copyWith(fontSize: 20 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text, height: 1.25)),
+            child: Text(title, style: ty.h3.copyWith(fontSize: 20 * context.ui.fontScale, fontWeight: FontWeight.w600, color: t.text, height: 1.25)),
           ),
-        if ((def.description ?? '').isNotEmpty) _desc(context, def.description!),
+        if (description.isNotEmpty) _desc(context, description),
       ]));
     }
 
@@ -375,10 +395,10 @@ class UiFormRendererState extends State<UiFormRenderer> {
           decoration: BoxDecoration(border: k > 0 ? Border(top: BorderSide(color: t.border)) : null),
           child: Semantics(
             container: true,
-            label: p.title,
+            label: e.text(p.title),
             explicitChildNodes: true,
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
-              if (_multiPage && ((p.title ?? '').isNotEmpty || (p.description ?? '').isNotEmpty)) _pageHead(context, p, showTitle: true),
+              if (_multiPage && (e.text(p.title).isNotEmpty || e.text(p.description).isNotEmpty)) _pageHead(context, p, showTitle: true),
               _grid(context, p.elements, null, 1),
             ]),
           ),
@@ -389,7 +409,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
       final summary = e.settings.errorSummary && e.attempted.contains(e.page.id) ? e.pageErrors(e.pageIndex) : const <UiFbErrorItem>[];
       if (summary.isNotEmpty) children.add(_summary(context, summary));
       final page = e.page;
-      if (_multiPage && ((page.title ?? '').isNotEmpty || (page.description ?? '').isNotEmpty)) {
+      if (_multiPage && (e.text(page.title).isNotEmpty || e.text(page.description).isNotEmpty)) {
         children.add(_pageHead(context, page, showTitle: s?.showProgress == false));
       }
       children.add(Focus(focusNode: _pageFocus, child: KeyedSubtree(key: ValueKey('page-${page.id}'), child: _grid(context, page.elements, null, 1))));
@@ -398,13 +418,16 @@ class UiFormRendererState extends State<UiFormRenderer> {
     if (widget.showActions && !viewing) children.add(_footer(context));
     children.add(Semantics(liveRegion: true, label: _announce, child: const SizedBox.shrink()));
 
-    return DefaultTextStyle.merge(
-      style: TextStyle(color: t.text),
-      child: Semantics(
-        container: true,
-        explicitChildNodes: true,
-        label: widget.showTitle && def.title.isNotEmpty ? def.title : null,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space4, children: children),
+    return Directionality(
+      textDirection: e.dir == UiFbDir.rtl ? TextDirection.rtl : TextDirection.ltr,
+      child: DefaultTextStyle.merge(
+        style: TextStyle(color: t.text),
+        child: Semantics(
+          container: true,
+          explicitChildNodes: true,
+          label: widget.showTitle && title.isNotEmpty ? title : null,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space4, children: children),
+        ),
       ),
     );
   }
@@ -416,14 +439,16 @@ class UiFormRendererState extends State<UiFormRenderer> {
 
   Widget _pageHead(BuildContext context, UiFbPage p, {required bool showTitle}) {
     final t = context.ui;
-    if (!showTitle && (p.description ?? '').isEmpty) return const SizedBox.shrink();
+    final title = _engine.text(p.title);
+    final description = _engine.text(p.description);
+    if (!showTitle && description.isEmpty) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 2, children: [
-      if (showTitle && (p.title ?? '').isNotEmpty)
+      if (showTitle && title.isNotEmpty)
         Semantics(
           header: true,
-          child: Text(p.title!, style: context.uiText.body.copyWith(fontSize: t.fontSizeLg, fontWeight: FontWeight.w600, color: t.text, height: 1.3)),
+          child: Text(title, style: context.uiText.body.copyWith(fontSize: t.fontSizeLg, fontWeight: FontWeight.w600, color: t.text, height: 1.3)),
         ),
-      if ((p.description ?? '').isNotEmpty) _desc(context, p.description!),
+      if (description.isNotEmpty) _desc(context, description),
     ]);
   }
 
@@ -431,6 +456,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final t = context.ui;
     final e = _engine;
     final page = e.page;
+    final pageTitle = e.text(page.title);
     final dur = context.uiAnimate ? t.motionBase : Duration.zero;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
       ExcludeSemantics(
@@ -450,7 +476,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
         ]),
       ),
       Text(
-        'Step ${e.step + 1} of ${e.path.length}${(page.title ?? '').isNotEmpty ? ': ${page.title}' : ''}',
+        'Step ${e.step + 1} of ${e.path.length}${pageTitle.isNotEmpty ? ': $pageTitle' : ''}',
         style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textSecondary),
       ),
     ]);
@@ -477,10 +503,10 @@ class UiFormRendererState extends State<UiFormRenderer> {
               // A lighter tint than the web's 8% so the 13px danger links keep 4.5:1 in every theme.
               color: uiMix(t.danger, 0.04, t.surface),
               borderRadius: BorderRadius.circular(theme.radius()),
-              border: Border(
-                left: BorderSide(color: uiMix(t.danger, 0.55, t.surface), width: 4),
+              border: BorderDirectional(
+                start: BorderSide(color: uiMix(t.danger, 0.55, t.surface), width: 4),
                 top: BorderSide(color: uiMix(t.danger, 0.55, t.surface)),
-                right: BorderSide(color: uiMix(t.danger, 0.55, t.surface)),
+                end: BorderSide(color: uiMix(t.danger, 0.55, t.surface)),
                 bottom: BorderSide(color: uiMix(t.danger, 0.55, t.surface)),
               ),
               // Focused by the form so it's read out; its red frame already marks it, a ring would double it.
@@ -597,11 +623,11 @@ class UiFormRendererState extends State<UiFormRenderer> {
               padding: EdgeInsets.only(top: t.space2),
               child: Semantics(
                 header: true,
-                child: Text(el.text ?? '', style: ty.h4.copyWith(fontSize: t.fontSizeLg, fontWeight: FontWeight.w600, color: t.text, height: 1.3)),
+                child: Text(_engine.text(el.text), style: ty.h4.copyWith(fontSize: t.fontSizeLg, fontWeight: FontWeight.w600, color: t.text, height: 1.3)),
               ),
             );
           case 'paragraph':
-            return Text(el.text ?? '', style: ty.body.copyWith(fontSize: t.fontSizeSm, height: 1.5, color: t.textSecondary));
+            return Text(_engine.text(el.text), style: ty.body.copyWith(fontSize: t.fontSizeSm, height: 1.5, color: t.textSecondary));
           default:
             return Padding(padding: EdgeInsets.symmetric(vertical: t.space1), child: Container(height: 1, color: t.borderSubtle));
         }
@@ -618,10 +644,12 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final viewing = e.mode == UiFormMode.view;
     final disabled = e.instanceState(g.id, row).disabled && !viewing;
     final cols = (g.columns ?? 1).toInt();
+    final gTitle = e.text(g.title);
+    final gDescription = e.text(g.description);
     final content = <Widget>[
-      if ((g.title ?? '').isNotEmpty)
-        Semantics(header: true, child: Text(g.title!, style: ty.body.copyWith(fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, color: t.text))),
-      if ((g.description ?? '').isNotEmpty) _desc(context, g.description!),
+      if (gTitle.isNotEmpty)
+        Semantics(header: true, child: Text(gTitle, style: ty.body.copyWith(fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, color: t.text))),
+      if (gDescription.isNotEmpty) _desc(context, gDescription),
     ];
     if (g.repeat == null) {
       content.add(_grid(context, g.elements, row, cols));
@@ -648,7 +676,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
             variant: UiButtonVariant.outline,
             size: UiSize.sm,
             icon: const UiIcon(HugeIcons.strokeRoundedAdd01, size: 15),
-            label: g.repeat!.addLabel ?? 'Add another',
+            label: e.text(g.repeat!.addLabel).isNotEmpty ? e.text(g.repeat!.addLabel) : 'Add another',
             onPressed: e.canAddRow(g.id) && !e.instanceState(g.id, row).disabled ? () => _addRow(g) : null,
           ),
           if (max != null) Text('${rows.length} of ${max.toInt()}', style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)),
@@ -660,7 +688,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
       child: Semantics(
         container: true,
         explicitChildNodes: true,
-        label: g.title,
+        label: gTitle,
         child: Container(
           padding: EdgeInsets.all(t.space3),
           decoration: BoxDecoration(border: Border.all(color: t.borderSubtle), borderRadius: BorderRadius.circular(theme.radius())),
@@ -715,14 +743,14 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final e = _engine;
     final s = e.definition.settings;
     final primaryLabel = !e.isLastPage
-        ? (s?.nextLabel?.isNotEmpty == true ? s!.nextLabel! : 'Continue')
-        : (widget.submitLabel ?? (s?.submitLabel?.isNotEmpty == true ? s!.submitLabel! : (e.mode == UiFormMode.edit ? 'Save changes' : 'Submit')));
+        ? (e.text(s?.nextLabel).isNotEmpty ? e.text(s?.nextLabel) : 'Continue')
+        : (widget.submitLabel ?? (e.text(s?.submitLabel).isNotEmpty ? e.text(s?.submitLabel) : (e.mode == UiFormMode.edit ? 'Save changes' : 'Submit')));
     final start = <Widget>[
       if (_multiPage && e.step > 0)
         UiButton(
           variant: UiButtonVariant.outline,
           icon: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, size: 14),
-          label: s?.backLabel?.isNotEmpty == true ? s!.backLabel! : 'Back',
+          label: e.text(s?.backLabel).isNotEmpty ? e.text(s?.backLabel) : 'Back',
           onPressed: _back,
         ),
       if (widget.cancelLabel != null) UiButton(variant: UiButtonVariant.ghost, label: widget.cancelLabel, onPressed: widget.onCancelled ?? () {}),

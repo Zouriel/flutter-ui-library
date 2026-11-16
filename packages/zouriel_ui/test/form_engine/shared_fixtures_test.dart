@@ -24,16 +24,19 @@ void main() {
   test('all shared fixtures are present', () {
     final files = Directory(_dir).listSync().map((f) => f.uri.pathSegments.last).where((n) => n.endsWith('.json')).toList()..sort();
     expect(files, [
-      'calc.json', 'conditions.json', 'definition.json', 'describe.json', 'engine-rules.json', 'engine-scholarship.json', //
-      'http-sources.json', 'scholarship.answers.json', 'scholarship.definition.json', 'slug.json', 'values.json',
+      'calc.json', 'conditions.json', 'definition.json', 'describe.json', 'engine-locale.json', 'engine-rules.json', //
+      'engine-scholarship.json', 'http-sources.json', 'localize.json', 'migrate.json', 'scholarship.answers.json', //
+      'scholarship.definition.json', 'slug.json', 'submission-fields.json', 'values.json',
     ]);
   });
 
   runEngine('engine-scholarship.json');
   runEngine('engine-rules.json');
+  runEngine('engine-locale.json');
   conditionsAndCalc();
   valuesAndSlugs();
   definitionHelpers();
+  localizeMigrateAndFields();
   httpSources();
 }
 
@@ -47,7 +50,8 @@ void runEngine(String file) {
         final definition = c['definition'] ?? (c['definitionFile'] != null ? load(c['definitionFile'] as String) : fx['definition'] ?? load(fx['definitionFile'] as String));
         final data = c['data'] ?? (c['dataFile'] != null ? load(c['dataFile'] as String) : null);
         final mode = c['mode'] == null ? null : UiFormMode.values.byName(c['mode'] as String);
-        final e = UiFormEngine.fromJson(definition, data: data == null ? null : obj(data), mode: mode, today: () => c['today'] as String);
+        final link = c['link'] == null ? null : linkOf(c['link']);
+        final e = UiFormEngine.fromJson(definition, data: data == null ? null : obj(data), mode: mode, today: () => c['today'] as String, locale: c['locale'] as String?, link: link);
         (String, String?) at(String addr) {
           final parts = addr.split('@');
           if (parts.length == 1) return (addr, null);
@@ -86,6 +90,17 @@ void runEngine(String file) {
             expect(e.back(), step['back'], reason: '$where: back');
           } else if (step.containsKey('goTo')) {
             e.goTo(step['goTo'] as int);
+          } else if (step.containsKey('setLocale')) {
+            e.setLocale(step['setLocale'] as String?);
+          } else if (step.containsKey('setLink')) {
+            e.setLink(step['setLink'] == null ? null : linkOf(step['setLink']));
+          } else if (step.containsKey('submitLacks')) {
+            final s = e.submit();
+            expect(s, isNotNull, reason: '$where: submit');
+            final json = s!.toJson();
+            for (final k in arr(step['submitLacks'])) {
+              expect(json.containsKey(k), isFalse, reason: '$where: submission lacks $k');
+            }
           } else if (step.containsKey('submit')) {
             final s = e.submit();
             final want = step['submit'];
@@ -94,7 +109,9 @@ void runEngine(String file) {
             } else if (want == true) {
               expect(s, isNotNull, reason: '$where: submit');
             } else {
-              expectJson({'formId': s?.formId, 'revision': s?.revision, 'data': s?.data}, want, '$where: submit');
+              // Compares the keys the fixture lists (the time of submitting and the files vary).
+              final json = s?.toJson() ?? const <String, Object?>{};
+              expectJson({for (final k in obj(want).keys) k: json[k]}, want, '$where: submit');
             }
           } else if (step.containsKey('expect')) {
             checkEngine(e, obj(step['expect']), where, at, name);
@@ -106,6 +123,11 @@ void runEngine(String file) {
   });
 }
 
+UiFbSubmissionLink linkOf(Object? json) {
+  final m = obj(json);
+  return UiFbSubmissionLink(workflowId: m['workflowId'] as String?, serviceCode: m['serviceCode'] as String?);
+}
+
 void checkEngine(UiFormEngine e, UiJson x, String where, (String, String?) Function(String) at, String Function(String, String?) name) {
   void per(String key, Object? Function(String id, String? row) read) {
     for (final MapEntry(key: addr, value: want) in obj(x[key] ?? const {}).entries) {
@@ -114,6 +136,8 @@ void checkEngine(UiFormEngine e, UiJson x, String where, (String, String?) Funct
     }
   }
 
+  if (x.containsKey('locale')) expect(e.locale, x['locale'], reason: '$where: locale');
+  if (x.containsKey('dir')) expect(e.dir.name, x['dir'], reason: '$where: dir');
   if (x.containsKey('mode')) expect(e.mode.name, x['mode'], reason: '$where: mode');
   if (x.containsKey('path')) expectJson(e.path, x['path'], '$where: path');
   if (x.containsKey('pageIndex')) expect(e.pageIndex, x['pageIndex'], reason: '$where: pageIndex');
@@ -128,7 +152,7 @@ void checkEngine(UiFormEngine e, UiJson x, String where, (String, String?) Funct
   per('errors', (id, row) => e.instanceState(id, row).errors);
   per('warnings', (id, row) => e.instanceState(id, row).warnings);
   per('errorsShown', (id, row) => e.errorsShown(id, row));
-  per('display', (id, row) => formatValue(e.field(id)!, e.instanceState(id, row).value, locale: 'en_US'));
+  per('display', (id, row) => formatValue(e.field(id)!, e.instanceState(id, row).value, locale: 'en_US', textLocale: e.locale, defaultLocale: e.defaultLocale));
   per('dataPath', (id, row) => e.dataPath(id, row));
   per('instanceLabel', (id, row) => e.instanceLabel(id, row));
   per('sourceParams', (id, row) => e.sourceParams(id, row));
@@ -323,7 +347,9 @@ void definitionHelpers() {
         expect(d.pages.length, c['pages']);
         expect(d.id, isNotEmpty);
         expect(d.pages.every((p) => p.id.isNotEmpty), isTrue);
-        expect(d.schemaVersion, 1);
+        expect(d.schemaVersion, 2);
+        expect(d.defaultLocale, 'en');
+        expectJson([for (final l in d.supportedLocales!) l.toJson()], [{'code': 'en'}], 'supportedLocales');
       }
     });
     test('round-trips definitions unchanged', () {
@@ -393,8 +419,80 @@ void definitionHelpers() {
       final c = obj(fx['createDefinition']);
       final d = createDefinition(title: c['title'] as String, defaults: UiFbSettings.fromJson(c['defaults']));
       expectJson(d.settings!.toJson(), c['expectedSettings'], 'settings');
-      expect(d.title, c['title']);
+      expect(d.title, UiFbText(c['title'] as String));
+      expectJson({'defaultLocale': d.defaultLocale, 'supportedLocales': [for (final l in d.supportedLocales!) l.toJson()]}, c['expectedLocales'], 'locales');
+      expect(d.schemaVersion, 2);
       expect(d.pages.length, 1);
+    });
+  });
+}
+
+// ── Languages, older forms, submission fields ───────────────────────────────────────────────────
+
+void localizeMigrateAndFields() {
+  group('localize.json', () {
+    final fx = obj(load('localize.json'));
+    UiFormDefinition defOf(Object? j) => UiFormDefinition.fromJson(j);
+    test('resolves text in a language', () {
+      for (final c in arr(fx['text']).map(obj)) {
+        expect(fbText(UiFbText.fromJson(c['text']), c['locale'] as String?, c['defaultLocale'] as String?), c['expected'], reason: c['name'] as String);
+      }
+    });
+    test('reads one language only, with no fallback', () {
+      for (final c in arr(fx['textIn']).map(obj)) {
+        expect(fbTextIn(UiFbText.fromJson(c['text']), c['locale'] as String, c['defaultLocale'] as String?), c['expected'], reason: jsonEncode(c));
+      }
+    });
+    test('writes text in a language', () {
+      for (final c in arr(fx['setText']).map(obj)) {
+        final out = fbSetText(UiFbText.fromJson(c['text']), c['locale'] as String, c['value'] as String, c['defaultLocale'] as String?);
+        expectJson(out.toJson(), c['expected'], c['name'] as String);
+      }
+    });
+    test('picks the language to show', () {
+      for (final c in arr(fx['resolveLocale']).map(obj)) {
+        expect(fbResolveLocale(defOf(c['definition']), c['requested'] as String?), c['expected'], reason: jsonEncode(c));
+      }
+    });
+    test('knows each language’s direction', () {
+      for (final c in arr(fx['localeDir']).map(obj)) {
+        expect(fbLocaleDir(defOf(c['definition']), c['locale'] as String?).name, c['expected'], reason: jsonEncode(c));
+      }
+    });
+    test('lists a form’s languages with labels and directions', () {
+      for (final c in arr(fx['locales']).map(obj)) {
+        final got = [for (final l in fbLocales(defOf(c['definition']))) {'code': l.code, 'label': l.label, 'dir': l.dir.name}];
+        expectJson(got, c['expected'], jsonEncode(c['definition']));
+      }
+    });
+    test('warns about missing translations, once per element and language', () {
+      for (final c in arr(fx['lintTranslations']).map(obj)) {
+        expectJson([for (final p in lintDefinition(defOf(c['definition']))) p.toJson()], c['expected'], c['name'] as String);
+      }
+    });
+  });
+
+  group('migrate.json', () {
+    final fx = obj(load('migrate.json'));
+    test('brings older forms up to the current version', () {
+      for (final c in arr(fx['cases']).map(obj)) {
+        expectJson(migrateDefinition(c['raw']).toJson(), c['expected'], c['name'] as String);
+      }
+    });
+    test('does nothing the second time', () {
+      for (final c in arr(fx['cases']).map(obj)) {
+        expectJson(migrateDefinition(migrateDefinition(c['raw'])).toJson(), c['expected'], c['name'] as String);
+      }
+    });
+  });
+
+  group('submission-fields.json', () {
+    final fx = obj(load('submission-fields.json'));
+    test('describes where each answer sits', () {
+      for (final c in arr(fx['cases']).map(obj)) {
+        final got = fbSubmissionFields(UiFormDefinition.fromJson(c['definition']), c['locale'] as String?);
+        expectJson([for (final f in got) f.toJson()], c['expected'], c['name'] as String);
+      }
     });
   });
 }

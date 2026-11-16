@@ -113,11 +113,11 @@ UiJson f(String id, String type, [Map<String, Object?> extra = const {}]) => {'k
 
 /// Finds a text control by the field label it carries (UiFieldScope label).
 Finder editableIn(String label) => find.descendant(
-      of: find.byWidgetPredicate((w) => w is UiFbFieldView && w.field.label == label),
+      of: find.byWidgetPredicate((w) => w is UiFbFieldView && fbText(w.field.label) == label),
       matching: find.byType(EditableText),
     );
 
-Finder fieldView(String label, {int at = 0}) => find.byWidgetPredicate((w) => w is UiFbFieldView && w.field.label == label).at(at);
+Finder fieldView(String label, {int at = 0}) => find.byWidgetPredicate((w) => w is UiFbFieldView && fbText(w.field.label) == label).at(at);
 
 Future<void> settle(WidgetTester tester) async {
   await tester.pump();

@@ -6,6 +6,7 @@ import 'conditions.dart';
 import 'definition.dart';
 import 'field_types.dart';
 import 'js.dart';
+import 'localize.dart';
 import 'option_sources.dart';
 import 'schema.dart';
 import 'validators.dart';
@@ -211,12 +212,18 @@ class UiFormEngine {
     List<UiFbOptionSourceDef> optionSources = const [],
     String Function()? today,
     DateTime Function()? now,
+    String? locale,
+    UiFbSubmissionLink? link,
   }) : definition = migrateDefinition(definition),
+       _requestedLocale = locale,
+       _link = link,
        mode = mode ?? (data != null ? UiFormMode.edit : UiFormMode.create),
        _today = today ?? todayIso,
        _now = now ?? DateTime.now,
        _initialData = data != null ? jsonCloneMap(data) : <String, Object?>{} {
     index = indexDefinition(this.definition);
+    defaultLocale = fbDefaultLocale(this.definition);
+    _locale = fbResolveLocale(this.definition, _requestedLocale);
     final s = this.definition.settings;
     settings = UiFbEngineSettings(
       validateOn: s?.validateOn ?? 'blur',
@@ -241,6 +248,8 @@ class UiFormEngine {
     List<UiFbOptionSourceDef> optionSources = const [],
     String Function()? today,
     DateTime Function()? now,
+    String? locale,
+    UiFbSubmissionLink? link,
   }) => UiFormEngine(
     definition: migrateDefinition(definition),
     data: data,
@@ -249,12 +258,43 @@ class UiFormEngine {
     optionSources: optionSources,
     today: today,
     now: now,
+    locale: locale,
+    link: link,
   );
 
   final UiFormDefinition definition;
   late final UiFbIndex index;
   final UiFormMode mode;
   late final UiFbEngineSettings settings;
+
+  /// The form's default language.
+  late final String defaultLocale;
+
+  /// The language in use: the requested one if the form has it, else the form's default.
+  String get locale => _locale;
+
+  /// Writing direction of the language in use.
+  UiFbDir get dir => fbLocaleDir(definition, _locale);
+
+  /// The form's languages, the default one first.
+  List<UiFbResolvedLocale> get locales => fbLocales(definition);
+
+  /// Switches the language. Answers are kept; every message and label is worded again.
+  void setLocale(String? code) {
+    if (code == _requestedLocale) return;
+    _requestedLocale = code;
+    final next = fbResolveLocale(definition, code);
+    if (next == _locale) return;
+    _locale = next;
+    _state = null;
+    _notify();
+  }
+
+  /// The submission link (workflow id, service code) copied onto each submission.
+  void setLink(UiFbSubmissionLink? link) => _link = link;
+
+  /// [t] in the language in use (falls back to the form's default language).
+  String text(UiFbText? t) => fbText(t, _locale, defaultLocale);
 
   late final Map<String, UiFbValidatorDef> _validatorDefs;
   late final Map<String, UiFbOptionSourceDef> _sourceDefs;
@@ -264,7 +304,12 @@ class UiFormEngine {
 
   Map<String, Object?> _values = {};
   Map<String, List<String>> _rowIds = {};
-  final Map<String, ({String hash, String? result})> _asyncResults = {};
+  // Kept raw (`null` = passed, a String or `false` = failed): a message from the rule is worded when
+  // read, in the language then in use.
+  final Map<String, ({String hash, Object? result})> _asyncResults = {};
+  String? _requestedLocale;
+  late String _locale;
+  UiFbSubmissionLink? _link;
   final Set<String> _touched = {};
   final Set<String> _attempted = {};
   int _pageIndex = 0;
@@ -497,10 +542,11 @@ class UiFormEngine {
   /// "Email" — or "Email (Dependant 2)" inside a repeat entry.
   String instanceLabel(String id, String? row) {
     final entry = index[id];
-    final name = elementName(entry?.element);
+    final name = elementName(entry?.element, definition, _locale);
     if (row == null || entry?.repeat == null) return name;
     final n = rows(entry!.repeat!.id).indexOf(row) + 1;
-    final item = (entry.repeat!.repeat?.itemLabel ?? 'Entry {n}').replaceFirst('{n}', '$n');
+    final itemText = text(entry.repeat!.repeat?.itemLabel);
+    final item = (itemText.isEmpty ? 'Entry {n}' : itemText).replaceFirst('{n}', '$n');
     return '$name ($item)';
   }
 
@@ -635,7 +681,18 @@ class UiFormEngine {
       if (instanceState(id, row).visible) out[dataPath(id, row)] = list;
     }
     _notify();
-    return UiFormSubmission(formId: definition.id, revision: definition.revision, data: data, submittedAt: _isoNow(), files: out);
+    final link = _link;
+    return UiFormSubmission(
+      formId: definition.id,
+      revision: definition.revision,
+      locale: _locale,
+      data: data,
+      submittedAt: _isoNow(),
+      workflowId: link?.workflowId != null && link!.workflowId!.isNotEmpty ? link.workflowId : null,
+      serviceCode: link?.serviceCode != null && link!.serviceCode!.isNotEmpty ? link.serviceCode : null,
+      fields: fbSubmissionFields(definition, _locale),
+      files: out,
+    );
   }
 
   String _isoNow() {
@@ -666,7 +723,7 @@ class UiFormEngine {
       if (entry.kind == 'group' && group!.repeat != null) {
         final before = _initialRows[id] ?? const <String>[];
         final now = rowIds[id] ?? const <String>[];
-        if (before.length != now.length) out.add(UiFbChange(path: dataPath(id, null), label: elementName(group), from: before.length, to: now.length));
+        if (before.length != now.length) out.add(UiFbChange(path: dataPath(id, null), label: elementName(group, definition, _locale), from: before.length, to: now.length));
       }
       if (entry.kind != 'field') continue;
       final f = entry.asField!;
@@ -797,6 +854,10 @@ class UiFormEngine {
     final values = _values;
     final rows = _rowIds;
     final asyncResults = _asyncResults;
+    final locale = _locale;
+    final dl = defaultLocale;
+    String tx(UiFbText? t) => fbText(t, locale, dl);
+    String nameOf(String id) => elementName(idx[id]?.element, def, locale);
     final memo = <String, Object?>{};
     final busy = <String>{};
     final checks = <_PendingCheck>[];
@@ -938,11 +999,12 @@ class UiFormEngine {
           final f = idx[id]?.asField;
           if (f == null || view || !visible(id, row) || disabled(id, row) || f.type == UiFbFieldType.hidden) return res();
           final v = value(id, row);
-          final label = f.label.isNotEmpty ? f.label : f.key;
+          final fl = tx(f.label);
+          final label = fl.isNotEmpty ? fl : f.key;
           final empty = isEmptyValue(v) || (valueKindOf(f.type) == UiFbValueKind.boolean && v != true);
           if (required(id, row) && empty) {
-            final custom = f.requiredMessage;
-            errs.add(formatMessage(custom != null && custom.isNotEmpty ? custom : requiredMessage(f, label), {'label': label}));
+            final custom = tx(f.requiredMessage);
+            errs.add(formatMessage(custom.isNotEmpty ? custom : requiredMessage(f, label), {'label': label}));
             return res();
           }
           final rules = [...?f.validators];
@@ -959,22 +1021,22 @@ class UiFormEngine {
                 if (p.hasDefault) p.key: p.defaultValue,
               ...?rule.params,
             };
-            final vctx = UiFbValidatorContext(field: f, value: ctxBase.value, label: (ref) => elementName(idx[ref]?.element), today: () => today);
+            final vctx = UiFbValidatorContext(field: f, value: ctxBase.value, label: nameOf, today: () => today);
             String message(Object? result) {
               if (result is String) return result;
               final vars = <String, Object?>{'label': label};
               for (final spec in vdef.params ?? const <UiFbParamSpec>[]) {
                 final pv = params[spec.key];
                 vars[spec.key] = spec.kind == 'field'
-                    ? '“${elementName(idx[jsString(pv)]?.element)}”'
+                    ? '“${nameOf(jsString(pv))}”'
                     : spec.kind == 'date'
                     ? describeDateParam(pv)
                     : spec.key == 'comparison'
                     ? comparisonWords(pv)
                     : pv;
               }
-              final custom = rule.message;
-              return formatMessage(custom != null && custom.isNotEmpty ? custom : vdef.defaultMessage, vars);
+              final custom = tx(rule.message);
+              return formatMessage(custom.isNotEmpty ? custom : vdef.defaultMessage, vars);
             }
 
             void push(Object? result) {
@@ -1092,7 +1154,7 @@ class UiFormEngine {
       final abort = UiFbAbortController();
       final entry = _Inflight(c.hash, abort);
       _inflight[c.key] = entry;
-      void finish(String? msg) {
+      void finish(Object? msg) {
         if (abort.signal.aborted || _disposed) return;
         _inflight.remove(c.key);
         _asyncResults[c.key] = (hash: c.hash, result: msg);
@@ -1109,13 +1171,8 @@ class UiFormEngine {
         }
         p.then(
           (result) {
-            final custom = c.rule.message;
-            final msg = result == true || result == null
-                ? null
-                : result is String
-                ? result
-                : formatMessage(custom != null && custom.isNotEmpty ? custom : c.def.defaultMessage, {'label': c.ctx.field.label, ...?c.rule.params});
-            finish(msg);
+            // Kept raw: a message from the rule is worded when read, in the language then in use.
+            finish(result == true || result == null ? null : result);
           },
           // A check that crashes (e.g. the server is down) doesn't block the form.
           onError: (Object _) => finish(null),

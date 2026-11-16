@@ -50,7 +50,7 @@ void main() {
       expect(find.bySemanticsLabel(RegExp('Full name')), findsWidgets);
       await tester.tap(find.textContaining('Full name'));
       await tester.pump();
-      expect(FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<UiFbFieldView>()?.field.label, 'Full name');
+      expect(FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<UiFbFieldView>()?.field.label, const UiFbText('Full name'));
       handle.dispose();
     });
 

@@ -137,7 +137,7 @@ void main() {
       fj('a', 'text', {'label': 'First'}),
       {'kind': 'group', 'id': 'g', 'title': 'Box', 'elements': [fj('in', 'text', {'label': 'Inside'})]},
     ]);
-    def.pages.add(UiFbPage(id: 'p2', title: 'Later', elements: []));
+    def.pages.add(UiFbPage(id: 'p2', title: const UiFbText('Later'), elements: []));
     final (c, _) = await pumpCanvas(tester, def);
     await dragGrip(tester, 'First', tester.getBottomLeft(find.text('Inside')) + const Offset(40, 14));
     expect(ids(c), ['g']);
@@ -155,7 +155,7 @@ void main() {
     final def = formOf([
       {'kind': 'group', 'id': 'g', 'title': 'Box', 'elements': [fj('in', 'text', {'label': 'Inside'})]},
     ]);
-    def.pages.add(UiFbPage(id: 'p2', title: 'Later', elements: []));
+    def.pages.add(UiFbPage(id: 'p2', title: const UiFbText('Later'), elements: []));
     final (c, _) = await pumpCanvas(tester, def);
     await tester.tap(find.text('Inside'));
     await tester.pump();
@@ -180,7 +180,7 @@ void main() {
 
   testWidgets('a page can be opened, moved or deleted from its menu', (tester) async {
     final def = formOf([fj('a', 'text')]);
-    def.pages.add(UiFbPage(id: 'p2', title: 'Second', elements: []));
+    def.pages.add(UiFbPage(id: 'p2', title: const UiFbText('Second'), elements: []));
     final (c, log) = await pumpCanvas(tester, def);
     await tester.tap(iconButton('Actions for Page 1'));
     await tester.pumpAndSettle();
@@ -202,7 +202,7 @@ void main() {
 
   testWidgets('page tabs switch pages; tapping the current tab opens its settings; + adds a page', (tester) async {
     final def = formOf([fj('a', 'text', {'label': 'On one'})]);
-    def.pages.add(UiFbPage(id: 'p2', title: 'Second', elements: [UiFbField(id: 'z', type: UiFbFieldType.text, key: 'z', label: 'On two')]));
+    def.pages.add(UiFbPage(id: 'p2', title: const UiFbText('Second'), elements: [UiFbField(id: 'z', type: UiFbFieldType.text, key: 'z', label: const UiFbText('On two'))]));
     final (c, log) = await pumpCanvas(tester, def);
     expect(find.text('On two'), findsNothing);
     await tester.tap(find.text('Second'));

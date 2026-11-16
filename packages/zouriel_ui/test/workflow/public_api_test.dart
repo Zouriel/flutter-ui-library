@@ -13,9 +13,9 @@ void main() {
       UiWorkflowBuilder.new, UiWorkflowPanel.new, UiWorkflowAudit.new, UiWorkflowStateBadge.new, UiWorkflowTasksDrawer.new,
       UiWorkflowPermissions.new, UiWorkflowGlobalSettings.new, UiWorkflowHttpApi.new, UiWorkflowClock.new, createWorkflow, createStep,
       insertStep, moveStep, removeStep, indexSteps, listSteps, tokensAt, describeTrigger, describeStep, autoLayout, wfStatesFrom,
-      wfDescribeHistory,
+      wfDescribeHistory, wfSubmissionPayload, wfPickWorkflow, wfRouteSubmission, wfStartFromSubmission, wfSubmissionRegistry,
     ];
-    expect(used, hasLength(22));
+    expect(used, hasLength(27));
   });
 
   test('keeps the runtime views\' inner parts internal', () {

@@ -18,6 +18,7 @@ import '../engine/definition.dart';
 import '../engine/engine.dart' show requiredMessage;
 import '../engine/field_types.dart';
 import '../engine/js.dart';
+import '../engine/localize.dart';
 import '../engine/option_sources.dart';
 import '../engine/schema.dart';
 import '../engine/validators.dart';
@@ -98,21 +99,24 @@ class _UiFbOptionsEditorState extends State<UiFbOptionsEditor> {
 
     void setLabel(UiFbOption o, String label) {
       // The saved value follows the label until it's locked or was set by hand.
-      final follows = !locked.contains(o.value) &&
-          (o.value == fbSlug(o.label) || RegExp(r'^option_?\d*$').hasMatch(o.value) || o.value.startsWith('${fbSlug(o.label)}_'));
+      final cur = fbText(o.label, store.defaultLocale, store.defaultLocale);
+      final follows = !store.translating &&
+          !locked.contains(o.value) &&
+          (o.value == fbSlug(cur) || RegExp(r'^option_?\d*$').hasMatch(o.value) || o.value.startsWith('${fbSlug(cur)}_'));
       final value = follows ? _unique(fbSlug(label), exceptId: o.id) : o.value;
-      _write(store, [for (final x in _copy()) x.id == o.id ? (x..label = label..value = value) : x], mergeKey: 'opt:${o.id}');
+      final text = store.setText(o.label, label);
+      _write(store, [for (final x in _copy()) x.id == o.id ? (x..label = text..value = value) : x], mergeKey: 'opt:${o.id}');
     }
 
     void setValue(UiFbOption o, String raw) {
-      final value = _unique(raw.trim().isEmpty ? fbSlug(o.label) : raw.trim(), exceptId: o.id);
+      final value = _unique(raw.trim().isEmpty ? fbSlug(store.shown(o.label)) : raw.trim(), exceptId: o.id);
       _write(store, [for (final x in _copy()) x.id == o.id ? (x..value = value) : x], mergeKey: 'optv:${o.id}');
     }
 
     void addAt(int at) {
       final list = _copy();
       final label = 'Option ${list.length + 1}';
-      list.insert(at, UiFbOption(id: fbUid('opt'), label: label, value: _unique(fbSlug(label))));
+      list.insert(at, UiFbOption(id: fbUid('opt'), label: store.setText(null, label), value: _unique(fbSlug(label))));
       _write(store, list);
     }
 
@@ -134,7 +138,7 @@ class _UiFbOptionsEditorState extends State<UiFbOptionsEditor> {
     }
 
     void applyPaste() {
-      final existing = {for (final o in f.options ?? const <UiFbOption>[]) o.label.trim().toLowerCase()};
+      final existing = {for (final o in f.options ?? const <UiFbOption>[]) store.shown(o.label).trim().toLowerCase()};
       final list = _copy();
       for (final line in _pasted.split(RegExp(r'\r?\n')).map((l) => l.trim()).where((l) => l.isNotEmpty)) {
         if (!existing.add(line.toLowerCase())) continue;
@@ -145,7 +149,7 @@ class _UiFbOptionsEditorState extends State<UiFbOptionsEditor> {
         while (taken.contains(v)) {
           v = '${base}_${n++}';
         }
-        list.add(UiFbOption(id: fbUid('opt'), label: line, value: v));
+        list.add(UiFbOption(id: fbUid('opt'), label: store.setText(null, line), value: v));
       }
       _write(store, list);
       setState(() {
@@ -177,6 +181,7 @@ class _UiFbOptionsEditorState extends State<UiFbOptionsEditor> {
           _OptionRow(
             key: ValueKey(opts[i].id),
             option: opts[i],
+            store: store,
             index: i,
             last: i == opts.length - 1,
             locked: locked.contains(opts[i].value),
@@ -211,6 +216,7 @@ class _OptionRow extends StatelessWidget {
   const _OptionRow({
     super.key,
     required this.option,
+    required this.store,
     required this.index,
     required this.last,
     required this.locked,
@@ -224,6 +230,7 @@ class _OptionRow extends StatelessWidget {
   });
 
   final UiFbOption option;
+  final UiFormBuilderController store;
   final int index;
   final bool last;
   final bool locked;
@@ -240,10 +247,11 @@ class _OptionRow extends StatelessWidget {
     final t = context.ui;
     final o = option;
     final archived = o.archived == true;
+    final name = store.shown(o.label);
     return Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space1, children: [
       Row(mainAxisSize: MainAxisSize.min, spacing: 2, children: [
-        FbIconButton(icon: HugeIcons.strokeRoundedArrowUp01, label: 'Move ${o.label} up', onPressed: index == 0 ? null : () => onMove(-1)),
-        FbIconButton(icon: HugeIcons.strokeRoundedArrowDown01, label: 'Move ${o.label} down', onPressed: last ? null : () => onMove(1)),
+        FbIconButton(icon: HugeIcons.strokeRoundedArrowUp01, label: 'Move $name up', onPressed: index == 0 ? null : () => onMove(-1)),
+        FbIconButton(icon: HugeIcons.strokeRoundedArrowDown01, label: 'Move $name down', onPressed: last ? null : () => onMove(1)),
       ]),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 3, children: [
@@ -251,8 +259,9 @@ class _OptionRow extends StatelessWidget {
             opacity: archived ? 0.55 : 1,
             child: UiInput(
               size: UiSize.sm,
-              value: o.label,
-              placeholder: 'Option label',
+              value: store.text(o.label),
+              dir: fbTextDir(store.editDir),
+              placeholder: store.defaultText(o.label).isNotEmpty ? store.defaultText(o.label) : 'Option label',
               semanticLabel: 'Option ${index + 1}',
               textInputAction: TextInputAction.next,
               onChanged: onLabel,
@@ -267,7 +276,7 @@ class _OptionRow extends StatelessWidget {
                   size: UiSize.sm,
                   value: o.value,
                   enabled: !locked,
-                  semanticLabel: 'Saved value of ${o.label}',
+                  semanticLabel: 'Saved value of $name',
                   onSubmitted: onValue,
                   onChanged: onValue,
                 ),
@@ -281,7 +290,7 @@ class _OptionRow extends StatelessWidget {
             ]),
         ]),
       ),
-      if (!archived) FbIconButton(icon: HugeIcons.strokeRoundedCancel01, label: locked ? 'Archive ${o.label} (answers use it)' : 'Remove ${o.label}', danger: true, onPressed: onRemove),
+      if (!archived) FbIconButton(icon: HugeIcons.strokeRoundedCancel01, label: locked ? 'Archive $name (answers use it)' : 'Remove $name', danger: true, onPressed: onRemove),
     ]);
   }
 }
@@ -304,7 +313,7 @@ class UiFbChecksEditor extends StatelessWidget {
     final r = f.required;
     final requiredMode = r == null ? 'no' : (r.flag == true ? 'yes' : (r.isConditional ? 'when' : 'no'));
     final requiredWhen = r != null && r.isConditional ? r.when : null;
-    final label = f.label.isNotEmpty ? f.label : 'This field';
+    final label = store.shown(f.label).isNotEmpty ? store.shown(f.label) : 'This field';
     final defaultRequired = formatMessage(requiredMessage(f, label), {'label': label});
     UiFbValidatorDef? defOf(String type) => store.validatorDefs.where((d) => d.type == type).firstOrNull;
     final implicitType = uiFbImplicitValidator[f.type];
@@ -369,10 +378,11 @@ class UiFbChecksEditor extends StatelessWidget {
               label: 'Message when it’s left empty',
               child: UiInput(
                 size: UiSize.sm,
-                value: f.requiredMessage ?? '',
-                placeholder: defaultRequired,
+                value: store.text(f.requiredMessage),
+                dir: fbTextDir(store.editDir),
+                placeholder: store.defaultText(f.requiredMessage).isNotEmpty ? store.defaultText(f.requiredMessage) : defaultRequired,
                 semanticLabel: 'Message when it’s left empty',
-                onChanged: (v) => store.updateField(f.id, (x) => x.requiredMessage = v.isEmpty ? null : v, mergeKey: 'reqmsg:${f.id}'),
+                onChanged: (v) => store.updateField(f.id, (x) => x.requiredMessage = store.setTextOpt(x.requiredMessage, v), mergeKey: 'reqmsg:${f.id}'),
               ),
             ),
         ]),
@@ -471,7 +481,7 @@ class _CheckBox extends StatelessWidget {
     final label = d?.label ?? rule.type;
 
     String preview() {
-      final vars = <String, Object?>{'label': field.label.isNotEmpty ? field.label : 'This field'};
+      final vars = <String, Object?>{'label': store.shown(field.label).isNotEmpty ? store.shown(field.label) : 'This field'};
       for (final p in d!.params ?? const <UiFbParamSpec>[]) {
         final v = _raw(p);
         vars[p.key] = p.kind == 'field' ? '“${store.name(v == null ? '' : jsString(v))}”' : p.kind == 'date' ? describeDateParam(v) : p.key == 'comparison' ? comparisonWords(v) : v;
@@ -553,10 +563,11 @@ class _CheckBox extends StatelessWidget {
           label: 'Message',
           child: UiInput(
             size: UiSize.sm,
-            value: rule.message ?? '',
-            placeholder: preview(),
+            value: store.text(rule.message),
+            dir: fbTextDir(store.editDir),
+            placeholder: store.defaultText(rule.message).isNotEmpty ? store.defaultText(rule.message) : preview(),
             semanticLabel: 'Message',
-            onChanged: (v) => onPatch((r) => r.message = v.isEmpty ? null : v, merge: 'msg'),
+            onChanged: (v) => onPatch((r) => r.message = store.setTextOpt(r.message, v), merge: 'msg'),
           ),
         ),
         FbSwitch(size: UiSize.sm, 
@@ -604,7 +615,7 @@ class UiFbCalcEditor extends StatelessWidget {
       if (e.repeat != null && myRepeat != null && e.repeat!.id != myRepeat.id) continue;
       if (e.kind == 'group') {
         final g = e.asGroup!;
-        if (g.repeat != null && c.op == UiFbCalcOp.count) choices.add((id: g.id, label: '${(g.title ?? '').isNotEmpty ? g.title : 'Repeating section'} (entries)'));
+        if (g.repeat != null && c.op == UiFbCalcOp.count) choices.add((id: g.id, label: '${store.shown(g.title).isNotEmpty ? store.shown(g.title) : 'Repeating section'} (entries)'));
         continue;
       }
       final f = e.asField!;
@@ -618,7 +629,7 @@ class UiFbCalcEditor extends StatelessWidget {
           ? true
           : kind == UiFbValueKind.number || kind == UiFbValueKind.boolean;
       if (!ok) continue;
-      choices.add((id: f.id, label: (f.label.isNotEmpty ? f.label : f.key) + (e.repeat != null && myRepeat == null ? ' (each entry)' : '')));
+      choices.add((id: f.id, label: (store.shown(f.label).isNotEmpty ? store.shown(f.label) : f.key) + (e.repeat != null && myRepeat == null ? ' (each entry)' : '')));
     }
 
     UiFbCalc copy() => UiFbCalc.fromJson(c.toJson());

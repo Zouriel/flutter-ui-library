@@ -11,6 +11,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import '../form_builder/engine/field_types.dart';
+import '../form_builder/engine/localize.dart' show fbText, uiFbDefaultLocale;
+import '../form_builder/engine/schema.dart' show UiFbText;
 import '../form_builder/engine/slug_table.g.dart';
 import 'json.dart';
 import 'schema.dart';
@@ -669,7 +671,12 @@ class UiWfAt {
 typedef UiWfInputField = ({String key, String label});
 
 /// The questions of a form (fields on every page, inside groups too), as answer keys and labels.
-List<UiWfInputField> wfFormFields(UiJson? form) {
+/// A localized label is read in [locale] (else the form's default language).
+List<UiWfInputField> wfFormFields(UiJson? form, [String? locale]) {
+  final dl = form?['defaultLocale'];
+  final sl = form?['supportedLocales'];
+  final firstCode = sl is List && sl.isNotEmpty && sl.first is Map ? (sl.first as Map)['code'] : null;
+  final def = dl is String && dl.isNotEmpty ? dl : firstCode is String && firstCode.isNotEmpty ? firstCode : uiFbDefaultLocale;
   final out = <UiWfInputField>[];
   void walk(Object? els, String prefix) {
     if (els is! List) return;
@@ -677,8 +684,8 @@ List<UiWfInputField> wfFormFields(UiJson? form) {
       if (e is! Map) continue;
       final key = e['key'];
       if (e['kind'] == 'field' && key is String) {
-        final label = e['label'];
-        out.add((key: '$prefix$key', label: label is String && label.isNotEmpty ? label : key));
+        final label = fbText(UiFbText.fromJson(e['label']), locale ?? def, def);
+        out.add((key: '$prefix$key', label: label.isNotEmpty ? label : key));
       } else if (e['kind'] == 'group') {
         walk(e['elements'], key is String && key.isNotEmpty ? '$prefix$key.' : prefix);
       }

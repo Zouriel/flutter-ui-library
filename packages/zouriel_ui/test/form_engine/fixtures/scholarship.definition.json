@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "scholarship-2027",
   "title": "Scholarship application",
   "description": "Takes about 10 minutes. Your answers are saved when you submit.",
@@ -458,6 +458,12 @@
           }
         }
       ]
+    }
+  ],
+  "defaultLocale": "en",
+  "supportedLocales": [
+    {
+      "code": "en"
     }
   ]
 }

@@ -37,6 +37,10 @@ class _UiFbPreviewState extends State<UiFbPreview> {
   UiFormSubmission? _last;
   String _dataText = '{}';
 
+  /// The language picked here, and the edit language it was picked under (it starts at the one being edited).
+  String? _picked;
+  String? _pickedUnder;
+
   ({UiJson? ok, String? error}) get _parsed {
     try {
       final v = jsonDecode(_dataText.trim().isEmpty ? '{}' : _dataText);
@@ -65,10 +69,12 @@ class _UiFbPreviewState extends State<UiFbPreview> {
     final t = context.ui;
     final store = UiFbBuilderScope.of(context);
     final parsed = _parsed;
+    final locale = _picked != null && _pickedUnder == store.editLocale && store.locales.any((l) => l.code == _picked) ? _picked! : store.editLocale;
     final builtIn = {for (final v in uiFbBuiltinValidators) v.type};
     final renderer = UiFormRenderer(
       key: ValueKey(_run),
       definition: store.def,
+      locale: locale,
       data: _mode == UiFormMode.create ? null : (parsed.ok ?? const {}),
       mode: _mode,
       validators: [for (final v in store.validatorDefs) if (!builtIn.contains(v.type)) v],
@@ -121,6 +127,20 @@ class _UiFbPreviewState extends State<UiFbPreview> {
                   onChanged: _setMode,
                 ),
               ),
+              if (store.multilingual)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: UiSegmented<String>(
+                    label: 'Language',
+                    size: UiSize.sm,
+                    value: locale,
+                    options: [for (final l in store.locales) UiSegmentedOption(value: l.code, label: l.label)],
+                    onChanged: (v) => setState(() {
+                      _picked = v;
+                      _pickedUnder = store.editLocale;
+                    }),
+                  ),
+                ),
               UiButton(
                 label: 'Start again',
                 size: UiSize.sm,

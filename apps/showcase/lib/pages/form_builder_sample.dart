@@ -1,5 +1,5 @@
 // The showcase's sample form and saved answers: the same JSON as the web showcase
-// (form-builder.sample.ts) and the shared engine fixtures (test/form_engine/fixtures).
+// (form-builder.sample.ts, English and Dhivehi) and the shared engine fixtures (test/form_engine/fixtures).
 import 'dart:async';
 import 'dart:convert';
 
@@ -76,10 +76,29 @@ final demoSources = <UiFbOptionSourceDef>[studentsSource, coursesSource];
 
 const _form = r'''
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "defaultLocale": "en",
+  "supportedLocales": [
+    {
+      "code": "en",
+      "label": "English",
+      "dir": "ltr"
+    },
+    {
+      "code": "dv",
+      "label": "ދިވެހި",
+      "dir": "rtl"
+    }
+  ],
   "id": "scholarship-2027",
-  "title": "Scholarship application",
-  "description": "Takes about 10 minutes. Your answers are saved when you submit.",
+  "title": {
+    "en": "Scholarship application",
+    "dv": "ސްކޮލަރޝިޕަށް އެދޭ ފޯމު"
+  },
+  "description": {
+    "en": "Takes about 10 minutes. Your answers are saved when you submit.",
+    "dv": "މިއަށް ގާތްގަނޑަކަށް 10 މިނިޓު ނަގައެވެ. ފޯމު ހުށަހަޅުއްވުމުން ތިޔަބޭފުޅާގެ ޖަވާބުތައް ރައްކާކުރެވޭނެއެވެ."
+  },
   "revision": 4,
   "settings": {
     "labelPlacement": "top",
@@ -93,14 +112,20 @@ const _form = r'''
   "pages": [
     {
       "id": "p_about",
-      "title": "About you",
+      "title": {
+        "en": "About you",
+        "dv": "ތިޔަބޭފުޅާއަށް ބެހޭ"
+      },
       "elements": [
         {
           "kind": "field",
           "id": "f_name",
           "type": "text",
           "key": "full_name",
-          "label": "Full name",
+          "label": {
+            "en": "Full name",
+            "dv": "ފުރިހަމަ ނަން"
+          },
           "required": true,
           "props": {
             "autocomplete": "name"
@@ -114,8 +139,14 @@ const _form = r'''
           "id": "f_pref",
           "type": "text",
           "key": "preferred_name",
-          "label": "Preferred name",
-          "help": "What we should call you, if different.",
+          "label": {
+            "en": "Preferred name",
+            "dv": "ގޮވާނެ ނަން"
+          },
+          "help": {
+            "en": "What we should call you, if different.",
+            "dv": "އެހެން ނަމެއްގައި ގޮވަންޖެހޭނަމަ، އެ ނަން."
+          },
           "layout": {
             "width": "half"
           }
@@ -125,7 +156,10 @@ const _form = r'''
           "id": "f_email",
           "type": "email",
           "key": "email",
-          "label": "Email address",
+          "label": {
+            "en": "Email address",
+            "dv": "އީމެއިލް އެޑްރެސް"
+          },
           "required": true,
           "layout": {
             "width": "half"
@@ -136,7 +170,10 @@ const _form = r'''
           "id": "f_phone",
           "type": "phone",
           "key": "phone",
-          "label": "Mobile number",
+          "label": {
+            "en": "Mobile number",
+            "dv": "މޯބައިލް ނަންބަރު"
+          },
           "layout": {
             "width": "half"
           }
@@ -146,7 +183,10 @@ const _form = r'''
           "id": "f_dob",
           "type": "date",
           "key": "date_of_birth",
-          "label": "Date of birth",
+          "label": {
+            "en": "Date of birth",
+            "dv": "އުފަން ތާރީޚު"
+          },
           "required": true,
           "layout": {
             "width": "half"
@@ -158,7 +198,10 @@ const _form = r'''
               "params": {
                 "years": 16
               },
-              "message": "Applicants must be 16 or older."
+              "message": {
+                "en": "Applicants must be 16 or older.",
+                "dv": "އެދޭ މީހުންގެ އުމުރު 16 އަހަރު ނުވަތަ އެއަށްވުރެ ބޮޑުވާންޖެހެއެވެ."
+              }
             }
           ]
         },
@@ -167,7 +210,10 @@ const _form = r'''
           "id": "f_age",
           "type": "calculated",
           "key": "age",
-          "label": "Age",
+          "label": {
+            "en": "Age",
+            "dv": "އުމުރު"
+          },
           "calc": {
             "op": "ageYears",
             "args": [
@@ -189,7 +235,10 @@ const _form = r'''
           "id": "f_status",
           "type": "radio",
           "key": "study_status",
-          "label": "Are you studying at the moment?",
+          "label": {
+            "en": "Are you studying at the moment?",
+            "dv": "މިހާރު ކިޔަވަނީތަ؟"
+          },
           "required": true,
           "props": {
             "orientation": "horizontal"
@@ -198,17 +247,26 @@ const _form = r'''
             {
               "id": "o_s1",
               "value": "full_time",
-              "label": "Full time"
+              "label": {
+                "en": "Full time",
+                "dv": "ފުލް ޓައިމް"
+              }
             },
             {
               "id": "o_s2",
               "value": "part_time",
-              "label": "Part time"
+              "label": {
+                "en": "Part time",
+                "dv": "ޕާޓް ޓައިމް"
+              }
             },
             {
               "id": "o_s3",
               "value": "not_studying",
-              "label": "Not studying"
+              "label": {
+                "en": "Not studying",
+                "dv": "ނުކިޔަވަމޭ"
+              }
             }
           ]
         },
@@ -217,7 +275,10 @@ const _form = r'''
           "id": "f_inst",
           "type": "text",
           "key": "institution",
-          "label": "School or university",
+          "label": {
+            "en": "School or university",
+            "dv": "ސްކޫލް ނުވަތަ ޔުނިވަރސިޓީ"
+          },
           "required": true,
           "visibility": {
             "action": "hide",
@@ -235,8 +296,14 @@ const _form = r'''
           "id": "f_record",
           "type": "select",
           "key": "student_record",
-          "label": "Your student record",
-          "help": "Search by name or student ID. Leave it blank if you’re not enrolled yet.",
+          "label": {
+            "en": "Your student record",
+            "dv": "ތިޔަބޭފުޅާގެ ދަރިވަރު ރެކޯޑު"
+          },
+          "help": {
+            "en": "Search by name or student ID. Leave it blank if you’re not enrolled yet.",
+            "dv": "ނަމުން ނުވަތަ ދަރިވަރުގެ އައިޑީން ހޯދާށެވެ. އަދި ނުކިޔަވާނަމަ ހުސްކޮށް ދޫކޮށްލައްވާ."
+          },
           "source": {
             "type": "students"
           },
@@ -256,16 +323,25 @@ const _form = r'''
           "id": "f_dep",
           "type": "toggle",
           "key": "has_dependants",
-          "label": "Do you support any dependants?",
+          "label": {
+            "en": "Do you support any dependants?",
+            "dv": "ތިޔަބޭފުޅުންގެ ބެލުމުގެ ދަށުގައި މީހުން ތިބޭތަ؟"
+          },
           "props": {
-            "caption": "Yes, I do"
+            "caption": {
+              "en": "Yes, I do",
+              "dv": "އާނއެކެވެ، ތިބެއެވެ"
+            }
           }
         }
       ]
     },
     {
       "id": "p_household",
-      "title": "Household",
+      "title": {
+        "en": "Household",
+        "dv": "ގޭގެ މަޢުލޫމާތު"
+      },
       "visibility": {
         "action": "show",
         "when": {
@@ -278,13 +354,22 @@ const _form = r'''
           "kind": "group",
           "id": "g_deps",
           "key": "dependants",
-          "title": "Dependants",
+          "title": {
+            "en": "Dependants",
+            "dv": "ބެލުމުގެ ދަށުގައިވާ މީހުން"
+          },
           "columns": 2,
           "repeat": {
             "min": 1,
             "max": 6,
-            "addLabel": "Add a dependant",
-            "itemLabel": "Dependant {n}"
+            "addLabel": {
+              "en": "Add a dependant",
+              "dv": "މީހަކު އިތުރުކުރައްވާ"
+            },
+            "itemLabel": {
+              "en": "Dependant {n}",
+              "dv": "މީހާ {n}"
+            }
           },
           "elements": [
             {
@@ -292,7 +377,10 @@ const _form = r'''
               "id": "f_dep_name",
               "type": "text",
               "key": "name",
-              "label": "Name",
+              "label": {
+                "en": "Name",
+                "dv": "ނަން"
+              },
               "required": true
             },
             {
@@ -300,28 +388,43 @@ const _form = r'''
               "id": "f_dep_rel",
               "type": "select",
               "key": "relationship",
-              "label": "Relationship",
+              "label": {
+                "en": "Relationship",
+                "dv": "ގާތްކަން"
+              },
               "required": true,
               "options": [
                 {
                   "id": "o_r1",
                   "value": "child",
-                  "label": "Child"
+                  "label": {
+                    "en": "Child",
+                    "dv": "ދަރިއެއް"
+                  }
                 },
                 {
                   "id": "o_r2",
                   "value": "parent",
-                  "label": "Parent"
+                  "label": {
+                    "en": "Parent",
+                    "dv": "މައިންބަފައިން"
+                  }
                 },
                 {
                   "id": "o_r3",
                   "value": "sibling",
-                  "label": "Sibling"
+                  "label": {
+                    "en": "Sibling",
+                    "dv": "އެއްބަނޑުގެ މީހަކު"
+                  }
                 },
                 {
                   "id": "o_r4",
                   "value": "other",
-                  "label": "Other"
+                  "label": {
+                    "en": "Other",
+                    "dv": "އެހެން"
+                  }
                 }
               ]
             },
@@ -330,7 +433,10 @@ const _form = r'''
               "id": "f_dep_other",
               "type": "text",
               "key": "relationship_other",
-              "label": "How are you related?",
+              "label": {
+                "en": "How are you related?",
+                "dv": "ތިޔަބޭފުޅާއަށް ގާތްވަނީ ކިހިނެއްތޯ؟"
+              },
               "required": true,
               "visibility": {
                 "action": "show",
@@ -352,7 +458,10 @@ const _form = r'''
           "kind": "group",
           "id": "g_income",
           "key": "income",
-          "title": "Monthly household income",
+          "title": {
+            "en": "Monthly household income",
+            "dv": "ގޭގެ މަހުގެ އާމްދަނީ"
+          },
           "columns": 3,
           "elements": [
             {
@@ -360,7 +469,10 @@ const _form = r'''
               "id": "f_wages",
               "type": "currency",
               "key": "wages",
-              "label": "Wages",
+              "label": {
+                "en": "Wages",
+                "dv": "މުސާރަ"
+              },
               "props": {
                 "currency": "USD",
                 "decimals": 2,
@@ -372,7 +484,10 @@ const _form = r'''
               "id": "f_benefits",
               "type": "currency",
               "key": "benefits",
-              "label": "Benefits",
+              "label": {
+                "en": "Benefits",
+                "dv": "އެހީތެރިކަން"
+              },
               "props": {
                 "currency": "USD",
                 "decimals": 2,
@@ -384,7 +499,10 @@ const _form = r'''
               "id": "f_total",
               "type": "calculated",
               "key": "total",
-              "label": "Total",
+              "label": {
+                "en": "Total",
+                "dv": "ޖުމްލަ"
+              },
               "calc": {
                 "op": "sum",
                 "args": [
@@ -409,36 +527,57 @@ const _form = r'''
     },
     {
       "id": "p_application",
-      "title": "Your application",
+      "title": {
+        "en": "Your application",
+        "dv": "ތިޔަބޭފުޅާގެ އެދުން"
+      },
       "elements": [
         {
           "kind": "field",
           "id": "f_prog",
           "type": "select",
           "key": "programme",
-          "label": "Programme",
+          "label": {
+            "en": "Programme",
+            "dv": "ޕްރޮގްރާމް"
+          },
           "required": true,
-          "placeholder": "Choose a programme",
+          "placeholder": {
+            "en": "Choose a programme",
+            "dv": "ޕްރޮގްރާމެއް ހޮވާ"
+          },
           "options": [
             {
               "id": "o_p1",
               "value": "stem",
-              "label": "Science and engineering"
+              "label": {
+                "en": "Science and engineering",
+                "dv": "ސައިންސާއި އިންޖިނިއަރިންގ"
+              }
             },
             {
               "id": "o_p2",
               "value": "arts",
-              "label": "Arts and humanities"
+              "label": {
+                "en": "Arts and humanities",
+                "dv": "އާޓްސް އާއި ހިއުމެނިޓީސް"
+              }
             },
             {
               "id": "o_p3",
               "value": "health",
-              "label": "Health and medicine"
+              "label": {
+                "en": "Health and medicine",
+                "dv": "ސިއްހަތާއި ބޭސްފަރުވާ"
+              }
             },
             {
               "id": "o_p4",
               "value": "vocational",
-              "label": "Vocational training"
+              "label": {
+                "en": "Vocational training",
+                "dv": "ހުނަރުވެރިކަމުގެ ތަމްރީނު"
+              }
             }
           ]
         },
@@ -447,8 +586,14 @@ const _form = r'''
           "id": "f_courses",
           "type": "multiselect",
           "key": "courses",
-          "label": "Courses you’ll take",
-          "help": "The list follows the programme you picked. Choose up to four.",
+          "label": {
+            "en": "Courses you’ll take",
+            "dv": "ކިޔަވާނެ ކޯސްތައް"
+          },
+          "help": {
+            "en": "The list follows the programme you picked. Choose up to four.",
+            "dv": "ލިސްޓަކީ ތިޔަބޭފުޅުން ހޮވި ޕްރޮގްރާމާ ގުޅޭ ކޯސްތަކެވެ. ގިނަވެގެން ހަތަރު ހޮވިދާނެއެވެ."
+          },
           "source": {
             "type": "courses",
             "params": {
@@ -472,9 +617,15 @@ const _form = r'''
           "id": "f_statement",
           "type": "textarea",
           "key": "statement",
-          "label": "Personal statement",
+          "label": {
+            "en": "Personal statement",
+            "dv": "އަމިއްލަ ބަޔާން"
+          },
           "required": true,
-          "help": "Tell us why you are applying and what you hope to achieve. 50 to 300 words.",
+          "help": {
+            "en": "Tell us why you are applying and what you hope to achieve. 50 to 300 words.",
+            "dv": "ކީއްވެގެން އެދެނީ، ކޮން ކަމެއް ހާސިލުކުރަން އުންމީދުކުރަނީ ކަމުގެ ތަފްސީލު ލިޔުއްވާށެވެ. 50 އިން 300 ބަސްފުޅަށް."
+          },
           "validators": [
             {
               "id": "v_min",
@@ -497,12 +648,18 @@ const _form = r'''
           "id": "f_docs",
           "type": "file",
           "key": "documents",
-          "label": "Supporting documents",
+          "label": {
+            "en": "Supporting documents",
+            "dv": "ސަޕޯޓްކުރާ ޑޮކިއުމަންޓްތައް"
+          },
           "props": {
             "multiple": true,
             "accept": ".pdf,image/*"
           },
-          "help": "Transcripts or letters of reference. PDF or images, up to 5 MB each.",
+          "help": {
+            "en": "Transcripts or letters of reference. PDF or images, up to 5 MB each.",
+            "dv": "ޓްރާންސްކްރިޕްޓް ނުވަތަ ރެފަރެންސް ލިޔުންތަކެވެ. PDF ނުވަތަ ފޮޓޯ، ކޮންމެއަކީ 5 އެމްބީ އާއި ހަމައަށް."
+          },
           "required": {
             "when": {
               "ref": "f_prog",
@@ -527,11 +684,20 @@ const _form = r'''
           "id": "f_consent",
           "type": "checkbox",
           "key": "consent",
-          "label": "Declaration",
+          "label": {
+            "en": "Declaration",
+            "dv": "އިޤުރާރު"
+          },
           "required": true,
-          "requiredMessage": "You must confirm the declaration to apply.",
+          "requiredMessage": {
+            "en": "You must confirm the declaration to apply.",
+            "dv": "އެދުން ހުށަހެޅުމަށް އިޤުރާރު ކުރަންޖެހެއެވެ."
+          },
           "props": {
-            "caption": "The information I have given is true and complete."
+            "caption": {
+              "en": "The information I have given is true and complete.",
+              "dv": "އަޅުގަނޑު ދެއްވި މަޢުލޫމާތަކީ ތެދު އަދި ފުރިހަމަ މަޢުލޫމާތެކެވެ."
+            }
           }
         }
       ]

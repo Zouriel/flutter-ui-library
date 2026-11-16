@@ -6,6 +6,7 @@ import '../../forms/text/select.dart';
 import '../../theme/theme.dart';
 import '../engine/schema.dart';
 import 'builder_bits.dart';
+import 'builder_store.dart';
 
 /// A change to merge into the form settings; quick typing in one box shares a [mergeKey].
 typedef UiFbSettingsPatch = void Function(void Function(UiFbSettings s) edit, {String? mergeKey});
@@ -23,6 +24,8 @@ class UiFbSettingsFields extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.ui;
     final s = settings;
+    // Only inside a builder: the edit language decides which translation of the button labels is shown.
+    final store = UiFbBuilderScope.maybeOf(context);
     Widget select(String label, String value, List<(String, String)> options, void Function(UiFbSettings s, String v) set) => FbSetting(
       label: label,
       child: UiSelect(
@@ -34,14 +37,18 @@ class UiFbSettingsFields extends StatelessWidget {
       ),
     );
 
-    Widget input(String label, String? value, String placeholder, String mergeKey, void Function(UiFbSettings s, String? v) set) => FbSetting(
+    String read(UiFbText? v) => store != null ? store.text(v) : (v?.plain ?? '');
+    UiFbText? write(UiFbText? v, String text) => store != null ? store.setTextOpt(v, text) : (text.isEmpty ? null : UiFbText(text));
+
+    Widget input(String label, UiFbText? value, String placeholder, String mergeKey, void Function(UiFbSettings s, UiFbText? v) set, UiFbText? Function(UiFbSettings s) get) => FbSetting(
       label: label,
       child: UiInput(
         size: UiSize.sm,
-        value: value ?? '',
+        dir: store != null ? fbTextDir(store.editDir) : null,
+        value: read(value),
         placeholder: placeholder,
         semanticLabel: label,
-        onChanged: (v) => onPatch((st) => set(st, v.isEmpty ? null : v), mergeKey: mergeKey),
+        onChanged: (v) => onPatch((st) => set(st, write(get(st), v)), mergeKey: mergeKey),
       ),
     );
 
@@ -87,9 +94,9 @@ class UiFbSettingsFields extends StatelessWidget {
         FbSection(title: 'Buttons and steps', children: [
           FbSwitch(size: UiSize.sm, value: s.showProgress != false, label: 'Show progress on multi-page forms', onChanged: (v) => onPatch((st) => st.showProgress = v ? null : false)),
           FbPair(children: [
-            input('Submit button', s.submitLabel, 'Submit', 'sl', (st, v) => st.submitLabel = v),
-            input('Next button', s.nextLabel, 'Continue', 'nl', (st, v) => st.nextLabel = v),
-            input('Back button', s.backLabel, 'Back', 'bl', (st, v) => st.backLabel = v),
+            input('Submit button', s.submitLabel, 'Submit', 'sl', (st, v) => st.submitLabel = v, (st) => st.submitLabel),
+            input('Next button', s.nextLabel, 'Continue', 'nl', (st, v) => st.nextLabel = v, (st) => st.nextLabel),
+            input('Back button', s.backLabel, 'Back', 'bl', (st, v) => st.backLabel = v, (st) => st.backLabel),
           ]),
         ]),
       ],

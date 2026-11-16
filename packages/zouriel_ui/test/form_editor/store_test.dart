@@ -28,7 +28,7 @@ void main() {
       final s = store(formOf([createGroup().toJson()..['id'] = 'g']));
       s.setGroupTitle('g', 'Contact details');
       expect(s.index['g']!.asGroup!.key, isNull);
-      expect(s.index['g']!.asGroup!.title, 'Contact details');
+      expect(s.index['g']!.asGroup!.title, const UiFbText('Contact details'));
     });
 
     test('adds right after the selection and selects the new field', () {
@@ -75,43 +75,43 @@ void main() {
       final clock = FakeClock();
       final s = store(formOf([fj('a', 'text')]), clock: clock);
       for (final l in ['N', 'Na', 'Name']) {
-        s.updateField('a', (f) => f.label = l, mergeKey: 'label:a');
+        s.updateField('a', (f) => f.label = UiFbText(l), mergeKey: 'label:a');
         clock.advance(const Duration(milliseconds: 300));
       }
-      s.updateField('a', (f) => f.help = 'Your name');
+      s.updateField('a', (f) => f.help = const UiFbText('Your name'));
       s.undo();
       expect(s.field('a')!.help, isNull);
-      expect(s.field('a')!.label, 'Name');
+      expect(s.field('a')!.label, const UiFbText('Name'));
       s.undo();
-      expect(s.field('a')!.label, 'A');
+      expect(s.field('a')!.label, const UiFbText('A'));
       expect(s.canUndo, isFalse);
       s.redo();
-      expect(s.field('a')!.label, 'Name');
+      expect(s.field('a')!.label, const UiFbText('Name'));
       expect(s.canRedo, isTrue);
     });
 
     test('typing after a pause is its own step', () {
       final clock = FakeClock();
       final s = store(formOf([fj('a', 'text')]), clock: clock);
-      s.updateField('a', (f) => f.label = 'One', mergeKey: 'label:a');
+      s.updateField('a', (f) => f.label = const UiFbText('One'), mergeKey: 'label:a');
       clock.advance(const Duration(seconds: 2));
-      s.updateField('a', (f) => f.label = 'Two', mergeKey: 'label:a');
+      s.updateField('a', (f) => f.label = const UiFbText('Two'), mergeKey: 'label:a');
       s.undo();
-      expect(s.field('a')!.label, 'One');
+      expect(s.field('a')!.label, const UiFbText('One'));
     });
 
     test('never changes the definition it was handed', () {
       final def = formOf([fj('a', 'text')]);
       final before = jsonEncode(def.toJson());
       final s = store(def);
-      s.updateField('a', (f) => f.label = 'Changed');
+      s.updateField('a', (f) => f.label = const UiFbText('Changed'));
       s.add(createField(UiFbFieldType.number, def: s.def));
       expect(jsonEncode(def.toJson()), before);
     });
 
     test('keeps history when the host hands back the same form with a new revision (publishing)', () {
       final s = store(formOf([fj('a', 'text')]));
-      s.updateField('a', (f) => f.label = 'Name');
+      s.updateField('a', (f) => f.label = const UiFbText('Name'));
       expect(s.canUndo, isTrue);
       // The host publishes: a new object, revision bumped, content as the builder has it.
       s.load(s.def.clone()..revision = 3);
@@ -122,22 +122,22 @@ void main() {
       expect(s.canUndo, isTrue);
       // Undo steps back through content; the revision the host gave stays.
       s.undo();
-      expect(s.field('a')!.label, 'A');
+      expect(s.field('a')!.label, const UiFbText('A'));
       expect(s.def.revision, 4);
       s.redo();
-      expect(s.field('a')!.label, 'Name');
+      expect(s.field('a')!.label, const UiFbText('Name'));
       expect(s.def.revision, 4);
     });
 
     test('clears history for another form, for other content, or when asked', () {
       final s = store(formOf([fj('a', 'text')]));
-      s.updateField('a', (f) => f.label = 'Name');
+      s.updateField('a', (f) => f.label = const UiFbText('Name'));
       s.load(formOf([fj('a', 'text', {'label': 'Name'})], id: 'other'));
       expect(s.canUndo, isFalse);
-      s.updateField('a', (f) => f.label = 'Again');
+      s.updateField('a', (f) => f.label = const UiFbText('Again'));
       s.load(formOf([fj('a', 'text', {'label': 'Changed elsewhere'})], id: 'other'));
       expect(s.canUndo, isFalse);
-      s.updateField('a', (f) => f.label = 'Once more');
+      s.updateField('a', (f) => f.label = const UiFbText('Once more'));
       s.undo();
       s.clearHistory();
       expect(s.canUndo, isFalse);
@@ -244,7 +244,7 @@ void main() {
     test('titles the first page when a second one is added, and moves and removes pages', () {
       final s = store(createDefinition());
       s.addPage();
-      expect([for (final p in s.def.pages) p.title], ['Page 1', 'Page 2']);
+      expect([for (final p in s.def.pages) p.title], [const UiFbText('Page 1'), const UiFbText('Page 2')]);
       expect(s.pageIndex, 1);
       final second = s.def.pages[1].id;
       s.movePage(second, -1);
@@ -260,7 +260,7 @@ void main() {
 
     test('updates settings without leaving empty keys behind', () {
       final s = store(createDefinition());
-      s.updateSettings((st) => st.submitLabel = 'Send');
+      s.updateSettings((st) => st.submitLabel = const UiFbText('Send'));
       expect(s.def.settings!.toJson(), {'submitLabel': 'Send'});
       s.updateSettings((st) => st.submitLabel = null);
       expect(s.def.settings!.toJson(), isEmpty);

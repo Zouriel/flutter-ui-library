@@ -6,6 +6,7 @@ import '../engine/definition.dart';
 import '../engine/field_types.dart';
 import '../engine/format.dart';
 import '../engine/js.dart';
+import '../engine/localize.dart';
 import '../engine/option_sources.dart';
 import '../engine/schema.dart';
 import '../engine/validators.dart';
@@ -42,6 +43,27 @@ UiFormDefinition _keepRevision(UiFormDefinition target, UiFormDefinition current
   return target.clone()..revision = current.revision;
 }
 
+/// [value] without [code]'s entries in any text map (a map whose values are all strings and that
+/// has [code] as a key). A map left with only the default locale collapses to a plain string.
+Object? _stripLocale(Object? value, String code, String def) {
+  if (value is List) return [for (final v in value) _stripLocale(v, code, def)];
+  if (value is! Map) return value;
+  final out = <String, Object?>{};
+  for (final e in value.entries) {
+    final k = '${e.key}';
+    final v = e.value;
+    if (k == 'supportedLocales') {
+      out[k] = v;
+    } else if (v is Map && v.containsKey(code) && v.values.every((x) => x is String)) {
+      final rest = {for (final x in v.entries) if (x.key != code) '${x.key}': x.value as String};
+      out[k] = rest.isEmpty ? '' : (rest.length == 1 && rest.keys.first == def ? rest[def] : rest);
+    } else {
+      out[k] = _stripLocale(v, code, def);
+    }
+  }
+  return out;
+}
+
 int _builderSeq = 0;
 
 /// The form builder's state (the web `FbBuilderStore`): the definition being edited, what's
@@ -66,6 +88,7 @@ class UiFormBuilderController extends ChangeNotifier {
   List<UiFbOptionSourceDef> _optionSourceDefs = const [];
   String? _selectedId;
   int _pageIndex = 0;
+  String? _editLocaleRaw;
 
   /// Bumped on every change, including ones the host configures silently, so the scope rebuilds.
   int _epoch = 0;
@@ -130,6 +153,88 @@ class UiFormBuilderController extends ChangeNotifier {
   set submissionCount(int v) => configure(submissionCount: v);
   set validatorDefs(List<UiFbValidatorDef> v) => configure(validatorDefs: v);
   set optionSourceDefs(List<UiFbOptionSourceDef> v) => configure(optionSourceDefs: v);
+
+  // ── Languages ───────────────────────────────────────────────────────────────────────────
+
+  /// The languages of the form, the default one first.
+  List<UiFbResolvedLocale> get locales => fbLocales(_def);
+  String get defaultLocale => fbDefaultLocale(_def);
+
+  /// Whether the form has more than one language.
+  bool get multilingual => locales.length > 1;
+
+  /// The language being written now. Falls back to the default when the chosen one is gone.
+  String get editLocale {
+    final raw = _editLocaleRaw;
+    return raw != null && locales.any((l) => l.code == raw) ? raw : defaultLocale;
+  }
+
+  /// Direction of the default language (for the hint under a translation input).
+  UiFbDir get defaultDir => fbLocaleDir(_def, defaultLocale);
+
+  /// Writing direction of the edit language.
+  UiFbDir get editDir => fbLocaleDir(_def, editLocale);
+
+  /// Whether the edit language is not the default one (so the default text is shown as a hint).
+  bool get translating => editLocale != defaultLocale;
+
+  void setEditLocale(String code) {
+    _editLocaleRaw = locales.any((l) => l.code == code) ? code : null;
+    _changed();
+  }
+
+  /// [t] in the edit language with no fallback: '' when it isn't translated yet. For inputs.
+  String text(UiFbText? t) => fbTextIn(t, editLocale, defaultLocale);
+
+  /// The default language's text, for the hint under an input while translating ('' when editing the default).
+  String defaultText(UiFbText? t) => translating ? fbText(t, defaultLocale, defaultLocale) : '';
+
+  /// [t] as it shows on the canvas: the edit language, falling back to the default.
+  String shown(UiFbText? t) => fbText(t, editLocale, defaultLocale);
+
+  /// [current] with the edit language's text set to [value].
+  UiFbText setText(UiFbText? current, String value) => fbSetText(current, editLocale, value, defaultLocale);
+
+  /// Like [setText], but null when the result is empty (an optional text left blank).
+  UiFbText? setTextOpt(UiFbText? current, String value) {
+    final t = setText(current, value);
+    return t.plain == '' ? null : t;
+  }
+
+  /// Adds a language; false when the code is empty or already there.
+  bool addLocale(String code, {String? label, UiFbDir? dir}) {
+    code = code.trim();
+    if (code.isEmpty || locales.any((l) => l.code.toLowerCase() == code.toLowerCase())) return false;
+    final all = locales;
+    final next = _def.clone()
+      ..defaultLocale = all.first.code
+      ..supportedLocales = [
+        for (final l in all) UiFbLocale(code: l.code, label: l.label, dir: l.dir),
+        UiFbLocale(code: code, label: label != null && label.trim().isNotEmpty ? label.trim() : null, dir: dir ?? fbDefaultDir(code)),
+      ];
+    commit(next);
+    return true;
+  }
+
+  /// Removes a language and its text from every question, as one undoable edit.
+  void removeLocale(String code) {
+    if (code == defaultLocale || !locales.any((l) => l.code == code)) return;
+    final json = _def.clone()..supportedLocales = [for (final l in locales) if (l.code != code) UiFbLocale(code: l.code, label: l.label, dir: l.dir)];
+    final stripped = _stripLocale(json.toJson(), code, defaultLocale);
+    commit(migrateDefinition(stripped!));
+  }
+
+  void setDefaultLocale(String code) {
+    if (!locales.any((l) => l.code == code) || code == defaultLocale) return;
+    final all = locales;
+    commit(_def.clone()
+      ..defaultLocale = code
+      ..supportedLocales = [for (final l in all) UiFbLocale(code: l.code, label: l.label, dir: l.dir)]);
+  }
+
+  void setLocaleDir(String code, UiFbDir dir) {
+    commit(_def.clone()..supportedLocales = [for (final l in locales) UiFbLocale(code: l.code, label: l.label, dir: l.code == code ? dir : l.dir)]);
+  }
 
   // ── Derived ─────────────────────────────────────────────────────────────────────────────
 
@@ -207,6 +312,15 @@ class UiFormBuilderController extends ChangeNotifier {
     if (_selectedId != null && !index.containsKey(_selectedId)) _selectedId = null;
     _pageIndex = _pageIndex.clamp(0, next.pages.length - 1);
     _changed(notify: notify);
+  }
+
+  /// Replaces the whole definition as ONE undoable edit (restoring a revision), keeping the host's `revision`.
+  void replace(Object raw) {
+    final next = _keepRevision(migrateDefinition(raw), _def);
+    commit(next);
+    if (_selectedId != null && !index.containsKey(_selectedId)) _selectedId = null;
+    if (_pageIndex >= _def.pages.length) _pageIndex = _def.pages.length - 1;
+    _changed();
   }
 
   /// Forgets undo/redo history (e.g. the host saved and wants a fresh start).
@@ -353,16 +467,21 @@ class UiFormBuilderController extends ChangeNotifier {
 
   /// Retitles a section. Like a question's key following its label, a section's key follows its
   /// title while it still has the key it was given automatically and no answers are saved under it.
-  void setGroupTitle(String id, String title) {
+  void setGroupTitle(String id, String value) {
     final g = index[id]?.asGroup;
     if (g == null) return;
-    final slug = fbSlug((g.title ?? '').isNotEmpty ? g.title! : (g.repeat != null ? 'items' : 'section'));
+    final dl = defaultLocale;
+    final title = setText(g.title, value);
+    // The key follows the default-language title only.
+    final cur = fbTextIn(g.title, dl, dl);
+    final base = cur.isNotEmpty ? cur : fbText(g.title, dl, dl);
+    final slug = fbSlug(base.isNotEmpty ? base : (g.repeat != null ? 'items' : 'section'));
     String stem(String k) => k.replaceFirst(RegExp(r'_\d+$'), '');
     final key = g.key;
     final auto = key != null && key.isNotEmpty && !hasAnswers(id) && (stem(key) == 'items' || stem(key) == slug || stem(key) == 'section');
-    final next = auto && title.trim().isNotEmpty ? uniqueKey(_def, fbSlug(title), id) : key;
+    final next = auto && !translating && value.trim().isNotEmpty ? uniqueKey(_def, fbSlug(value), id) : key;
     updateGroup(id, (g) {
-      g.title = title.isEmpty ? null : title;
+      g.title = title.plain == '' ? null : title;
       g.key = next;
     }, mergeKey: 'title:$id');
   }
@@ -375,10 +494,10 @@ class UiFormBuilderController extends ChangeNotifier {
       commit(updatePageOf(_def, id, edit), mergeKey: mergeKey);
 
   void addPage() {
-    final p = createPage('Page ${_def.pages.length + 1}');
+    final p = createPage()..title = UiFbText('Page ${_def.pages.length + 1}');
     final next = _def.clone();
     // A form that had one untitled page gets a title on it, now that there are steps.
-    if (next.pages.length == 1 && (next.pages[0].title ?? '').isEmpty) next.pages[0].title = 'Page 1';
+    if (next.pages.length == 1 && fbText(next.pages[0].title).isEmpty) next.pages[0].title = const UiFbText('Page 1');
     next.pages.add(p);
     commit(next);
     _pageIndex = _def.pages.length - 1;
@@ -407,7 +526,7 @@ class UiFormBuilderController extends ChangeNotifier {
     _changed();
   }
 
-  void updateForm({String? title, String? description, bool clearDescription = false, String? mergeKey}) {
+  void updateForm({UiFbText? title, UiFbText? description, bool clearDescription = false, String? mergeKey}) {
     final next = _def.clone();
     if (title != null) next.title = title;
     if (description != null || clearDescription) next.description = description;
@@ -425,7 +544,7 @@ class UiFormBuilderController extends ChangeNotifier {
 
   String name(String id) {
     final e = index[id];
-    return e != null ? elementName(e.element, _def) : 'Deleted question';
+    return e != null ? elementName(e.element, _def, editLocale) : 'Deleted question';
   }
 
   UiFbField? field(String id) => index[id]?.asField;
@@ -466,18 +585,18 @@ class UiFormBuilderController extends ChangeNotifier {
       if (e.id == forId && e.kind == 'field') continue;
       final el = e.asElement;
       if (el != null && el.archived == true) continue;
-      final where = elementName(e.page, _def);
+      final where = elementName(e.page, _def, editLocale);
       if (e.kind == 'page') {
-        if (_def.pages.length > 1 && e.id != forId) out.add(UiFbRefOption(id: e.id, label: elementName(e.element, _def), kind: UiFbSubjectKind.page, where: 'Page'));
+        if (_def.pages.length > 1 && e.id != forId) out.add(UiFbRefOption(id: e.id, label: elementName(e.element, _def, editLocale), kind: UiFbSubjectKind.page, where: 'Page'));
         continue;
       }
       if (e.repeat != null && e.repeat!.id != myRepeat?.id) continue;
       if (e.kind == 'group') {
         if (e.id == forId) continue;
-        out.add(UiFbRefOption(id: e.id, label: elementName(el, _def), kind: e.asGroup!.repeat != null ? UiFbSubjectKind.repeat : UiFbSubjectKind.group, where: where));
+        out.add(UiFbRefOption(id: e.id, label: elementName(el, _def, editLocale), kind: e.asGroup!.repeat != null ? UiFbSubjectKind.repeat : UiFbSubjectKind.group, where: where));
       } else if (e.kind == 'field') {
         final f = e.asField!;
-        out.add(UiFbRefOption(id: e.id, label: f.label.isNotEmpty ? f.label : f.key, kind: valueKindOf(f.type, f.props?.format).subject, where: where));
+        out.add(UiFbRefOption(id: e.id, label: shown(f.label).isNotEmpty ? shown(f.label) : f.key, kind: valueKindOf(f.type, f.props?.format).subject, where: where));
       }
     }
     return out;
@@ -508,6 +627,9 @@ class UiFbBuilderScope extends StatefulWidget {
     assert(s != null, 'No UiFbBuilderScope above this builder panel');
     return s!.controller;
   }
+
+  /// The nearest controller, or null outside a builder (the form-wide settings panel also works alone).
+  static UiFormBuilderController? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_FbInherited>()?.controller;
 
   @override
   State<UiFbBuilderScope> createState() => _UiFbBuilderScopeState();

@@ -66,7 +66,7 @@ class _UiFbLogicOverviewState extends State<UiFbLogicOverview> {
     final t = context.ui;
     final s = UiFbBuilderScope.of(context);
     final def = s.def;
-    String pageName(UiFbPage p) => (p.title ?? '').isNotEmpty ? p.title! : 'Page ${def.pages.indexOf(p) + 1}';
+    String pageName(UiFbPage p) => s.shown(p.title).isNotEmpty ? s.shown(p.title) : 'Page ${def.pages.indexOf(p) + 1}';
 
     final entries = <({String id, String name, String where, List<_Line> lines})>[];
     for (final p in def.pages) {
@@ -103,7 +103,15 @@ class _UiFbLogicOverviewState extends State<UiFbLogicOverview> {
                   Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
                     heading('Needs attention'),
                     SizedBox(height: t.space1),
-                    for (final p in problems) _Problem(problem: p, onTap: () => widget.onOpen?.call(p.targetId)),
+                    for (final p in problems) _Problem(
+                      problem: p,
+                      onTap: () {
+                        // A missing translation also switches to the language that is missing.
+                        final code = p.message.contains('translation for:') ? RegExp(r'\(([^()]+)\) translation').firstMatch(p.message)?.group(1) : null;
+                        if (code != null) s.setEditLocale(code);
+                        widget.onOpen?.call(p.targetId);
+                      },
+                    ),
                   ]),
                 Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 4, children: [
                   Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [

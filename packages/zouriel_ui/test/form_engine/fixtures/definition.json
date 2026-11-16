@@ -1380,7 +1380,7 @@
         }
       },
       "expected": {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "id": "x",
         "title": "Untitled form",
         "settings": {},
@@ -1393,7 +1393,13 @@
         ],
         "custom": {
           "keep": true
-        }
+        },
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ]
       }
     },
     {
@@ -1421,7 +1427,7 @@
         ]
       },
       "expected": {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "id": "y",
         "title": "Old",
         "settings": {
@@ -1440,6 +1446,12 @@
                 "label": "A"
               }
             ]
+          }
+        ],
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
           }
         ]
       }
@@ -1476,7 +1488,7 @@
     {
       "name": "every shape the schema has",
       "definition": {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "id": "all",
         "title": "All",
         "description": "d",
@@ -1726,6 +1738,12 @@
                 }
               }
             ]
+          }
+        ],
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
           }
         ]
       }
@@ -2877,6 +2895,88 @@
           "Changed the data source settings of “Teacher”",
           "Added “New words”",
           "Deleted “Age”"
+        ],
+        "textChanged": [],
+        "localesAdded": [],
+        "localesRemoved": []
+      }
+    },
+    {
+      "before": {
+        "schemaVersion": 2,
+        "id": "f",
+        "title": "T",
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": "Name"
+              }
+            ]
+          }
+        ]
+      },
+      "after": {
+        "schemaVersion": 2,
+        "id": "f",
+        "title": "T",
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": {
+                  "en": "Name",
+                  "dv": "ނަން"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "added": [],
+        "removed": [],
+        "archived": [],
+        "restored": [],
+        "renamedKeys": [],
+        "typeChanged": [],
+        "optionsRemoved": [],
+        "rulesChanged": [],
+        "textChanged": [
+          "a"
+        ],
+        "localesAdded": [
+          "dv"
+        ],
+        "localesRemoved": [],
+        "summary": [
+          "Added the language ދިވެހި (dv)",
+          "Changed the wording or translations of “Name”"
         ]
       }
     }
@@ -2991,6 +3091,14 @@
     "expectedSettings": {
       "labelPlacement": "inside",
       "validateOn": "submit"
+    },
+    "expectedLocales": {
+      "defaultLocale": "en",
+      "supportedLocales": [
+        {
+          "code": "en"
+        }
+      ]
     }
   },
   "typesCompatible": [

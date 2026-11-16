@@ -14,6 +14,7 @@ import '../../forms/text/select.dart';
 import '../../theme/theme.dart';
 import '../engine/definition.dart';
 import '../engine/field_types.dart';
+import '../engine/localize.dart';
 import '../engine/option_sources.dart';
 import '../engine/schema.dart';
 import 'builder_bits.dart';
@@ -161,7 +162,7 @@ class _Head extends StatelessWidget {
       UiFbStatic(:final type) => (fbStaticIcon(type), type == 'heading' ? 'Heading' : type == 'paragraph' ? 'Text block' : 'Divider'),
       _ => (HugeIcons.strokeRoundedSettings02, ''),
     };
-    final name = sel != null ? store.name(sel.id) : (store.def.title.isNotEmpty ? store.def.title : 'Untitled form');
+    final name = sel != null ? store.name(sel.id) : (store.shown(store.def.title).isNotEmpty ? store.shown(store.def.title) : 'Untitled form');
     return Padding(
       padding: EdgeInsets.fromLTRB(pad, t.space3, pad, t.space2),
       child: Row(spacing: t.space2, children: [
@@ -412,11 +413,12 @@ class _FieldPanel extends StatelessWidget {
 
     void setLabel(String label) {
       // Keys follow labels until the form has answers or someone named it by hand.
-      final slug = fbSlug(f.label);
+      final slug = fbSlug(fbText(f.label, store.defaultLocale, store.defaultLocale));
       final auto = !store.hasAnswers(f.id) && (f.key == slug || f.key.startsWith('${slug}_') || f.key == fbSlug(info.defaultLabel));
-      final key = auto && label.trim().isNotEmpty ? uniqueKey(store.def, fbSlug(label), f.id) : f.key;
+      // The key follows the label in the form's default language only.
+      final key = auto && !store.translating && label.trim().isNotEmpty ? uniqueKey(store.def, fbSlug(label), f.id) : f.key;
       store.updateField(f.id, (x) {
-        x.label = label;
+        x.label = store.setText(x.label, label);
         x.key = key;
       }, mergeKey: 'label:${f.id}');
     }
@@ -469,7 +471,7 @@ class _FieldPanel extends StatelessWidget {
     final answers = store.hasAnswers(f.id);
     final types = answers ? [for (final ti in uiFbFieldTypes) if (typesCompatible(f.type, ti.type) && valueKindOf(ti.type) == valueKindOf(f.type)) ti] : uiFbFieldTypes;
     final multi = valueKindOf(f.type) == UiFbValueKind.multi;
-    final self = UiFbRefOption(id: f.id, label: f.label, kind: valueKindOf(f.type, f.props?.format).subject, where: '');
+    final self = UiFbRefOption(id: f.id, label: store.shown(f.label), kind: valueKindOf(f.type, f.props?.format).subject, where: '');
     final p = f.props;
 
     final children = <Widget>[
@@ -482,30 +484,35 @@ class _FieldPanel extends StatelessWidget {
         ),
       FbSetting(
         label: f.type == UiFbFieldType.hidden ? 'Name' : 'Question',
-        child: UiInput(value: f.label, size: UiSize.sm, placeholder: 'What do you want to ask?', semanticLabel: f.type == UiFbFieldType.hidden ? 'Name' : 'Question', onChanged: setLabel),
+        trans: f.label,
+        child: UiInput(value: store.text(f.label), dir: fbTextDir(store.editDir), size: UiSize.sm, placeholder: 'What do you want to ask?', semanticLabel: f.type == UiFbFieldType.hidden ? 'Name' : 'Question', onChanged: setLabel),
       ),
       if (f.type != UiFbFieldType.hidden)
         FbSetting(
           label: 'Help text',
+          trans: f.help,
           child: UiTextarea(size: UiSize.sm, 
-            value: f.help ?? '',
+            dir: fbTextDir(store.editDir),
+            value: store.text(f.help),
             rows: 2,
             autosize: true,
             maxRows: 6,
             placeholder: 'Optional. Shown under the box.',
             semanticLabel: 'Help text',
-            onChanged: (v) => store.updateField(f.id, (x) => x.help = v.isEmpty ? null : v, mergeKey: 'help:${f.id}'),
+            onChanged: (v) => store.updateField(f.id, (x) => x.help = store.setTextOpt(x.help, v), mergeKey: 'help:${f.id}'),
           ),
         ),
       if (info.placeholder)
         FbSetting(
           label: 'Placeholder',
+          trans: f.placeholder,
           child: UiInput(
-            value: f.placeholder ?? '',
+            dir: fbTextDir(store.editDir),
+            value: store.text(f.placeholder),
             size: UiSize.sm,
             placeholder: 'Example text shown in the empty box',
             semanticLabel: 'Placeholder',
-            onChanged: (v) => store.updateField(f.id, (x) => x.placeholder = v.isEmpty ? null : v, mergeKey: 'ph:${f.id}'),
+            onChanged: (v) => store.updateField(f.id, (x) => x.placeholder = store.setTextOpt(x.placeholder, v), mergeKey: 'ph:${f.id}'),
           ),
         ),
       FbSetting(
@@ -631,6 +638,19 @@ class _FieldPanel extends StatelessWidget {
         onChanged: (v) => prop(key, map != null ? map(v) : (v.isEmpty ? null : v)),
       ),
     );
+    final store = UiFbBuilderScope.of(context);
+    Widget caption(String label, UiFbText? value, String placeholder) => FbSetting(
+      label: label,
+      trans: value,
+      child: UiInput(
+        size: UiSize.sm,
+        dir: fbTextDir(store.editDir),
+        value: store.text(value),
+        placeholder: placeholder,
+        semanticLabel: label,
+        onChanged: (v) => prop('caption', store.setTextOpt(value, v)?.toJson()),
+      ),
+    );
     Widget orient() => FbSetting(
       label: 'Arrange options',
       child: _segmented<String>(
@@ -671,7 +691,7 @@ class _FieldPanel extends StatelessWidget {
           ),
         ];
       case 'checkbox' || 'toggle':
-        return [text('Text next to it', 'caption', p?.caption, 'I agree')];
+        return [caption('Text next to it', p?.caption, 'I agree')];
       case 'radio':
         return [orient()];
       case 'checkboxes':
@@ -788,7 +808,7 @@ class _LogicPanel extends StatelessWidget {
               ),
               const FbLabel('set this to'),
               UiFbValueInput(
-                subject: UiFbRefOption(id: field.id, label: field.label, kind: valueKindOf(field.type, field.props?.format).subject, where: ''),
+                subject: UiFbRefOption(id: field.id, label: store.shown(field.label), kind: valueKindOf(field.type, field.props?.format).subject, where: ''),
                 op: valueKindOf(field.type) == UiFbValueKind.multi ? UiFbOperator.includesAny : UiFbOperator.eq,
                 operand: sv.value,
                 forId: field.id,
@@ -864,18 +884,21 @@ class _GroupPanel extends StatelessWidget {
         ),
       FbSetting(
         label: 'Title',
-        child: UiInput(value: g.title ?? '', size: UiSize.sm, placeholder: 'e.g. Contact details', semanticLabel: 'Title', onChanged: (v) => store.setGroupTitle(g.id, v)),
+        trans: g.title,
+        child: UiInput(value: store.text(g.title), dir: fbTextDir(store.editDir), size: UiSize.sm, placeholder: 'e.g. Contact details', semanticLabel: 'Title', onChanged: (v) => store.setGroupTitle(g.id, v)),
       ),
       FbSetting(
         label: 'Description',
+        trans: g.description,
         child: UiTextarea(size: UiSize.sm, 
-          value: g.description ?? '',
+          dir: fbTextDir(store.editDir),
+          value: store.text(g.description),
           rows: 2,
           autosize: true,
           maxRows: 6,
           placeholder: 'Optional',
           semanticLabel: 'Description',
-          onChanged: (v) => store.updateGroup(g.id, (x) => x.description = v.isEmpty ? null : v, mergeKey: 'desc:${g.id}'),
+          onChanged: (v) => store.updateGroup(g.id, (x) => x.description = store.setTextOpt(x.description, v), mergeKey: 'desc:${g.id}'),
         ),
       ),
       FbSetting(
@@ -899,9 +922,9 @@ class _GroupPanel extends StatelessWidget {
               ? null
               : (on) {
                   if (on) {
-                    final key = g.key ?? uniqueKey(store.def, fbSlug((g.title ?? '').isNotEmpty ? g.title! : 'items'), g.id);
+                    final key = g.key ?? uniqueKey(store.def, fbSlug(store.shown(g.title).isNotEmpty ? store.shown(g.title) : 'items'), g.id);
                     store.updateGroup(g.id, (x) {
-                      x.repeat = UiFbRepeat(min: 1, addLabel: 'Add another', itemLabel: 'Entry {n}');
+                      x.repeat = UiFbRepeat(min: 1, addLabel: const UiFbText('Add another'), itemLabel: const UiFbText('Entry {n}'));
                       x.key = key;
                     });
                   } else {
@@ -923,17 +946,20 @@ class _GroupPanel extends StatelessWidget {
           ]),
           FbSetting(
             label: 'Add button',
-            child: UiInput(size: UiSize.sm, value: rep.addLabel ?? '', placeholder: 'Add another', semanticLabel: 'Add button', onChanged: (v) => repeat((r) => r.addLabel = v.isEmpty ? null : v)),
+            trans: rep.addLabel,
+            child: UiInput(size: UiSize.sm, dir: fbTextDir(store.editDir), value: store.text(rep.addLabel), placeholder: 'Add another', semanticLabel: 'Add button', onChanged: (v) => repeat((r) => r.addLabel = store.setTextOpt(r.addLabel, v))),
           ),
           FbSetting(
             label: 'Each entry is called',
             hint: '{n} becomes the entry’s number.',
+            trans: rep.itemLabel,
             child: UiInput(
               size: UiSize.sm,
-              value: rep.itemLabel ?? '',
+              dir: fbTextDir(store.editDir),
+              value: store.text(rep.itemLabel),
               placeholder: 'Entry {n}',
               semanticLabel: 'Each entry is called',
-              onChanged: (v) => repeat((r) => r.itemLabel = v.isEmpty ? null : v),
+              onChanged: (v) => repeat((r) => r.itemLabel = store.setTextOpt(r.itemLabel, v)),
             ),
           ),
         ],
@@ -944,7 +970,7 @@ class _GroupPanel extends StatelessWidget {
           label: 'Keep its answers together',
           onChanged: rep != null
               ? null
-              : (on) => store.updateGroup(g.id, (x) => x.key = on ? uniqueKey(store.def, fbSlug((g.title ?? '').isNotEmpty ? g.title! : 'section'), g.id) : null),
+              : (on) => store.updateGroup(g.id, (x) => x.key = on ? uniqueKey(store.def, fbSlug(store.shown(g.title).isNotEmpty ? store.shown(g.title) : 'section'), g.id) : null),
         ),
         FbHint(rep != null ? 'Entries are saved as a list under this name.' : 'Saves this section’s answers inside one object, e.g. address.street.'),
         if ((g.key ?? '').isNotEmpty) _KeyBox(id: g.id, current: g.key!, showHint: false),
@@ -980,12 +1006,14 @@ class _StaticPanel extends StatelessWidget {
       if (s.type == 'heading')
         FbSetting(
           label: 'Heading',
-          child: UiInput(size: UiSize.sm, value: s.text ?? '', semanticLabel: 'Heading', onChanged: (v) => store.updateStatic(s.id, (x) => x.text = v, mergeKey: 'text:${s.id}')),
+          trans: s.text,
+          child: UiInput(size: UiSize.sm, dir: fbTextDir(store.editDir), value: store.text(s.text), semanticLabel: 'Heading', onChanged: (v) => store.updateStatic(s.id, (x) => x.text = store.setText(x.text, v), mergeKey: 'text:${s.id}')),
         )
       else if (s.type == 'paragraph') ...[
         FbSetting(
           label: 'Text',
-          child: UiTextarea(size: UiSize.sm, value: s.text ?? '', rows: 4, autosize: true, maxRows: 14, semanticLabel: 'Text', onChanged: (v) => store.updateStatic(s.id, (x) => x.text = v, mergeKey: 'text:${s.id}')),
+          trans: s.text,
+          child: UiTextarea(size: UiSize.sm, dir: fbTextDir(store.editDir), value: store.text(s.text), rows: 4, autosize: true, maxRows: 14, semanticLabel: 'Text', onChanged: (v) => store.updateStatic(s.id, (x) => x.text = store.setText(x.text, v), mergeKey: 'text:${s.id}')),
         ),
         FbSetting(
           label: 'Width',
@@ -1017,24 +1045,28 @@ class _PagePanel extends StatelessWidget {
       return _stack(context, [
         FbSetting(
           label: 'Page title',
+          trans: p.title,
           child: UiInput(
             size: UiSize.sm,
-            value: p.title ?? '',
+            dir: fbTextDir(store.editDir),
+            value: store.text(p.title),
             placeholder: 'Page ${i + 1}',
             semanticLabel: 'Page title',
-            onChanged: (v) => store.updatePage(p.id, (x) => x.title = v.isEmpty ? null : v, mergeKey: 'ptitle:${p.id}'),
+            onChanged: (v) => store.updatePage(p.id, (x) => x.title = store.setTextOpt(x.title, v), mergeKey: 'ptitle:${p.id}'),
           ),
         ),
         FbSetting(
           label: 'Description',
+          trans: p.description,
           child: UiTextarea(size: UiSize.sm, 
-            value: p.description ?? '',
+            dir: fbTextDir(store.editDir),
+            value: store.text(p.description),
             rows: 2,
             autosize: true,
             maxRows: 6,
             placeholder: 'Optional',
             semanticLabel: 'Description',
-            onChanged: (v) => store.updatePage(p.id, (x) => x.description = v.isEmpty ? null : v, mergeKey: 'pdesc:${p.id}'),
+            onChanged: (v) => store.updatePage(p.id, (x) => x.description = store.setTextOpt(x.description, v), mergeKey: 'pdesc:${p.id}'),
           ),
         ),
         Container(
@@ -1057,7 +1089,7 @@ class _PagePanel extends StatelessWidget {
     }
 
     final vis = p.visibility;
-    final later = [for (var k = i + 1; k < pages.length; k++) (id: pages[k].id, label: (pages[k].title ?? '').isNotEmpty ? pages[k].title! : 'Page ${k + 1}')];
+    final later = [for (var k = i + 1; k < pages.length; k++) (id: pages[k].id, label: store.shown(pages[k].title).isNotEmpty ? store.shown(pages[k].title) : 'Page ${k + 1}')];
     return _stack(context, [
       FbSection(first: true, title: 'Show this page', children: [
         _segmented<String>(
@@ -1139,18 +1171,24 @@ class _FormSettings extends StatelessWidget {
     return _stack(context, [
       FbSetting(
         label: 'Form title',
-        child: UiInput(size: UiSize.sm, value: def.title, semanticLabel: 'Form title', onChanged: (v) => store.updateForm(title: v, mergeKey: 'ftitle')),
+        trans: def.title,
+        child: UiInput(size: UiSize.sm, dir: fbTextDir(store.editDir), value: store.text(def.title), semanticLabel: 'Form title', onChanged: (v) => store.updateForm(title: store.setText(store.def.title, v), mergeKey: 'ftitle')),
       ),
       FbSetting(
         label: 'Description',
+        trans: def.description,
         child: UiTextarea(size: UiSize.sm, 
-          value: def.description ?? '',
+          dir: fbTextDir(store.editDir),
+          value: store.text(def.description),
           rows: 2,
           autosize: true,
           maxRows: 6,
           placeholder: 'Shown at the top of the form',
           semanticLabel: 'Description',
-          onChanged: (v) => store.updateForm(description: v.isEmpty ? null : v, clearDescription: v.isEmpty, mergeKey: 'fdesc'),
+          onChanged: (v) {
+            final next = store.setTextOpt(store.def.description, v);
+            store.updateForm(description: next, clearDescription: next == null, mergeKey: 'fdesc');
+          },
         ),
       ),
       UiFbSettingsFields(settings: def.settings ?? UiFbSettings(), onPatch: (edit, {mergeKey}) => store.updateSettings(edit, mergeKey: mergeKey)),

@@ -849,6 +849,17 @@ File: `form-builder/src/builder-preview.ts`
 `ui-fb-preview` — fill the form in as people will, on a desktop or phone width, with the saved JSON alongside. Paste saved answers to try editing.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### FbLanguages (component, `ui-fb-languages`)
+File: `form-builder/src/builder-languages.ts` (Flutter: `lib/src/form_builder/editor/builder_languages.dart`, `UiFbLanguages`)  
+`ui-fb-languages` — the languages of the form (in the builder's Languages dialog): add one from suggestions or a validated code, remove one (with confirmation), pick the default and set each language's direction.  
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase
+
+### UiFbRevisionPanel (component, `ui-fb-revisions`)
+File: `form-builder/src/builder-revisions.ts` (Flutter: `lib/src/form_builder/editor/builder_revisions.dart`)  
+`ui-fb-revisions` — the published versions of a form, newest first. Each can be opened to see what changed, compared with the draft, or restored (the draft is replaced; nothing goes live until the form is published again).  
+- Inputs: `store`, `formId`, `current`; output `restore` (Flutter: `onRestore`)
+- [x] Flutter port  - [x] widget tests  - [ ] golden/visual check  - [x] showcase
+
 ### FbSourceSettings (component, `ui-fb-source-settings`)
 File: `form-builder/src/builder-source.ts`  
 `ui-fb-source-settings` — where a dropdown or multi-select gets its options from a registered list: which list, its settings (each a fixed value or another question's answer, for lists that depend on each other), and a live preview to try it.  
@@ -1743,6 +1754,12 @@ File: `workflow/src/workflow-builder.ts`
 Design automations and lifecycles; two-way definition, API, schema, settings, persist.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### Submission bridge (functions, `@zouriel/ui/workflow`)
+File: `workflow/src/submission-bridge.ts`  
+Form submission to workflow: `wfSubmissionPayload`, `wfPickWorkflow`, `wfStartFromSubmission`, `wfRouteSubmission`, `wfConditionHolds`, `wfAnswerAt`, `wfSubmissionRegistry`, `wfSubmissionEntity`, `wfSubmissionFieldDescriptors`, `wfSubmissionTokens`, `wfFieldTypeOf`; types `UiWfSubmissionPayload`, `UiWfSubmissionBinding`, `UiWfRoute`, `UiWfRouteStep`, `UiWfRouteAssignee`, `UiWfRouteDecision`. `formFields(form, locale?)` reads localized labels (`wfFormFields(form, [locale])`).  
+- Flutter: `workflow/submission_bridge.dart`, tests in `test/workflow/submission_bridge_test.dart`, showcase page `form-workflow` (`apps/showcase/lib/pages/form_workflow_page.dart`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check (no new look)  - [x] showcase
+
 ### UiWorkflowPanel (component, `ui-workflow-panel`)
 File: `workflow/src/panel.ts`  
 A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens; `[(open)]` is `open` + `onOpenChanged`). Record types with no lifecycle still show their manual workflows, tasks and history.  
@@ -2002,3 +2019,4 @@ File: `chart/src/bar-chart.ts`
 - Inputs: `ariaLabel` (required); `categories`: string[]; `series`: { name, values, color? }[]; `formatValue`; `height` = 220; `showValues` = false; `selectedIndex`: number | null; `minCategoryWidth`: number | null; `emptyLabel`; output `categorySelect(index)`
 - Flutter: `UiBarChart(semanticLabel:, categories:, series: [UiBarChartSeries(name:, values:, color:)], formatValue:, height:, showValues:, selectedIndex:, onCategorySelect:, minCategoryWidth:, emptyLabel:)`; helpers `uiChartScale`, `uiChartLabels`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+- [x] Flutter port: interface `UiFbRevisionStore`, class `UiFbRevision`, `UiFbRevisionMeta`, `UiFbMemoryRevisionStore`, functions `fbRevisionSummary`, `fbCreateRevision`, `rollbackDefinition` (revisions.ts, `engine/revisions.dart`, tests in `test/form_engine/revisions_test.dart`)

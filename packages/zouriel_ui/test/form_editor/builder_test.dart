@@ -47,7 +47,7 @@ Future<HostState> pumpBuilder(WidgetTester tester, UiFormDefinition def, {Size s
 }
 
 Finder iconButton(String label) => find.byWidgetPredicate((w) => w is UiIconButton && w.label == label);
-List<String> labels(HostState h, [int page = 0]) => [for (final e in h.def.pages[page].elements) e is UiFbField ? e.label : e.id];
+List<String> labels(HostState h, [int page = 0]) => [for (final e in h.def.pages[page].elements) e is UiFbField ? fbText(e.label) : e.id];
 
 // Palette tiles pad their touch area and hit-test at the tile's centre, so a tap on a label inside
 // one lands on the tile rather than the text: those taps pass `warnIfMissed: false`.

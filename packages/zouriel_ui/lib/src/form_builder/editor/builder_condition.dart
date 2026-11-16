@@ -82,7 +82,7 @@ class _UiFbValueInputState extends State<UiFbValueInput> {
     final count = info.countValue;
     final multi = info.multiValue;
     final field = subject == null ? null : store.field(subject.id);
-    final options = [for (final o in field?.options ?? const <UiFbOption>[]) if (o.archived != true) (label: o.label, value: o.value)];
+    final options = [for (final o in field?.options ?? const <UiFbOption>[]) if (o.archived != true) (label: store.shown(o.label), value: o.value)];
     final sourceDef = field?.source == null ? null : store.optionSourceDefs.where((d) => d.type == field!.source!.type).firstOrNull;
     final o = widget.operand;
     final constRaw = o is UiFbConstOperand ? o.value : null;

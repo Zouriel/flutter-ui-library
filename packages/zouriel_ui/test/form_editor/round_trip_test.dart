@@ -12,7 +12,7 @@ void main() {
     final c = UiFormBuilderController(definition: UiFormDefinition.fromJson(raw));
     expect(jsonEncode(c.def.toJson()), expected);
     final first = c.def.pages[0].elements.first.id;
-    c.updateField(first, (f) => f.label = 'Changed');
+    c.updateField(first, (f) => f.label = const UiFbText('Changed'));
     c.duplicate(first);
     c.nudge(first, 1);
     c.addPage();

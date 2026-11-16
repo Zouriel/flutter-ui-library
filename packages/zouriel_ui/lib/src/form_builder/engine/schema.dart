@@ -16,7 +16,97 @@ library;
 
 import 'js.dart';
 
-const int uiFbSchemaVersion = 1;
+const int uiFbSchemaVersion = 2;
+
+// ── Languages ────────────────────────────────────────────────────────────────────────────────
+
+/// Text people read. A plain string is the same in every language; a map holds one text per locale
+/// code (`{'en': 'Name', 'dv': 'ނަން'}`). Immutable. The JSON form is the web's `UiFbLocalizedText`:
+/// a plain text writes back as a JSON string, a map as a JSON object with its key order kept.
+///
+/// Read it with `fbText(text, locale, defaultLocale)` and write it with `fbSetText(...)`
+/// (`localize.dart`). `const UiFbText('Name')` is a plain text.
+class UiFbText {
+  const UiFbText(String this.plain) : map = null;
+
+  /// One text per locale code. The map is copied (order kept) and can't be changed afterwards.
+  UiFbText.localized(Map<String, String> texts) : plain = null, map = Map.unmodifiable(Map<String, String>.of(texts));
+
+  /// Reads a JSON value: a string, or an object of strings. Anything else is `null`.
+  static UiFbText? fromJson(Object? json) {
+    if (json == null) return null;
+    if (json is Map) {
+      return UiFbText.localized({for (final e in json.entries) '${e.key}': _str(e.value) ?? ''});
+    }
+    final s = _str(json);
+    return s == null ? null : UiFbText(s);
+  }
+
+  /// The one text for every language, or `null` when this is a per-locale map.
+  final String? plain;
+
+  /// The per-locale texts, or `null` when this is a plain text.
+  final Map<String, String>? map;
+
+  /// Whether this is a per-locale map rather than one string for every language.
+  bool get isLocalized => map != null;
+
+  /// A JSON string, or a (copied) JSON object.
+  Object toJson() => map == null ? plain! : Map<String, String>.of(map!);
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! UiFbText) return false;
+    if (map == null || other.map == null) return map == other.map && plain == other.plain;
+    final a = map!, b = other.map!;
+    return a.length == b.length && a.entries.every((e) => b[e.key] == e.value && b.containsKey(e.key));
+  }
+
+  @override
+  int get hashCode => map == null ? plain.hashCode : Object.hashAllUnordered([for (final e in map!.entries) Object.hash(e.key, e.value)]);
+
+  @override
+  String toString() => map == null ? 'UiFbText($plain)' : 'UiFbText($map)';
+}
+
+/// Writing direction. String-backed like [UiFbFieldType].
+extension type const UiFbDir(String name) implements Object {
+  static const ltr = UiFbDir('ltr');
+  static const rtl = UiFbDir('rtl');
+}
+
+/// One language a form is written in.
+class UiFbLocale {
+  UiFbLocale({required this.code, this.label, this.dir, UiJson? extra}) : extra = extra ?? {};
+
+  static UiFbLocale fromJson(Object? json) {
+    final j = _map(json);
+    final dir = _str(j['dir']);
+    return UiFbLocale(
+      code: _str(j['code']) ?? '',
+      label: _str(j['label']),
+      dir: dir == null ? null : UiFbDir(dir),
+      extra: _extra(j, const {'code', 'label', 'dir'}),
+    );
+  }
+
+  /// A BCP 47 code: `en`, `dv`, `ar-SA`.
+  String code;
+
+  /// Shown in the language switcher. Defaults to the language's own name.
+  String? label;
+
+  /// Writing direction. Defaults by language (`dv`, `ar`, `he`, `fa`, `ur`... are right-to-left).
+  UiFbDir? dir;
+  final UiJson extra;
+
+  UiJson toJson() {
+    final out = <String, Object?>{'code': code};
+    _put(out, 'label', label);
+    _put(out, 'dir', dir?.name);
+    return _withExtra(out, extra);
+  }
+}
 
 // ── Enumerations (string-backed so unknown values from newer forms survive) ────────────────
 
@@ -103,6 +193,7 @@ String? _str(Object? v) => v == null ? null : (v is String ? v : jsString(v));
 num? _num(Object? v) => v is num ? v : null;
 bool? _bool(Object? v) => v is bool ? v : null;
 List<T>? _list<T>(Object? v, T Function(Object? x) read) => v is List ? [for (final x in v) read(x)] : null;
+UiFbText? _text(Object? v) => UiFbText.fromJson(v);
 List<String>? _strings(Object? v) => _list(v, (x) => _str(x) ?? '');
 
 UiJson _extra(UiJson j, Set<String> known) => {
@@ -319,7 +410,7 @@ class UiFbValidatorRule {
       id: _str(j['id']) ?? '',
       type: _str(j['type']) ?? '',
       params: j['params'] is Map ? jsonCloneMap(_map(j['params'])) : null,
-      message: _str(j['message']),
+      message: _text(j['message']),
       when: UiFbCondition.maybe(j['when']),
       severity: _str(j['severity']),
       extra: _extra(j, const {'id', 'type', 'params', 'message', 'when', 'severity'}),
@@ -331,7 +422,7 @@ class UiFbValidatorRule {
   UiJson? params;
 
   /// Overrides the validator's default message. Supports `{label}` and `{param}` placeholders.
-  String? message;
+  UiFbText? message;
 
   /// Only check this rule when the condition holds.
   UiFbCondition? when;
@@ -343,7 +434,7 @@ class UiFbValidatorRule {
   UiJson toJson() {
     final out = <String, Object?>{'id': id, 'type': type};
     _put(out, 'params', params == null ? null : jsonClone(params));
-    _put(out, 'message', message);
+    _put(out, 'message', message?.toJson());
     _put(out, 'when', when?.toJson());
     _put(out, 'severity', severity);
     return _withExtra(out, extra);
@@ -427,7 +518,7 @@ class UiFbOption {
     return UiFbOption(
       id: _str(j['id']) ?? '',
       value: _str(j['value']) ?? '',
-      label: _str(j['label']) ?? '',
+      label: _text(j['label']) ?? const UiFbText(''),
       archived: _bool(j['archived']),
       extra: _extra(j, const {'id', 'value', 'label', 'archived'}),
     );
@@ -437,14 +528,14 @@ class UiFbOption {
 
   /// Stored in the submitted data. Locked once a form has answers.
   String value;
-  String label;
+  UiFbText label;
 
   /// Hidden from new answers but still understood in old ones.
   bool? archived;
   final UiJson extra;
 
   UiJson toJson() {
-    final out = <String, Object?>{'id': id, 'value': value, 'label': label};
+    final out = <String, Object?>{'id': id, 'value': value, 'label': label.toJson()};
     _put(out, 'archived', archived);
     return _withExtra(out, extra);
   }
@@ -527,7 +618,7 @@ class UiFbFieldProps {
       multiple: _bool(j['multiple']),
       accept: _str(j['accept']),
       autocomplete: _str(j['autocomplete']),
-      caption: _str(j['caption']),
+      caption: _text(j['caption']),
       format: _str(j['format']),
       excludeFromData: _bool(j['excludeFromData']),
       extra: _extra(j, _keys),
@@ -558,7 +649,7 @@ class UiFbFieldProps {
   String? autocomplete;
 
   /// Text shown next to a single checkbox or toggle.
-  String? caption;
+  UiFbText? caption;
 
   /// For calculated fields: `number`, `currency` or `text`.
   String? format;
@@ -584,7 +675,7 @@ class UiFbFieldProps {
     _put(out, 'multiple', multiple);
     _put(out, 'accept', accept);
     _put(out, 'autocomplete', autocomplete);
-    _put(out, 'caption', caption);
+    _put(out, 'caption', caption?.toJson());
     _put(out, 'format', format);
     _put(out, 'excludeFromData', excludeFromData);
     return _withExtra(out, extra);
@@ -648,7 +739,7 @@ class UiFbField extends UiFbElement {
     required this.type,
     required this.key,
     this.keyHistory,
-    this.label = '',
+    this.label = const UiFbText(''),
     this.help,
     this.placeholder,
     this.hasDefaultValue = false,
@@ -674,14 +765,14 @@ class UiFbField extends UiFbElement {
     type: UiFbFieldType(_str(j['type']) ?? 'text'),
     key: _str(j['key']) ?? '',
     keyHistory: _strings(j['keyHistory']),
-    label: _str(j['label']) ?? '',
-    help: _str(j['help']),
-    placeholder: _str(j['placeholder']),
+    label: _text(j['label']) ?? const UiFbText(''),
+    help: _text(j['help']),
+    placeholder: _text(j['placeholder']),
     hasDefaultValue: j.containsKey('defaultValue'),
     defaultValue: jsonClone(j['defaultValue']),
     readOnly: _bool(j['readOnly']),
     required: UiFbToggle.fromJson(j['required']),
-    requiredMessage: _str(j['requiredMessage']),
+    requiredMessage: _text(j['requiredMessage']),
     disabled: UiFbToggle.fromJson(j['disabled']),
     visibility: UiFbVisibility.fromJson(j['visibility']),
     options: _list(j['options'], UiFbOption.fromJson),
@@ -707,16 +798,16 @@ class UiFbField extends UiFbElement {
   UiFbFieldType type;
   String key;
   List<String>? keyHistory;
-  String label;
-  String? help;
-  String? placeholder;
+  UiFbText label;
+  UiFbText? help;
+  UiFbText? placeholder;
 
   /// Whether the JSON has a `defaultValue` (it may be `null`).
   bool hasDefaultValue;
   Object? defaultValue;
   bool? readOnly;
   UiFbToggle? required;
-  String? requiredMessage;
+  UiFbText? requiredMessage;
   UiFbToggle? disabled;
   @override
   UiFbVisibility? visibility;
@@ -739,13 +830,13 @@ class UiFbField extends UiFbElement {
   UiJson toJson() {
     final out = <String, Object?>{'kind': 'field', 'id': id, 'type': type.name, 'key': key};
     _put(out, 'keyHistory', keyHistory == null ? null : [...keyHistory!]);
-    out['label'] = label;
-    _put(out, 'help', help);
-    _put(out, 'placeholder', placeholder);
+    out['label'] = label.toJson();
+    _put(out, 'help', help?.toJson());
+    _put(out, 'placeholder', placeholder?.toJson());
     if (hasDefaultValue) out['defaultValue'] = jsonClone(defaultValue);
     _put(out, 'readOnly', readOnly);
     _put(out, 'required', required?.toJson());
-    _put(out, 'requiredMessage', requiredMessage);
+    _put(out, 'requiredMessage', requiredMessage?.toJson());
     _put(out, 'disabled', disabled?.toJson());
     _put(out, 'visibility', visibility?.toJson());
     _put(out, 'options', options?.map((o) => o.toJson()).toList());
@@ -769,8 +860,8 @@ class UiFbRepeat {
     return UiFbRepeat(
       min: _num(j['min']),
       max: _num(j['max']),
-      addLabel: _str(j['addLabel']),
-      itemLabel: _str(j['itemLabel']),
+      addLabel: _text(j['addLabel']),
+      itemLabel: _text(j['itemLabel']),
       extra: _extra(j, const {'min', 'max', 'addLabel', 'itemLabel'}),
     );
   }
@@ -779,18 +870,18 @@ class UiFbRepeat {
   num? max;
 
   /// Label of the "add another" button.
-  String? addLabel;
+  UiFbText? addLabel;
 
   /// Title of each entry; `{n}` is replaced by its number.
-  String? itemLabel;
+  UiFbText? itemLabel;
   final UiJson extra;
 
   UiJson toJson() {
     final out = <String, Object?>{};
     _put(out, 'min', min);
     _put(out, 'max', max);
-    _put(out, 'addLabel', addLabel);
-    _put(out, 'itemLabel', itemLabel);
+    _put(out, 'addLabel', addLabel?.toJson());
+    _put(out, 'itemLabel', itemLabel?.toJson());
     return _withExtra(out, extra);
   }
 }
@@ -815,8 +906,8 @@ class UiFbGroup extends UiFbElement {
 
   factory UiFbGroup.fromJson(UiJson j) => UiFbGroup(
     id: _str(j['id']) ?? '',
-    title: _str(j['title']),
-    description: _str(j['description']),
+    title: _text(j['title']),
+    description: _text(j['description']),
     key: _str(j['key']),
     keyHistory: _strings(j['keyHistory']),
     columns: _num(j['columns']),
@@ -833,8 +924,8 @@ class UiFbGroup extends UiFbElement {
   String get kind => 'group';
   @override
   String id;
-  String? title;
-  String? description;
+  UiFbText? title;
+  UiFbText? description;
 
   /// When set, the group's answers are nested under this key. Required for repeatable groups.
   String? key;
@@ -856,8 +947,8 @@ class UiFbGroup extends UiFbElement {
   @override
   UiJson toJson() {
     final out = <String, Object?>{'kind': 'group', 'id': id};
-    _put(out, 'title', title);
-    _put(out, 'description', description);
+    _put(out, 'title', title?.toJson());
+    _put(out, 'description', description?.toJson());
     _put(out, 'key', key);
     _put(out, 'keyHistory', keyHistory == null ? null : [...keyHistory!]);
     _put(out, 'columns', columns);
@@ -878,7 +969,7 @@ class UiFbStatic extends UiFbElement {
   factory UiFbStatic.fromJson(UiJson j) => UiFbStatic(
     id: _str(j['id']) ?? '',
     type: _str(j['type']) ?? 'paragraph',
-    text: _str(j['text']),
+    text: _text(j['text']),
     visibility: UiFbVisibility.fromJson(j['visibility']),
     layout: UiFbLayout.fromJson(j['layout']),
     archived: _bool(j['archived']),
@@ -892,7 +983,7 @@ class UiFbStatic extends UiFbElement {
 
   /// `heading`, `paragraph` or `divider`.
   String type;
-  String? text;
+  UiFbText? text;
   @override
   UiFbVisibility? visibility;
   UiFbLayout? layout;
@@ -904,7 +995,7 @@ class UiFbStatic extends UiFbElement {
   @override
   UiJson toJson() {
     final out = <String, Object?>{'kind': 'static', 'id': id, 'type': type};
-    _put(out, 'text', text);
+    _put(out, 'text', text?.toJson());
     _put(out, 'visibility', visibility?.toJson());
     _put(out, 'layout', layout?.toJson());
     _put(out, 'archived', archived);
@@ -944,8 +1035,8 @@ class UiFbPage {
     final j = _map(json);
     return UiFbPage(
       id: _str(j['id']) ?? '',
-      title: _str(j['title']),
-      description: _str(j['description']),
+      title: _text(j['title']),
+      description: _text(j['description']),
       visibility: UiFbVisibility.fromJson(j['visibility']),
       jumps: _list(j['jumps'], UiFbJump.fromJson),
       elements: _list(j['elements'], UiFbElement.fromJson) ?? [],
@@ -954,8 +1045,8 @@ class UiFbPage {
   }
 
   String id;
-  String? title;
-  String? description;
+  UiFbText? title;
+  UiFbText? description;
   UiFbVisibility? visibility;
 
   /// Checked in order after this page; the first that holds decides where to go next.
@@ -965,8 +1056,8 @@ class UiFbPage {
 
   UiJson toJson() {
     final out = <String, Object?>{'id': id};
-    _put(out, 'title', title);
-    _put(out, 'description', description);
+    _put(out, 'title', title?.toJson());
+    _put(out, 'description', description?.toJson());
     _put(out, 'visibility', visibility?.toJson());
     _put(out, 'jumps', jumps?.map((j) => j.toJson()).toList());
     out['elements'] = [for (final e in elements) e.toJson()];
@@ -998,9 +1089,9 @@ class UiFbSettings {
       clearHidden: _str(j['clearHidden']),
       errorSummary: _bool(j['errorSummary']),
       requiredMarker: _str(j['requiredMarker']),
-      submitLabel: _str(j['submitLabel']),
-      nextLabel: _str(j['nextLabel']),
-      backLabel: _str(j['backLabel']),
+      submitLabel: _text(j['submitLabel']),
+      nextLabel: _text(j['nextLabel']),
+      backLabel: _text(j['backLabel']),
       showProgress: _bool(j['showProgress']),
       extra: _extra(j, const {
         'labelPlacement', 'errorPlacement', 'validateOn', 'clearHidden', 'errorSummary', 'requiredMarker', //
@@ -1024,9 +1115,9 @@ class UiFbSettings {
 
   /// `asterisk`, `optional` or `none`.
   String? requiredMarker;
-  String? submitLabel;
-  String? nextLabel;
-  String? backLabel;
+  UiFbText? submitLabel;
+  UiFbText? nextLabel;
+  UiFbText? backLabel;
   bool? showProgress;
   final UiJson extra;
 
@@ -1040,9 +1131,9 @@ class UiFbSettings {
     _put(out, 'clearHidden', clearHidden);
     _put(out, 'errorSummary', errorSummary);
     _put(out, 'requiredMarker', requiredMarker);
-    _put(out, 'submitLabel', submitLabel);
-    _put(out, 'nextLabel', nextLabel);
-    _put(out, 'backLabel', backLabel);
+    _put(out, 'submitLabel', submitLabel?.toJson());
+    _put(out, 'nextLabel', nextLabel?.toJson());
+    _put(out, 'backLabel', backLabel?.toJson());
     _put(out, 'showProgress', showProgress);
     return _withExtra(out, extra);
   }
@@ -1054,6 +1145,8 @@ class UiFormDefinition {
     required this.id,
     required this.title,
     this.description,
+    this.defaultLocale,
+    this.supportedLocales,
     this.revision,
     this.settings,
     required this.pages,
@@ -1066,19 +1159,27 @@ class UiFormDefinition {
     return UiFormDefinition(
       schemaVersion: _num(j['schemaVersion'])?.toInt() ?? uiFbSchemaVersion,
       id: _str(j['id']) ?? '',
-      title: _str(j['title']) ?? '',
-      description: _str(j['description']),
+      title: _text(j['title']) ?? const UiFbText(''),
+      description: _text(j['description']),
+      defaultLocale: _str(j['defaultLocale']),
+      supportedLocales: _list(j['supportedLocales'], UiFbLocale.fromJson),
       revision: _num(j['revision']),
       settings: j['settings'] is Map ? UiFbSettings.fromJson(j['settings']) : null,
       pages: _list(j['pages'], UiFbPage.fromJson) ?? [],
-      extra: _extra(j, const {'schemaVersion', 'id', 'title', 'description', 'revision', 'settings', 'pages'}),
+      extra: _extra(j, const {'schemaVersion', 'id', 'title', 'description', 'defaultLocale', 'supportedLocales', 'revision', 'settings', 'pages'}),
     );
   }
 
   int schemaVersion;
   String id;
-  String title;
-  String? description;
+  UiFbText title;
+  UiFbText? description;
+
+  /// The language plain-string texts are written in, and the fallback for a missing translation. Default `en`.
+  String? defaultLocale;
+
+  /// Every language the form is offered in, the default one included. Default: just the default locale.
+  List<UiFbLocale>? supportedLocales;
 
   /// Bumped by the host each time it publishes; recorded on every submission.
   num? revision;
@@ -1090,8 +1191,10 @@ class UiFormDefinition {
   UiFormDefinition clone() => UiFormDefinition.fromJson(toJson());
 
   UiJson toJson() {
-    final out = <String, Object?>{'schemaVersion': schemaVersion, 'id': id, 'title': title};
-    _put(out, 'description', description);
+    final out = <String, Object?>{'schemaVersion': schemaVersion, 'id': id, 'title': title.toJson()};
+    _put(out, 'description', description?.toJson());
+    _put(out, 'defaultLocale', defaultLocale);
+    _put(out, 'supportedLocales', supportedLocales?.map((l) => l.toJson()).toList());
     _put(out, 'revision', revision);
     _put(out, 'settings', settings?.toJson());
     out['pages'] = [for (final p in pages) p.toJson()];
@@ -1135,20 +1238,78 @@ class UiFbPickedFile {
   final Object? handle;
 }
 
+/// One answer of a submission: where it sits in `data` and what kind of value it is.
+class UiFbSubmissionField {
+  const UiFbSubmissionField({required this.path, required this.key, required this.label, required this.type});
+
+  factory UiFbSubmissionField.fromJson(Object? json) {
+    final j = _map(json);
+    return UiFbSubmissionField(
+      path: _str(j['path']) ?? '',
+      key: _str(j['key']) ?? '',
+      label: _str(j['label']) ?? '',
+      type: UiFbFieldType(_str(j['type']) ?? 'text'),
+    );
+  }
+
+  /// Path in `data`: `name`, `address.city`, `children[].age` for a repeating section.
+  final String path;
+  final String key;
+
+  /// The label in the submission's locale.
+  final String label;
+  final UiFbFieldType type;
+
+  UiJson toJson() => {'path': path, 'key': key, 'label': label, 'type': type.name};
+}
+
+/// Host-supplied linkage copied onto each submission. Never stored in the form definition.
+class UiFbSubmissionLink {
+  const UiFbSubmissionLink({this.workflowId, this.serviceCode});
+  final String? workflowId;
+  final String? serviceCode;
+}
+
 /// Emitted when a form is submitted. `data` is the JSON to store.
 class UiFormSubmission {
-  const UiFormSubmission({required this.formId, required this.revision, required this.data, required this.submittedAt, required this.files});
+  const UiFormSubmission({
+    required this.formId,
+    required this.revision,
+    required this.locale,
+    required this.data,
+    required this.submittedAt,
+    this.workflowId,
+    this.serviceCode,
+    this.fields = const [],
+    required this.files,
+  });
   final String formId;
   final num? revision;
+
+  /// The language the form was filled in.
+  final String locale;
   final UiJson data;
 
   /// ISO 8601 in UTC with milliseconds, like JS `toISOString()`.
   final String submittedAt;
 
+  /// Set by the host (the renderer's `link`) so a workflow can tell which process the answers belong to.
+  final String? workflowId;
+  final String? serviceCode;
+
+  /// What each answer in `data` is, so a workflow can build conditions on them without the form definition.
+  final List<UiFbSubmissionField> fields;
+
   /// Files picked in this session that have no uploader URL yet, keyed by data path.
   final Map<String, List<UiFbPickedFile>> files;
 
-  UiJson toJson() => {'formId': formId, 'revision': revision, 'data': data, 'submittedAt': submittedAt};
+  UiJson toJson() {
+    final out = <String, Object?>{'formId': formId, 'revision': revision, 'locale': locale, 'data': data, 'submittedAt': submittedAt};
+    _put(out, 'workflowId', workflowId);
+    _put(out, 'serviceCode', serviceCode);
+    out['fields'] = [for (final f in fields) f.toJson()];
+    return out;
+  }
 }
 
 /// One difference between the data a form was opened with and its current data.

@@ -17,6 +17,7 @@ export '../workflow/history.dart' show wfDescribeHistory;
 export '../workflow/layout.dart';
 export '../workflow/schema.dart';
 export '../workflow/store.dart';
+export '../workflow/submission_bridge.dart';
 export '../workflow/tasks_drawer.dart' show UiWorkflowTasksDrawer, UiWorkflowTasksDrawerState;
 export '../workflow/scope.dart' show UiWorkflowBuilderLayout;
 export '../workflow/workflow_builder.dart';

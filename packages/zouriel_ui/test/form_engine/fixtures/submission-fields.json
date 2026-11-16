@@ -1,0 +1,357 @@
+{
+  "kind": "submissionFields",
+  "cases": [
+    {
+      "name": "in the default language",
+      "definition": {
+        "schemaVersion": 2,
+        "id": "s",
+        "title": "S",
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": {
+                  "en": "Name",
+                  "dv": "ނަން"
+                }
+              },
+              {
+                "kind": "static",
+                "id": "h",
+                "type": "heading",
+                "text": "Heading"
+              },
+              {
+                "kind": "group",
+                "id": "g1",
+                "key": "address",
+                "title": "Address",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "b",
+                    "type": "text",
+                    "key": "city",
+                    "label": "City"
+                  }
+                ]
+              },
+              {
+                "kind": "group",
+                "id": "g2",
+                "title": "Plain section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "number",
+                    "key": "rooms",
+                    "label": {
+                      "dv": "ކޮޓަރި"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "text",
+                "key": "old",
+                "label": "Old",
+                "archived": true
+              },
+              {
+                "kind": "field",
+                "id": "e",
+                "type": "calculated",
+                "key": "total",
+                "label": "Total",
+                "calc": {
+                  "op": "sum",
+                  "args": []
+                },
+                "props": {
+                  "excludeFromData": true
+                }
+              },
+              {
+                "kind": "field",
+                "id": "f",
+                "type": "hidden",
+                "key": "ref",
+                "label": ""
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "g3",
+                "key": "children",
+                "repeat": {
+                  "min": 0
+                },
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "i",
+                    "type": "number",
+                    "key": "age",
+                    "label": "Age"
+                  },
+                  {
+                    "kind": "group",
+                    "id": "g4",
+                    "key": "toys",
+                    "title": "Toys",
+                    "elements": [
+                      {
+                        "kind": "field",
+                        "id": "j",
+                        "type": "text",
+                        "key": "toy",
+                        "label": "Toy"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "locale": null,
+      "expected": [
+        {
+          "path": "name",
+          "key": "name",
+          "label": "Name",
+          "type": "text"
+        },
+        {
+          "path": "address.city",
+          "key": "city",
+          "label": "City",
+          "type": "text"
+        },
+        {
+          "path": "rooms",
+          "key": "rooms",
+          "label": "ކޮޓަރި",
+          "type": "number"
+        },
+        {
+          "path": "ref",
+          "key": "ref",
+          "label": "ref",
+          "type": "hidden"
+        },
+        {
+          "path": "children[].age",
+          "key": "age",
+          "label": "Age",
+          "type": "number"
+        },
+        {
+          "path": "children[].toys.toy",
+          "key": "toy",
+          "label": "Toy",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "name": "in another language",
+      "definition": {
+        "schemaVersion": 2,
+        "id": "s",
+        "title": "S",
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p1",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": {
+                  "en": "Name",
+                  "dv": "ނަން"
+                }
+              },
+              {
+                "kind": "static",
+                "id": "h",
+                "type": "heading",
+                "text": "Heading"
+              },
+              {
+                "kind": "group",
+                "id": "g1",
+                "key": "address",
+                "title": "Address",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "b",
+                    "type": "text",
+                    "key": "city",
+                    "label": "City"
+                  }
+                ]
+              },
+              {
+                "kind": "group",
+                "id": "g2",
+                "title": "Plain section",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "c",
+                    "type": "number",
+                    "key": "rooms",
+                    "label": {
+                      "dv": "ކޮޓަރި"
+                    }
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "d",
+                "type": "text",
+                "key": "old",
+                "label": "Old",
+                "archived": true
+              },
+              {
+                "kind": "field",
+                "id": "e",
+                "type": "calculated",
+                "key": "total",
+                "label": "Total",
+                "calc": {
+                  "op": "sum",
+                  "args": []
+                },
+                "props": {
+                  "excludeFromData": true
+                }
+              },
+              {
+                "kind": "field",
+                "id": "f",
+                "type": "hidden",
+                "key": "ref",
+                "label": ""
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "elements": [
+              {
+                "kind": "group",
+                "id": "g3",
+                "key": "children",
+                "repeat": {
+                  "min": 0
+                },
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "i",
+                    "type": "number",
+                    "key": "age",
+                    "label": "Age"
+                  },
+                  {
+                    "kind": "group",
+                    "id": "g4",
+                    "key": "toys",
+                    "title": "Toys",
+                    "elements": [
+                      {
+                        "kind": "field",
+                        "id": "j",
+                        "type": "text",
+                        "key": "toy",
+                        "label": "Toy"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "locale": "dv",
+      "expected": [
+        {
+          "path": "name",
+          "key": "name",
+          "label": "ނަން",
+          "type": "text"
+        },
+        {
+          "path": "address.city",
+          "key": "city",
+          "label": "City",
+          "type": "text"
+        },
+        {
+          "path": "rooms",
+          "key": "rooms",
+          "label": "ކޮޓަރި",
+          "type": "number"
+        },
+        {
+          "path": "ref",
+          "key": "ref",
+          "label": "ref",
+          "type": "hidden"
+        },
+        {
+          "path": "children[].age",
+          "key": "age",
+          "label": "Age",
+          "type": "number"
+        },
+        {
+          "path": "children[].toys.toy",
+          "key": "toy",
+          "label": "Toy",
+          "type": "text"
+        }
+      ]
+    }
+  ]
+}

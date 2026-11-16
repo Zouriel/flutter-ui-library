@@ -179,10 +179,13 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     return p == 'inside' && _info.textLike;
   }
 
-  String get _placeholder => _labelPos == 'inside' ? '' : (_f.placeholder ?? '');
+  String get _labelText => _e.text(_f.label);
+  String get _helpText => _e.text(_f.help);
+  String get _captionText => _e.text(_f.props?.caption);
+  String get _placeholder => _labelPos == 'inside' ? '' : _e.text(_f.placeholder);
 
   List<({String label, String value})> _options(Object? v) {
-    final live = [for (final o in _f.options ?? const <UiFbOption>[]) if (o.archived != true) (label: o.label, value: o.value)];
+    final live = [for (final o in _f.options ?? const <UiFbOption>[]) if (o.archived != true) (label: _e.text(o.label), value: o.value)];
     final chosen = [for (final x in (v is List ? v : (isEmptyValue(v) ? const [] : [v]))) jsString(x)];
     for (final c in chosen) {
       if (live.any((o) => o.value == c)) continue;
@@ -191,7 +194,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         if (o.value == c) old = o;
       }
       // Old answers show (and stay chosen) instead of silently vanishing.
-      live.add((label: '${old?.label ?? c} (no longer offered)', value: c));
+      live.add((label: '${old != null ? _e.text(old.label) : c} (no longer offered)', value: c));
     }
     return live;
   }
@@ -270,7 +273,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     final shown = st.errors.isNotEmpty && _e.errorsShown(_f.id, widget.row);
     final error = shown ? st.errors.first : '';
     final warnings = _e.errorsShown(_f.id, widget.row) ? st.warnings : const <String>[];
-    final display = formatValue(_f, st.value);
+    final display = formatValue(_f, st.value, textLocale: _e.locale, defaultLocale: _e.defaultLocale);
     final pos = _labelPos;
     final small = ty.body.copyWith(fontSize: t.fontSizeSm, height: 1.35);
 
@@ -293,14 +296,14 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         focusNode: _wrap,
         onFocusChange: _onFocusChange,
         child: UiFieldScope(
-          label: _f.label,
+          label: _labelText,
           invalid: shown,
           required: st.required,
           link: _link,
           child: _decorated(context, st, shown, error, display),
         ),
       ));
-      if (_f.help != null && _f.help!.isNotEmpty) body.add(Text(_f.help!, style: small.copyWith(color: t.textSecondary)));
+      if (_helpText.isNotEmpty) body.add(Text(_helpText, style: small.copyWith(color: t.textSecondary)));
       if (shown) {
         final announced = Semantics(liveRegion: true, container: true, label: 'Error: $error', child: const SizedBox.shrink());
         body.add(_errInside
@@ -356,7 +359,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     final marker = _e.settings.requiredMarker;
     final text = Text.rich(
       TextSpan(children: [
-        TextSpan(text: _f.label),
+        TextSpan(text: _labelText),
         if (marker == 'asterisk' && st.required) TextSpan(text: ' *', style: TextStyle(color: t.danger), semanticsLabel: ''),
         if (marker == 'optional' && !st.required && !_viewing && _f.type != UiFbFieldType.calculated)
           TextSpan(text: ' (optional)', style: TextStyle(color: t.textMuted, fontWeight: FontWeight.w400)),
@@ -415,7 +418,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
                         child: ExcludeSemantics(
                           child: Text.rich(
                             TextSpan(children: [
-                              TextSpan(text: _f.label),
+                              TextSpan(text: _labelText),
                               if (_e.settings.requiredMarker == 'asterisk' && st.required) TextSpan(text: ' *', style: TextStyle(color: t.danger)),
                             ]),
                             maxLines: 1,
@@ -501,7 +504,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           suffix: f.type == UiFbFieldType.currency ? (p?.currency ?? '') : (p?.suffix ?? ''),
           steppers: f.type != UiFbFieldType.currency,
           placeholder: _placeholder,
-          semanticLabel: f.label,
+          semanticLabel: _labelText,
           invalid: invalid,
           enabled: enabled,
         );
@@ -542,7 +545,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           value: text.isEmpty ? null : text,
           onChanged: _set,
           placeholder: _placeholder.isNotEmpty ? _placeholder : 'Choose…',
-          label: f.label,
+          label: _labelText,
           invalid: invalid,
           enabled: enabled,
         );
@@ -551,7 +554,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           options: [for (final o in _options(v)) UiRadioOption(label: o.label, value: o.value)],
           value: text.isEmpty ? null : text,
           onChanged: enabled ? _set : null,
-          label: f.label,
+          label: _labelText,
           direction: p?.orientation == 'horizontal' ? Axis.horizontal : Axis.vertical,
         );
       case UiFbFieldType.checkboxes:
@@ -559,7 +562,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           options: [for (final o in _options(v)) UiCheckboxOption(label: o.label, value: o.value)],
           value: list,
           onChanged: enabled ? _set : null,
-          label: f.label,
+          label: _labelText,
           direction: p?.orientation == 'horizontal' ? Axis.horizontal : Axis.vertical,
           selectAll: p?.selectAll == true,
         );
@@ -569,22 +572,22 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           value: list,
           onChanged: _set,
           placeholder: _placeholder.isNotEmpty ? _placeholder : 'Choose…',
-          label: f.label,
+          label: _labelText,
           invalid: invalid,
           enabled: enabled,
         );
       case UiFbFieldType.checkbox:
         return Align(
           alignment: AlignmentDirectional.centerStart,
-          child: UiCheckbox(value: v == true, onChanged: enabled ? _set : null, label: p?.caption ?? f.label, invalid: invalid),
+          child: UiCheckbox(value: v == true, onChanged: enabled ? _set : null, label: _captionText.isNotEmpty ? _captionText : _labelText, invalid: invalid),
         );
       case UiFbFieldType.toggle:
         return Align(
           alignment: AlignmentDirectional.centerStart,
-          child: UiSwitch(value: v == true, onChanged: enabled ? _set : null, label: p?.caption ?? 'Yes', semanticLabel: '${f.label}: ${p?.caption ?? 'Yes'}'),
+          child: UiSwitch(value: v == true, onChanged: enabled ? _set : null, label: _captionText.isNotEmpty ? _captionText : 'Yes', semanticLabel: '$_labelText: ${_captionText.isNotEmpty ? _captionText : 'Yes'}'),
         );
       case UiFbFieldType.rating:
-        return UiRating(value: v is num ? v.toInt() : 0, onChanged: enabled ? _set : null, max: (p?.maxRating ?? 5).toInt(), label: f.label);
+        return UiRating(value: v is num ? v.toInt() : 0, onChanged: enabled ? _set : null, max: (p?.maxRating ?? 5).toInt(), label: _labelText);
       case UiFbFieldType.slider:
         final min = (p?.min ?? 0).toDouble();
         return UiSlider(
@@ -593,13 +596,13 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           min: min,
           max: (p?.max ?? 10).toDouble(),
           step: (p?.step ?? 1).toDouble(),
-          label: f.label,
+          label: _labelText,
         );
       case UiFbFieldType.file:
         return _fileControl(context, st);
       case UiFbFieldType.calculated:
         return Semantics(
-          label: f.label,
+          label: _labelText,
           value: display.isEmpty ? 'Worked out as you answer' : display,
           readOnly: true,
           container: true,

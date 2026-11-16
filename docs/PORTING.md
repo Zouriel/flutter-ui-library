@@ -1390,3 +1390,108 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
 - Series colours are `t.chart1..4` from the generated tokens (`--ui-chart-1..4`). No forced-colours variant: Flutter has
   no such mode; `MediaQuery.highContrast` is not handled.
 - Under RTL the bands, the bar order inside a group and the y axis mirror.
+
+## Form builder schema 2: localized text
+
+- The web `UiFbLocalizedText = string | Record<string, string>` is `UiFbText` here (`engine/schema.dart`), a small
+  immutable class holding either a `plain` String or a `map` of locale code to text. Dart has no union types, and a
+  bare `Object` would push `is String` / `is Map` checks into every renderer and editor call site. A class keeps the
+  JSON shape exact (`UiFbText.fromJson` reads a string or an object, `toJson()` writes it back as the same kind, key
+  order kept, input and output maps are copies), has value equality (the editor compares texts) and costs one
+  object per text. `const UiFbText('Name')` is the plain case; `UiFbText.localized({...})` the map.
+- Every user-facing text in the schema (labels, titles, descriptions, help, placeholders, captions, option labels,
+  validator and required messages, static text, repeat labels, settings button labels) is `UiFbText` / `UiFbText?`.
+  Read one with `fbText(text, locale, defaultLocale)`, write one with `fbSetText(...)` (returns a new `UiFbText`;
+  texts are never edited in place). The helpers in `engine/localize.dart` are the web `localize.ts` one to one:
+  `fbText`, `fbTextIn`, `fbSetText`, `fbLocales`, `fbResolveLocale`, `fbLocaleDir`, `fbDefaultLocale`,
+  `fbDefaultDir`, `fbLocaleName`, `fbBaseLocale`, `fbIsLocalized`; `UI_FB_DEFAULT_LOCALE` is `uiFbDefaultLocale`.
+- Optional arguments are positional (`fbText(t, 'dv', 'en')`), like the web. The web helpers take a
+  `Pick<UiFormDefinition, ...>`; the Dart ones take the whole `UiFormDefinition?`.
+- `fbLocales` returns `UiFbResolvedLocale` (code, label and dir all non-null) instead of the web's `Required<UiFbLocale>`.
+- `UiFbDir` is a string-backed extension type (`UiFbDir.ltr` / `UiFbDir.rtl`), like the other schema enums.
+- `UiFormSubmission` gains `locale`, `workflowId`, `serviceCode` and `fields` (`UiFbSubmissionField`); the host's
+  linkage is `UiFbSubmissionLink`. `uiFbSchemaVersion` is 2.
+
+## Form builder revisions (history and rollback)
+
+- Port of `revisions.ts` (`engine/revisions.dart`, pure Dart, exported from `areas/form_engine.dart`) and
+  `builder-revisions.ts` (`editor/builder_revisions.dart`, `UiFbRevisionPanel`, exported from `areas/form_editor.dart`).
+  `rollbackDefinition` follows the web rules step for step (deep copy of the target; current `id` and `revision`;
+  merged `keyHistory`; archived options and elements appended); `test/form_engine/revisions_test.dart` ports every
+  case of `revisions.spec.ts`.
+- `UiFbMaybeAsync<T>` is `FutureOr<T>`. `UiFbRevisionStore` is an `abstract interface class`, so apps implement it.
+  `UiFbRevision` is a class with `toJson` / `fromJson` / `clone` (the web uses a plain interface); `getRevision`
+  takes an `int` and `revision` is an `int` (the definition's own `revision` stays `num?`).
+- `fbCreateRevision(def, previous: ..., meta: UiFbRevisionMeta(...))`: both are named parameters (the web's are
+  positional `previous?, meta?`). `UiFbRevisionMeta` is a const class.
+- `UiFbMemoryRevisionStore` is a `ChangeNotifier`: `all` and `revisions(formId)` are `ValueListenable`s where the
+  web has signals (`all()`, `revisions(id)()`); `clear([formId])` and `listRevisions` are the same.
+- The package has no storage layer (no shared_preferences, no localStorage), so the web's `storageKey` option
+  becomes a `load` / `save` pair: `load` returns the JSON text `save` last got (or null), both may throw (then the
+  history stays in memory), e.g. `UiFbMemoryRevisionStore(load: () => prefs.getString('rev'), save: (j) => prefs.setString('rev', j))`.
+- A missing revision throws `UiFbRevisionError` (the web throws `Error`); the panel shows any error's text.
+- `UiFbRevisionPanel` shows the date with `intl` (`yMMMd` + `jm`, device locale) where the web uses `Intl.DateTimeFormat`.
+  Its Restore confirmation is `showUiConfirm` (the web hosts a `ui-confirm-dialog` in the panel), same wording.
+- `UiFormBuilder` gets `revisionStore` and `onRestored`; the History button opens the panel in a right drawer, and a
+  restore loads the draft as one undo step, closes the drawer, shows "Loaded the earlier version as a draft" with Undo.
+
+
+### Form builder schema 2: engine, renderer and lint
+
+- `migrateDefinition`, `createDefinition`, `elementName(el, def?, locale?)`, `lintTranslations` (run inside
+  `lintDefinition`, same messages), `diffDefinitions` (`textChanged`, `localesAdded`, `localesRemoved`) and
+  `fbSubmissionFields(def, [locale])` are the web functions one to one, checked by the shared fixtures
+  (`localize.json`, `migrate.json`, `submission-fields.json`, `engine-locale.json`, extended `definition.json`).
+- `UiFormEngine` takes `locale` and `link`; `locale`, `dir`, `locales`, `defaultLocale` are plain getters (no signals),
+  `setLocale` re-words everything and notifies the listeners, `setLink` only changes what later submissions carry,
+  `text(t)` resolves a `UiFbText`. Async check results are stored raw (`null` passed, a String or `false` failed) and
+  worded on read, so a language switch re-words them too. `UiFormSubmission.toJson()` keeps the web's key order
+  (`formId, revision, locale, data, submittedAt, workflowId, serviceCode, fields`) and leaves the link keys out when unset.
+- `formatValue` / `optionLabel`: the web's `locale` / `defaultLocale` arguments are named `textLocale` / `defaultLocale`
+  here, because `formatValue`'s existing `locale` is the intl number and date locale.
+- `UiFormRenderer` gets `locale` and `link`. Changing either keeps the engine (and the answers); a new `today` closure,
+  `definition`, `data` or `mode` still restarts it (so pass a stable `today` function). The content sits in a
+  `Directionality` from `fbLocaleDir`; the error summary border is `BorderDirectional`; everything else was already
+  start/end based. There is no `lang` attribute to set on Flutter.
+- Existing renderer tests (`test/form_renderer`) compare field labels with `fbText(field.label)` now that labels are `UiFbText`.
+
+## Form submission to workflow (submission bridge)
+
+- `lib/src/workflow/submission_bridge.dart` is `submission-bridge.ts` one to one (exported from the workflow area). The
+  form builder folder holds nothing about it: routing, queues and approvals only live in the workflow definition.
+- Dart has no structural `Pick<>` types or optional-property objects, so: `wfPickWorkflow(bindings, formId:, workflowId:,
+  serviceCode:)` takes the three keys as named arguments (bindings are `UiWfSubmissionBinding`s or bare
+  `UiWorkflowDefinition`s in a `List<Object>`); `wfRouteSubmission(def, s, {decisions, registry, today})` takes the web
+  options as named arguments; `s` (also in `wfConditionHolds`) is a `UiFormSubmission` or a `UiWfSubmissionPayload`
+  (typed `Object`). `wfSubmissionRegistry(fields, {roles, groups, channels, entity, entityLabel})` likewise.
+- `UiWfSubmissionPayload` is a class with `toJson()` (plain JSON, no files, link keys left out when unset); the web
+  returns a plain object. `UiWfRoute`/`UiWfRouteStep`/`UiWfRouteDecision` are classes; `result` stays a string
+  (`completed` / `failed`).
+- `wfStartFromSubmission(api, wf, s)` takes the whole `UiWorkflowApi` (no `Pick<>`; a test fake extends it) and throws a
+  `StateError` synchronously when files are picked, like the web throws before returning the promise.
+- `wfFormFields(form, [locale])` reads a localized label (a string or a locale map in the form JSON) with `fbText`, in
+  `locale`, else the form's default language (`defaultLocale`, else the first supported locale, else `en`).
+- Showcase: `form-workflow` page (Flagship group, after Workflow components). It adds a language switcher for
+  the form (`UiSegmented` over `fbLocales`, driving the renderer's `locale`), which the web page does not have.
+
+## Form builder editor: languages (multilingual editing)
+
+- Port of the web builder's multilingual editing. `UiFormBuilderController` gets the web store's language API under the
+  same names as getters (`locales`, `defaultLocale`, `multilingual`, `editLocale`, `editDir`, `defaultDir`, `translating`)
+  and methods (`setEditLocale`, `text`, `defaultText`, `shown`, `setText`, `addLocale`, `removeLocale`, `setDefaultLocale`,
+  `setLocaleDir`, `replace`). `addLocale(code, {label, dir})` takes its optional parts as named arguments.
+  `setTextOpt(current, value)` is an extra: `setText` that gives null for an empty optional text (the web's `|| undefined`).
+- `removeLocale` strips the code from the definition's JSON (any map of strings that has the code as a key, except
+  `supportedLocales`), then runs `migrateDefinition`, so it is one undoable commit. `replace(raw)` migrates, keeps the
+  host's `revision`, and is one undo step.
+- The key of a question, section or option follows the default-language text only (never while `translating`).
+- Inputs read `store.text(t)` and write `store.setText(...)` with `dir` set from the edit language; `FbSetting(trans: ...)`
+  adds the default-language hint (`FbTransHint`, the web `ui-fb-trans`) under the input. Option labels, the required
+  message and a check's message show the default text as placeholder instead, like the web.
+- `UiFbBuilderScope.maybeOf` lets `UiFbSettingsFields` work outside a builder (global settings): there it reads and writes plain text.
+- The canvas wraps the page in a `Directionality` of the edit language; its mock boxes and the section edge use
+  directional alignment and borders.
+- Toolbar: a compact "Languages" button with one language; with more, a `UiSegmented` language switcher and an icon-only
+  button. The dialog is `showUiModal` with `UiFbLanguages` (not exported, as on the web). Preview has its own language
+  switcher (only with more than one language) that starts at, and resets to, the edit language when that changes.
+- Goldens `builder_phone*.png` and `builder_tablet.png` were regenerated: the toolbar has the Languages button.

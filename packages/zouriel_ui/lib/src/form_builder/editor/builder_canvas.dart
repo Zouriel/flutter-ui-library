@@ -138,7 +138,10 @@ class _UiFbCanvasState extends State<UiFbCanvas> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 760),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+                      // The page reads in the language being edited, right to left for Thaana or Arabic.
+                      child: Directionality(
+                        textDirection: store.editDir == UiFbDir.rtl ? TextDirection.rtl : TextDirection.ltr,
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
                         _FormHead(store: store, onPicked: widget.onPicked, onOpenForm: widget.onOpenForm),
                         if (def.pages.length > 1) _PageHead(store: store, onOpen: widget.onOpen, onDelete: widget.onDeleteRequest),
                         _ListBox(
@@ -156,6 +159,7 @@ class _UiFbCanvasState extends State<UiFbCanvas> {
                             onTap: () => widget.onAddAt?.call(UiFbDropTarget(containerId: page.id, index: page.elements.length)),
                           ),
                       ]),
+                      ),
                     ),
                   ),
                 ),
@@ -185,7 +189,7 @@ class _UiFbCanvasState extends State<UiFbCanvas> {
     if (entry != null && store.index[entry.parentId]?.kind == 'group') items.add(const UiMenuItem(label: 'Move out of the section', value: 'out'));
     final pages = store.def.pages;
     for (var i = 0; i < pages.length; i++) {
-      if (pages[i].id != entry?.page.id) items.add(UiMenuItem(label: 'Move to ${(pages[i].title ?? '').isNotEmpty ? pages[i].title : 'Page ${i + 1}'}', value: 'page:${pages[i].id}'));
+      if (pages[i].id != entry?.page.id) items.add(UiMenuItem(label: 'Move to ${store.shown(pages[i].title).isNotEmpty ? store.shown(pages[i].title) : 'Page ${i + 1}'}', value: 'page:${pages[i].id}'));
     }
     items.add(el.archived == true ? const UiMenuItem(label: 'Restore', value: 'restore') : const UiMenuItem(label: 'Archive (hide, keep answers)', value: 'archive'));
     return items;
@@ -460,7 +464,8 @@ class _ItemCard extends StatelessWidget {
     final f = el is UiFbField ? el as UiFbField : null;
     final info = f == null ? null : fieldTypeInfo(f.type);
     final name = store.name(el.id);
-    final label = f != null ? '${f.label.isNotEmpty ? f.label : info!.label}, ${info!.label} field' : name;
+    final shownLabel = f == null ? '' : store.shown(f.label);
+    final label = f != null ? '${shownLabel.isNotEmpty ? shownLabel : info!.label}, ${info!.label} field' : name;
     final badges = _badges(store, el);
 
     Widget head;
@@ -475,10 +480,10 @@ class _ItemCard extends StatelessWidget {
         ),
         Text.rich(
           TextSpan(
-            text: f.label.isNotEmpty ? f.label : 'No label',
+            text: shownLabel.isNotEmpty ? shownLabel : 'No label',
             children: [if (f.required?.flag == true) TextSpan(text: ' *', style: TextStyle(color: t.danger))],
           ),
-          style: f.label.isNotEmpty
+          style: shownLabel.isNotEmpty
               ? context.uiText.label.copyWith(fontSize: 13 * context.ui.fontScale, fontWeight: FontWeight.w500, color: t.text)
               : context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, fontStyle: FontStyle.italic, color: t.textMuted),
         ),
@@ -487,9 +492,9 @@ class _ItemCard extends StatelessWidget {
     } else {
       final s = el as UiFbStatic;
       final text = switch (s.type) {
-        'heading' => Text((s.text ?? '').isNotEmpty ? s.text! : 'Heading', style: context.uiText.h6.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text)),
+        'heading' => Text(store.shown(s.text).isNotEmpty ? store.shown(s.text) : 'Heading', style: context.uiText.h6.copyWith(fontSize: 15 * context.ui.fontScale, color: t.text)),
         'paragraph' => Text(
-          (s.text ?? '').isNotEmpty ? s.text! : 'Text block',
+          store.shown(s.text).isNotEmpty ? store.shown(s.text) : 'Text block',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: context.uiText.body.copyWith(fontSize: 12, height: 1.4, color: t.textSecondary),
@@ -518,12 +523,12 @@ class _ItemCard extends StatelessWidget {
       actions: host.actions(store, el.id),
       builder: (context, s) => Container(
         width: double.infinity,
-        padding: EdgeInsets.fromLTRB(0, t.space2, t.space2, t.space2),
+        padding: EdgeInsetsDirectional.fromSTEB(0, t.space2, t.space2, t.space2),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radius), boxShadow: s.focused ? t.focusRing : null),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 6, children: [
           head,
           if (f != null) _Mock(field: f, store: store),
-          if (f?.help != null && f!.help!.isNotEmpty) Text(f.help!, style: context.uiText.body.copyWith(fontSize: 12, height: 1.35, color: t.textMuted)),
+          if (f != null && store.shown(f.help).isNotEmpty) Text(store.shown(f.help), style: context.uiText.body.copyWith(fontSize: 12, height: 1.35, color: t.textMuted)),
         ]),
       ),
     );
@@ -573,7 +578,7 @@ class _CardFrame extends StatelessWidget {
       ),
       foregroundDecoration: repeat
           ? BoxDecoration(
-              border: Border(left: BorderSide(color: t.primary.withValues(alpha: 0.4), width: 2)),
+              border: BorderDirectional(start: BorderSide(color: t.primary.withValues(alpha: 0.4), width: 2)),
               borderRadius: BorderRadius.circular(t.radius),
             )
           : null,
@@ -635,7 +640,7 @@ class _GroupCard extends StatelessWidget {
     final store = UiFbBuilderScope.of(context);
     final dnd = host._dndFor(store);
     final selected = store.selectedId == g.id;
-    final title = (g.title ?? '').isNotEmpty ? g.title! : (g.repeat != null ? 'Repeating section' : 'Section');
+    final title = store.shown(g.title).isNotEmpty ? store.shown(g.title) : (g.repeat != null ? 'Repeating section' : 'Section');
     final badges = _badges(store, g);
 
     final head = UiInteractive(
@@ -656,8 +661,8 @@ class _GroupCard extends StatelessWidget {
       builder: (context, s) => Container(
         width: double.infinity,
         constraints: const BoxConstraints(minHeight: 40),
-        padding: EdgeInsets.fromLTRB(0, 4, t.space2, 4),
-        alignment: Alignment.centerLeft,
+        padding: EdgeInsetsDirectional.fromSTEB(0, 4, t.space2, 4),
+        alignment: AlignmentDirectional.centerStart,
         decoration: BoxDecoration(boxShadow: s.focused ? t.focusRing : null),
         child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           Container(
@@ -732,7 +737,7 @@ class _Mock extends StatelessWidget {
     Widget box(String text, {double height = 28, Widget? trailing, bool dashed = false, Color? bg, TextStyle? style}) => Container(
       height: height,
       padding: EdgeInsets.symmetric(horizontal: t.space2, vertical: height > 40 ? 6 : 0),
-      alignment: height > 40 ? Alignment.topLeft : Alignment.centerLeft,
+      alignment: height > 40 ? AlignmentDirectional.topStart : AlignmentDirectional.centerStart,
       decoration: BoxDecoration(
         color: bg ?? t.bg,
         border: Border.all(color: dashed ? t.border : t.borderSubtle),
@@ -752,33 +757,33 @@ class _Mock extends StatelessWidget {
     Widget opts({required bool round}) {
       final live = [for (final o in f.options ?? const <UiFbOption>[]) if (o.archived != true) o];
       return Wrap(spacing: t.space3, runSpacing: 4, children: [
-        for (final o in live.take(3)) choice(mark(round: round), o.label),
+        for (final o in live.take(3)) choice(mark(round: round), store.shown(o.label)),
         if (live.length > 3) Text('+${live.length - 3} more', style: muted),
       ]);
     }
 
     final chevron = UiIcon(HugeIcons.strokeRoundedArrowDown01, size: 13, color: t.textMuted);
     final mock = switch (f.type.name) {
-      'textarea' => box(f.placeholder ?? '', height: 52),
+      'textarea' => box(store.shown(f.placeholder), height: 52),
       'select' || 'multiselect' => box(
-        f.source != null ? 'Search ${_sourceName(store, f).toLowerCase()}…' : ((f.placeholder ?? '').isNotEmpty ? f.placeholder! : 'Choose…'),
+        f.source != null ? 'Search ${_sourceName(store, f).toLowerCase()}…' : (store.shown(f.placeholder).isNotEmpty ? store.shown(f.placeholder) : 'Choose…'),
         trailing: chevron,
       ),
       'radio' => opts(round: true),
       'checkboxes' => opts(round: false),
-      'checkbox' => choice(mark(round: false), f.props?.caption ?? f.label),
+      'checkbox' => choice(mark(round: false), store.shown(f.props?.caption).isNotEmpty ? store.shown(f.props?.caption) : store.shown(f.label)),
       'toggle' => choice(
         Container(
           width: 24,
           height: 14,
           padding: const EdgeInsets.all(2),
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           decoration: BoxDecoration(color: t.track, borderRadius: BorderRadius.circular(7)),
           child: Container(width: 10, height: 10, decoration: BoxDecoration(color: t.textMuted, shape: BoxShape.circle)),
         ),
-        f.props?.caption ?? 'Yes',
+        store.shown(f.props?.caption).isNotEmpty ? store.shown(f.props?.caption) : 'Yes',
       ),
-      'date' => box((f.placeholder ?? '').isNotEmpty ? f.placeholder! : 'Select a date', trailing: UiIcon(HugeIcons.strokeRoundedCalendar01, size: 13, color: t.textMuted)),
+      'date' => box(store.shown(f.placeholder).isNotEmpty ? store.shown(f.placeholder) : 'Select a date', trailing: UiIcon(HugeIcons.strokeRoundedCalendar01, size: 13, color: t.textMuted)),
       'time' => box('--:--', trailing: UiIcon(HugeIcons.strokeRoundedClock02, size: 13, color: t.textMuted)),
       'rating' => Row(mainAxisSize: MainAxisSize.min, spacing: 2, children: [
         for (var i = 0; i < ((f.props?.maxRating ?? 5).toInt()).clamp(1, 10); i++) UiIcon(HugeIcons.strokeRoundedStar, size: 15, color: t.textMuted, strokeWidth: 1.6),
@@ -811,8 +816,8 @@ class _Mock extends StatelessWidget {
         'Stored as “${f.key}”, never shown${f.defaultValue != null && f.defaultValue != '' ? ': ${jsString(f.defaultValue)}' : ''}',
         style: muted.copyWith(fontStyle: FontStyle.italic),
       ),
-      'currency' => box(f.placeholder ?? '', trailing: Text(f.props?.currency ?? '', style: muted)),
-      _ => box(f.placeholder ?? ''),
+      'currency' => box(store.shown(f.placeholder), trailing: Text(f.props?.currency ?? '', style: muted)),
+      _ => box(store.shown(f.placeholder)),
     };
     return ExcludeSemantics(child: mock);
   }
@@ -851,7 +856,7 @@ class _AddButton extends StatelessWidget {
         );
       },
     );
-    return wide ? button : Align(alignment: Alignment.centerLeft, child: button);
+    return wide ? button : Align(alignment: AlignmentDirectional.centerStart, child: button);
   }
 }
 
@@ -923,7 +928,7 @@ class _FormHead extends StatelessWidget {
       },
       onLongPress: onOpenForm,
       selected: selected,
-      semanticLabel: def.title.isNotEmpty ? def.title : 'Untitled form',
+      semanticLabel: store.shown(def.title).isNotEmpty ? store.shown(def.title) : 'Untitled form',
       semanticHint: 'Form settings',
       excludeChildSemantics: true,
       pressScale: false,
@@ -936,8 +941,8 @@ class _FormHead extends StatelessWidget {
           boxShadow: s.focused ? t.focusRing : null,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: [
-          Text(def.title.isNotEmpty ? def.title : 'Untitled form', style: context.uiText.h4.copyWith(fontSize: 20 * context.ui.fontScale, color: t.text)),
-          if ((def.description ?? '').isNotEmpty) Text(def.description!, style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary)),
+          Text(store.shown(def.title).isNotEmpty ? store.shown(def.title) : 'Untitled form', style: context.uiText.h4.copyWith(fontSize: 20 * context.ui.fontScale, color: t.text)),
+          if (store.shown(def.description).isNotEmpty) Text(store.shown(def.description), style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.textSecondary)),
         ]),
       ),
     );
@@ -956,7 +961,7 @@ class _PageHead extends StatelessWidget {
     final page = store.page;
     final i = store.pageIndex;
     final n = store.def.pages.length;
-    final title = (page.title ?? '').isNotEmpty ? page.title! : 'Page ${i + 1}';
+    final title = store.shown(page.title).isNotEmpty ? store.shown(page.title) : 'Page ${i + 1}';
     final selected = store.selectedId == page.id;
     void open() {
       store.select(page.id);
@@ -1063,7 +1068,7 @@ class _PageTabsState extends State<_PageTabs> {
                   KeyedSubtree(
                     key: dnd.tabKey(pages[i].id),
                     child: _Tab(
-                      label: (pages[i].title ?? '').isNotEmpty ? pages[i].title! : 'Page ${i + 1}',
+                      label: store.shown(pages[i].title).isNotEmpty ? store.shown(pages[i].title) : 'Page ${i + 1}',
                       on: i == store.pageIndex,
                       over: over == 'tab:${pages[i].id}',
                       hasRules: pages[i].visibility != null || (pages[i].jumps ?? const []).isNotEmpty,

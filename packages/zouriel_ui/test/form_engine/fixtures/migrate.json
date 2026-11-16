@@ -1,0 +1,338 @@
+{
+  "kind": "migrate",
+  "cases": [
+    {
+      "name": "a v1 form gets English as its only language",
+      "raw": {
+        "schemaVersion": 1,
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ]
+      },
+      "expected": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ]
+      }
+    },
+    {
+      "name": "plain strings stay plain strings",
+      "raw": {
+        "schemaVersion": 1,
+        "id": "a",
+        "title": "Plain",
+        "pages": [
+          {
+            "id": "p",
+            "title": "Plain page",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "f",
+                "type": "text",
+                "key": "k",
+                "label": "Plain label"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "schemaVersion": 2,
+        "id": "a",
+        "title": "Plain",
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p",
+            "title": "Plain page",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "f",
+                "type": "text",
+                "key": "k",
+                "label": "Plain label"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "locales given as plain codes become objects",
+      "raw": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "defaultLocale": "en",
+        "supportedLocales": [
+          "en",
+          "dv"
+        ]
+      },
+      "expected": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the default language is added to the list, first",
+      "raw": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "defaultLocale": "dv",
+        "supportedLocales": [
+          "en"
+        ]
+      },
+      "expected": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "dv",
+        "supportedLocales": [
+          {
+            "code": "dv"
+          },
+          {
+            "code": "en"
+          }
+        ]
+      }
+    },
+    {
+      "name": "labels and directions are kept, repeats dropped",
+      "raw": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv",
+            "label": "Dhivehi",
+            "dir": "rtl"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "expected": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv",
+            "label": "Dhivehi",
+            "dir": "rtl"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a v2 form is left alone",
+      "raw": {
+        "id": "a",
+        "title": {
+          "en": "Form",
+          "dv": "ފޯމް"
+        },
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "expected": {
+        "id": "a",
+        "title": {
+          "en": "Form",
+          "dv": "ފޯމް"
+        },
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown properties survive",
+      "raw": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "custom": {
+          "keep": true
+        }
+      },
+      "expected": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ],
+        "custom": {
+          "keep": true
+        }
+      }
+    },
+    {
+      "name": "blank codes are ignored",
+      "raw": {
+        "schemaVersion": 1,
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "supportedLocales": [
+          "",
+          "dv"
+        ]
+      },
+      "expected": {
+        "id": "a",
+        "title": "T",
+        "pages": [
+          {
+            "id": "p",
+            "elements": []
+          }
+        ],
+        "schemaVersion": 2,
+        "settings": {},
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      }
+    }
+  ]
+}

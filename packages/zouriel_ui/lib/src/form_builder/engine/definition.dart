@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'field_types.dart';
 import 'js.dart';
+import 'localize.dart';
 import 'schema.dart';
 import 'slug_table.g.dart';
 
@@ -45,31 +46,33 @@ bool fbKeyValid(String key) => RegExp(r'^[A-Za-z][A-Za-z0-9_]*$').hasMatch(key);
 /// A new, one-page form. [defaults] (e.g. global settings' `defaults`) are copied into its settings.
 UiFormDefinition createDefinition({String title = 'Untitled form', UiFbSettings? defaults}) => UiFormDefinition(
   id: fbUid('form'),
-  title: title,
+  title: UiFbText(title),
+  defaultLocale: 'en',
+  supportedLocales: [UiFbLocale(code: 'en')],
   revision: 0,
   settings: defaults?.clone() ?? UiFbSettings(),
   pages: [createPage()],
 );
 
-UiFbPage createPage([String? title]) => UiFbPage(id: fbUid('page'), title: title, elements: []);
+UiFbPage createPage([String? title]) => UiFbPage(id: fbUid('page'), title: title == null ? null : UiFbText(title), elements: []);
 
 UiFbField createField(UiFbFieldType type, {UiFormDefinition? def, String? label}) {
   final info = fieldTypeInfo(type);
   final lbl = label ?? info.defaultLabel;
-  final field = UiFbField(id: fbUid('fld'), type: type, key: def != null ? uniqueKey(def, fbSlug(lbl), null) : fbSlug(lbl), label: lbl);
+  final field = UiFbField(id: fbUid('fld'), type: type, key: def != null ? uniqueKey(def, fbSlug(lbl), null) : fbSlug(lbl), label: UiFbText(lbl));
   if (info.defaultProps != null) field.props = UiFbFieldProps.fromJson(info.defaultProps);
   if (info.hasOptions) {
-    field.options = [for (final l in const ['Option 1', 'Option 2', 'Option 3']) UiFbOption(id: fbUid('opt'), value: fbSlug(l), label: l)];
+    field.options = [for (final l in const ['Option 1', 'Option 2', 'Option 3']) UiFbOption(id: fbUid('opt'), value: fbSlug(l), label: UiFbText(l))];
   }
   if (type == UiFbFieldType.calculated) field.calc = UiFbCalc(op: UiFbCalcOp.sum, args: []);
   return field;
 }
 
 UiFbGroup createGroup({UiFormDefinition? def, bool repeat = false}) {
-  final g = UiFbGroup(id: fbUid('grp'), title: repeat ? 'Repeating section' : 'Section', elements: []);
+  final g = UiFbGroup(id: fbUid('grp'), title: UiFbText(repeat ? 'Repeating section' : 'Section'), elements: []);
   if (repeat) {
     g.key = def != null ? uniqueKey(def, 'items', null) : 'items';
-    g.repeat = UiFbRepeat(min: 1, addLabel: 'Add another', itemLabel: 'Entry {n}');
+    g.repeat = UiFbRepeat(min: 1, addLabel: const UiFbText('Add another'), itemLabel: const UiFbText('Entry {n}'));
   }
   return g;
 }
@@ -77,7 +80,7 @@ UiFbGroup createGroup({UiFormDefinition? def, bool repeat = false}) {
 /// `type` is `heading`, `paragraph` or `divider`.
 UiFbStatic createStatic(String type) {
   final text = type == 'heading' ? 'Heading' : type == 'paragraph' ? 'Add some explanation here.' : null;
-  return UiFbStatic(id: fbUid('st'), type: type, text: text);
+  return UiFbStatic(id: fbUid('st'), type: type, text: text == null ? null : UiFbText(text));
 }
 
 // ── Walking and indexing ─────────────────────────────────────────────────────────────────────
@@ -188,22 +191,35 @@ List<UiFbElement> allElements(UiFormDefinition def) {
 
 List<UiFbField> allFields(UiFormDefinition def) => allElements(def).whereType<UiFbField>().toList();
 
-/// A short human name for any element or page ([el] is a [UiFbElement], a [UiFbPage] or null).
-String elementName(Object? el, [UiFormDefinition? def]) {
+/// A short human name for any element or page ([el] is a [UiFbElement], a [UiFbPage] or null), in
+/// [locale] (default: the form's default language).
+String elementName(Object? el, [UiFormDefinition? def, String? locale]) {
   if (el == null) return 'Missing item';
+  final dl = fbDefaultLocale(def);
+  String t(UiFbText? x) => fbText(x, locale ?? dl, dl);
   if (el is UiFbPage) {
     final i = def != null ? def.pages.indexWhere((p) => identical(p, el)) : -1;
-    if (el.title != null && el.title!.isNotEmpty) return el.title!;
+    final title = t(el.title);
+    if (title.isNotEmpty) return title;
     return i >= 0 ? 'Page ${i + 1}' : 'Page';
   }
-  if (el is UiFbField) return el.label.isNotEmpty ? el.label : el.key;
-  if (el is UiFbGroup) return el.title != null && el.title!.isNotEmpty ? el.title! : (el.repeat != null ? 'Repeating section' : 'Section');
+  if (el is UiFbField) {
+    final label = t(el.label);
+    return label.isNotEmpty ? label : el.key;
+  }
+  if (el is UiFbGroup) {
+    final title = t(el.title);
+    return title.isNotEmpty ? title : (el.repeat != null ? 'Repeating section' : 'Section');
+  }
   final s = el as UiFbStatic;
   if (s.type == 'divider') return 'Divider';
-  final text = s.text ?? '';
-  final cut = text.length > 40 ? text.substring(0, 40) : text;
+  final text = t(s.text);
+  final cut = _slice(text, 40);
   return cut.isNotEmpty ? cut : (s.type == 'heading' ? 'Heading' : 'Text block');
 }
+
+/// The first [n] UTF-16 units, like JS `slice(0, n)`.
+String _slice(String s, int n) => s.length > n ? s.substring(0, n) : s;
 
 // ── Edits (each returns a new definition; the one passed in is never changed) ────────────────
 
@@ -787,6 +803,7 @@ class UiFbProblem {
 List<UiFbProblem> lintDefinition(UiFormDefinition def) {
   final out = <UiFbProblem>[];
   final idx = indexDefinition(def);
+  final dl = fbDefaultLocale(def);
   String name(String id) => elementName(idx[id]?.element, def);
   void add(String severity, String target, String message) => out.add(UiFbProblem(severity: severity, targetId: target, message: message));
   final keys = <String, String>{};
@@ -809,7 +826,7 @@ List<UiFbProblem> lintDefinition(UiFormDefinition def) {
       }
     }
     if (el is UiFbField) {
-      if (el.label.trim().isEmpty && el.type != UiFbFieldType.hidden) add('warning', el.id, 'A ${fieldTypeInfo(el.type).label.toLowerCase()} field has no label.');
+      if (fbText(el.label, dl, dl).trim().isEmpty && el.type != UiFbFieldType.hidden) add('warning', el.id, 'A ${fieldTypeInfo(el.type).label.toLowerCase()} field has no label.');
       // Options from a data source live in the app, so there's nothing typed to check.
       if (fieldTypeInfo(el.type).hasOptions && el.source == null) {
         final live = (el.options ?? const <UiFbOption>[]).where((o) => o.archived != true);
@@ -869,6 +886,96 @@ List<UiFbProblem> lintDefinition(UiFormDefinition def) {
   for (final loop in findCycles(def)) {
     add('error', loop[0], 'These depend on each other in a loop: ${loop.map((id) => '“${name(id)}”').join(' $_arrow ')} $_arrow “${name(loop[0])}”.');
   }
+  out.addAll(lintTranslations(def));
+  return out;
+}
+
+/// One text of an element: what it is called in a warning, its value, and an id when it is a list item.
+typedef _TextSlot = (String what, UiFbText? text, String? id);
+
+List<_TextSlot> _elementTexts(Object el) {
+  if (el is UiFbPage) return [('title', el.title, null), ('description', el.description, null)];
+  if (el is UiFbStatic) return [('text', el.text, null)];
+  if (el is UiFbGroup) {
+    return [('title', el.title, null), ('description', el.description, null), ('add button label', el.repeat?.addLabel, null), ('entry label', el.repeat?.itemLabel, null)];
+  }
+  final f = el as UiFbField;
+  final slots = <_TextSlot>[
+    ('label', f.label, null),
+    ('help text', f.help, null),
+    ('placeholder', f.placeholder, null),
+    ('checkbox text', f.props?.caption, null),
+    ('required message', f.requiredMessage, null),
+  ];
+  var n = 0;
+  for (final o in f.options ?? const <UiFbOption>[]) {
+    if (o.archived == true) continue;
+    slots.add(('option ${++n}', o.label, 'o:${o.id}'));
+  }
+  var r = 0;
+  for (final v in f.validators ?? const <UiFbValidatorRule>[]) {
+    slots.add(('message of rule ${++r}', v.message, 'v:${v.id}'));
+  }
+  return slots;
+}
+
+/// Texts written in the default language but not yet in another supported one. One warning per
+/// element and language.
+List<UiFbProblem> lintTranslations(UiFormDefinition def) {
+  final locales = fbLocales(def);
+  if (locales.length < 2) return const [];
+  final dl = locales[0].code;
+  final out = <UiFbProblem>[];
+  void check(String targetId, String label, List<_TextSlot> slots) {
+    for (final l in locales.skip(1)) {
+      final missing = [
+        for (final (what, t, _) in slots)
+          if (fbText(t, dl, dl).trim().isNotEmpty && fbTextIn(t, l.code, dl).trim().isEmpty) what,
+      ];
+      if (missing.isNotEmpty) {
+        out.add(UiFbProblem(severity: 'warning', targetId: targetId, message: '“$label” has no ${l.label} (${l.code}) translation for: ${missing.join(', ')}.'));
+      }
+    }
+  }
+
+  final first = def.pages.isNotEmpty ? def.pages[0].id : '';
+  final title = fbText(def.title, dl, dl);
+  check(first, title.isNotEmpty ? title : 'Form', [('title', def.title, null), ('description', def.description, null)]);
+  final s = def.settings;
+  if (s != null) check(first, 'Form settings', [('submit label', s.submitLabel, null), ('next label', s.nextLabel, null), ('back label', s.backLabel, null)]);
+  for (final entry in indexDefinition(def).values) {
+    final el = entry.element;
+    if (el is UiFbElement && el.archived == true) continue;
+    final slots = _elementTexts(el);
+    if (slots.any((x) => x.$2 != null)) check(entry.id, elementName(el, def, dl), slots);
+  }
+  return out;
+}
+
+/// Every field that stores data, in document order: `name`,
+/// `address.city`, `children[].age` (inside a repeating section). Archived elements and fields
+/// excluded from the data are skipped; hidden fields are kept.
+List<UiFbSubmissionField> fbSubmissionFields(UiFormDefinition def, [String? locale]) {
+  final dl = fbDefaultLocale(def);
+  final loc = locale != null && locale.isNotEmpty ? locale : dl;
+  final out = <UiFbSubmissionField>[];
+  void visit(List<UiFbElement> els, String prefix) {
+    for (final el in els) {
+      if (el.archived == true) continue;
+      if (el is UiFbGroup) {
+        final k = el.key;
+        visit(el.elements, k != null && k.isNotEmpty ? '$prefix$k${el.repeat != null ? '[]' : ''}.' : prefix);
+      } else if (el is UiFbField) {
+        if (el.props?.excludeFromData == true) continue;
+        final label = fbText(el.label, loc, dl);
+        out.add(UiFbSubmissionField(path: '$prefix${el.key}', key: el.key, label: label.isNotEmpty ? label : el.key, type: el.type));
+      }
+    }
+  }
+
+  for (final p in def.pages) {
+    visit(p.elements, '');
+  }
   return out;
 }
 
@@ -879,7 +986,8 @@ final String _arrow = String.fromCharCode(0x2192);
 // ── Loading and comparing versions ───────────────────────────────────────────────────────────
 
 /// Brings a stored definition (JSON, or a [UiFormDefinition]) up to the current schema version
-/// and fills in defaults: an id, a title, settings, and at least one page.
+/// and fills in defaults: an id, a title, settings, the languages (English when none), and at
+/// least one page. Idempotent: plain strings stay plain, unknown properties are kept.
 UiFormDefinition migrateDefinition(Object? raw) {
   final source = raw is UiFormDefinition ? raw.toJson() : raw;
   final d = source is Map ? jsonCloneMap(source.cast<String, Object?>()) : <String, Object?>{};
@@ -890,6 +998,28 @@ UiFormDefinition migrateDefinition(Object? raw) {
   d['schemaVersion'] = uiFbSchemaVersion;
   d['id'] = id != null && id.isNotEmpty ? id : fbUid('form');
   d['title'] = d['title'] ?? 'Untitled form';
+  final dlRaw = d['defaultLocale'];
+  final defaultLocale = dlRaw is String && dlRaw.isNotEmpty ? dlRaw : 'en';
+  final supported = <Object?>[];
+  final seen = <String>{};
+  for (final l in d['supportedLocales'] is List ? d['supportedLocales'] as List : const []) {
+    final String? code;
+    final Object? loc;
+    if (l is String) {
+      code = l.isEmpty ? null : l;
+      loc = code == null ? null : <String, Object?>{'code': code};
+    } else if (l is Map && l['code'] is String && (l['code'] as String).isNotEmpty) {
+      code = l['code'] as String;
+      loc = l;
+    } else {
+      code = null;
+      loc = null;
+    }
+    if (code != null && seen.add(code)) supported.add(loc);
+  }
+  if (!seen.contains(defaultLocale)) supported.insert(0, <String, Object?>{'code': defaultLocale});
+  d['defaultLocale'] = defaultLocale;
+  d['supportedLocales'] = supported;
   d['settings'] = d['settings'] ?? <String, Object?>{};
   d['pages'] = [
     for (final p in pages)
@@ -936,6 +1066,13 @@ class UiFbDiff {
   final List<UiFbOptionsRemoved> optionsRemoved = [];
   final List<String> rulesChanged = [];
 
+  /// Elements whose text (or a translation of it) changed.
+  final List<String> textChanged = [];
+
+  /// Language codes added to / removed from the form.
+  final List<String> localesAdded = [];
+  final List<String> localesRemoved = [];
+
   /// One line per change, for a "what will change" summary.
   final List<String> summary = [];
 
@@ -948,8 +1085,22 @@ class UiFbDiff {
     'typeChanged': [for (final t in typeChanged) t.toJson()],
     'optionsRemoved': [for (final o in optionsRemoved) o.toJson()],
     'rulesChanged': rulesChanged,
+    'textChanged': textChanged,
+    'localesAdded': localesAdded,
+    'localesRemoved': localesRemoved,
     'summary': summary,
   };
+}
+
+/// Whether any text of the element, or a translation of it, differs. Options and rules added or
+/// removed are reported elsewhere.
+bool _textsChanged(UiFbElement a, UiFbElement b) {
+  String sig(UiFbText? t) => jsonEncode(t?.toJson());
+  final mine = {for (final (what, t, id) in _elementTexts(a)) id ?? what: sig(t)};
+  return _elementTexts(b).any((x) {
+    final key = x.$3 ?? x.$1;
+    return mine.containsKey(key) && mine[key] != sig(x.$2);
+  });
 }
 
 String _rulesSig(UiFbElement el) {
@@ -974,6 +1125,16 @@ UiFbDiff diffDefinitions(UiFormDefinition before, UiFormDefinition after) {
   final b = {for (final e in allElements(after)) e.id: e};
   final diff = UiFbDiff();
   String nm(UiFbElement e) => '“${elementName(e)}”';
+  final la = [for (final l in fbLocales(before)) l.code];
+  final lb = [for (final l in fbLocales(after)) l.code];
+  for (final c in lb.where((c) => !la.contains(c))) {
+    diff.localesAdded.add(c);
+    diff.summary.add('Added the language ${fbLocaleName(c)} ($c)');
+  }
+  for (final c in la.where((c) => !lb.contains(c))) {
+    diff.localesRemoved.add(c);
+    diff.summary.add('Removed the language ${fbLocaleName(c)} ($c). Its translations are dropped');
+  }
   for (final MapEntry(key: id, value: e) in b.entries) {
     final old = a[id];
     if (old == null) {
@@ -1012,6 +1173,10 @@ UiFbDiff diffDefinitions(UiFormDefinition before, UiFormDefinition after) {
       } else if (jsonEncode(old.source?.toJson()['params'] ?? const {}) != jsonEncode(e.source?.toJson()['params'] ?? const {})) {
         diff.summary.add('Changed the data source settings of ${nm(e)}');
       }
+    }
+    if (_textsChanged(old, e)) {
+      diff.textChanged.add(id);
+      diff.summary.add('Changed the wording or translations of ${nm(e)}');
     }
     if (_rulesSig(old) != _rulesSig(e)) {
       diff.rulesChanged.add(id);

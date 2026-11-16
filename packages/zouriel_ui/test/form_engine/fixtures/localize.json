@@ -1,0 +1,891 @@
+{
+  "kind": "localize",
+  "text": [
+    {
+      "name": "exact locale",
+      "text": {
+        "en": "Name",
+        "dv": "ނަން"
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": "ނަން"
+    },
+    {
+      "name": "same language, other region",
+      "text": {
+        "dv": "ނަން",
+        "en": "Name"
+      },
+      "locale": "dv-MV",
+      "defaultLocale": "en",
+      "expected": "ނަން"
+    },
+    {
+      "name": "map key has a region, request does not",
+      "text": {
+        "en-GB": "Colour",
+        "dv": "ކުލަ"
+      },
+      "locale": "en",
+      "defaultLocale": "dv",
+      "expected": "Colour"
+    },
+    {
+      "name": "falls back to the default locale",
+      "text": {
+        "en": "Name"
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": "Name"
+    },
+    {
+      "name": "falls back to the first non-empty entry",
+      "text": {
+        "fr": "Nom"
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": "Nom"
+    },
+    {
+      "name": "a plain string is the same everywhere",
+      "text": "Name",
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": "Name"
+    },
+    {
+      "name": "blank counts as missing",
+      "text": {
+        "en": "Name",
+        "dv": "  "
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": "Name"
+    },
+    {
+      "name": "blank default falls to the first non-empty",
+      "text": {
+        "en": "",
+        "dv": "ނަން"
+      },
+      "locale": "fr",
+      "defaultLocale": "en",
+      "expected": "ނަން"
+    },
+    {
+      "name": "no locale asked for uses the default",
+      "text": {
+        "en": "A",
+        "dv": "B"
+      },
+      "locale": null,
+      "defaultLocale": "dv",
+      "expected": "B"
+    },
+    {
+      "name": "no locale and no default means en",
+      "text": {
+        "en": "A",
+        "dv": "B"
+      },
+      "locale": null,
+      "defaultLocale": null,
+      "expected": "A"
+    },
+    {
+      "name": "all blank",
+      "text": {
+        "en": "",
+        "dv": " "
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "name": "empty map",
+      "text": {},
+      "locale": "en",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "name": "empty string",
+      "text": "",
+      "locale": "en",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "name": "missing text",
+      "text": null,
+      "locale": "en",
+      "defaultLocale": "en",
+      "expected": ""
+    }
+  ],
+  "textIn": [
+    {
+      "text": {
+        "en": "A",
+        "dv": "B"
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": "B"
+    },
+    {
+      "text": {
+        "en": "A"
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "text": "A",
+      "locale": "en",
+      "defaultLocale": "en",
+      "expected": "A"
+    },
+    {
+      "text": "A",
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "text": "A",
+      "locale": "dv",
+      "defaultLocale": "dv",
+      "expected": "A"
+    },
+    {
+      "text": "A",
+      "locale": "en",
+      "defaultLocale": null,
+      "expected": "A"
+    },
+    {
+      "text": {
+        "en": "A",
+        "dv-MV": "B"
+      },
+      "locale": "dv",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "text": null,
+      "locale": "en",
+      "defaultLocale": "en",
+      "expected": ""
+    }
+  ],
+  "setText": [
+    {
+      "name": "a plain string becomes a map on the first translation",
+      "text": "Name",
+      "locale": "dv",
+      "value": "ނަން",
+      "defaultLocale": "en",
+      "expected": {
+        "en": "Name",
+        "dv": "ނަން"
+      }
+    },
+    {
+      "name": "blank translation collapses back to a string",
+      "text": {
+        "en": "Name",
+        "dv": "x"
+      },
+      "locale": "dv",
+      "value": "",
+      "defaultLocale": "en",
+      "expected": "Name"
+    },
+    {
+      "name": "whitespace counts as blank",
+      "text": {
+        "en": "Name",
+        "dv": "x"
+      },
+      "locale": "dv",
+      "value": "  ",
+      "defaultLocale": "en",
+      "expected": "Name"
+    },
+    {
+      "name": "editing the default of a plain string",
+      "text": "Name",
+      "locale": "en",
+      "value": "Other",
+      "defaultLocale": "en",
+      "expected": "Other"
+    },
+    {
+      "name": "editing one translation of a map",
+      "text": {
+        "en": "A",
+        "dv": "B"
+      },
+      "locale": "dv",
+      "value": "C",
+      "defaultLocale": "en",
+      "expected": {
+        "en": "A",
+        "dv": "C"
+      }
+    },
+    {
+      "name": "first text written in a translation only",
+      "text": "",
+      "locale": "dv",
+      "value": "ނަން",
+      "defaultLocale": "en",
+      "expected": {
+        "dv": "ނަން"
+      }
+    },
+    {
+      "name": "first text from nothing",
+      "text": null,
+      "locale": "dv",
+      "value": "x",
+      "defaultLocale": "en",
+      "expected": {
+        "dv": "x"
+      }
+    },
+    {
+      "name": "blank default stays while another language has text",
+      "text": {
+        "en": "A",
+        "fr": "B"
+      },
+      "locale": "en",
+      "value": "",
+      "defaultLocale": "en",
+      "expected": {
+        "en": "",
+        "fr": "B"
+      }
+    },
+    {
+      "name": "clearing the only text",
+      "text": "A",
+      "locale": "en",
+      "value": "",
+      "defaultLocale": "en",
+      "expected": ""
+    },
+    {
+      "name": "removing a blank translation among several",
+      "text": {
+        "en": "A",
+        "dv": "B",
+        "fr": "C"
+      },
+      "locale": "fr",
+      "value": "",
+      "defaultLocale": "en",
+      "expected": {
+        "en": "A",
+        "dv": "B"
+      }
+    }
+  ],
+  "resolveLocale": [
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "requested": "dv",
+      "expected": "dv"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "requested": "DV",
+      "expected": "dv"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "requested": "dv-MV",
+      "expected": "dv"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "requested": "fr",
+      "expected": "en"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "requested": null,
+      "expected": "en"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "requested": "",
+      "expected": "en"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en-GB",
+        "supportedLocales": [
+          {
+            "code": "en-GB"
+          }
+        ]
+      },
+      "requested": "en",
+      "expected": "en-GB"
+    },
+    {
+      "definition": {},
+      "requested": "dv",
+      "expected": "en"
+    },
+    {
+      "definition": {
+        "defaultLocale": "dv",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ]
+      },
+      "requested": null,
+      "expected": "dv"
+    },
+    {
+      "definition": {
+        "defaultLocale": "dv",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ]
+      },
+      "requested": "en",
+      "expected": "en"
+    }
+  ],
+  "localeDir": [
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "locale": "dv",
+      "expected": "rtl"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "locale": "en",
+      "expected": "ltr"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "locale": "dv-MV",
+      "expected": "rtl"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "locale": "fr",
+      "expected": "ltr"
+    },
+    {
+      "definition": {
+        "defaultLocale": "dv",
+        "supportedLocales": [
+          {
+            "code": "dv"
+          }
+        ]
+      },
+      "locale": "fr",
+      "expected": "rtl"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "xx",
+            "dir": "rtl"
+          }
+        ]
+      },
+      "locale": "xx",
+      "expected": "rtl"
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "ar",
+            "dir": "ltr"
+          }
+        ]
+      },
+      "locale": "ar",
+      "expected": "ltr"
+    },
+    {
+      "definition": {
+        "defaultLocale": "ar",
+        "supportedLocales": [
+          {
+            "code": "ar"
+          }
+        ]
+      },
+      "locale": null,
+      "expected": "rtl"
+    }
+  ],
+  "locales": [
+    {
+      "definition": {},
+      "expected": [
+        {
+          "code": "en",
+          "label": "English",
+          "dir": "ltr"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "dv",
+            "label": "Dhivehi"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "code": "en",
+          "label": "English",
+          "dir": "ltr"
+        },
+        {
+          "code": "dv",
+          "label": "Dhivehi",
+          "dir": "rtl"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "defaultLocale": "dv",
+        "supportedLocales": [
+          {
+            "code": "dv"
+          },
+          {
+            "code": "en"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "code": "dv",
+          "label": "ދިވެހި",
+          "dir": "rtl"
+        },
+        {
+          "code": "en",
+          "label": "English",
+          "dir": "ltr"
+        }
+      ]
+    },
+    {
+      "definition": {
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "en"
+          },
+          {
+            "code": "qq"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "code": "en",
+          "label": "English",
+          "dir": "ltr"
+        },
+        {
+          "code": "qq",
+          "label": "QQ",
+          "dir": "ltr"
+        }
+      ]
+    }
+  ],
+  "lintTranslations": [
+    {
+      "name": "one warning per element and language",
+      "definition": {
+        "schemaVersion": 2,
+        "id": "f",
+        "title": {
+          "en": "Form",
+          "dv": "ފޯމް"
+        },
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv",
+            "label": "Dhivehi"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p1",
+            "title": {
+              "en": "Page one"
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": {
+                  "en": "Full name",
+                  "dv": "ފުރިހަމަ ނަން"
+                },
+                "help": {
+                  "en": "As on your ID"
+                },
+                "placeholder": "e.g. Aisha"
+              },
+              {
+                "kind": "field",
+                "id": "b",
+                "type": "select",
+                "key": "colour",
+                "label": "Colour",
+                "options": [
+                  {
+                    "id": "o1",
+                    "value": "r",
+                    "label": {
+                      "en": "Red",
+                      "dv": "ރަތް"
+                    }
+                  },
+                  {
+                    "id": "o2",
+                    "value": "g",
+                    "label": "Green"
+                  }
+                ]
+              },
+              {
+                "kind": "field",
+                "id": "c",
+                "type": "text",
+                "key": "old",
+                "label": "Old question",
+                "archived": true
+              },
+              {
+                "kind": "static",
+                "id": "s",
+                "type": "paragraph",
+                "text": "Hello"
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "kids",
+                "title": {
+                  "en": "Kids",
+                  "dv": "ކުދިން"
+                },
+                "repeat": {
+                  "addLabel": "Add child"
+                },
+                "elements": []
+              }
+            ]
+          }
+        ]
+      },
+      "expected": [
+        {
+          "severity": "warning",
+          "targetId": "p1",
+          "message": "“Page one” has no Dhivehi (dv) translation for: title."
+        },
+        {
+          "severity": "warning",
+          "targetId": "a",
+          "message": "“Full name” has no Dhivehi (dv) translation for: help text, placeholder."
+        },
+        {
+          "severity": "warning",
+          "targetId": "b",
+          "message": "“Colour” has no Dhivehi (dv) translation for: label, option 2."
+        },
+        {
+          "severity": "warning",
+          "targetId": "s",
+          "message": "“Hello” has no Dhivehi (dv) translation for: text."
+        },
+        {
+          "severity": "warning",
+          "targetId": "g",
+          "message": "“Kids” has no Dhivehi (dv) translation for: add button label."
+        }
+      ]
+    },
+    {
+      "name": "nothing missing",
+      "definition": {
+        "schemaVersion": 2,
+        "id": "f",
+        "title": {
+          "en": "Form",
+          "dv": "ފޯމް"
+        },
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv",
+            "label": "Dhivehi"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p1",
+            "title": {
+              "en": "P",
+              "dv": "ޕ"
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": {
+                  "en": "Name",
+                  "dv": "ނަން"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "a one-language form has nothing to translate",
+      "definition": {
+        "schemaVersion": 2,
+        "id": "f",
+        "title": "Form",
+        "pages": [
+          {
+            "id": "p1",
+            "title": "One",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": "Name"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "form title, description and button labels",
+      "definition": {
+        "schemaVersion": 2,
+        "id": "f",
+        "title": {
+          "en": "Form"
+        },
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          },
+          {
+            "code": "dv",
+            "label": "Dhivehi"
+          }
+        ],
+        "pages": [
+          {
+            "id": "p1",
+            "title": {
+              "en": "P",
+              "dv": "ޕ"
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "a",
+                "type": "text",
+                "key": "name",
+                "label": {
+                  "en": "Name",
+                  "dv": "ނަން"
+                }
+              }
+            ]
+          }
+        ],
+        "description": "About this form",
+        "settings": {
+          "submitLabel": {
+            "en": "Send"
+          }
+        }
+      },
+      "expected": [
+        {
+          "severity": "warning",
+          "targetId": "p1",
+          "message": "“Form” has no Dhivehi (dv) translation for: title, description."
+        },
+        {
+          "severity": "warning",
+          "targetId": "p1",
+          "message": "“Form settings” has no Dhivehi (dv) translation for: submit label."
+        }
+      ]
+    }
+  ]
+}

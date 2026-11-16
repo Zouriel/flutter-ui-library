@@ -45,7 +45,7 @@ void main() {
 
   testWidgets('golden: inspector Logic and Checks tabs', (tester) async {
     final c = UiFormBuilderController(definition: UiFormDefinition.fromJson(fixture('scholarship.definition.json')))..optionSourceDefs = sources;
-    final school = c.def.pages[0].elements.firstWhere((e) => e is UiFbField && e.label.startsWith('School'));
+    final school = c.def.pages[0].elements.firstWhere((e) => e is UiFbField && fbText(e.label).startsWith('School'));
     c.select(school.id);
     await expectThemedGolden(tester, 'inspector_settings_text', (context) => UiFbBuilderScope(controller: c, child: const UiFbInspector()), height: 900);
     for (final e in find.text('Logic').evaluate().toList()) {
@@ -78,7 +78,7 @@ void main() {
   for (final (name, label) in const [('options', 'Are you studying'), ('calc', 'Age'), ('source', 'Your student record')]) {
     testWidgets('golden: inspector settings, $name', (tester) async {
       final c = UiFormBuilderController(definition: UiFormDefinition.fromJson(fixture('scholarship.definition.json')))..optionSourceDefs = sources;
-      final el = c.def.pages[0].elements.firstWhere((e) => e is UiFbField && e.label.startsWith(label));
+      final el = c.def.pages[0].elements.firstWhere((e) => e is UiFbField && fbText(e.label).startsWith(label));
       c.select(el.id);
       await expectThemedGolden(tester, 'inspector_$name', (context) => UiFbBuilderScope(controller: c, child: const UiFbInspector()), height: 1400);
     });

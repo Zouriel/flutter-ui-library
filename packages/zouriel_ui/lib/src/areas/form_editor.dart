@@ -12,6 +12,7 @@ export '../form_builder/editor/builder_inspector.dart' show UiFbInspector;
 export '../form_builder/editor/builder_logic.dart' show UiFbLogicOverview;
 export '../form_builder/editor/builder_palette.dart' show UiFbPalette;
 export '../form_builder/editor/builder_preview.dart' show UiFbPreview;
+export '../form_builder/editor/builder_revisions.dart' show UiFbRevisionPanel;
 export '../form_builder/editor/builder_source.dart' show UiFbSourceSettings;
 export '../form_builder/editor/builder_store.dart' show UiFormBuilderController, UiFbBuilderScope, UiFbRefOption, sameForm;
 export '../form_builder/editor/form_builder.dart' show UiFormBuilder, UiFormBuilderState, UiFormBuilderView, UiFormBuilderLayout;

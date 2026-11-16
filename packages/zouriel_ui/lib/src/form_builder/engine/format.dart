@@ -2,16 +2,21 @@ import 'package:intl/intl.dart';
 
 import 'conditions.dart';
 import 'js.dart';
+import 'localize.dart';
 import 'option_sources.dart';
 import 'schema.dart';
 
 /// An option's label for a stored value, or the value itself (marked) when the option is gone.
-String optionLabel(UiFbField field, Object? value) {
+///
+/// [textLocale] and [defaultLocale] pick the language of the option's label (the web's
+/// `locale` / `defaultLocale` arguments); they are separate from the number/date `locale` of
+/// [formatValue].
+String optionLabel(UiFbField field, Object? value, {String? textLocale, String? defaultLocale}) {
   // Sourced answers carry the label they were picked with.
   if (isChoice(value)) return jsString((value as Map)['label']);
   final s = jsString(value);
   for (final o in field.options ?? const <UiFbOption>[]) {
-    if (o.value == s) return o.label;
+    if (o.value == s) return fbText(o.label, textLocale, defaultLocale);
   }
   return '$s (no longer an option)';
 }
@@ -140,15 +145,17 @@ String formatDate(String iso, {String? locale}) {
 }
 
 /// An answer as people read it: option labels, dates, money, Yes/No, file names. [locale]
-/// defaults to `Intl.getCurrentLocale()` (the web version uses the browser's).
-String formatValue(UiFbField field, Object? value, {String? locale}) {
+/// defaults to `Intl.getCurrentLocale()` (the web version uses the browser's) and formats numbers
+/// and dates. [textLocale] and [defaultLocale] are the form language for option labels (the web
+/// passes those as its `locale` / `defaultLocale`).
+String formatValue(UiFbField field, Object? value, {String? locale, String? textLocale, String? defaultLocale}) {
   if (isEmptyValue(value)) return '';
   final loc = _locale(locale);
   switch (field.type) {
     case UiFbFieldType.select || UiFbFieldType.radio:
-      return optionLabel(field, value);
+      return optionLabel(field, value, textLocale: textLocale, defaultLocale: defaultLocale);
     case UiFbFieldType.checkboxes || UiFbFieldType.multiselect:
-      return (value is List ? value : [value]).map((v) => optionLabel(field, v)).join(', ');
+      return (value is List ? value : [value]).map((v) => optionLabel(field, v, textLocale: textLocale, defaultLocale: defaultLocale)).join(', ');
     case UiFbFieldType.checkbox || UiFbFieldType.toggle:
       return value == true ? 'Yes' : 'No';
     case UiFbFieldType.date:

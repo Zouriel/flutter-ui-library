@@ -8,9 +8,9 @@ import 'package:zouriel_ui/src/areas/form_engine.dart';
 import 'package:zouriel_ui/src/form_builder/engine/js.dart';
 
 UiFbField f(String id, UiFbFieldType type, {String? label, UiFbToggle? required, List<UiFbValidatorRule>? validators}) =>
-    UiFbField(id: id, type: type, key: id, label: label ?? id.toUpperCase(), required: required, validators: validators);
+    UiFbField(id: id, type: type, key: id, label: UiFbText(label ?? id.toUpperCase()), required: required, validators: validators);
 
-UiFormDefinition form(List<UiFbElement> elements) => UiFormDefinition(id: 'form1', title: 'T', revision: 3, pages: [UiFbPage(id: 'p1', elements: elements)]);
+UiFormDefinition form(List<UiFbElement> elements) => UiFormDefinition(id: 'form1', title: const UiFbText('T'), revision: 3, pages: [UiFbPage(id: 'p1', elements: elements)]);
 
 Future<void> wait(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
 
@@ -46,6 +46,7 @@ void main() {
       final asked = <Object?>[];
       final def = UiFbValidatorDef(
         type: 'remote', label: 'Remote', defaultMessage: '{label} is not {thing}.', debounceMs: 30, //
+        params: const [UiFbParamSpec(key: 'thing', label: 'Thing', kind: 'text')],
         validate: (v, p, c) {
           asked.add(v);
           if (v == 'boom') throw StateError('server down');
@@ -158,7 +159,7 @@ void main() {
       final rep = createGroup(def: d, repeat: true);
       expect(rep.toJson()..remove('id'), {'kind': 'group', 'title': 'Repeating section', 'key': 'items', 'repeat': {'min': 1, 'addLabel': 'Add another', 'itemLabel': 'Entry {n}'}, 'elements': []});
       expect(createStatic('divider').text, isNull);
-      expect(createStatic('heading').text, 'Heading');
+      expect(createStatic('heading').text, const UiFbText('Heading'));
     });
 
     test('duplicating a section gives fresh ids, unique keys, and its own rules follow the copy', () {
@@ -184,11 +185,11 @@ void main() {
 
     test('removing and updating return new definitions', () {
       final d = form([f('a', UiFbFieldType.text), f('b', UiFbFieldType.text)]);
-      final out = updateElement(removeElement(d, 'a'), 'b', (el) => (el as UiFbField)..label = 'Bee');
-      expect(out.pages[0].elements.map((e) => (e as UiFbField).label), ['Bee']);
+      final out = updateElement(removeElement(d, 'a'), 'b', (el) => (el as UiFbField)..label = const UiFbText('Bee'));
+      expect(out.pages[0].elements.map((e) => (e as UiFbField).label), [const UiFbText('Bee')]);
       expect(d.pages[0].elements.length, 2);
-      expect((d.pages[0].elements[1] as UiFbField).label, 'B');
-      expect(updatePage(d, 'p1', (p) => p..title = 'One').pages[0].title, 'One');
+      expect((d.pages[0].elements[1] as UiFbField).label, const UiFbText('B'));
+      expect(updatePage(d, 'p1', (p) => p..title = const UiFbText('One')).pages[0].title, const UiFbText('One'));
       expect(canDrop(d, d.pages[0].elements[0], 'nope'), isFalse);
       expect(allFields(d).length, 2);
       expect(elementName(d.pages[0], d), 'Page 1');

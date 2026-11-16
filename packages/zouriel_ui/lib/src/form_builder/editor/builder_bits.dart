@@ -6,8 +6,11 @@ import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
 import '../../forms/choice/switch.dart';
+import '../../forms/text/text_dir.dart';
 import '../../theme/theme.dart';
 import '../engine/schema.dart';
+import '../engine/localize.dart';
+import 'builder_store.dart';
 
 // Small building blocks shared by the builder's panels (the web `FB_SHARED_STYLES`): labels,
 // hints, chips, link buttons, sections and the icons for each kind of thing.
@@ -54,6 +57,41 @@ UiIconData fbElementIcon(UiFbElement el) => switch (el) {
   UiFbGroup(:final repeat) => repeat != null ? fbRepeatIcon : fbGroupIcon,
   UiFbStatic(:final type) => fbStaticIcon(type),
 };
+
+/// The text field direction for a language's [UiFbDir].
+UiTextDir fbTextDir(UiFbDir d) => d == UiFbDir.rtl ? UiTextDir.rtl : UiTextDir.ltr;
+
+/// `ui-fb-trans`: under a text input while translating, the default language's text to translate from.
+class FbTransHint extends StatelessWidget {
+  const FbTransHint(this.text, {super.key});
+  final UiFbText? text;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = UiFbBuilderScope.maybeOf(context);
+    final shown = store?.defaultText(text) ?? '';
+    if (store == null || shown.isEmpty) return const SizedBox.shrink();
+    final t = context.ui;
+    final style = context.uiText.body.copyWith(fontSize: 12 * t.fontScale, height: 1.4, color: t.textSecondary);
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Directionality(
+        textDirection: store.defaultDir == UiFbDir.rtl ? TextDirection.rtl : TextDirection.ltr,
+        child: Semantics(
+          label: '${fbLocaleName(store.defaultLocale)}: $shown',
+          excludeSemantics: true,
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: '${store.defaultLocale.toUpperCase()}  ', style: style.copyWith(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: t.textMuted)),
+              TextSpan(text: shown),
+            ]),
+            style: style,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// A setting's label (the web `.fb-label`).
 class FbLabel extends StatelessWidget {
@@ -212,9 +250,12 @@ class FbIconButton extends StatelessWidget {
 
 /// A setting: its label, the control and an optional hint underneath.
 class FbSetting extends StatelessWidget {
-  const FbSetting({super.key, required this.label, required this.child, this.hint, this.badHint = false, this.required = false});
+  const FbSetting({super.key, required this.label, required this.child, this.hint, this.badHint = false, this.required = false, this.trans});
   final String label;
   final Widget child;
+
+  /// The text being translated: its default-language version shows under the control while translating.
+  final UiFbText? trans;
   final String? hint;
   final bool badHint;
   final bool required;
@@ -226,6 +267,7 @@ class FbSetting extends StatelessWidget {
       children: [
         FbLabel(label, required: required),
         child,
+        if (trans != null) FbTransHint(trans),
         if (hint != null && hint!.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: FbHint(hint!, bad: badHint)),
       ],
     );

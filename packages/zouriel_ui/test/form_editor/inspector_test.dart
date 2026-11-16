@@ -193,8 +193,8 @@ void main() {
     testWidgets('a page jump goes to a later page or the end', (tester) async {
       final def = formOf([fj('s', 'toggle', {'label': 'Student'})]);
       def.pages
-        ..add(UiFbPage(id: 'p2', title: 'Two', elements: []))
-        ..add(UiFbPage(id: 'p3', title: 'Three', elements: []));
+        ..add(UiFbPage(id: 'p2', title: const UiFbText('Two'), elements: []))
+        ..add(UiFbPage(id: 'p3', title: const UiFbText('Three'), elements: []));
       final c = await pumpInspector(tester, def, select: 'p1');
       await type(tester, 'Page title', 'About you');
       await tapText(tester, 'Logic');
@@ -205,7 +205,7 @@ void main() {
       expect(c.def.pages[0].toJson()['jumps'], [
         {'id': jump.id, 'when': {'match': 'all', 'conditions': <Object?>[]}, 'to': 'end'},
       ]);
-      expect(c.def.pages[0].title, 'About you');
+      expect(c.def.pages[0].title, const UiFbText('About you'));
     });
 
     testWidgets('with nothing selected it edits the form and its settings', (tester) async {
@@ -214,7 +214,7 @@ void main() {
       await type(tester, 'Form title', 'Enrolment');
       await type(tester, 'Submit button', 'Send');
       await choose(tester, select('Show problems'), 'Only when they continue or submit');
-      expect(c.def.title, 'Enrolment');
+      expect(c.def.title, const UiFbText('Enrolment'));
       expect(c.def.settings!.toJson(), {'validateOn': 'submit', 'submitLabel': 'Send'});
     });
   });
