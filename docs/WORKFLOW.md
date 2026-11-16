@@ -280,6 +280,17 @@ survive a round trip, and every helper returns a new definition, keeping untouch
 `createWorkflow`, `createStep`, `insertStep`, `moveStep`, `removeStep`, `indexSteps`, `listSteps`,
 `tokensAt`, `describeTrigger` / `describeStep`, and `autoLayout`.
 
+## Departments, separation of duties, paused clocks, processing times
+
+- The registry may list `departments`, `portals` and `queues` (`{key, label}`); people lists then also offer
+  "A department", "A portal" and "A queue" and store `{department: key}`, `{portal: key}` or `{queue: key}`.
+- An approval step has a "Separation of duties" section (`makerChecker`): the person who started it, or whoever approved
+  the step before, cannot approve, and a role can be required.
+- A state's time limit can pause while the record is in other states (`pauseOnStatus`, state ids) or on registry signals
+  (`pauseOnEvent`, `resumeOnEvent`).
+- A workflow's settings have a "Public processing time" (`publicProcessingTime: {estimate, display}`); the panel shows
+  `UiWfRecord.publicProcessingTime` as "Usual processing time".
+
 ## Same behaviour as the web
 
 - `test/workflow/fixtures/layout.json` is the Angular `src/fixtures/layout.json`; both suites must

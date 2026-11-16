@@ -1536,3 +1536,31 @@ table are generated from `fixtures/form-strings.json` (so they are byte-identica
   passes the form words when they differ from the English table (another language or an override); English output is unchanged.
 - Words the web table does not have and Flutter still writes in English: the "n of max" count of a repeat, the change list's
   "Changes / was / now", "Chosen files", and the "isn't a file type this question takes" rejection note.
+
+## Workflow: departments, portals and queues; separation of duties; paused time limits; public processing time
+
+Spec v1 stays at 1; every new key is optional and a definition that uses none of them serialises as before (the editors
+remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-CONTRACT.md`.
+
+- Assignees: `UiWfAssignee.department` / `portal` / `queue` and the registry lists `departments`, `portals`, `queues`
+  (`UiWfLabelled`). `WfAssigneesEditor` offers "A department › label" etc. after groups, only for the lists the registry
+  has; `describeAssignees` (chips, canvas cards, permissions) reads the label and falls back to the key. `UiWfUser` is not
+  extended: nothing in the UI reads a person's departments.
+- Separation of duties: `UiWfApprovalStep.makerChecker` (`UiWfMakerChecker`). The approval editor's section writes the
+  object and removes the key when all three are off. The role select is the library's `WfSelect` with an "Any role" empty
+  option (the web select is "clearable"; the Flutter select has no clear button, so the empty option does it).
+  `segregationOfDuties` errors show the server message through the existing `wfErrorText` (no new code).
+- Time limit pause: `UiWfSla.pauseOnStatus` / `pauseOnEvent` / `resumeOnEvent`. There is no multi-select control in the
+  library, so the three lists use `WfChecks` (a wrap of checkboxes, as the Switch step's "Values" does) under an
+  `FbSetting` label. A key the list holds but the app no longer offers stays listed as "<key> (unknown)" so it is never
+  dropped unseen. The signal lists are hidden when the registry has no signals (unless the list already holds keys).
+  `removeState` also removes the state from other states' `pauseOnStatus` (the web store's cleaning does the same).
+- Public processing time: `UiWorkflowDefinition.publicProcessingTime` (`UiWfPublicProcessingTime`) in the workflow
+  settings, 200 characters enforced with a `LengthLimitingTextInputFormatter` (`UiInput` has no `maxLength`). The key is
+  removed when the estimate is blank and the switch is off. `UiWfRecord.publicProcessingTime` is the optional string of the
+  record view; the panel (all layouts) says "Usual processing time: <estimate>" under the state when it is set.
+- Audit: `lifecycle.slaPaused` "Time limit paused" and `lifecycle.slaResumed` "Time limit running again"; the history
+  sentence adds the state ("Time limit paused in In review").
+- No client-side lint mirrors: the builder checks nothing comparable (`unknownGroup`, `unknownRole`) itself; the engine's
+  problems arrive through `api.validate`.
+

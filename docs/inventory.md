@@ -1762,7 +1762,7 @@ Form submission to workflow: `wfSubmissionPayload`, `wfPickWorkflow`, `wfStartFr
 
 ### UiWorkflowPanel (component, `ui-workflow-panel`)
 File: `workflow/src/panel.ts`  
-A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens; `[(open)]` is `open` + `onOpenChanged`). Record types with no lifecycle still show their manual workflows, tasks and history.  
+A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens; `[(open)]` is `open` + `onOpenChanged`). Record types with no lifecycle still show their manual workflows, tasks and history. Says "Usual processing time" when the record view carries one.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### WfRecordActions (component, `ui-wf-record-actions`)
