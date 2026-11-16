@@ -85,6 +85,16 @@ page: an icon in a tinted badge, eyebrow, title, description and an action, with
 accent, brand, neutral), `layout` (vertical, horizontal) and `size` (md, lg); with `onPressed` the
 whole card is one button.
 
+**Workflow tour anchors, workflow error text, form prefill and server errors (0.87.0):** `UiWorkflowPanel` and
+`UiWorkflowTasksDrawer` take `anchorPrefix`, making their controls `UiTourAnchor`s (`<prefix>.open`, `.move.<key>`,
+`.manual.<key>`, `.reset`, `.confirm`, `.task-entry`, `.task.<outcome>`, `.stopped`); a tour pointing into a closed drawer
+opens it first (`UiTour.registerRevealer(prefix, reveal)`). The workflow widgets never show an engine's raw HTTP error:
+`UiWorkflowHttpApi` reports a missing route, an error page or no answer as `UiWfApiError(code: 'unreachable')` with a `detail`,
+shown as `UiStrings.workflowUnavailable` with a closed "Technical details" toggle (`wfErrorText`, `wfErrorDetail`).
+`UiFormRenderer(prefill:)` opens a new submission with starting answers, and `serverErrors:` shows a server's 422 by data
+path under the questions and in the summary (unmatched ones listed first, reported by `onServerErrorsUnmatched`); the engine
+has `prefill`, `setServerErrors` and `serverUnmatched`.
+
 **Sidebar account button (0.86.0):** `UiSidebarAccount` is the signed-in person for
 `UiSidebarLayout.sidebarFooter`: avatar (photo or initials), `name`, `subtitle` (job title · section), an optional
 `badge` + `badgeTone` (Read-only) and `hint` (Switch test account), and an unfold chevron (`showChevron`). One

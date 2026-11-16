@@ -1580,3 +1580,48 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
 - Height: at least `sizeTouch` (44), and 48 on touch platforms (the web uses `--ui-size-touch`); the subtitle and hint are
   12px muted, the name `fontSizeSm` semibold, one line each with an ellipsis.
 - `UiSidebarLayout` has no rail mode on either side, so `collapsed` is set by the app on both.
+
+## 0.87.0: workflow anchors, workflow error text, form prefill and server errors
+
+- Tour revealers: `UiTour.registerRevealer(prefix, bool Function(String id) reveal)` returns the remover (the web
+  `UiTourAnchors.registerRevealer`) and `UiTour.reveal(id)` asks every revealer whose prefix the id starts with. Flutter's
+  anchor registry is the static map in `tour.dart`, so the revealers live beside it. `UiTour.start` stays synchronous when
+  nothing needs revealing (existing callers and tests see no change); otherwise it marks the tour active, waits for the
+  revealed anchors frame by frame (a post-frame check with `scheduleFrame`, cut off by a 1 s `Timer`, so fake time in tests
+  ends it), then filters the steps as before. A newer start or `stop()` during the wait wins (a start counter): the waiting
+  start completes `closed`. `stop()` now also clears `active`.
+- `UiWorkflowPanel.anchorPrefix`: anchors are wrapped by the internal `wfAnchor(prefix, name, child)` (no wrapper without a
+  prefix). The rail (`.open`) lives in the panel's `OverlayPortal`. The web reveal opens its `ui-drawer` non-modal; here the
+  drawer layouts already have a non-modal peek (`UiDrawerPeek`, used by hover), so the revealer opens the peek with a
+  `_pinned` flag that keeps `_hoverOut` from closing it (the tour's scrim covering the drawer is exactly a pointer leaving).
+  Closing in any way (the peek's close, a tap on the rail, the host's `open: false`) drops the pin. `.confirm` and `.task.*`
+  are never revealed (dialogs), nor `.open` (on screen already), as on the web.
+- `UiWorkflowTasksDrawer.anchorPrefix`: its drawer is a modal route; the revealer calls `show()` for `.task-entry` and
+  `.stopped`. The route is pushed before the tour's overlay entry is inserted, so the tour stays on top.
+- `showWfDecideDialog(anchorPrefix:)`, `WfRecordActions.anchorPrefix` and `WfTaskInbox.anchorPrefix` (internal) carry the
+  prefix to the outcome buttons, moves, manual starts, reset, confirmation button and task rows.
+- Error text: the new code is `unreachable` (not `unavailable`: an engine may itself answer `{code: 'unavailable'}` and
+  its message must still show). `UiWfApiError` gets a fifth optional positional `detail` (the web constructor's order).
+  `UiWorkflowHttpApi` catches anything `client.send` throws (status 0, `"<METHOD> <path>: no answer - <error>"`) and
+  classifies with the public `wfIsUnavailable(status, json)`; HTML is stripped (script/style blocks, tags, whitespace) and cut
+  to 300 characters with an ellipsis. `exportAudit`: 403 keeps its message, any other failure is `unreachable`. The English
+  sentence is the exported `wfUnavailableMessage`.
+- `wfErrorText(e, fallback, [UiStrings strings = const UiStrings()])` (positional, like the web's optional third argument)
+  and `wfErrorDetail(e)` are now exported. Widgets read the strings through the internal `wfErrorTextFor(state, e, fallback)`
+  (the library's strings while the state is mounted, English after), which also keeps `use_build_context_synchronously` quiet
+  in the async catch blocks. The permissions page used to show only `e.message`; it now uses `wfErrorText` like the rest.
+- The disclosure is the internal `WfErrorNote(text, detail:, trailing:, style:)`: a `WfNote` with a small `UiInteractive`
+  toggle (chevron, `strings.technicalDetails`, 11.5px muted, `expanded` semantics) and the detail in `uiText.code` at 11px
+  when open; a new detail closes it again. Used for load errors in the panel (also the stale "may be out of date" note), task
+  inbox, run view, audit log (also its verify/export errors) and permissions. Action errors keep `WfNote` with the friendly text.
+- Engine: `UiFormEngine(prefill:)` / `fromJson(prefill:)`, `setServerErrors(Map<String, Object>?)` returning
+  `List<UiFbServerErrorItem>` (with `toJson()` and value equality) and the `serverUnmatched` getter. Server messages are merged
+  into the evaluated states in `_current` (after `_evaluate`), so every reader (`pageErrors`, `submit`, `instanceState`) sees
+  them. The shared fixtures `engine-prefill.json` and `engine-server.json` are byte copies of the web ones; the runner reads
+  the case-level `prefill`, the `serverErrors` step with its `unmatched`, and the `serverUnmatched` expectation.
+- Renderer: `prefill` restarts the engine on identity change (like `values`); `serverErrors` is applied on identity change
+  and after every restart (applied before the engine listener is added, so nothing calls `setState` during `initState`).
+  `onServerErrorsUnmatched` is called after the frame and focus moves to the summary (or the first field with an error when
+  the form has no summary) through the existing `_showSummary`. The summary lists unmatched messages first as plain rows (a
+  bullet and danger text, no link) and counts both in its heading.
+- New `UiStrings` keys `workflowUnavailable` and `technicalDetails` (en + dv, the texts of the spec).

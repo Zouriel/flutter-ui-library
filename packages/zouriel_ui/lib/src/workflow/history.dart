@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
+
+import '../theme/theme.dart';
 import 'api.dart';
 import 'bits.dart';
 import 'json.dart';
@@ -9,8 +12,10 @@ import 'schema.dart' show UiWfRemarks;
 // workflow panel and the task inbox.
 
 /// What to show for a failed call (the web `wfErrorText`): the engine's message with the details
-/// it gave (e.g. which field is wrong), else [fallback].
-String wfErrorText(Object e, String fallback) {
+/// it gave (e.g. which field is wrong), else [fallback]. An `unreachable` error (0.87.0) is never shown
+/// raw: it reads [UiStrings.workflowUnavailable] from [strings] (English when not given).
+String wfErrorText(Object e, String fallback, [UiStrings strings = const UiStrings()]) {
+  if (e is UiWfApiError && e.code == 'unreachable') return strings.workflowUnavailable;
   if (e is UiWfApiError) {
     final d = e.details;
     final details = d is List ? [for (final x in d) if (x is Map && x['message'] is String) x['message'] as String] : const <String>[];
@@ -18,6 +23,12 @@ String wfErrorText(Object e, String fallback) {
   }
   return fallback;
 }
+
+/// [wfErrorText] in the library's language while [state] is still on screen (English after).
+String wfErrorTextFor(State state, Object e, String fallback) => wfErrorText(e, fallback, state.mounted ? state.context.uiStrings : const UiStrings());
+
+/// The technical text of an error, for a closed "Technical details" disclosure (null: none).
+String? wfErrorDetail(Object e) => e is UiWfApiError ? e.detail : null;
 
 /// Parses an audit entry's JSON field; a broken one reads as empty rather than throwing.
 UiJson wfAuditJson(String? text) {

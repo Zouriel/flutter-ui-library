@@ -1,0 +1,268 @@
+{
+  "kind": "engine",
+  "description": "Errors from a server by data path (`setServerErrors`, 0.87.0): shown on the field after its own errors, their pages' errors shown at once, the form moved to the first such page; an answer change clears its message; paths naming no field come back unmatched; null clears.",
+  "definition": {
+    "schemaVersion": 1,
+    "id": "apply",
+    "title": "Apply",
+    "revision": 2,
+    "pages": [
+      {
+        "id": "p1",
+        "elements": [
+          {
+            "kind": "field",
+            "id": "name",
+            "type": "text",
+            "key": "full_name",
+            "label": "NAME",
+            "required": true
+          },
+          {
+            "kind": "field",
+            "id": "island",
+            "type": "text",
+            "key": "island",
+            "label": "ISLAND",
+            "defaultValue": "Hithadhoo"
+          },
+          {
+            "kind": "field",
+            "id": "note",
+            "type": "text",
+            "key": "note",
+            "label": "NOTE",
+            "defaultValue": "none"
+          },
+          {
+            "kind": "group",
+            "id": "addr",
+            "key": "address",
+            "title": "ADDRESS",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "city",
+                "type": "text",
+                "key": "city",
+                "label": "CITY"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "elements": [
+          {
+            "kind": "group",
+            "id": "deps",
+            "key": "dependants",
+            "title": "DEPENDANTS",
+            "repeat": {
+              "min": 0,
+              "max": 5
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "dep",
+                "type": "text",
+                "key": "name",
+                "label": "DEPENDANT"
+              },
+              {
+                "kind": "field",
+                "id": "rel",
+                "type": "text",
+                "key": "relation",
+                "label": "RELATION",
+                "defaultValue": "child"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "puts a server message on the field its path names and blocks submitting until the answer changes",
+      "today": "2026-11-17",
+      "prefill": {
+        "full_name": "Aisha",
+        "address": {
+          "city": "Addu"
+        }
+      },
+      "steps": [
+        {
+          "serverErrors": {
+            "full_name": [
+              "Use the name on your ID card."
+            ],
+            "address.city": "Unknown city.",
+            "office_note": [
+              "Applications are closed."
+            ]
+          },
+          "unmatched": [
+            {
+              "path": "office_note",
+              "message": "Applications are closed."
+            }
+          ]
+        },
+        {
+          "expect": {
+            "errors": {
+              "name": [
+                "Use the name on your ID card."
+              ],
+              "city": [
+                "Unknown city."
+              ]
+            },
+            "errorsShown": {
+              "name": true,
+              "city": true
+            },
+            "pageIndex": 0,
+            "pageErrors": {
+              "0": [
+                {
+                  "field": "name",
+                  "label": "NAME",
+                  "message": "Use the name on your ID card."
+                },
+                {
+                  "field": "city",
+                  "label": "CITY",
+                  "message": "Unknown city."
+                }
+              ]
+            },
+            "serverUnmatched": [
+              {
+                "path": "office_note",
+                "message": "Applications are closed."
+              }
+            ]
+          }
+        },
+        {
+          "submit": false
+        },
+        {
+          "set": "name",
+          "value": "Aisha Ali"
+        },
+        {
+          "expect": {
+            "errors": {
+              "name": [],
+              "city": [
+                "Unknown city."
+              ]
+            }
+          }
+        },
+        {
+          "set": "city",
+          "value": "Addu City"
+        },
+        {
+          "submit": true
+        }
+      ]
+    },
+    {
+      "name": "a server message comes after the field's own error and is not repeated",
+      "today": "2026-11-17",
+      "steps": [
+        {
+          "serverErrors": {
+            "full_name": "Required."
+          },
+          "unmatched": []
+        },
+        {
+          "expect": {
+            "errors": {
+              "name": [
+                "NAME is required.",
+                "Required."
+              ]
+            }
+          }
+        },
+        {
+          "serverErrors": {
+            "full_name": "NAME is required."
+          },
+          "unmatched": []
+        },
+        {
+          "expect": {
+            "errors": {
+              "name": [
+                "NAME is required."
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "moves to the first page holding a server error; paths into repeat entries find their entry",
+      "today": "2026-11-17",
+      "prefill": {
+        "full_name": "Sam",
+        "dependants": [
+          {
+            "name": "Lee"
+          },
+          {
+            "name": "Ray"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "serverErrors": {
+            "dependants[1].name": [
+              "Give the full name."
+            ]
+          },
+          "unmatched": []
+        },
+        {
+          "expect": {
+            "pageIndex": 1,
+            "errors": {
+              "dep@1": [
+                "Give the full name."
+              ],
+              "dep@0": []
+            },
+            "errorsShown": {
+              "dep@1": true
+            }
+          }
+        },
+        {
+          "serverErrors": null,
+          "unmatched": []
+        },
+        {
+          "expect": {
+            "errors": {
+              "dep@1": []
+            },
+            "serverUnmatched": []
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -926,11 +926,12 @@ File: `form-builder/src/builder-source.ts`
 - interface `UiFbDiff` (definition.ts)
 - function `diffDefinitions` (definition.ts)
 - type `UiFormMode` (engine.ts)
-- interface `UiFormEngineOptions` (engine.ts)
+- interface `UiFormEngineOptions` (engine.ts) (0.87.0: `prefill`, create mode only; Flutter `UiFormEngine(prefill:)`)
 - interface `UiFbInstance` (engine.ts)
 - interface `UiFbInstanceState` (engine.ts)
 - interface `UiFbRemovedRow` (engine.ts)
 - interface `UiFbErrorItem` (engine.ts)
+- interface `UiFbServerErrorItem` (engine.ts, 0.87.0): `{path, message}`; with `UiFormEngine.setServerErrors(errors)` and `serverUnmatched` (Flutter a getter)
 - function `requiredMessage` (engine.ts)
 - const `addrOf` (engine.ts)
 - function `coerceValue` (engine.ts)
@@ -959,6 +960,7 @@ File: `form-builder/src/form-renderer.ts`
 `ui-form-renderer` — fills in a form built with `ui-form-builder`. Give it a definition, and (to edit or view saved answers) the saved `data`. It emits `submitted` with JSON ready to store: `{ formId, revision, data, … }`.  
 - Inputs: `definition`: UiFormDefinition; `data`: Record<string, unknown> | null = null; `mode`: UiFormMode | null = null; `validators`: readonly UiFbValidatorDef[] = []; `optionSources`: readonly UiFbOptionSourceDef[] = []; `globalSettings`: UiFormGlobalSettings | null = null; `uploader`: UiFbUploader | null = null; `showTitle` = true; `showActions` = true; `submitLabel`: string | null = null; `cancelLabel`: string | null = null; `busy` = false; `today`: (() => string) | null = null
 - Outputs: `submitted`: UiFormSubmission; `cancelled`: void; `valueChange`: Record<string, unknown>; `dirtyChange`: boolean
+- 0.87.0: inputs `prefill`: Record<string, unknown> | null = null (Flutter `UiJson?`), `serverErrors`: Record<string, string | string[]> | null = null (Flutter `Map<String, Object>?`); output `serverErrorsUnmatched` (Flutter `onServerErrorsUnmatched: ValueChanged<List<UiFbServerErrorItem>>?`); the error summary lists unmatched server errors first and takes focus
 - Methods: `reset()`, `submit()`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1770,6 +1772,7 @@ Form submission to workflow: `wfSubmissionPayload`, `wfPickWorkflow`, `wfStartFr
 ### UiWorkflowPanel (component, `ui-workflow-panel`)
 File: `workflow/src/panel.ts`  
 A record's workflow as a vertical, horizontal or compact panel (the compact one replaces the removed record panel), or an edge drawer behind a rail of dots (hover peeks, tap opens; `[(open)]` is `open` + `onOpenChanged`). Record types with no lifecycle still show their manual workflows, tasks and history. Says "Usual processing time" when the record view carries one.  
+- 0.87.0: `anchorPrefix` (tour anchors `.open`, `.move.<key>`, `.manual.<key>`, `.reset`, `.confirm`, `.task-entry`, `.task.<outcome>`; the drawer layouts register a tour revealer that opens the drawer pinned); load errors as the plain `workflowUnavailable` sentence with a closed "Technical details" disclosure (Flutter `WfErrorNote`, internal)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### WfRecordActions (component, `ui-wf-record-actions`)
@@ -1790,7 +1793,13 @@ One run over its workflow, with retry, skip (asking for the step's results, per 
 ### UiWorkflowTasksDrawer (component, `ui-workflow-tasks-drawer`)
 File: `workflow/src/tasks-drawer.ts`  
 A "My tasks" button with the number open (red when one is overdue or a workflow stopped) that opens the tasks in a drawer, open or finished, each opening its decision; stopped workflows above them for people who may intervene. `[(open)]` is `open` + `onOpenChanged`; `scope: 'all'` lists everyone's tasks.  
+- 0.87.0: `anchorPrefix` (tour anchors `.open` on the button, `.task-entry`, `.stopped`, `.task.<outcome>`; a revealer opens the drawer for `.task-entry` / `.stopped`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiWfApiError + wfErrorText + wfErrorDetail (workflow api / runtime-shared, 0.87.0)
+File: `workflow/src/api.ts`, `workflow/src/runtime-shared.ts`  
+`UiWfApiError.detail` (string | null); the HTTP client's `unreachable` code (no answer, a non-JSON answer, or 404/405/408/429/5xx without an engine `code`) with the English `workflowUnavailable` sentence; `wfErrorText(e, fallback, strings?)` maps `unreachable` to `UiStrings.workflowUnavailable`; `wfErrorDetail(e)`. New `UiStrings` keys `workflowUnavailable`, `technicalDetails` (en + dv). Flutter also exports `wfUnavailableMessage`, `wfIsUnavailable`.  
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check (no new golden: the disclosure is text under the existing note)  - [x] showcase
 
 ### UiWorkflowPermissions (component, `ui-workflow-permissions`)
 File: `workflow/src/permissions.ts`  
@@ -1972,6 +1981,7 @@ File: `guidance/src/tour.ts`
 Coach-mark tour: dimmed page, rounded cut-out round each anchor with a breathing ring, a bubble with "2 of 4", Back / Next / Done, Skip, Turn off tips.  
 - Flutter: `UiTour.start(context, UiTourSpec)`, `UiTour.stop()`, `UiTour.active`, `UiTourAnchor(id:, child:)`, `UiTourStep`, `UiTourLabels`, `UiTourPlacement`
 - 0.75.1: anchors on library-built buttons: `UiBottomNavItem.anchor`, `UiTab.anchor` (web: `UiBottomNavItem.anchor`, `ui-tab [anchor]`)
+- 0.87.0: revealers: web `UiTourAnchors.registerRevealer(prefix, reveal)` / `reveal(id)`; Flutter `UiTour.registerRevealer(prefix, bool Function(String id))` (returns the remover) / `UiTour.reveal(id)`. A tour's start reveals missing anchors and waits up to 1 s for them
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check (screenshots)  - [x] showcase
 
 ### UiOfferCard (component, `ui-offer-card`)

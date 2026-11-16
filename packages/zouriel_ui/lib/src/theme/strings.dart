@@ -217,6 +217,8 @@ class UiStrings {
     this.tourStep = '{n} of {total}',
     this.tourStepAnnounce = 'Step {n} of {total}: {text}',
     this.tipsOff = 'Turn off tips',
+    this.workflowUnavailable = "Workflows aren't available right now. Try again later.",
+    this.technicalDetails = 'Technical details',
     this.checklistCount = '{done} of {total}',
     this.checklistAllDone = 'All set',
     this.checklistItemDone = 'Done',
@@ -439,6 +441,8 @@ class UiStrings {
     tourStep: '{total} އިން {n}',
     tourStepAnnounce: '{total} ފިޔަވަޅުގެ {n} ވަނަ: {text}',
     tipsOff: 'ޓިޕްސް ނިއްވާލާ',
+    workflowUnavailable: 'ވޯކްފްލޯތައް މިވަގުތު ނުލިބޭ. ފަހުން އަލުން މަސައްކަތްކޮށްލައްވާ.',
+    technicalDetails: 'ޓެކްނިކަލް ތަފްސީލު',
     checklistCount: '{total} އިން {done}',
     checklistAllDone: 'ހުރިހާ ކަމެއް ނިމިއްޖެ',
     checklistItemDone: 'ނިމިފައި',
@@ -1058,6 +1062,13 @@ class UiStrings {
   /// Tour, offer card (0.75.0): the small action that turns every tip off.
   final String tipsOff;
 
+  /// Workflow components (0.87.0): said instead of the raw error when the workflow engine can't be
+  /// reached or something other than the engine answered (a missing route, an error page).
+  final String workflowUnavailable;
+
+  /// Workflow components (0.87.0): the closed disclosure holding an error's technical detail.
+  final String technicalDetails;
+
   /// Checklist (0.75.0): the count in its header (`{done}`, `{total}`).
   final String checklistCount;
 
@@ -1294,6 +1305,8 @@ class UiStrings {
     String? tourStep,
     String? tourStepAnnounce,
     String? tipsOff,
+    String? workflowUnavailable,
+    String? technicalDetails,
     String? checklistCount,
     String? checklistAllDone,
     String? checklistItemDone,
@@ -1511,6 +1524,8 @@ class UiStrings {
         tourStep: tourStep ?? this.tourStep,
         tourStepAnnounce: tourStepAnnounce ?? this.tourStepAnnounce,
         tipsOff: tipsOff ?? this.tipsOff,
+        workflowUnavailable: workflowUnavailable ?? this.workflowUnavailable,
+        technicalDetails: technicalDetails ?? this.technicalDetails,
         checklistCount: checklistCount ?? this.checklistCount,
         checklistAllDone: checklistAllDone ?? this.checklistAllDone,
         checklistItemDone: checklistItemDone ?? this.checklistItemDone,
@@ -1730,6 +1745,8 @@ class UiStrings {
         'tourStep': tourStep,
         'tourStepAnnounce': tourStepAnnounce,
         'tipsOff': tipsOff,
+        'workflowUnavailable': workflowUnavailable,
+        'technicalDetails': technicalDetails,
         'checklistCount': checklistCount,
         'checklistAllDone': checklistAllDone,
         'checklistItemDone': checklistItemDone,

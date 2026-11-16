@@ -87,6 +87,8 @@ key.currentState!.engine.dirty;      // and values, changes, pageIndex...''',
           api: const [
             ApiRow('definition', 'Object', 'The form: a UiFormDefinition or its stored JSON map (migrated on load). Usually the published version.'),
             ApiRow('values', 'UiJson?', 'Saved answers to edit or view. Unknown keys and answers to questions hidden at the time are kept.'),
+            ApiRow('prefill', 'UiJson?', 'Starting answers for a new submission (create mode; 0.87.0): filled in without making it an edit (no change list, the normal Submit label); defaults still apply to questions without one, keys that are not questions are dropped. The form restarts when it changes.'),
+            ApiRow('serverErrors', 'Map<String, Object>?', 'A server\'s 422 by data path (full_name, address.city, dependants[1].name), each a message or a list of them (0.87.0). Shown under their questions and in the summary, which takes focus; a message goes when its answer changes. Give a new map for each response; null or {} clears them.'),
             ApiRow('mode', 'UiFormMode?', 'edit shows “Save changes” and a change list; view shows every page as text and never validates.', def: 'edit with values, else create'),
             ApiRow('validators', 'List<UiFbValidatorDef>', 'App checks (sync or async), on top of the built-in ones.', def: '[]'),
             ApiRow('optionSources', 'List<UiFbOptionSourceDef>', 'Lists sourced dropdowns search. Use the same ones the builder had.', def: '[]'),
@@ -105,10 +107,32 @@ key.currentState!.engine.dirty;      // and values, changes, pageIndex...''',
             ApiRow('onValueChanged', 'ValueChanged<UiJson>', 'The values as it would be saved, after every change.'),
             ApiRow('onDirtyChanged', 'ValueChanged<bool>', 'Whether the answers differ from what the form opened with.'),
             ApiRow('onCancelled', 'VoidCallback', 'The Cancel button was pressed.'),
+            ApiRow('onServerErrorsUnmatched', 'ValueChanged<List<UiFbServerErrorItem>>', 'After non-empty serverErrors were applied: the ones that named no question ({path, message}), which the summary lists first as plain text.'),
+            ApiRow('engine.setServerErrors(errors) / engine.serverUnmatched', 'List<UiFbServerErrorItem>', 'The same on the engine: returns (and keeps) the unmatched ones; a remaining server error blocks submit().'),
             ApiRow('submit() / reset()', 'UiFormRendererState', 'Validate and submit; start over from the given values on the first page.'),
             ApiRow('engine', 'UiFormEngine', 'The running form: values, dirty, changes, pageIndex, setValue...'),
             ApiRow('engine.strings / engine.setStrings(overrides)', 'UiFbStrings / void', 'The engine’s and renderer’s own words in the language in use (built-in table plus the strings option). Messages are worded again when the language or the overrides change. UiFormEngine(strings: …) sets them up front.'),
           ],
+        ),
+        const DocSection(
+          name: 'Starting answers and server errors',
+          widget: 'UiFormRenderer(prefill:, serverErrors:)',
+          summary: 'A new submission can open with answers already in it (prefill): a signed-in person\'s details, or what they gave an '
+              'older version of the form. It stays a new submission: Submit, no change list, nothing counts as changed. When your server '
+              'refuses a submission with errors by data path, pass them as serverErrors: each shows under its question and in the summary at '
+              'the top, which takes focus, until the answer changes; paths that name no question are listed first in the summary and '
+              'reported by onServerErrorsUnmatched.',
+          demo: _PrefillServerDemo(),
+          code: '''UiFormRenderer(
+  definition: form,
+  prefill: {'full_name': me.name, 'address': {'city': me.city}},
+  serverErrors: errors, // a new map per response, e.g. the 422's errors with 'data.' taken off
+  onServerErrorsUnmatched: (items) => log(items),
+  onSubmitted: (s) async {
+    final res = await api.submit(s.values);
+    if (res.statusCode == 422) setState(() => errors = res.errors);
+  },
+)''',
         ),
         const DocSection(
           name: 'Answers studio',
@@ -294,6 +318,74 @@ class _AnswersStudioState extends State<_AnswersStudio> {
           ]),
         ),
       if (shown != null) DocCode(code: _json.convert(shown.values), language: 'JSON'),
+    ]);
+  }
+}
+
+/// Prefill and server errors: a short form opened with a signed-in person's details, and a button
+/// that answers the way a server's 422 would.
+class _PrefillServerDemo extends StatefulWidget {
+  const _PrefillServerDemo();
+
+  @override
+  State<_PrefillServerDemo> createState() => _PrefillServerDemoState();
+}
+
+class _PrefillServerDemoState extends State<_PrefillServerDemo> {
+  static const _form = {
+    'schemaVersion': 1,
+    'id': 'apply',
+    'title': 'Apply for a permit',
+    'pages': [
+      {
+        'id': 'p1',
+        'elements': [
+          {'kind': 'field', 'id': 'name', 'type': 'text', 'key': 'full_name', 'label': 'Full name', 'required': true},
+          {'kind': 'field', 'id': 'phone', 'type': 'text', 'key': 'phone', 'label': 'Phone'},
+          {
+            'kind': 'group',
+            'id': 'addr',
+            'key': 'address',
+            'title': 'Address',
+            'elements': [
+              {'kind': 'field', 'id': 'city', 'type': 'text', 'key': 'city', 'label': 'City'},
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  Map<String, Object>? _errors;
+  String _unmatched = '';
+  String _submitted = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+      Wrap(spacing: t.space2, runSpacing: t.space2, children: [
+        UiButton(
+          label: 'Answer as the server would',
+          size: UiSize.sm,
+          variant: UiButtonVariant.outline,
+          onPressed: () => setState(() => _errors = {
+                'full_name': ['Use the name on your ID card.'],
+                'address.city': 'We don\'t serve this city yet.',
+                'office_note': 'Applications close at 2 pm today.',
+              }),
+        ),
+        UiButton(label: 'Clear', size: UiSize.sm, variant: UiButtonVariant.ghost, onPressed: () => setState(() => _errors = null)),
+      ]),
+      UiFormRenderer(
+        definition: _form,
+        prefill: const {'full_name': 'Aisha Ali', 'address': {'city': 'Addu City'}, 'efaas_id': 'A123456'},
+        serverErrors: _errors,
+        onServerErrorsUnmatched: (items) => setState(() => _unmatched = items.isEmpty ? 'Every error named a question.' : 'Named no question: ${items.map((i) => i.path).join(', ')}'),
+        onSubmitted: (s) => setState(() => _submitted = 'Submitted: ${jsonEncode(s.values)}'),
+      ),
+      if (_unmatched.isNotEmpty) UiText(_unmatched, color: t.textSecondary),
+      if (_submitted.isNotEmpty) UiText(_submitted, color: t.textSecondary),
     ]);
   }
 }

@@ -13,7 +13,7 @@ export '../workflow/global_settings.dart' show UiWorkflowGlobalSettings, UiWorkf
 export '../workflow/runtime.dart' show UiWorkflowStateBadge, UiWorkflowAudit, UiWorkflowAuditState;
 export '../workflow/panel.dart' show UiWorkflowPanel, UiWorkflowPanelState, UiWorkflowPanelLayout, UiWfPanelStep;
 export '../workflow/permissions.dart' show UiWorkflowPermissions, UiWorkflowPermissionsState;
-export '../workflow/history.dart' show wfDescribeHistory;
+export '../workflow/history.dart' show wfDescribeHistory, wfErrorText, wfErrorDetail;
 export '../workflow/layout.dart';
 export '../workflow/schema.dart';
 export '../workflow/store.dart';

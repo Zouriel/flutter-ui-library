@@ -78,6 +78,21 @@ class UiFbErrorItem {
   UiJson toJson() => {'addr': addr, 'id': id, 'row': row, 'label': label, 'message': message};
 }
 
+/// A server error whose data path matched no field of the form (0.87.0).
+class UiFbServerErrorItem {
+  const UiFbServerErrorItem({required this.path, required this.message});
+  final String path;
+  final String message;
+
+  UiJson toJson() => {'path': path, 'message': message};
+
+  @override
+  bool operator ==(Object other) => other is UiFbServerErrorItem && other.path == path && other.message == message;
+
+  @override
+  int get hashCode => Object.hash(path, message);
+}
+
 /// The settings the engine runs with (the form's own, with defaults filled in).
 class UiFbEngineSettings {
   const UiFbEngineSettings({required this.validateOn, required this.clearHidden, required this.errorSummary, required this.requiredMarker});
@@ -204,10 +219,16 @@ class _Ctx implements UiFbConditionContext, UiFbCalcContext {
 /// async check finishing) re-evaluates the form straight away, runs "set value" rules to a fixed
 /// point, starts any async checks, then calls the listeners — the state a running web form is in
 /// after its change detection.
+///
+/// `prefill` (0.87.0) gives a new submission starting answers (create mode only; ignored when
+/// editing or viewing): the form opens with them filled in but stays a new submission (no change
+/// list, the normal Submit label), defaults still apply to fields without one, and keys that aren't
+/// fields of the form are not carried into the values.
 class UiFormEngine {
   UiFormEngine({
     required UiFormDefinition definition,
     UiJson? values,
+    UiJson? prefill,
     UiFormMode? mode,
     List<UiFbValidatorDef> validators = const [],
     List<UiFbOptionSourceDef> optionSources = const [],
@@ -236,6 +257,7 @@ class UiFormEngine {
     );
     _validatorDefs = {for (final d in [...uiFbBuiltinValidators, ...validators]) d.type: d};
     _sourceDefs = {for (final d in optionSources) d.type: d};
+    _prefill = this.mode == UiFormMode.create && prefill != null ? jsonCloneMap(prefill) : null;
     _load();
     // The first full picture (calculations included) is the "unchanged" baseline.
     _baseline = this.values;
@@ -246,6 +268,7 @@ class UiFormEngine {
   factory UiFormEngine.fromJson(
     Object? definition, {
     UiJson? values,
+    UiJson? prefill,
     UiFormMode? mode,
     List<UiFbValidatorDef> validators = const [],
     List<UiFbOptionSourceDef> optionSources = const [],
@@ -257,6 +280,7 @@ class UiFormEngine {
   }) => UiFormEngine(
     definition: migrateDefinition(definition),
     values: values,
+    prefill: prefill,
     mode: mode,
     validators: validators,
     optionSources: optionSources,
@@ -318,6 +342,13 @@ class UiFormEngine {
   final String Function() _today;
   final DateTime Function() _now;
   final UiJson _savedValues;
+
+  /// Starting answers of a new submission (create mode only).
+  late final UiJson? _prefill;
+
+  /// Errors from a server by field address (see [setServerErrors]).
+  Map<String, String> _serverErrors = const {};
+  List<UiFbServerErrorItem> _serverUnmatched = const [];
 
   Map<String, Object?> _answers = {};
   Map<String, List<String>> _rowIds = {};
@@ -382,15 +413,17 @@ class UiFormEngine {
     final values = <String, Object?>{};
     final rows = <String, List<String>>{};
     final fresh = mode == UiFormMode.create;
+    // A new submission may start from given answers (prefill); they never count as saved ("loaded").
+    final useStored = !fresh || _prefill != null;
     // `isNew`: nothing was saved here before, so defaults apply (always for hidden values).
     void loadEls(List<UiFbElement> els, Map<String, Object?>? src, String? row, bool isNew) {
       for (final el in els) {
         if (el is UiFbField) {
           final addr = addrOf(el.id, row);
           final (found, stored) = _pick(src, [el.key, ...?el.keyHistory]);
-          if (found && !fresh) {
+          if (found && useStored) {
             values[addr] = coerceValue(el, stored);
-            _loaded.add(addr);
+            if (!fresh) _loaded.add(addr);
           } else if (el.hasDefaultValue && (isNew || el.type == UiFbFieldType.hidden)) {
             values[addr] = coerceValue(el, jsonClone(el.defaultValue));
           }
@@ -400,15 +433,16 @@ class UiFormEngine {
           final (subFound, sub) = hasKey ? _pick(src, [el.key!, ...?el.keyHistory]) : (src != null, src);
           final repeat = el.repeat;
           if (repeat != null) {
-            final items = !fresh && sub is List ? sub : const <Object?>[];
+            final items = useStored && sub is List ? sub : const <Object?>[];
             final ids = <String>[];
             for (final item in items) {
               final id = _newRowId();
-              _rowBase[id] = _isObj(item) ? (item as Map).cast<String, Object?>() : <String, Object?>{};
-              loadEls(el.elements, _isObj(item) ? (item as Map).cast<String, Object?>() : null, id, false);
+              // A prefilled entry is new: only its fields' answers are taken, and defaults fill the rest.
+              _rowBase[id] = _isObj(item) && !fresh ? (item as Map).cast<String, Object?>() : <String, Object?>{};
+              loadEls(el.elements, _isObj(item) ? (item as Map).cast<String, Object?>() : null, id, fresh);
               ids.add(id);
             }
-            if (items.isNotEmpty) _loaded.add(addrOf(el.id, row));
+            if (items.isNotEmpty && !fresh) _loaded.add(addrOf(el.id, row));
             // New forms start with the minimum number of entries (at least one).
             final min = fresh ? math.max(1, (repeat.min ?? 0).toInt()) : (repeat.min ?? 0).toInt();
             while (ids.length < min) {
@@ -419,7 +453,7 @@ class UiFormEngine {
             rows[el.id] = ids;
             _initialRows[el.id] = [...ids];
           } else {
-            if (hasKey && subFound) _loaded.add(addrOf(el.id, row));
+            if (hasKey && subFound && !fresh) _loaded.add(addrOf(el.id, row));
             final next = hasKey ? (_isObj(sub) ? (sub as Map).cast<String, Object?>() : null) : src;
             loadEls(el.elements, next, row, isNew);
           }
@@ -428,7 +462,7 @@ class UiFormEngine {
     }
 
     for (final p in definition.pages) {
-      loadEls(p.elements, _savedValues, null, fresh);
+      loadEls(p.elements, fresh ? _prefill : _savedValues, null, fresh);
     }
     _answers = values;
     _rowIds = rows;
@@ -438,7 +472,74 @@ class UiFormEngine {
 
   // ── Reacting ───────────────────────────────────────────────────────────────────────────────
 
-  _EvalResult get _current => _state ??= _evaluate();
+  _EvalResult get _current => _state ??= _withServerErrors(_evaluate());
+
+  /// Adds the server's messages to the fields they belong to, after the form's own (while the field shows).
+  _EvalResult _withServerErrors(_EvalResult result) {
+    if (_serverErrors.isEmpty || mode == UiFormMode.view) return result;
+    final states = {...result.states};
+    for (final MapEntry(key: addr, value: message) in _serverErrors.entries) {
+      final st = states[addr];
+      if (st == null || !st.visible || st.errors.contains(message)) continue;
+      states[addr] = UiFbInstanceState(
+        visible: st.visible,
+        disabled: st.disabled,
+        required: st.required,
+        value: st.value,
+        errors: [...st.errors, message],
+        warnings: st.warnings,
+        pending: st.pending,
+      );
+    }
+    return _EvalResult(states, result.path, result.complete, result.checks);
+  }
+
+  /// Server errors that matched no field (shown above the form), from the last [setServerErrors].
+  List<UiFbServerErrorItem> get serverUnmatched => _serverUnmatched;
+
+  /// Shows errors from a server (a 422 keyed by data path, e.g. `full_name`, `address.city`,
+  /// `dependants[1].name`; a message or a list of them, the first is used) on the fields they name,
+  /// like the form's own errors: their pages show all their errors at once and the form moves to the
+  /// first such page on its route. A field's message goes away as soon as its answer changes; until
+  /// then it counts as an error ([submit] refuses it). Paths that name no field are returned, in input
+  /// order, and kept in [serverUnmatched]. `null` or `{}` clears them (0.87.0).
+  List<UiFbServerErrorItem> setServerErrors(Map<String, Object>? errors) {
+    final where = <String, ({String addr, int page})>{};
+    for (var i = 0; i < definition.pages.length; i++) {
+      for (final inst in instancesOn(i)) {
+        where[valuePath(inst.id, inst.row)] = (addr: inst.addr, page: i);
+      }
+    }
+    final byAddr = <String, String>{};
+    final unmatched = <UiFbServerErrorItem>[];
+    final pages = <int>{};
+    for (final MapEntry(key: path, value: value) in (errors ?? const <String, Object>{}).entries) {
+      final first = value is List ? (value.isEmpty ? null : value.first) : value;
+      final message = (first ?? '').toString().trim();
+      if (message.isEmpty) continue;
+      final hit = where[path];
+      if (hit == null) {
+        unmatched.add(UiFbServerErrorItem(path: path, message: message));
+        continue;
+      }
+      byAddr.putIfAbsent(hit.addr, () => message);
+      pages.add(hit.page);
+    }
+    _serverErrors = byAddr;
+    _serverUnmatched = List.unmodifiable(unmatched);
+    _state = null;
+    for (final i in pages) {
+      _attempted.add(definition.pages[i].id);
+    }
+    for (final i in path) {
+      if (pages.contains(i)) {
+        _pageIndex = i;
+        break;
+      }
+    }
+    _notify();
+    return unmatched;
+  }
 
   /// Re-evaluates after a change: "set value" rules to a fixed point, then async checks.
   void _settle() {
@@ -574,7 +675,10 @@ class UiFormEngine {
   void setValue(String id, String? row, Object? value) {
     if (mode == UiFormMode.view) return;
     final f = field(id);
-    _answers = {..._answers, addrOf(id, row): f != null ? coerceValue(f, value) : value};
+    final addr = addrOf(id, row);
+    _answers = {..._answers, addr: f != null ? coerceValue(f, value) : value};
+    // A changed answer is no longer the one the server refused.
+    if (_serverErrors.containsKey(addr)) _serverErrors = {..._serverErrors}..remove(addr);
     _changed();
   }
 

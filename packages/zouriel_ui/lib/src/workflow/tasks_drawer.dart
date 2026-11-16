@@ -9,6 +9,7 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/drawer.dart';
+import '../guidance/tour.dart';
 import '../theme/theme.dart';
 import 'api.dart';
 import 'bits.dart';
@@ -24,6 +25,9 @@ import 'runtime.dart';
 /// Open it from code with [open] (and follow it with [onOpenChanged], the web `[(open)]`), or call
 /// [UiWorkflowTasksDrawerState.show] through a `GlobalKey`. With [showButton] false only the drawer
 /// is left, for apps that open it from their own control.
+///
+/// With [anchorPrefix] (0.87.0) its controls are [UiTourAnchor]s; a tour pointing at a task or a
+/// stopped workflow opens the drawer first.
 ///
 /// ```dart
 /// UiWorkflowTasksDrawer(api: api)
@@ -45,6 +49,7 @@ class UiWorkflowTasksDrawer extends StatefulWidget {
     this.pageSize = 25,
     this.scope = 'mine',
     this.onDecided,
+    this.anchorPrefix,
   });
 
   final UiWorkflowApi? api;
@@ -75,6 +80,11 @@ class UiWorkflowTasksDrawer extends StatefulWidget {
   /// After a task was decided in the drawer.
   final ValueChanged<UiWfTask>? onDecided;
 
+  /// Tour anchors (0.87.0): `<prefix>.open` (the built-in button), `<prefix>.task-entry` (each task),
+  /// `<prefix>.stopped` (each stopped workflow) and `<prefix>.task.<outcome key>` (the decision's
+  /// buttons). A tour pointing at a task or a stopped workflow opens the drawer. Null: no anchors.
+  final String? anchorPrefix;
+
   @override
   State<UiWorkflowTasksDrawer> createState() => UiWorkflowTasksDrawerState();
 }
@@ -100,6 +110,9 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
 
   /// Whether the app is in view: polling pauses while it is in the background.
   bool _visible = true;
+
+  /// Removes the tour revealer (with an anchor prefix).
+  VoidCallback? _unreveal;
 
   /// Workflows that stopped and need someone to try again, skip or cancel: every instance in `incident`
   /// (automations, lifecycle child runs, and record instances whose timer was parked), listed (and
@@ -144,6 +157,21 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     refresh();
     _startTimer();
     if (widget.open == true) WidgetsBinding.instance.addPostFrameCallback((_) => show());
+    _syncRevealer();
+  }
+
+  /// A tour pointing at a task or a stopped workflow opens the drawer.
+  void _syncRevealer() {
+    _unreveal?.call();
+    _unreveal = null;
+    final prefix = widget.anchorPrefix;
+    if (prefix == null || prefix.isEmpty) return;
+    _unreveal = UiTour.registerRevealer('$prefix.', (id) {
+      final name = id.substring(prefix.length + 1);
+      if (!mounted || _shown || (name != 'task-entry' && name != 'stopped')) return false;
+      show();
+      return true;
+    });
   }
 
   @override
@@ -156,6 +184,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
     });
     if (old.api != widget.api || old.scope != widget.scope) refresh();
     if (old.refreshSeconds != widget.refreshSeconds) _startTimer();
+    if (old.anchorPrefix != widget.anchorPrefix) _syncRevealer();
     if (old.open != widget.open) {
       if (widget.open == true && !_shown) WidgetsBinding.instance.addPostFrameCallback((_) => show());
       if (widget.open == false && _shown) hide();
@@ -165,6 +194,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _unreveal?.call();
     _timer?.cancel();
     _seq++;
     // The drawer goes with its button: close it (after this frame, when the navigator can change),
@@ -260,6 +290,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
           builder: (ctx, w, _) => _DrawerBody(
             stopped: _stopped,
             api: w.api,
+            anchorPrefix: w.anchorPrefix,
             // After trying again, skipping or cancelling the run may no longer be stopped: count again.
             onRunChanged: () {
               if (mounted) refresh();
@@ -268,6 +299,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
               api: w.api,
               scope: w.scope,
               pageSize: w.pageSize,
+              anchorPrefix: w.anchorPrefix,
               onDecided: (t) {
                 // The host's callback as it is now, not as it was when the drawer opened.
                 if (!mounted) return;
@@ -306,7 +338,7 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
   @override
   Widget build(BuildContext context) {
     if (!widget.showButton) return const SizedBox.shrink();
-    return UiButton(
+    return wfAnchor(widget.anchorPrefix, 'open', UiButton(
       size: widget.size,
       variant: widget.variant,
       icon: UiIcon(WfIcons.inbox, size: widget.size == UiSize.sm ? 14 : 16, strokeWidth: 1.8),
@@ -318,15 +350,16 @@ class UiWorkflowTasksDrawerState extends State<UiWorkflowTasksDrawer> with Widge
           : null,
       onPressed: show,
       child: ExcludeSemantics(child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis)),
-    );
+    ));
   }
 }
 
 /// The drawer's content: the stopped workflows (for people who may intervene) above the task inbox;
 /// a stopped workflow opens its run view, with a way back to the list.
 class _DrawerBody extends StatefulWidget {
-  const _DrawerBody({required this.stopped, required this.api, required this.onRunChanged, required this.inbox});
+  const _DrawerBody({required this.stopped, required this.api, required this.onRunChanged, required this.inbox, this.anchorPrefix});
   final ValueListenable<List<UiWfInstance>> stopped;
+  final String? anchorPrefix;
   final UiWorkflowApi? api;
   final VoidCallback onRunChanged;
   final Widget inbox;
@@ -363,7 +396,7 @@ class _DrawerBodyState extends State<_DrawerBody> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
               WfSectionTitle('Stopped workflows', color: t.danger),
               const FbHint('They need someone to try again or skip what stopped them.'),
-              for (final r in stopped) _StoppedRow(run: r, onTap: () => setState(() => _open = r)),
+              for (final r in stopped) wfAnchor(widget.anchorPrefix, 'stopped', _StoppedRow(run: r, onTap: () => setState(() => _open = r))),
             ]),
           ),
         widget.inbox,

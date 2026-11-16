@@ -10,6 +10,7 @@ import 'api.dart';
 import 'bits.dart';
 import 'definition.dart';
 import 'editors.dart';
+import 'history.dart';
 import 'schema.dart';
 
 /// One "who" in a published workflow: a transition, the reset, the start button or a person's step.
@@ -104,7 +105,6 @@ class _Workflow {
   final List<UiWfToken> tokens;
 }
 
-String _errorText(Object e, String fallback) => e is UiWfApiError ? e.message : fallback;
 
 /// `ui-workflow-permissions`: who may do what in every published workflow, on one settings page:
 /// who may make each lifecycle move, start a record over, press a start button, and decide each
@@ -127,6 +127,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
   UiWorkflowRegistry? _registry;
   bool _loading = true;
   String _loadError = '';
+  String? _loadErrorDetail;
   bool _canEdit = false;
   String _query = '';
   int _loadSeq = 0;
@@ -203,7 +204,8 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     } catch (e) {
       if (!mounted || n != _loadSeq) return;
       setState(() {
-        _loadError = _errorText(e, 'Could not load the workflows.');
+        _loadError = wfErrorTextFor(this, e, 'Could not load the workflows.');
+        _loadErrorDetail = wfErrorDetail(e);
         _loading = false;
       });
     }
@@ -311,7 +313,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
         _saved[id] = 'Reloaded: version ${d.summary.version} is in use.';
       });
     } catch (e) {
-      if (mounted) setState(() => _errors[id] = _errorText(e, 'Could not reload this workflow.'));
+      if (mounted) setState(() => _errors[id] = wfErrorTextFor(this, e, 'Could not reload this workflow.'));
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -346,7 +348,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errors[id] = _errorText(e, 'Saving failed.');
+          _errors[id] = wfErrorTextFor(this, e, 'Saving failed.');
           _busy = null;
         });
       }
@@ -415,7 +417,7 @@ class UiWorkflowPermissionsState extends State<UiWorkflowPermissions> {
       if (_loading)
         const FbHint('Loading…')
       else if (_loadError.isNotEmpty)
-        WfNote(_loadError)
+        WfErrorNote(_loadError, detail: _loadErrorDetail)
       else if (widget.api == null)
         const FbHint('No workflow API is connected: pass api (e.g. a UiWorkflowHttpApi) to UiWorkflowPermissions.')
       else if (shown.isEmpty)

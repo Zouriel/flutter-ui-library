@@ -522,15 +522,45 @@ class UiWfAuditQuery {
 }
 
 /// A refusal from the engine, e.g. `code: 'notAllowed', message: 'You are not allowed to “Approve”.'`.
+///
+/// Code `unreachable` (0.87.0): the engine couldn't be reached, or something other than the engine
+/// answered (a missing route, a server error page); [message] is then a plain sentence and [detail] the
+/// technical text (method, path, status, what came back) for a "Technical details" disclosure, never
+/// shown open.
 class UiWfApiError implements Exception {
-  const UiWfApiError(this.status, this.code, this.message, [this.details]);
+  const UiWfApiError(this.status, this.code, this.message, [this.details, this.detail]);
   final int status;
   final String code;
   final String message;
   final Object? details;
 
+  /// The technical text of an `unreachable` error, or null.
+  final String? detail;
+
   @override
   String toString() => 'UiWfApiError($status, $code): $message';
+}
+
+/// The English sentence of an `unreachable` error; the widgets show `UiStrings.workflowUnavailable`.
+const String wfUnavailableMessage = "Workflows aren't available right now. Try again later.";
+
+/// A body as short plain text: tags dropped, whitespace collapsed, at most 300 characters.
+String _plainText(String text) {
+  final plain = text
+      .replaceAll(RegExp(r'<(script|style)[\s\S]*?</\1>', caseSensitive: false), ' ')
+      .replaceAll(RegExp(r'<[^>]*>'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  return plain.length > 300 ? '${plain.substring(0, 299)}…' : plain;
+}
+
+/// Whether a failed answer came from something other than the engine: no engine `code` in a JSON
+/// body and a status that means a missing route or a broken server, or a body that isn't JSON at all
+/// (401 and 403 keep their own messages).
+bool wfIsUnavailable(int status, Object? json) {
+  if (json is Map && json['code'] is String) return false;
+  if (status == 401 || status == 403) return false;
+  return json is! Map || const {404, 405, 408, 429}.contains(status) || status >= 500;
 }
 
 /// Everything the workflow widgets ask of an engine. [UiWorkflowHttpApi] calls the REST API;
@@ -654,7 +684,13 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
       req.body = jsonEncode(body);
     }
     if (headers != null) req.headers.addAll(await headers!());
-    final res = await http.Response.fromStream(await client.send(req));
+    final http.Response res;
+    try {
+      res = await http.Response.fromStream(await client.send(req));
+    } catch (err) {
+      // Offline, refused, blocked: nothing answered at all.
+      throw UiWfApiError(0, 'unreachable', wfUnavailableMessage, null, '$method $path: no answer - $err');
+    }
     if (res.statusCode == 204) return null;
     Object? json;
     try {
@@ -662,7 +698,13 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
     } catch (_) {
       json = null;
     }
-    if (res.statusCode < 200 || res.statusCode >= 300) {
+    final ok = res.statusCode >= 200 && res.statusCode < 300;
+    if (!ok && wfIsUnavailable(res.statusCode, json)) {
+      final message = json is Map ? json['message'] : null;
+      final said = message is String ? message : _plainText(utf8.decode(res.bodyBytes, allowMalformed: true));
+      throw UiWfApiError(res.statusCode, 'unreachable', wfUnavailableMessage, null, '$method $path: HTTP ${res.statusCode}${said.isNotEmpty ? ' - $said' : ''}');
+    }
+    if (!ok) {
       final e = json is Map ? json : const {};
       final fallback = res.statusCode == 403 ? 'You are not allowed to do that.' : res.statusCode == 401 ? 'Please sign in.' : 'The server answered ${res.statusCode}.';
       throw UiWfApiError(res.statusCode, wfStrOrNull(e['code']) ?? 'http${res.statusCode}', wfStrOrNull(e['message']) ?? fallback, e['details']);
@@ -809,8 +851,9 @@ class UiWorkflowHttpApi implements UiWorkflowApi {
     final req = http.Request('GET', Uri.parse(auditExportUrl(q)));
     if (headers != null) req.headers.addAll(await headers!());
     final res = await http.Response.fromStream(await client.send(req));
+    if (res.statusCode == 403) throw const UiWfApiError(403, 'http403', 'You are not allowed to export the audit log.');
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw UiWfApiError(res.statusCode, 'http${res.statusCode}', res.statusCode == 403 ? 'You are not allowed to export the audit log.' : 'The server answered ${res.statusCode}.');
+      throw UiWfApiError(res.statusCode, 'unreachable', wfUnavailableMessage, null, 'GET /audit/export: HTTP ${res.statusCode}');
     }
     return res.bodyBytes;
   }

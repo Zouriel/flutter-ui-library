@@ -46,6 +46,8 @@ class UiFormRenderer extends StatefulWidget {
     super.key,
     required this.definition,
     this.values,
+    this.prefill,
+    this.serverErrors,
     this.mode,
     this.validators = const [],
     this.optionSources = const [],
@@ -66,6 +68,7 @@ class UiFormRenderer extends StatefulWidget {
     this.onCancelled,
     this.onValueChanged,
     this.onDirtyChanged,
+    this.onServerErrorsUnmatched,
   }) : assert(definition is UiFormDefinition || definition is Map, 'definition is a UiFormDefinition or its JSON map');
 
   /// The form: a [UiFormDefinition] or its JSON (`Map`). Usually the published version.
@@ -73,6 +76,20 @@ class UiFormRenderer extends StatefulWidget {
 
   /// Saved answers to edit or view. Unknown keys and answers hidden at the time are kept.
   final UiJson? values;
+
+  /// Starting answers for a new submission (create mode): filled in without making it an edit (no
+  /// change list, the normal Submit label); defaults still apply to fields without one. E.g. details
+  /// from a sign-in, or the answers given to an older version of the form. The form restarts when it
+  /// changes (0.87.0).
+  final UiJson? prefill;
+
+  /// Errors from the server by data path (`full_name`, `address.city`, `dependants[1].name`; a 422's
+  /// `errors`, with any request prefix such as `data.` taken off), each a message or a list of them.
+  /// Shown on their fields like the form's own errors and listed in the error summary, which takes
+  /// focus; a field's message goes away when its answer changes. Paths that match no field are listed
+  /// at the top of the summary and reported by [onServerErrorsUnmatched]. Give a new map for each
+  /// response (0.87.0).
+  final Map<String, Object>? serverErrors;
 
   /// Defaults to [UiFormMode.edit] when [data] is given, otherwise [UiFormMode.create].
   final UiFormMode? mode;
@@ -131,6 +148,9 @@ class UiFormRenderer extends StatefulWidget {
   /// Whether the answers differ from what the form opened with.
   final ValueChanged<bool>? onDirtyChanged;
 
+  /// After non-empty [serverErrors] were applied: the ones that matched no field (empty when all did).
+  final ValueChanged<List<UiFbServerErrorItem>>? onServerErrorsUnmatched;
+
   @override
   State<UiFormRenderer> createState() => UiFormRendererState();
 }
@@ -180,6 +200,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final w = widget;
     if (!identical(old.definition, w.definition) ||
         !identical(old.values, w.values) ||
+        !identical(old.prefill, w.prefill) ||
         old.mode != w.mode ||
         old.today != w.today ||
         old.globalSettings != w.globalSettings ||
@@ -193,6 +214,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     if (old.locale != w.locale) _engine.setLocale(w.locale);
     if (old.link != w.link) _engine.setLink(w.link);
     if (!fbStringOverridesEqual(old.strings, w.strings)) _engine.setStrings(_overrides);
+    if (!identical(old.serverErrors, w.serverErrors)) _applyServerErrors();
   }
 
   @override
@@ -212,6 +234,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     _engine = UiFormEngine.fromJson(
       w.definition is UiFormDefinition ? (w.definition as UiFormDefinition).toJson() : w.definition,
       values: w.values,
+      prefill: w.prefill,
       mode: w.mode,
       validators: w.validators,
       optionSources: [...sourcesFromSettings(w.globalSettings, w.httpSources), ...w.optionSources],
@@ -220,11 +243,25 @@ class UiFormRendererState extends State<UiFormRenderer> {
       strings: _overrides,
       link: w.link,
     );
+    // Applied again after a restart; before listening, so nothing rebuilds while this one builds.
+    _applyServerErrors();
     _engine.addListener(_onEngine);
     _lastValues = _engine.values;
     _lastDirty = _engine.dirty;
     _removed = null;
     _removedTimer?.cancel();
+  }
+
+  /// Puts [UiFormRenderer.serverErrors] on the running form; when there are any, reports the unmatched
+  /// ones and moves focus to the error summary.
+  void _applyServerErrors() {
+    final errors = widget.serverErrors;
+    final unmatched = _engine.setServerErrors(errors);
+    if (errors == null || errors.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onServerErrorsUnmatched?.call(unmatched);
+    });
+    _showSummary();
   }
 
   void _onEngine() {
@@ -431,7 +468,9 @@ class UiFormRendererState extends State<UiFormRenderer> {
     } else {
       if (_multiPage && s?.showProgress != false) children.add(_progress(context));
       final summary = e.settings.errorSummary && e.attempted.contains(e.page.id) ? e.pageErrors(e.pageIndex) : const <UiFbErrorItem>[];
-      if (summary.isNotEmpty) children.add(_summary(context, summary));
+      // Server errors that name no field: listed first, with nothing to jump to.
+      final unmatched = e.settings.errorSummary ? e.serverUnmatched : const <UiFbServerErrorItem>[];
+      if (summary.isNotEmpty || unmatched.isNotEmpty) children.add(_summary(context, summary, unmatched));
       final page = e.page;
       if (_multiPage && (e.text(page.title).isNotEmpty || e.text(page.description).isNotEmpty)) {
         children.add(_pageHead(context, page, showTitle: s?.showProgress == false));
@@ -506,11 +545,17 @@ class UiFormRendererState extends State<UiFormRenderer> {
     ]);
   }
 
-  Widget _summary(BuildContext context, List<UiFbErrorItem> items) {
+  Widget _summary(BuildContext context, List<UiFbErrorItem> items, List<UiFbServerErrorItem> unmatched) {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final ty = context.uiText;
-    final title = items.length == 1 ? _engine.strings.problemOne : fbFormat(_engine.strings.problemMany, {'n': items.length});
+    final count = items.length + unmatched.length;
+    final title = count == 1 ? _engine.strings.problemOne : fbFormat(_engine.strings.problemMany, {'n': count});
+    Widget bullet() => Padding(
+      padding: const EdgeInsets.only(top: 7),
+      child: Container(width: 4, height: 4, decoration: BoxDecoration(color: t.danger, shape: BoxShape.circle)),
+    );
+    final itemStyle = ty.body.copyWith(fontSize: t.fontSizeSm, height: 1.4, fontWeight: FontWeight.w500, color: t.danger);
     return Focus(
       key: _summaryKey,
       focusNode: _summaryFocus,
@@ -539,6 +584,11 @@ class UiFormRendererState extends State<UiFormRenderer> {
               ExcludeSemantics(
                 child: Text(title, style: ty.body.copyWith(fontSize: t.fontSizeMd, fontWeight: FontWeight.w600, color: t.text)),
               ),
+              for (final item in unmatched)
+                Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
+                  bullet(),
+                  Expanded(child: Text(item.message, style: itemStyle)),
+                ]),
               for (final item in items)
                 UiInteractive(
                   onTap: () => _focusField(item.addr),
@@ -554,18 +604,11 @@ class UiFormRendererState extends State<UiFormRenderer> {
                       alignment: AlignmentDirectional.centerStart,
                       decoration: BoxDecoration(boxShadow: st.focused ? t.focusRing : const [], borderRadius: BorderRadius.circular(2)),
                       child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 7),
-                          child: Container(width: 4, height: 4, decoration: BoxDecoration(color: t.danger, shape: BoxShape.circle)),
-                        ),
+                        bullet(),
                         Expanded(
                           child: Text(
                             item.message,
-                            style: ty.body.copyWith(
-                              fontSize: t.fontSizeSm,
-                              height: 1.4,
-                              fontWeight: FontWeight.w500,
-                              color: t.danger,
+                            style: itemStyle.copyWith(
                               // Underlined on hover/focus only: at rest the 1px line drags the measured
                               // contrast of 13px text under 4.5:1 in the dark themes.
                               decoration: st.hovered || st.focused ? TextDecoration.underline : TextDecoration.none,

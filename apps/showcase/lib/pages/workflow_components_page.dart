@@ -18,6 +18,28 @@ class WorkflowComponentsPage extends StatefulWidget {
 /// Who the demos act as when the page opens: the head of office, who sees every button.
 const String _defaultUser = 'hana';
 
+/// A tour over the panel's anchors (`anchorPrefix: 'wfDemo'`); steps whose control isn't there for
+/// this person and state are left out, and in the drawer layouts the tour opens the drawer first.
+const UiTourSpec _panelTour = UiTourSpec('showcase.workflow-panel', [
+  UiTourStep('wfDemo.open', 'The workflow waits here on the screen\'s edge.', title: 'The rail'),
+  UiTourStep('wfDemo.move.submit', 'Send the application on from here.'),
+  UiTourStep('wfDemo.move.approve', 'Approve moves the application on.', title: 'Moves'),
+  UiTourStep('wfDemo.task-entry', 'Tasks waiting on someone; yours open their decision.'),
+  UiTourStep('wfDemo.reset', 'Start over takes the application back.'),
+]);
+
+/// An engine that never answers: every call fails as the HTTP client reports a missing route.
+class _UnreachableApi implements UiWorkflowApi {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future<Never>.error(const UiWfApiError(
+    404,
+    'unreachable',
+    wfUnavailableMessage,
+    null,
+    'GET /records/application/1: HTTP 404 - The route api/workflows/records/application/1 could not be found.',
+  ));
+}
+
 class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
   final DemoWorkflowApi _api = DemoWorkflowApi();
   UiWorkflowPanelLayout _layout = UiWorkflowPanelLayout.vertical;
@@ -217,13 +239,17 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
                 UiSegmentedOption(value: UiWorkflowPanelLayout.bottomDrawer, label: 'Bottom drawer'),
               ],
             ),
+            Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Builder(builder: (context) => UiButton(label: 'Take the tour', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => UiTour.start(context, _panelTour))),
+              ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520), child: note('The panel below has anchorPrefix: \'wfDemo\', so a tour can point at its controls.')),
+            ]),
             if (drawer) ...[
               note('The panel is on the ${_layout == UiWorkflowPanelLayout.sideDrawer ? 'right edge' : 'bottom edge'} of the screen as a rail '
                   'of dots: one per state, green up to where the application is now. Hover it with a mouse to peek, or tap it to open the drawer.'),
-              UiWorkflowPanel(key: _k('panel-${_layout.name}-$_panelRev', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
+              UiWorkflowPanel(key: _k('panel-${_layout.name}-$_panelRev', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', anchorPrefix: 'wfDemo', onChanged: (_) => _changed()),
             ] else
               frame(
-                UiWorkflowPanel(key: _k('panel-${_layout.name}-$_panelRev', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', onChanged: (_) => _changed()),
+                UiWorkflowPanel(key: _k('panel-${_layout.name}-$_panelRev', live: false), api: _api, entity: 'application', entityId: _appId, layout: _layout, title: 'Application workflow', anchorPrefix: 'wfDemo', onChanged: (_) => _changed()),
                 maxWidth: _layout == UiWorkflowPanelLayout.horizontal ? null : 460,
               ),
           ]),
@@ -240,7 +266,11 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
 UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.sideDrawer)
 
 // a rail of dots along the bottom
-UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.bottomDrawer)''',
+UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWorkflowPanelLayout.bottomDrawer)
+
+// tour anchors: wfDemo.open, wfDemo.move.<key>, wfDemo.manual.<key>, wfDemo.reset, wfDemo.task-entry, ...
+UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, anchorPrefix: 'wfDemo')
+UiTour.start(context, const UiTourSpec('intro', [UiTourStep('wfDemo.move.approve', 'Approve moves it on.')]))''',
           api: const [
             ApiRow('api', 'UiWorkflowApi?', 'The engine. Nothing loads while it is null.'),
             ApiRow('entity', 'String', 'The record type key, as registered.'),
@@ -251,6 +281,7 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
             ApiRow('showHistory', 'bool', 'Show what happened in each state.', def: 'true'),
             ApiRow('emptyText', 'String', 'Said when the person has nothing to do in the current state; empty hides it.', def: "'Nothing for you to do here right now.'"),
             ApiRow('open', 'bool?', 'Drawer layouts: whether the drawer is open, when you control it; with onOpenChanged it is the web [(open)].'),
+            ApiRow('anchorPrefix', 'String?', 'Tour anchors (0.87.0): <prefix>.open (the drawer rail), .move.<transition key>, .manual.<key>, .reset, .task-entry, and in the dialogs .confirm and .task.<outcome key>. In the drawer layouts a tour pointing inside opens the drawer, pinned. Null: none.', def: 'null'),
           ],
           callbacks: const [
             ApiRow('onChanged', 'ValueChanged<UiWfRecord>', 'After the record moved through the panel, so the page can reload its own data.'),
@@ -279,6 +310,7 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
                 UiWorkflowTasksDrawer(
                   key: ValueKey('drawer-$_user'),
                   api: _api,
+                  anchorPrefix: 'wfTasks',
                   onDecided: (_) => setState(() {
                     _rev++;
                     _panelRev++;
@@ -296,6 +328,21 @@ UiWorkflowPanel(api: api, entity: 'application', entityId: app.id, layout: UiWor
               ),
             ]),
             if (_sendError.isNotEmpty) UiText(_sendError, color: t.danger),
+            Builder(
+              builder: (context) => Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: UiButton(
+                  label: 'Point at my tasks',
+                  size: UiSize.sm,
+                  variant: UiButtonVariant.outline,
+                  // anchorPrefix: 'wfTasks': a tour pointing at a task opens the drawer first.
+                  onPressed: () => UiTour.start(context, const UiTourSpec('showcase.tasks', [
+                    UiTourStep('wfTasks.stopped', 'Workflows that stopped and need someone.'),
+                    UiTourStep('wfTasks.task-entry', 'Each task opens its decision.'),
+                  ])),
+                ),
+              ),
+            ),
           ]),
           code: '''// in the app bar
 UiWorkflowTasksDrawer(api: api, onDecided: (_) => reload())
@@ -316,11 +363,38 @@ UiWorkflowTasksDrawer(api: api, scope: 'all', label: 'All tasks', pageSize: 50)'
             ApiRow('refreshSeconds', 'int', 'How often the count refreshes while the app is in the foreground; 0 only on open, close and decisions.', def: '60'),
             ApiRow('pageSize', 'int', 'Tasks per page in the drawer.', def: '25'),
             ApiRow('scope', 'String', "The signed-in person's tasks ('mine'), or everyone's ('all', for admins; give it a label such as 'All tasks'). The count follows it.", def: "'mine'"),
+            ApiRow('anchorPrefix', 'String?', 'Tour anchors (0.87.0): <prefix>.open (the button), .task-entry (each task), .stopped (each stopped workflow), .task.<outcome key> (the decision). A tour pointing at a task or a stopped workflow opens the drawer. Null: none.', def: 'null'),
           ],
           callbacks: const [
             ApiRow('onOpenChanged', 'ValueChanged<bool>', 'When the drawer opens or closes.'),
             ApiRow('onDecided', 'ValueChanged<UiWfTask>', 'After a task was decided in the drawer.'),
             ApiRow('show() · hide() · refresh()', 'state', 'Through a GlobalKey<UiWorkflowTasksDrawerState>.'),
+          ],
+        ),
+        DocSection(
+          name: 'When the engine is unavailable',
+          widget: 'UiWfApiError · wfErrorText · wfErrorDetail',
+          summary: 'The workflow widgets never show an engine\'s raw HTTP error (a missing route\'s message, an HTML error page). '
+              'UiWorkflowHttpApi turns a request that gets no answer, a non-JSON answer, or a 404, 405, 408, 429 or 5xx without an engine '
+              'code into UiWfApiError(code: \'unreachable\') with a plain sentence (UiStrings.workflowUnavailable, so it follows the '
+              'language) and the technical text in detail. Load errors in the panel, the tasks drawer, the audit log and permissions put '
+              'that detail behind a closed Technical details toggle. Engine refusals (a JSON code) and 401/403 show their own message.',
+          demo: frame(UiWorkflowPanel(api: _UnreachableApi(), entity: 'application', entityId: '1', title: 'Application workflow'), maxWidth: 460),
+          code: '''// in your own widgets
+try {
+  await api.applyTransition('application', id, 'approve');
+} catch (e) {
+  setState(() {
+    error = wfErrorText(e, 'That did not work.', context.uiStrings); // the plain sentence for unreachable
+    detail = wfErrorDetail(e); // "GET /records/application/1: HTTP 404 - ..." or null
+  });
+}''',
+          api: const [
+            ApiRow('UiWfApiError.code', 'String', "'unreachable': no answer, or something other than the engine answered. Otherwise the engine's code (or http<status>)."),
+            ApiRow('UiWfApiError.detail', 'String?', 'For unreachable: "<METHOD> <path>: HTTP <status> - <message or page text, 300 characters at most>" (status 0: "no answer - <error>").'),
+            ApiRow('wfErrorText(e, fallback, [strings])', 'String', 'The text to show: the plain sentence for unreachable, else the engine message with its details, else fallback.'),
+            ApiRow('wfErrorDetail(e)', 'String?', 'The technical text, for a closed disclosure.'),
+            ApiRow('UiStrings.workflowUnavailable · technicalDetails', 'String', 'The sentence and the toggle\'s words (English and Dhivehi built in).'),
           ],
         ),
         DocSection(

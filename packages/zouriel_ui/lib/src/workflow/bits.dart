@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/icon.dart';
+import '../core/interactive.dart';
 import '../core/types.dart';
 import '../forms/choice/checkbox.dart';
 import '../forms/choice/switch.dart';
 import '../forms/text/select.dart';
+import '../guidance/tour.dart';
 import '../theme/theme.dart';
 import 'icons.dart';
 
@@ -156,6 +158,80 @@ class WfNote extends StatelessWidget {
           child: child ?? Text(text),
         ),
       ),
+    );
+  }
+}
+
+/// [child] as the tour anchor `<prefix>.<name>` (0.87.0, the workflow widgets' `anchorPrefix`); without a
+/// prefix it is left as it is.
+Widget wfAnchor(String? prefix, String name, Widget child) =>
+    prefix == null || prefix.isEmpty ? child : UiTourAnchor(id: '$prefix.$name', child: child);
+
+/// A workflow widget's error (0.87.0, the web `ui-wf-error`): the plain sentence in a [WfNote] and, when
+/// there is one, the technical [detail] (method, path, status, what came back) behind a closed "Technical
+/// details" toggle, so a raw error page is never shown open. [trailing] follows the text in the same box.
+class WfErrorNote extends StatefulWidget {
+  const WfErrorNote(this.text, {super.key, this.detail, this.trailing, this.style});
+  final String text;
+  final String? detail;
+  final Widget? trailing;
+
+  /// The sentence's style, over the note's 12px text.
+  final TextStyle? style;
+
+  @override
+  State<WfErrorNote> createState() => _WfErrorNoteState();
+}
+
+class _WfErrorNoteState extends State<WfErrorNote> {
+  bool _open = false;
+
+  @override
+  void didUpdateWidget(WfErrorNote oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Another failure starts closed again.
+    if (oldWidget.detail != widget.detail) _open = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final detail = widget.detail;
+    final label = context.uiStrings.technicalDetails;
+    final muted = context.uiText.body.copyWith(fontSize: 11.5, color: t.textMuted);
+    final text = Text(widget.text, style: widget.style);
+    return WfNote.custom(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        if (widget.trailing == null) text else Wrap(spacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [text, widget.trailing!]),
+        if (detail != null && detail.isNotEmpty) ...[
+          SizedBox(height: t.space1),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Semantics(
+              expanded: _open,
+              child: UiInteractive(
+                onTap: () => setState(() => _open = !_open),
+                semanticLabel: label,
+                excludeChildSemantics: true,
+                pressScale: false,
+                builder: (context, s) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : null),
+                  child: Row(mainAxisSize: MainAxisSize.min, spacing: 4, children: [
+                    UiIcon(_open ? WfIcons.arrowDown01 : WfIcons.arrowRight01, size: 11, strokeWidth: 2, color: t.textMuted),
+                    Text(label, style: muted.copyWith(decoration: s.hovered ? TextDecoration.underline : null, decorationColor: t.textMuted)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+          if (_open)
+            Padding(
+              padding: EdgeInsets.only(top: t.space1),
+              child: Text(detail, style: context.uiText.code.copyWith(fontSize: 11, height: 1.4, color: t.textMuted)),
+            ),
+        ],
+      ]),
     );
   }
 }

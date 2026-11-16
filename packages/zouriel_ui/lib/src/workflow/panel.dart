@@ -11,6 +11,7 @@ import '../core/types.dart';
 import '../dialog/drawer.dart';
 import '../dialog/modal.dart';
 import '../feedback/alert.dart';
+import '../guidance/tour.dart';
 import '../navigation/stepper.dart';
 import '../theme/theme.dart';
 import 'api.dart';
@@ -119,6 +120,9 @@ const Duration _runsPoll = Duration(seconds: 15);
 ///
 /// In the drawer layouts the host can open and close the drawer with [open] and follow it with
 /// [onOpenChanged] (the web `[(open)]`).
+///
+/// With [anchorPrefix] (0.87.0) its controls are [UiTourAnchor]s, so an app's [UiTour] can point at
+/// them; in the drawer layouts a tour pointing inside the closed drawer opens it first.
 class UiWorkflowPanel extends StatefulWidget {
   const UiWorkflowPanel({
     super.key,
@@ -133,6 +137,7 @@ class UiWorkflowPanel extends StatefulWidget {
     this.onChanged,
     this.open,
     this.onOpenChanged,
+    this.anchorPrefix,
   });
 
   /// The engine. Nothing loads while it is null.
@@ -163,6 +168,13 @@ class UiWorkflowPanel extends StatefulWidget {
   /// Drawer layouts: the drawer opened (from the rail, a hover or [open]) or closed (in any way).
   final ValueChanged<bool>? onOpenChanged;
 
+  /// Tour anchors for the panel's controls (0.87.0): `<prefix>.open` (a drawer layout's rail),
+  /// `<prefix>.move.<transition key>`, `<prefix>.manual.<key>`, `<prefix>.reset`, `<prefix>.task-entry`
+  /// (the "Waiting for" tasks), and in the dialogs `<prefix>.confirm` and `<prefix>.task.<outcome key>`.
+  /// In the drawer layouts a tour that points at a control inside opens the drawer first, pinned (it
+  /// stays open when the pointer leaves). Null: no anchors.
+  final String? anchorPrefix;
+
   @override
   State<UiWorkflowPanel> createState() => UiWorkflowPanelState();
 }
@@ -171,6 +183,9 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   final _record = ValueNotifier<UiWfRecord?>(null);
   final _history = ValueNotifier<List<UiWfAuditEntry>>(const []);
   final _error = ValueNotifier<String>('');
+
+  /// The technical detail of the last load error, for its "Technical details" disclosure.
+  String? _errorDetail;
 
   /// The history could not be read (the record could).
   final _historyError = ValueNotifier<bool>(false);
@@ -199,7 +214,13 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   final _rail = OverlayPortalController();
   int _seq = 0;
   bool _peek = false;
+
+  /// The peek was opened by a tour to show a control inside it: it stays until closed.
+  bool _pinned = false;
   bool _drawerOpen = false;
+
+  /// Removes the tour revealer (drawer layouts with an anchor prefix).
+  VoidCallback? _unreveal;
   Timer? _closeTimer;
 
   /// The regular drawer's route, so closing it from [UiWorkflowPanel.open] never pops something else.
@@ -224,6 +245,27 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
     _visible = now == null || now == AppLifecycleState.resumed || now == AppLifecycleState.inactive;
     reload();
     if (widget.open == true) WidgetsBinding.instance.addPostFrameCallback((_) => _openFromHost());
+    _syncRevealer();
+  }
+
+  /// A tour pointing into the closed drawer opens it (drawer layouts with an anchor prefix).
+  void _syncRevealer() {
+    _unreveal?.call();
+    _unreveal = null;
+    final prefix = widget.anchorPrefix;
+    if (prefix == null || prefix.isEmpty || !_isDrawer) return;
+    _unreveal = UiTour.registerRevealer('$prefix.', (id) {
+      final name = id.substring(prefix.length + 1);
+      // The rail is on screen already; the dialogs only open from the person's own press.
+      if (!mounted || name == 'open' || name == 'confirm' || name.startsWith('task.') || isOpen) return false;
+      _closeTimer?.cancel();
+      setState(() {
+        _peek = true;
+        _pinned = true;
+      });
+      _report();
+      return true;
+    });
   }
 
   @override
@@ -243,6 +285,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       _syncPoll();
     }
     if (old.api != widget.api || old.entity != widget.entity || old.entityId != widget.entityId) reload();
+    if (old.anchorPrefix != widget.anchorPrefix || old.layout != widget.layout) _syncRevealer();
     if (old.open != widget.open) {
       if (widget.open == true && !isOpen) WidgetsBinding.instance.addPostFrameCallback((_) => _openFromHost());
       if (widget.open == false && isOpen) WidgetsBinding.instance.addPostFrameCallback((_) => _close());
@@ -265,7 +308,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   void _close() {
     if (!mounted) return;
     if (_peek) {
-      setState(() => _peek = false);
+      setState(() => _peek = _pinned = false);
       _report();
     }
     final route = _drawerRoute;
@@ -296,6 +339,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _unreveal?.call();
     _poll?.cancel();
     _poll = null;
     _closeTimer?.cancel();
@@ -343,7 +387,10 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       }
       if (_isDrawer) setState(() {}); // the rail's dots
     } catch (e) {
-      if (mounted && n == _seq) _error.value = wfErrorText(e, 'Could not load the record’s workflow.');
+      if (mounted && n == _seq) {
+        _errorDetail = wfErrorDetail(e);
+        _error.value = wfErrorTextFor(this, e, 'Could not load the record’s workflow.');
+      }
     }
   }
 
@@ -385,7 +432,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       await reload();
       return true;
     } catch (e) {
-      if (mounted && entity == widget.entity && id == widget.entityId) _recordActError = wfErrorText(e, 'That did not work.');
+      if (mounted && entity == widget.entity && id == widget.entityId) _recordActError = wfErrorTextFor(this, e, 'That did not work.');
       return false;
     } finally {
       _recordBusy = false;
@@ -470,7 +517,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
 
   /// Leaving the rail and the drawer closes a hover-opened peek, after a moment to cross the gap.
   void _hoverOut() {
-    if (!_peek) return;
+    if (!_peek || _pinned) return;
     _closeTimer?.cancel();
     _closeTimer = Timer(const Duration(milliseconds: 300), () {
       if (!mounted) return;
@@ -482,7 +529,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
   /// A tap, a click or Enter on the rail: open as a regular drawer (pinning a peek), or close.
   Future<void> _toggle() async {
     _closeTimer?.cancel();
-    if (_peek) setState(() => _peek = false);
+    if (_peek) setState(() => _peek = _pinned = false);
     if (_drawerOpen) return;
     setState(() => _drawerOpen = true);
     _report();
@@ -510,15 +557,15 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       builder: (context, _) {
         final t = context.ui;
         final r = _record.value;
-        if (r == null) return _error.value.isNotEmpty ? WfNote(_error.value) : const FbHint('Loading…');
+        if (r == null) return _error.value.isNotEmpty ? WfErrorNote(_error.value, detail: _errorDetail) : const FbHint('Loading…');
         // A reload failed: what is shown may be out of date.
         final stale = _error.value.isEmpty
             ? null
-            : WfNote.custom(
-                child: Wrap(spacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  Text('${_error.value} What is shown may be out of date.', style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text)),
-                  FbLink(label: 'Try again', fontSize: 12.5, onTap: reload),
-                ]),
+            : WfErrorNote(
+                '${_error.value} What is shown may be out of date.',
+                detail: _errorDetail,
+                style: context.uiText.body.copyWith(fontSize: 13 * context.ui.fontScale, color: t.text),
+                trailing: FbLink(label: 'Try again', fontSize: 12.5, onTap: reload),
               );
         final stuck = r.status == 'incident' ? _stuck(context, r) : null;
         Widget withStale(Widget body) => stale == null && stuck == null
@@ -654,6 +701,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
         emptyText: emptyText,
         onChanged: _moved,
         onReload: reload,
+        anchorPrefix: widget.anchorPrefix,
       );
 
   /// History entries as a list with a rule on the left.
@@ -738,7 +786,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
     final rail = MouseRegion(
       onEnter: (e) => _hoverIn(e.kind),
       onExit: (_) => _hoverOut(),
-      child: UiInteractive(
+      child: wfAnchor(widget.anchorPrefix, 'open', UiInteractive(
         onTap: _toggle,
         semanticLabel: label,
         excludeChildSemantics: true,
@@ -767,7 +815,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
             tone: UiStepperTone.success,
           ),
         ),
-      ),
+      )),
     );
     return Align(
       alignment: switch (edge) {
@@ -803,7 +851,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
       side: _edge,
       title: widget.title,
       onClose: () {
-        setState(() => _peek = false);
+        setState(() => _peek = _pinned = false);
         _report();
       },
       onPointerEnter: () => _closeTimer?.cancel(),

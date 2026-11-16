@@ -24,8 +24,8 @@ void main() {
   test('all shared fixtures are present', () {
     final files = Directory(_dir).listSync().map((f) => f.uri.pathSegments.last).where((n) => n.endsWith('.json')).toList()..sort();
     expect(files, [
-      'calc.json', 'conditions.json', 'definition.json', 'describe.json', 'engine-locale.json', 'engine-rules.json', //
-      'engine-scholarship.json', 'form-strings.json', 'http-sources.json', 'localize.json', 'migrate.json', 'scholarship.answers.json', //
+      'calc.json', 'conditions.json', 'definition.json', 'describe.json', 'engine-locale.json', 'engine-prefill.json', //
+      'engine-rules.json', 'engine-scholarship.json', 'engine-server.json', 'form-strings.json', 'http-sources.json', 'localize.json', 'migrate.json', 'scholarship.answers.json', //
       'scholarship.definition.json', 'slug.json', 'submission-fields.json', 'values.json',
     ]);
   });
@@ -33,6 +33,8 @@ void main() {
   runEngine('engine-scholarship.json');
   runEngine('engine-rules.json');
   runEngine('engine-locale.json');
+  runEngine('engine-prefill.json');
+  runEngine('engine-server.json');
   conditionsAndCalc();
   valuesAndSlugs();
   definitionHelpers();
@@ -52,7 +54,8 @@ void runEngine(String file) {
         final data = c['values'] ?? (c['valuesFile'] != null ? load(c['valuesFile'] as String) : null);
         final mode = c['mode'] == null ? null : UiFormMode.values.byName(c['mode'] as String);
         final link = c['link'] == null ? null : linkOf(c['link']);
-        final e = UiFormEngine.fromJson(definition, values: data == null ? null : obj(data), mode: mode, today: () => c['today'] as String, locale: c['locale'] as String?, link: link);
+        final prefill = c['prefill'] == null ? null : obj(c['prefill']);
+        final e = UiFormEngine.fromJson(definition, values: data == null ? null : obj(data), prefill: prefill, mode: mode, today: () => c['today'] as String, locale: c['locale'] as String?, link: link);
         (String, String?) at(String addr) {
           final parts = addr.split('@');
           if (parts.length == 1) return (addr, null);
@@ -95,6 +98,9 @@ void runEngine(String file) {
             e.setLocale(step['setLocale'] as String?);
           } else if (step.containsKey('setLink')) {
             e.setLink(step['setLink'] == null ? null : linkOf(step['setLink']));
+          } else if (step.containsKey('serverErrors')) {
+            final errors = step['serverErrors'] == null ? null : obj(step['serverErrors']).cast<String, Object>();
+            expectJson([for (final u in e.setServerErrors(errors)) u.toJson()], step['unmatched'], '$where: unmatched');
           } else if (step.containsKey('submitLacks')) {
             final s = e.submit();
             expect(s, isNotNull, reason: '$where: submit');
@@ -179,6 +185,7 @@ void checkEngine(UiFormEngine e, UiJson x, String where, (String, String?) Funct
   }
   if (x.containsKey('dirty')) expect(e.dirty, x['dirty'], reason: '$where: dirty');
   if (x.containsKey('changes')) expectJson([for (final ch in e.changes) ch.toJson()], x['changes'], '$where: changes');
+  if (x.containsKey('serverUnmatched')) expectJson([for (final u in e.serverUnmatched) u.toJson()], x['serverUnmatched'], '$where: serverUnmatched');
 }
 
 // ── Rules, calculations and wording ─────────────────────────────────────────────────────────────

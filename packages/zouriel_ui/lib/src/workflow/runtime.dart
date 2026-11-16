@@ -31,7 +31,7 @@ import 'schema.dart';
 // view and the audit log. There is
 // no dependency injection in Flutter: each takes the engine's [UiWorkflowApi] as `api`.
 
-const _errorText = wfErrorText;
+const _errorText = wfErrorTextFor;
 
 /// The most characters remarks may have; the engine refuses longer ones (spec §6 remarks).
 const int wfRemarksMax = 2000;
@@ -192,7 +192,9 @@ class _DecideState extends ChangeNotifier {
 /// even one whose answer arrives after the dialog was taken away, so the host can always reload.
 ///
 /// [onRoute] gets the dialog's route as it opens, so a host can take it away (when its record changes).
-Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api, ValueChanged<UiWfTask>? onDecided, ValueChanged<Route<Object?>>? onRoute}) {
+///
+/// With [anchorPrefix] (0.87.0) the outcome buttons are tour anchors `<prefix>.task.<outcome key>`.
+Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask task, required UiWorkflowApi api, ValueChanged<UiWfTask>? onDecided, ValueChanged<Route<Object?>>? onRoute, String? anchorPrefix}) {
   final st = _DecideState();
   final formKey = GlobalKey<UiFormRendererState>();
   String outcomeLabel(String key) => wfOutcomeLabel(key, [for (final o in task.outcomes) (key: o.key, label: o.label)]);
@@ -220,6 +222,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
   Future<void> decide(BuildContext ctx, String outcome) async {
     // A second tap while the first is on its way would send the decision twice.
     if (st.busy) return;
+    final strings = ctx.uiStrings;
     // The form checks itself first and shows what's wrong next to each answer; the engine checks again.
     // Its submission holds every answer, untouched defaults and prefilled values too.
     UiJson data = const {};
@@ -256,7 +259,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       onDecided?.call(res);
       if (ctx.mounted) Navigator.of(ctx).pop(res);
     } catch (e) {
-      st.set(() => st.error = _errorText(e, 'The decision could not be saved.'));
+      st.set(() => st.error = wfErrorText(e, 'The decision could not be saved.', strings));
     } finally {
       st.set(() => st.busy = false);
     }
@@ -264,6 +267,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
 
   Future<void> delegate(BuildContext ctx) async {
     if (st.busy || st.delegateTo.isEmpty) return;
+    final strings = ctx.uiStrings;
     st.set(() {
       st.busy = true;
       st.error = '';
@@ -273,7 +277,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
       onDecided?.call(res);
       if (ctx.mounted) Navigator.of(ctx).pop(res);
     } catch (e) {
-      st.set(() => st.error = _errorText(e, 'Could not hand it over.'));
+      st.set(() => st.error = wfErrorText(e, 'Could not hand it over.', strings));
     } finally {
       st.set(() => st.busy = false);
     }
@@ -391,7 +395,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
           UiButton(label: 'Close', variant: UiButtonVariant.ghost, onPressed: st.busy ? null : () => Navigator.of(ctx).pop()),
           Wrap(spacing: ctx.ui.space2, runSpacing: ctx.ui.space2, children: [
             for (final o in task.outcomes)
-              UiButton(label: o.label, variant: _variantOf(o.tone), onPressed: st.busy || !task.canDecide ? null : () => decide(ctx, o.key)),
+              wfAnchor(anchorPrefix, 'task.${o.key}', UiButton(label: o.label, variant: _variantOf(o.tone), onPressed: st.busy || !task.canDecide ? null : () => decide(ctx, o.key))),
           ]),
         ],
       )),
@@ -416,6 +420,7 @@ class WfRecordActions extends StatefulWidget {
     this.emptyText = '',
     this.onChanged,
     this.onReload,
+    this.anchorPrefix,
   });
 
   final UiWorkflowApi? api;
@@ -434,6 +439,10 @@ class WfRecordActions extends StatefulWidget {
 
   /// Something changed that needs a fresh read (a decision, a manual start).
   final Future<void> Function()? onReload;
+
+  /// Tour anchors (0.87.0): `<prefix>.move.<key>`, `.manual.<key>`, `.reset`, `.task-entry`, and in the
+  /// dialogs `.confirm` and `.task.<outcome key>`. Null: none.
+  final String? anchorPrefix;
 
   @override
   State<WfRecordActions> createState() => _WfRecordActionsState();
@@ -722,12 +731,12 @@ class _WfRecordActionsState extends State<WfRecordActions> {
         listenable: d,
         builder: (ctx, _) => Row(mainAxisAlignment: MainAxisAlignment.end, spacing: ctx.ui.space2, children: [
           UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, onPressed: d.busy ? null : () => Navigator.of(ctx).pop()),
-          UiButton(
+          wfAnchor(widget.anchorPrefix, 'confirm', UiButton(
             label: o.label,
             variant: o.tone == 'danger' ? UiButtonVariant.destructive : UiButtonVariant.primary,
             // Not before the reset's list arrives: confirming then would take back nothing.
             onPressed: d.busy || d.loading ? null : () => confirm(ctx),
-          ),
+          )),
         ]),
       ),
     ).whenComplete(() {
@@ -761,7 +770,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       await widget.onChanged?.call(r);
       return true;
     } catch (e) {
-      _fail(d, _errorText(e, 'That did not work.'));
+      _fail(d, _errorText(this, e, 'That did not work.'));
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -780,7 +789,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       await widget.onChanged?.call(r);
       return true;
     } catch (e) {
-      _fail(d, _errorText(e, 'The workflow could not be reset.'));
+      _fail(d, _errorText(this, e, 'The workflow could not be reset.'));
       // Someone else changed what the workflow did meanwhile: show the list as it is now, keeping the person's ticks.
       if (!d.disposed && e is UiWfApiError && e.code == 'resetChanged') _loadResetItems(d, keepChoices: true);
       return false;
@@ -799,7 +808,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
       await widget.onReload?.call();
       return true;
     } catch (e) {
-      _fail(d, _errorText(e, 'That did not work.'));
+      _fail(d, _errorText(this, e, 'That did not work.'));
       return false;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -810,7 +819,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     final api = widget.api;
     if (api == null) return;
     // Reloads on every saved decision, even one that lands after the dialog was taken away.
-    await showWfDecideDialog(context, task: t, api: api, onDecided: (_) => widget.onReload?.call(), onRoute: (r) => _taskRoute = r);
+    await showWfDecideDialog(context, task: t, api: api, onDecided: (_) => widget.onReload?.call(), onRoute: (r) => _taskRoute = r, anchorPrefix: widget.anchorPrefix);
     _taskRoute = null;
   }
 
@@ -827,8 +836,8 @@ class _WfRecordActionsState extends State<WfRecordActions> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space3, children: [
       if (r.transitions.isNotEmpty || r.manual.isNotEmpty)
         Wrap(spacing: t.space2, runSpacing: t.space2, children: [
-          for (final tr in r.transitions) UiButton(label: tr.label, size: size, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr)),
-          for (final m in r.manual) UiButton(label: m.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m)),
+          for (final tr in r.transitions) wfAnchor(widget.anchorPrefix, 'move.${tr.key}', UiButton(label: tr.label, size: size, variant: _variantOf(tr.tone), onPressed: _busy ? null : () => _start(tr))),
+          for (final m in r.manual) wfAnchor(widget.anchorPrefix, 'manual.${m.key}', UiButton(label: m.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startManual(m))),
         ]),
       if (reset != null)
         // Set apart by a dashed rule (the web `.reset { border-top: 1px dashed }`).
@@ -839,7 +848,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
           padding: EdgeInsets.only(top: t.space2),
           child: Wrap(spacing: t.space2, runSpacing: t.space2, alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text('Back to “${reset.toLabel}”: open tasks and runs stop.', style: _body(context, size: 12, color: t.textMuted)),
-            UiButton(label: reset.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startReset(reset)),
+            wfAnchor(widget.anchorPrefix, 'reset', UiButton(label: reset.label, size: size, variant: UiButtonVariant.outline, onPressed: _busy ? null : () => _startReset(reset))),
           ]),
         )),
       if (tasks.isNotEmpty)
@@ -848,7 +857,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
           for (final task in tasks)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: UiInteractive(
+              child: wfAnchor(widget.anchorPrefix, 'task-entry', UiInteractive(
                 onTap: () => _openTask(task),
                 enabled: task.canDecide,
                 semanticLabel: '${task.title}, ${task.assigneeNames.join(', ')}, due ${wfAgo(task.dueAt, UiWorkflowClock.nowOf(context))}${task.canDecide ? ', your turn' : ''}',
@@ -872,7 +881,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
                     if (task.canDecide) const WfChip('Your turn', tone: 'primary'),
                   ]),
                 ),
-              ),
+              )),
             ),
         ]),
       if (nothing && widget.emptyText.isNotEmpty) FbHint(widget.emptyText),
@@ -906,8 +915,11 @@ class WfDashedTopRule extends CustomPainter {
 /// The task inbox inside [UiWorkflowTasksDrawer]: approvals and tasks, due first, overdue marked,
 /// open or finished, each opening its decision. Internal: apps use the drawer.
 class WfTaskInbox extends StatefulWidget {
-  const WfTaskInbox({super.key, required this.api, this.scope = 'mine', this.pageSize = 25, this.onDecided});
+  const WfTaskInbox({super.key, required this.api, this.scope = 'mine', this.pageSize = 25, this.onDecided, this.anchorPrefix});
   final UiWorkflowApi? api;
+
+  /// Tour anchors `<prefix>.task-entry` on each task and `<prefix>.task.<outcome key>` in its decision.
+  final String? anchorPrefix;
 
   /// `mine` (the signed-in person's) or `all` (needs admin rights).
   final String scope;
@@ -925,6 +937,7 @@ class WfTaskInboxState extends State<WfTaskInbox> {
   List<UiWfTask> _tasks = const [];
   int _total = 0;
   String _error = '';
+  String? _errorDetail;
   late int _take = widget.pageSize;
   int _seq = 0;
 
@@ -980,7 +993,12 @@ class WfTaskInboxState extends State<WfTaskInbox> {
         _error = '';
       });
     } catch (e) {
-      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load tasks.'));
+      if (mounted && n == _seq) {
+        setState(() {
+          _error = _errorText(this, e, 'Could not load tasks.');
+          _errorDetail = wfErrorDetail(e);
+        });
+      }
     }
   }
 
@@ -989,7 +1007,7 @@ class WfTaskInboxState extends State<WfTaskInbox> {
   Future<void> _open(UiWfTask t) async {
     final api = widget.api;
     if (api == null) return;
-    await showWfDecideDialog(context, task: t, api: api, onDecided: (res) {
+    await showWfDecideDialog(context, task: t, api: api, anchorPrefix: widget.anchorPrefix, onDecided: (res) {
       widget.onDecided?.call(res);
       if (mounted) reload();
     });
@@ -1014,13 +1032,13 @@ class WfTaskInboxState extends State<WfTaskInbox> {
         const Spacer(),
         FbIconButton(icon: WfIcons.refresh, label: 'Refresh', onPressed: reload),
       ]),
-      if (_error.isNotEmpty) WfNote(_error),
+      if (_error.isNotEmpty) WfErrorNote(_error, detail: _errorDetail),
       if (_tasks.isEmpty && _emptyText.isNotEmpty)
         Padding(
           padding: EdgeInsets.symmetric(vertical: t.space6),
           child: Text(_emptyText, textAlign: TextAlign.center, style: _body(context, color: t.textMuted)),
         ),
-      for (final task in _tasks) _TaskRow(task: task, outcome: _outcomeLabel(task), onTap: () => _open(task)),
+      for (final task in _tasks) wfAnchor(widget.anchorPrefix, 'task-entry', _TaskRow(task: task, outcome: _outcomeLabel(task), onTap: () => _open(task))),
       if (_total > _tasks.length)
         Align(
           alignment: AlignmentDirectional.centerStart,
@@ -1142,6 +1160,7 @@ class WfRunViewState extends State<WfRunView> {
   UiWorkflowDefinition? _def;
   bool _busy = false;
   String _error = '';
+  String? _errorDetail;
   bool _allowed = false;
   int _seq = 0;
 
@@ -1189,7 +1208,12 @@ class WfRunViewState extends State<WfRunView> {
         _error = '';
       });
     } catch (e) {
-      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load the run.'));
+      if (mounted && n == _seq) {
+        setState(() {
+          _error = _errorText(this, e, 'Could not load the run.');
+          _errorDetail = wfErrorDetail(e);
+        });
+      }
     }
   }
 
@@ -1251,6 +1275,7 @@ class WfRunViewState extends State<WfRunView> {
     setState(() {
       _busy = true;
       _error = '';
+      _errorDetail = null;
     });
     dialog?.set(() {
       dialog.busy = true;
@@ -1268,7 +1293,7 @@ class WfRunViewState extends State<WfRunView> {
       widget.onChanged?.call(next);
       return true;
     } catch (e) {
-      final msg = _errorText(e, 'That did not work.');
+      final msg = _errorText(this, e, 'That did not work.');
       if (mounted) setState(() => _error = msg);
       dialog?.set(() => dialog.error = msg);
       return false;
@@ -1432,7 +1457,7 @@ class WfRunViewState extends State<WfRunView> {
   Widget build(BuildContext context) {
     final t = context.ui;
     final r = _run;
-    if (r == null) return _error.isNotEmpty ? WfNote(_error) : const FbHint('Loading…');
+    if (r == null) return _error.isNotEmpty ? WfErrorNote(_error, detail: _errorDetail) : const FbHint('Loading…');
     final incidents = _incidents;
     UiButton btn(String label, VoidCallback onTap, {UiButtonVariant variant = UiButtonVariant.primary}) =>
         UiButton(label: label, size: UiSize.sm, variant: variant, onPressed: _busy ? null : onTap);
@@ -1502,7 +1527,7 @@ class WfRunViewState extends State<WfRunView> {
         )
       else if (_mayIntervene && (r.status == 'waiting' || r.status == 'running' || r.status == 'queued'))
         Align(alignment: AlignmentDirectional.centerStart, child: cancel),
-      if (_error.isNotEmpty) WfNote(_error),
+      if (_error.isNotEmpty) WfErrorNote(_error, detail: _errorDetail),
       // A lifecycle record instance has no steps of its own: no empty list for it.
       if (_rows.isNotEmpty)
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1611,6 +1636,7 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
   UiWfAuditVerification? _verification;
   bool _busy = false;
   String _error = '';
+  String? _errorDetail;
 
   /// Workflow titles by key, so entries by a workflow name it rather than its key.
   Map<String, String> _titles = const {};
@@ -1682,7 +1708,12 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
         _error = '';
       });
     } catch (e) {
-      if (mounted && n == _seq) setState(() => _error = _errorText(e, 'Could not load the audit log.'));
+      if (mounted && n == _seq) {
+        setState(() {
+          _error = _errorText(this, e, 'Could not load the audit log.');
+          _errorDetail = wfErrorDetail(e);
+        });
+      }
     }
   }
 
@@ -1694,7 +1725,12 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
       final v = await api.verifyAudit();
       if (mounted) setState(() => _verification = v);
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'Could not check the chain.'));
+      if (mounted) {
+        setState(() {
+          _error = _errorText(this, e, 'Could not check the chain.');
+          _errorDetail = wfErrorDetail(e);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1709,7 +1745,12 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
       final bytes = await api.exportAudit(_query(format: format));
       widget.onExport?.call(bytes, format);
     } catch (e) {
-      if (mounted) setState(() => _error = _errorText(e, 'The export failed.'));
+      if (mounted) {
+        setState(() {
+          _error = _errorText(this, e, 'The export failed.');
+          _errorDetail = wfErrorDetail(e);
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1776,7 +1817,7 @@ class UiWorkflowAuditState extends State<UiWorkflowAudit> {
               ? Text('The chain is intact: ${v.checked} entries checked.', style: _body(context, size: 12.5, color: t.success))
               : WfNote('The chain is broken at entry ${v.brokenAtSeq}: ${v.problem ?? ''}', alert: false),
         ),
-      if (_error.isNotEmpty) WfNote(_error),
+      if (_error.isNotEmpty) WfErrorNote(_error, detail: _errorDetail),
       Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),

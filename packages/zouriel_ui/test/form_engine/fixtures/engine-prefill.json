@@ -1,0 +1,242 @@
+{
+  "kind": "engine",
+  "description": "Starting answers for a new submission (create mode `prefill`, 0.87.0): filled in without becoming an edit; defaults still apply to fields without one; keys that aren't fields don't reach the values; ignored in edit mode.",
+  "definition": {
+    "schemaVersion": 1,
+    "id": "apply",
+    "title": "Apply",
+    "revision": 2,
+    "pages": [
+      {
+        "id": "p1",
+        "elements": [
+          {
+            "kind": "field",
+            "id": "name",
+            "type": "text",
+            "key": "full_name",
+            "label": "NAME",
+            "required": true
+          },
+          {
+            "kind": "field",
+            "id": "island",
+            "type": "text",
+            "key": "island",
+            "label": "ISLAND",
+            "defaultValue": "Hithadhoo"
+          },
+          {
+            "kind": "field",
+            "id": "note",
+            "type": "text",
+            "key": "note",
+            "label": "NOTE",
+            "defaultValue": "none"
+          },
+          {
+            "kind": "group",
+            "id": "addr",
+            "key": "address",
+            "title": "ADDRESS",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "city",
+                "type": "text",
+                "key": "city",
+                "label": "CITY"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "p2",
+        "elements": [
+          {
+            "kind": "group",
+            "id": "deps",
+            "key": "dependants",
+            "title": "DEPENDANTS",
+            "repeat": {
+              "min": 0,
+              "max": 5
+            },
+            "elements": [
+              {
+                "kind": "field",
+                "id": "dep",
+                "type": "text",
+                "key": "name",
+                "label": "DEPENDANT"
+              },
+              {
+                "kind": "field",
+                "id": "rel",
+                "type": "text",
+                "key": "relation",
+                "label": "RELATION",
+                "defaultValue": "child"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "fills in the given answers and stays a new, unchanged submission",
+      "today": "2026-11-17",
+      "prefill": {
+        "full_name": "Aisha Ali",
+        "address": {
+          "city": "Addu"
+        },
+        "efaas_id": "A123456"
+      },
+      "steps": [
+        {
+          "expect": {
+            "mode": "create",
+            "dirty": false,
+            "value": {
+              "name": "Aisha Ali",
+              "island": "Hithadhoo",
+              "note": "none",
+              "city": "Addu"
+            },
+            "valuesHas": {
+              "full_name": "Aisha Ali",
+              "island": "Hithadhoo",
+              "address": {
+                "city": "Addu"
+              }
+            },
+            "valuesLacks": [
+              "efaas_id"
+            ],
+            "changes": []
+          }
+        },
+        {
+          "set": "name",
+          "value": "Aisha A."
+        },
+        {
+          "expect": {
+            "dirty": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "a given answer wins over the default, an empty one is kept as given",
+      "today": "2026-11-17",
+      "prefill": {
+        "full_name": "Sam",
+        "island": "Feydhoo",
+        "note": ""
+      },
+      "steps": [
+        {
+          "expect": {
+            "value": {
+              "island": "Feydhoo",
+              "note": ""
+            },
+            "valuesHas": {
+              "island": "Feydhoo"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "prefilled repeat entries are new entries: their answers are taken, defaults fill the rest, extra keys are dropped",
+      "today": "2026-11-17",
+      "prefill": {
+        "full_name": "Sam",
+        "dependants": [
+          {
+            "name": "Lee",
+            "age": 4
+          },
+          {
+            "name": "Ray",
+            "relation": "spouse"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "expect": {
+            "rows": {
+              "deps": 2
+            },
+            "value": {
+              "dep@0": "Lee",
+              "rel@0": "child",
+              "dep@1": "Ray",
+              "rel@1": "spouse"
+            },
+            "valuesHas": {
+              "dependants": [
+                {
+                  "name": "Lee",
+                  "relation": "child"
+                },
+                {
+                  "name": "Ray",
+                  "relation": "spouse"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "without starting answers a new form is blank apart from defaults",
+      "today": "2026-11-17",
+      "steps": [
+        {
+          "expect": {
+            "mode": "create",
+            "value": {
+              "name": null,
+              "island": "Hithadhoo"
+            },
+            "rows": {
+              "deps": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "edit mode ignores prefill and opens the saved answers",
+      "today": "2026-11-17",
+      "mode": "edit",
+      "values": {
+        "full_name": "Saved"
+      },
+      "prefill": {
+        "full_name": "Other",
+        "island": "Feydhoo"
+      },
+      "steps": [
+        {
+          "expect": {
+            "mode": "edit",
+            "value": {
+              "name": "Saved",
+              "island": null
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

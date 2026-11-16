@@ -119,6 +119,15 @@ class _UiTourAnchorState extends State<UiTourAnchor> {
   Widget build(BuildContext context) => widget.child;
 }
 
+/// Something that can bring hidden anchors on screen (a closed drawer holding them).
+class _Revealer {
+  _Revealer(this.prefix, this.reveal);
+  final String prefix;
+  final bool Function(String id) reveal;
+}
+
+final List<_Revealer> _revealers = [];
+
 _UiTourAnchorState? _findAnchor(String id) {
   for (final a in _anchors[id] ?? const <_UiTourAnchorState>{}) {
     if (a.box != null) return a;
@@ -133,6 +142,9 @@ abstract final class UiTour {
   static String? _active;
   static void Function(UiTourOutcome)? _stopCurrent;
 
+  /// Counts starts, so a start still waiting for revealed anchors knows when it was overtaken.
+  static int _starts = 0;
+
   /// The id of the tour on screen, or null.
   static String? get active => _active;
 
@@ -143,20 +155,79 @@ abstract final class UiTour {
   @visibleForTesting
   static Rect? get debugHole => _view?._shown;
 
-  /// Runs a tour. Steps whose anchor isn't laid out are left out (the count says "1 of 3" when one
-  /// of four is missing); with none left it completes [UiTourOutcome.closed] at once. A tour
-  /// already running ends with [UiTourOutcome.closed] first.
+  /// Adds a revealer (0.87.0, the web `UiTourAnchors.registerRevealer`): something that can bring
+  /// hidden anchors on screen, such as a closed drawer holding them ([UiWorkflowPanel] with an
+  /// `anchorPrefix`). A starting tour asks it, for each anchor id starting with [prefix] that isn't
+  /// laid out, to show it; [reveal] returns whether it did. Returns the remover.
+  static VoidCallback registerRevealer(String prefix, bool Function(String id) reveal) {
+    final r = _Revealer(prefix, reveal);
+    _revealers.add(r);
+    return () => _revealers.remove(r);
+  }
+
+  /// Asks the revealers for [id]'s prefix to bring it on screen; true when one of them did something.
+  static bool reveal(String id) {
+    var any = false;
+    for (final r in [..._revealers]) {
+      if (id.startsWith(r.prefix) && r.reveal(id)) any = true;
+    }
+    return any;
+  }
+
+  /// Runs a tour. Steps whose anchor isn't laid out are revealed first when a revealer can (see
+  /// [registerRevealer]; up to a second is waited for them to be drawn), else left out (the count
+  /// says "1 of 3" when one of four is missing); with none left it completes [UiTourOutcome.closed]
+  /// at once. A tour already running ends with [UiTourOutcome.closed] first.
   static Future<UiTourOutcome> start(BuildContext context, UiTourSpec spec) {
     _stopCurrent?.call(UiTourOutcome.closed);
+    final token = ++_starts;
     var steps = spec.steps;
     if (steps.length > uiTourMaxSteps) {
       debugPrint('UiTour "${spec.id}": ${steps.length} steps; a tour has at most $uiTourMaxSteps, the rest are left out.');
       steps = steps.sublist(0, uiTourMaxSteps);
     }
-    steps = [for (final s in steps) if (_findAnchor(s.anchor) != null) s];
-    if (steps.isEmpty) return Future.value(UiTourOutcome.closed);
-
     final overlay = Overlay.of(context, rootOverlay: true);
+    final hidden = [for (final s in steps) if (_findAnchor(s.anchor) == null && reveal(s.anchor)) s.anchor];
+    if (hidden.isNotEmpty) {
+      final all = steps;
+      _active = spec.id;
+      // A newer start, or stop(), while waiting wins: this one then ends as closed.
+      return _waitFor(hidden).then((_) {
+        if (token != _starts || !overlay.mounted) return UiTourOutcome.closed;
+        return _run(overlay, spec, [for (final s in all) if (_findAnchor(s.anchor) != null) s]);
+      });
+    }
+    return _run(overlay, spec, [for (final s in steps) if (_findAnchor(s.anchor) != null) s]);
+  }
+
+  /// Completes once every anchor is laid out, checking each frame, or after a second (whatever is
+  /// there by then is used).
+  static Future<void> _waitFor(List<String> ids) {
+    final done = Completer<void>();
+    final timeout = Timer(const Duration(seconds: 1), () {
+      if (!done.isCompleted) done.complete();
+    });
+    void check(Duration _) {
+      if (done.isCompleted) return;
+      if (ids.every((id) => _findAnchor(id) != null)) {
+        timeout.cancel();
+        done.complete();
+        return;
+      }
+      SchedulerBinding.instance.addPostFrameCallback(check);
+      SchedulerBinding.instance.scheduleFrame();
+    }
+
+    SchedulerBinding.instance.addPostFrameCallback(check);
+    SchedulerBinding.instance.scheduleFrame();
+    return done.future;
+  }
+
+  static Future<UiTourOutcome> _run(OverlayState overlay, UiTourSpec spec, List<UiTourStep> steps) {
+    if (steps.isEmpty) {
+      _active = null;
+      return Future.value(UiTourOutcome.closed);
+    }
     final completer = Completer<UiTourOutcome>();
     final restore = FocusManager.instance.primaryFocus;
     late final OverlayEntry entry;
@@ -180,7 +251,11 @@ abstract final class UiTour {
   }
 
   /// Ends the running tour with [UiTourOutcome.closed] (e.g. the page is leaving).
-  static void stop() => _stopCurrent?.call(UiTourOutcome.closed);
+  static void stop() {
+    _starts++;
+    _stopCurrent?.call(UiTourOutcome.closed);
+    _active = null;
+  }
 }
 
 class _UiTourView extends StatefulWidget {
