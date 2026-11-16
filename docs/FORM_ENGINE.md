@@ -139,7 +139,7 @@ final engine = UiFormEngine.fromJson(
 engine.addListener(() => setState(() {}));
 engine.setValue('f_name', null, 'Aminath');
 engine.instanceState('f_name', null); // visible, disabled, required, value, errors, warnings, pending
-final submission = engine.submit();   // null (and moved to the first page with problems) or the data
+final submission = engine.submit();   // null (and moved to the first page with problems) or the submission (answers in `values`)
 ```
 
 | Angular (signals) | Dart |

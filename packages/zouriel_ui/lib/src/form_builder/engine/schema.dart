@@ -1270,13 +1270,13 @@ class UiFbSubmissionLink {
   final String? serviceCode;
 }
 
-/// Emitted when a form is submitted. `data` is the JSON to store.
+/// Emitted when a form is submitted. `values` is the JSON to store.
 class UiFormSubmission {
   const UiFormSubmission({
     required this.formId,
     required this.revision,
     required this.locale,
-    required this.data,
+    required this.values,
     required this.submittedAt,
     this.workflowId,
     this.serviceCode,
@@ -1288,7 +1288,7 @@ class UiFormSubmission {
 
   /// The language the form was filled in.
   final String locale;
-  final UiJson data;
+  final UiJson values;
 
   /// ISO 8601 in UTC with milliseconds, like JS `toISOString()`.
   final String submittedAt;
@@ -1297,14 +1297,14 @@ class UiFormSubmission {
   final String? workflowId;
   final String? serviceCode;
 
-  /// What each answer in `data` is, so a workflow can build conditions on them without the form definition.
+  /// What each answer in `values` is, so a workflow can build conditions on them without the form definition.
   final List<UiFbSubmissionField> fields;
 
   /// Files picked in this session that have no uploader URL yet, keyed by data path.
   final Map<String, List<UiFbPickedFile>> files;
 
   UiJson toJson() {
-    final out = <String, Object?>{'formId': formId, 'revision': revision, 'locale': locale, 'data': data, 'submittedAt': submittedAt};
+    final out = <String, Object?>{'formId': formId, 'revision': revision, 'locale': locale, 'values': values, 'submittedAt': submittedAt};
     _put(out, 'workflowId', workflowId);
     _put(out, 'serviceCode', serviceCode);
     out['fields'] = [for (final f in fields) f.toJson()];

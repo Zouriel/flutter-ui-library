@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'conditions.dart';
 import 'field_types.dart';
+import 'form_strings.dart';
 import 'js.dart';
 import 'option_sources.dart';
 import 'schema.dart';
@@ -64,7 +65,7 @@ class UiFbValidatorDef {
     this.valueKinds,
     this.fieldTypes,
     this.params,
-    required this.defaultMessage,
+    this.defaultMessage,
     required this.validate,
     this.debounceMs,
     this.runWhenEmpty = false,
@@ -81,8 +82,11 @@ class UiFbValidatorDef {
   final List<UiFbFieldType>? fieldTypes;
   final List<UiFbParamSpec>? params;
 
-  /// Supports `{label}` (the field's label) and `{paramKey}` placeholders.
-  final String defaultMessage;
+  /// Message when the check fails; supports `{label}` (the field's label) and `{paramKey}` placeholders.
+  /// A `String`, or a `Map<String, String>` by language code (`{'en': '…', 'dv': '…'}`; the base language
+  /// `dv` also serves `dv-MV`). Leave it out for a built-in check: its wording comes from the form strings
+  /// ([UiFbStrings]).
+  final Object? defaultMessage;
   final UiFbValidateFn validate;
 
   /// Runs while typing only after this pause (async checks default to 400ms). Setting it marks
@@ -116,12 +120,12 @@ String? resolveDateParam(Object? v, String today) {
 }
 
 /// Shows a date param the way people read it.
-String describeDateParam(Object? v) {
+String describeDateParam(Object? v, [UiFbStrings strings = uiFbStringsEn]) {
   if (v is! String) return '';
   final m = _todayParam.firstMatch(v.trim());
   if (m == null) return v;
   final d = m.group(1) != null ? int.parse(m.group(1)!.replaceAll(RegExp(r'\s'), '')) : 0;
-  return d == 0 ? 'today' : d > 0 ? '$d days from today' : '${-d} days ago';
+  return d == 0 ? strings.dateToday : d > 0 ? fbFormat(strings.dateInDays, {'n': d}) : fbFormat(strings.dateDaysAgo, {'n': -d});
 }
 
 int _words(Object? v) => (v == null ? '' : jsString(v)).trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).length;
@@ -209,41 +213,34 @@ const _file = [UiFbValueKind.file];
 final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbValidatorDef>[
   UiFbValidatorDef(
     type: 'email', label: 'Valid email', description: 'Looks like name@example.com', fieldTypes: const [UiFbFieldType.email, UiFbFieldType.text], //
-    defaultMessage: 'Enter an email address like name@example.com.',
     validate: (v, p, c) => _email.hasMatch(_s(v).trim()),
   ),
   UiFbValidatorDef(
     type: 'url', label: 'Valid web address', description: 'Looks like example.com', fieldTypes: const [UiFbFieldType.url, UiFbFieldType.text], //
-    defaultMessage: 'Enter a web address like example.com.',
     validate: (v, p, c) => _url.hasMatch(_s(v).trim()),
   ),
   UiFbValidatorDef(
     type: 'phone', label: 'Valid phone number', description: 'Digits, spaces, + and brackets', fieldTypes: const [UiFbFieldType.phone, UiFbFieldType.text], //
-    defaultMessage: 'Enter a phone number, like +44 20 7946 0958.',
     validate: (v, p, c) => _phone.hasMatch(_s(v).trim()) && RegExp(r'\d').allMatches(_s(v)).length >= 6,
   ),
   UiFbValidatorDef(
     type: 'minLength', label: 'Minimum length', valueKinds: _text,
     params: const [UiFbParamSpec(key: 'min', label: 'At least', kind: 'number', placeholder: 'characters')],
-    defaultMessage: '{label} must be at least {min} characters.',
     validate: (v, p, c) => _s(v).length >= (_n(p['min']) ?? 0),
   ),
   UiFbValidatorDef(
     type: 'maxLength', label: 'Maximum length', valueKinds: _text,
     params: const [UiFbParamSpec(key: 'max', label: 'At most', kind: 'number', placeholder: 'characters')],
-    defaultMessage: '{label} must be {max} characters or fewer.',
     validate: (v, p, c) => _s(v).length <= (_n(p['max']) ?? double.infinity),
   ),
   UiFbValidatorDef(
     type: 'minWords', label: 'Minimum words', fieldTypes: const [UiFbFieldType.textarea, UiFbFieldType.text],
     params: const [UiFbParamSpec(key: 'min', label: 'At least', kind: 'number', placeholder: 'words')],
-    defaultMessage: '{label} must be at least {min} words.',
     validate: (v, p, c) => _words(v) >= (_n(p['min']) ?? 0),
   ),
   UiFbValidatorDef(
     type: 'maxWords', label: 'Maximum words', fieldTypes: const [UiFbFieldType.textarea, UiFbFieldType.text],
     params: const [UiFbParamSpec(key: 'max', label: 'At most', kind: 'number', placeholder: 'words')],
-    defaultMessage: '{label} must be {max} words or fewer.',
     validate: (v, p, c) => _words(v) <= (_n(p['max']) ?? double.infinity),
   ),
   UiFbValidatorDef(
@@ -252,7 +249,6 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
       UiFbParamSpec(key: 'preset', label: 'Allow', kind: 'select', options: [for (final p in uiFbPatternPresets) (value: p.value, label: p.label)], hasDefault: true, defaultValue: 'letters'),
       const UiFbParamSpec(key: 'regex', label: 'Pattern', kind: 'text', hint: 'A regular expression. Only used with “Custom pattern”.', placeholder: r'^[A-Z]{2}\d{6}$'),
     ],
-    defaultMessage: '{label} contains characters that are not allowed.',
     validate: (v, p, c) {
       final re = _patternRegex(p);
       return re == null || re.hasMatch(_s(v));
@@ -261,18 +257,15 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
   UiFbValidatorDef(
     type: 'min', label: 'Minimum value', valueKinds: _number,
     params: const [UiFbParamSpec(key: 'min', label: 'At least', kind: 'number')],
-    defaultMessage: '{label} must be {min} or more.',
     validate: (v, p, c) => (_n(v) ?? 0) >= (_n(p['min']) ?? double.negativeInfinity),
   ),
   UiFbValidatorDef(
     type: 'max', label: 'Maximum value', valueKinds: _number,
     params: const [UiFbParamSpec(key: 'max', label: 'At most', kind: 'number')],
-    defaultMessage: '{label} must be {max} or less.',
     validate: (v, p, c) => (_n(v) ?? 0) <= (_n(p['max']) ?? double.infinity),
   ),
   UiFbValidatorDef(
     type: 'integer', label: 'Whole number', valueKinds: _number, fieldTypes: const [UiFbFieldType.number, UiFbFieldType.calculated],
-    defaultMessage: '{label} must be a whole number.',
     validate: (v, p, c) {
       final x = _n(v);
       return x != null && x == x.truncateToDouble();
@@ -281,7 +274,6 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
   UiFbValidatorDef(
     type: 'decimalPlaces', label: 'Decimal places', valueKinds: _number,
     params: const [UiFbParamSpec(key: 'places', label: 'At most', kind: 'number', placeholder: 'decimal places')],
-    defaultMessage: '{label} can have at most {places} decimal places.',
     validate: (v, p, c) {
       final x = _n(v);
       final s = x == null ? '' : jsNumberToString(x);
@@ -292,7 +284,6 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
   UiFbValidatorDef(
     type: 'minDate', label: 'Earliest date', valueKinds: _date,
     params: const [UiFbParamSpec(key: 'date', label: 'On or after', kind: 'date', hint: 'A date, or “today”, “today+7”, “today-30”.')],
-    defaultMessage: '{label} must be on or after {date}.',
     validate: (v, p, c) {
       final d = resolveDateParam(p['date'], c.today());
       return d == null || _s(v).compareTo(d) >= 0;
@@ -301,7 +292,6 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
   UiFbValidatorDef(
     type: 'maxDate', label: 'Latest date', valueKinds: _date,
     params: const [UiFbParamSpec(key: 'date', label: 'On or before', kind: 'date', hint: 'A date, or “today”, “today+7”, “today-30”.')],
-    defaultMessage: '{label} must be on or before {date}.',
     validate: (v, p, c) {
       final d = resolveDateParam(p['date'], c.today());
       return d == null || _s(v).compareTo(d) <= 0;
@@ -310,43 +300,36 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
   UiFbValidatorDef(
     type: 'ageAtLeast', label: 'Minimum age', description: 'For a date of birth', valueKinds: _date,
     params: const [UiFbParamSpec(key: 'years', label: 'At least', kind: 'number', placeholder: 'years old')],
-    defaultMessage: 'You must be at least {years} years old.',
     validate: (v, p, c) => (_age(_s(v), c.today()) ?? double.infinity) >= (_n(p['years']) ?? 0),
   ),
   UiFbValidatorDef(
     type: 'ageAtMost', label: 'Maximum age', description: 'For a date of birth', valueKinds: _date,
     params: const [UiFbParamSpec(key: 'years', label: 'At most', kind: 'number', placeholder: 'years old')],
-    defaultMessage: 'You must be {years} years old or younger.',
     validate: (v, p, c) => (_age(_s(v), c.today()) ?? double.negativeInfinity) <= (_n(p['years']) ?? double.infinity),
   ),
   UiFbValidatorDef(
     type: 'earliestTime', label: 'Earliest time', valueKinds: _time,
     params: const [UiFbParamSpec(key: 'time', label: 'At or after', kind: 'text', placeholder: '09:00')],
-    defaultMessage: '{label} must be {time} or later.',
     validate: (v, p, c) => !jsTruthy(p['time']) || _s(v).compareTo(_s(p['time'])) >= 0,
   ),
   UiFbValidatorDef(
     type: 'latestTime', label: 'Latest time', valueKinds: _time,
     params: const [UiFbParamSpec(key: 'time', label: 'At or before', kind: 'text', placeholder: '17:00')],
-    defaultMessage: '{label} must be {time} or earlier.',
     validate: (v, p, c) => !jsTruthy(p['time']) || _s(v).compareTo(_s(p['time'])) <= 0,
   ),
   UiFbValidatorDef(
     type: 'minSelected', label: 'Tick at least', valueKinds: _multi,
     params: const [UiFbParamSpec(key: 'count', label: 'At least', kind: 'number', placeholder: 'options')],
-    defaultMessage: 'Choose at least {count} options for {label}.',
     validate: (v, p, c) => (v is List ? v.length : 0) >= (_n(p['count']) ?? 0),
   ),
   UiFbValidatorDef(
     type: 'maxSelected', label: 'Tick at most', valueKinds: _multi,
     params: const [UiFbParamSpec(key: 'count', label: 'At most', kind: 'number', placeholder: 'options')],
-    defaultMessage: 'Choose no more than {count} options for {label}.',
     validate: (v, p, c) => (v is List ? v.length : 0) <= (_n(p['count']) ?? double.infinity),
   ),
   UiFbValidatorDef(
     type: 'fileType', label: 'File types', valueKinds: _file,
     params: const [UiFbParamSpec(key: 'accept', label: 'Allowed types', kind: 'text', placeholder: '.pdf, .docx, image/*', hint: 'Extensions or types, separated by commas.')],
-    defaultMessage: 'Upload files of these types: {accept}.',
     validate: (v, p, c) {
       final rules = (p['accept'] == null ? '' : _s(p['accept'])).split(',').map((s) => s.trim().toLowerCase()).where((s) => s.isNotEmpty).toList();
       if (rules.isEmpty) return true;
@@ -360,20 +343,17 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
   UiFbValidatorDef(
     type: 'maxFileSize', label: 'Largest file', valueKinds: _file,
     params: const [UiFbParamSpec(key: 'mb', label: 'Up to', kind: 'number', placeholder: 'MB')],
-    defaultMessage: 'Each file must be {mb} MB or smaller.',
     validate: (v, p, c) => _files(v).every((f) => (f['size'] as num) <= (_n(p['mb']) ?? double.infinity) * 1024 * 1024),
   ),
   UiFbValidatorDef(
     type: 'maxFiles', label: 'Number of files', valueKinds: _file,
     params: const [UiFbParamSpec(key: 'count', label: 'At most', kind: 'number', placeholder: 'files')],
-    defaultMessage: 'Upload no more than {count} files.',
     validate: (v, p, c) => (v as List).length <= (_n(p['count']) ?? double.infinity),
   ),
   UiFbValidatorDef(
     type: 'equalsField', label: 'Matches another answer', description: 'e.g. “Confirm email” must match “Email”',
     valueKinds: const [UiFbValueKind.text, UiFbValueKind.number, UiFbValueKind.date, UiFbValueKind.time, UiFbValueKind.choice],
     params: const [UiFbParamSpec(key: 'field', label: 'Must match', kind: 'field')],
-    defaultMessage: '{label} must match {field}.',
     validate: (v, p, c) {
       final other = c.value(p['field'] == null ? '' : _s(p['field']));
       return isEmptyValue(other) || _s(v).trim().toLowerCase() == _s(other).trim().toLowerCase();
@@ -386,7 +366,6 @@ final List<UiFbValidatorDef> uiFbBuiltinValidators = List.unmodifiable(<UiFbVali
       UiFbParamSpec(key: 'comparison', label: 'Must be', kind: 'select', options: _comparisons, hasDefault: true, defaultValue: 'gt'),
       const UiFbParamSpec(key: 'field', label: 'Than', kind: 'field', fieldKinds: [UiFbValueKind.number, UiFbValueKind.date, UiFbValueKind.time]),
     ],
-    defaultMessage: '{label} must be {comparison} {field}.',
     validate: (v, p, c) {
       final other = c.value(p['field'] == null ? '' : _s(p['field']));
       if (isEmptyValue(other)) return true;
@@ -426,8 +405,34 @@ String formatMessage(String template, Map<String, Object?> vars) => template.rep
 });
 
 /// The words shown for a comparison param in messages.
-String comparisonWords(Object? v) =>
-    const {'eq': 'the same as', 'gt': 'more than', 'gte': 'at least', 'lt': 'less than', 'lte': 'at most'}[v == null ? '' : jsString(v)] ?? (v == null ? '' : jsString(v));
+String comparisonWords(Object? v, [UiFbStrings strings = uiFbStringsEn]) =>
+    {'eq': strings.compareEq, 'gt': strings.compareGt, 'gte': strings.compareGte, 'lt': strings.compareLt, 'lte': strings.compareLte}[v == null ? '' : jsString(v)] ?? (v == null ? '' : jsString(v));
+
+/// The message a check shows when it fails and the rule has none of its own, in a language. A registered
+/// check's `defaultMessage` (a string, or a map by language code) wins; a built-in's comes from [strings].
+String validatorMessage(UiFbValidatorDef def, UiFbStrings strings, [String locale = 'en']) =>
+    validatorMessageFor(def.type, def.defaultMessage, strings, locale);
+
+/// [validatorMessage] for a check's type and `defaultMessage` alone.
+String validatorMessageFor(String type, Object? defaultMessage, UiFbStrings strings, [String locale = 'en']) {
+  final dm = defaultMessage;
+  if (dm is String) return dm;
+  if (dm is Map) {
+    final base = locale.split(RegExp(r'[-_]'))[0];
+    String? hit = dm[locale] as String? ?? dm[base] as String?;
+    if (hit == null) {
+      for (final e in dm.entries) {
+        final k = '${e.key}'.toLowerCase();
+        if (k == locale.toLowerCase() || k == base.toLowerCase()) {
+          hit = e.value as String?;
+          break;
+        }
+      }
+    }
+    return hit ?? dm['en'] as String? ?? (dm.values.isEmpty ? null : dm.values.first as String?) ?? strings.validatorInvalid;
+  }
+  return strings['validator${type.isEmpty ? '' : type[0].toUpperCase() + type.substring(1)}'] ?? strings.validatorInvalid;
+}
 
 /// Today's local date as `YYYY-MM-DD`.
 String todayIso() => isoDate(DateTime.now());

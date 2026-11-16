@@ -16,6 +16,7 @@ import '../../forms/text/form_field.dart';
 import '../../forms/text/text_core.dart';
 import '../../overlay/anchored.dart';
 import '../../theme/theme.dart';
+import '../engine/form_strings.dart';
 import '../engine/js.dart';
 import '../engine/option_sources.dart';
 
@@ -35,7 +36,8 @@ class UiFbSourcePicker extends StatefulWidget {
     this.multiple = false,
     this.value,
     this.onChanged,
-    this.placeholder = 'Search…',
+    this.placeholder,
+    this.strings = uiFbStringsEn,
     this.enabled = true,
     this.invalid = false,
     this.label,
@@ -53,7 +55,11 @@ class UiFbSourcePicker extends StatefulWidget {
 
   /// Called with a `{value, label}` map (or null) or, with [multiple], the new list.
   final ValueChanged<Object?>? onChanged;
-  final String placeholder;
+  /// Placeholder; leave out for the form strings' "Search…".
+  final String? placeholder;
+
+  /// The form's own words (see [fbStrings]); English by default.
+  final UiFbStrings strings;
   final bool enabled;
   final bool invalid;
 
@@ -165,19 +171,19 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
     final missing = _missingParam;
     switch (_status) {
       case _Status.needs when missing != null:
-        return 'Choose ${missing.label.toLowerCase()} first.';
+        return fbFormat(widget.strings.chooseFirst, {'name': missing.label.toLowerCase()});
       case _Status.short:
-        return 'Type at least ${widget.source.minQueryLength} characters to search.';
+        return fbFormat(widget.strings.typeToSearch, {'n': widget.source.minQueryLength});
       case _Status.error:
-        return 'Couldn’t load the list.';
+        return widget.strings.loadFailed;
       case _Status.loading:
-        return 'Searching…';
+        return widget.strings.searching;
       case _Status.more:
-        return 'Loading more…';
+        return widget.strings.loadingMore;
       default:
         if (_items.isEmpty && _loadedKey != null) {
           final q = _query.trim();
-          return q.isNotEmpty ? 'No matches for “$q”.' : 'Nothing to choose from.';
+          return q.isNotEmpty ? fbFormat(widget.strings.noMatches, {'query': q}) : widget.strings.nothingToChoose;
         }
         return '';
     }
@@ -383,7 +389,7 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
       controller: _text,
       focusNode: _focus,
       style: uiFieldTextStyle(context, UiSize.md),
-      placeholder: (!widget.multiple || chosen.isEmpty) ? widget.placeholder : null,
+      placeholder: (!widget.multiple || chosen.isEmpty) ? (widget.placeholder ?? widget.strings.search) : null,
       enabled: widget.enabled,
       onChanged: _onText,
       onKeyEvent: _onKey,
@@ -392,7 +398,7 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
       ),
     );
     final trailing = <Widget>[
-      if (showClear) UiFieldButton(label: 'Clear', visual: 24, onTap: _clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
+      if (showClear) UiFieldButton(label: widget.strings.clear, visual: 24, onTap: _clear, icon: const UiIcon(HugeIcons.strokeRoundedCancel01, strokeWidth: 2)),
       SizedBox(width: showClear ? t.space1 : t.space2),
       SizedBox.square(
         dimension: 14,
@@ -431,7 +437,7 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
                       spacing: t.space1,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        for (final c in chosen) _SourceChip(label: c['label'] as String, height: rowH, enabled: widget.enabled, onRemove: () => _remove(c)),
+                        for (final c in chosen) _SourceChip(label: c['label'] as String, removeLabel: fbFormat(widget.strings.remove, {'name': c['label']}), height: rowH, enabled: widget.enabled, onRemove: () => _remove(c)),
                         ConstrainedBox(
                           constraints: BoxConstraints(minWidth: 80, minHeight: rowH),
                           child: IntrinsicWidth(
@@ -565,7 +571,7 @@ class UiFbSourcePickerState extends State<UiFbSourcePicker> {
                     ),
                   ),
                   if (_status == _Status.error)
-                    ExcludeFocus(child: _RetryButton(onTap: _retry)),
+                    ExcludeFocus(child: _RetryButton(label: widget.strings.tryAgain, onTap: _retry)),
                 ]),
               ),
           ],
@@ -580,7 +586,8 @@ bool _isBlank(Object? v) =>
 
 /// "Try again" in the status row after a failed load.
 class _RetryButton extends StatelessWidget {
-  const _RetryButton({required this.onTap});
+  const _RetryButton({required this.label, required this.onTap});
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -589,7 +596,7 @@ class _RetryButton extends StatelessWidget {
     final t = theme.tokens;
     return UiInteractive(
       onTap: onTap,
-      semanticLabel: 'Try again',
+      semanticLabel: label,
       excludeChildSemantics: true,
       pressScale: false,
       builder: (context, s) => Container(
@@ -602,7 +609,7 @@ class _RetryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(theme.radius(t.radiusXs)),
           boxShadow: s.focused ? t.focusRing : const [],
         ),
-        child: Text('Try again', style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, color: t.text)),
+        child: Text(label, style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, color: t.text)),
       ),
     );
   }
@@ -610,8 +617,9 @@ class _RetryButton extends StatelessWidget {
 
 /// A chosen item in a multiple picker: a tinted pill with a remove button (the web `.chip`).
 class _SourceChip extends StatelessWidget {
-  const _SourceChip({required this.label, required this.height, required this.enabled, required this.onRemove});
+  const _SourceChip({required this.label, required this.removeLabel, required this.height, required this.enabled, required this.onRemove});
   final String label;
+  final String removeLabel;
   final double height;
   final bool enabled;
   final VoidCallback onRemove;
@@ -655,7 +663,7 @@ class _SourceChip extends StatelessWidget {
             child: UiInteractive(
               onTap: onRemove,
               enabled: enabled,
-              semanticLabel: 'Remove $label',
+              semanticLabel: removeLabel,
               excludeChildSemantics: true,
               pressScale: false,
               padTouchTarget: false,

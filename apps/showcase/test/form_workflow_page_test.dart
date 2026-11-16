@@ -19,13 +19,13 @@ Future<void> _done(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 2));
 }
 
-Future<void> _submit(WidgetTester tester, int days) async {
+Future<void> _submit(WidgetTester tester, int days, {String label = 'Submit'}) async {
   final engine = tester.state<UiFormRendererState>(find.byType(UiFormRenderer)).engine;
   engine.setValue('f_name', null, 'Aminath');
   engine.setValue('f_type', null, 'annual');
   engine.setValue('f_days', null, days);
   await tester.pump();
-  await tester.tap(button('Submit'));
+  await tester.tap(button(label));
   await tester.pump(const Duration(seconds: 1));
 }
 
@@ -70,7 +70,8 @@ void main() {
     await tester.tap(find.text('ދިވެހި'));
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('ނަން'), findsWidgets);
-    await _submit(tester, 5);
+    // The button's own word is Dhivehi now too (the form's language, not just its labels).
+    await _submit(tester, 5, label: uiFbStringsDv.submit);
     expect(find.textContaining('"locale": "dv"'), findsOneWidget);
     await _done(tester);
   });

@@ -1,0 +1,284 @@
+{
+  "en": {
+    "submit": "Submit",
+    "saveChanges": "Save changes",
+    "next": "Continue",
+    "back": "Back",
+    "stepOf": "Step {n} of {total}",
+    "problemOne": "There is a problem",
+    "problemMany": "There are {n} problems",
+    "errorLabel": "Error:",
+    "changeOne": "1 change",
+    "changeMany": "{n} changes",
+    "noChanges": "No changes",
+    "empty": "Empty",
+    "yes": "Yes",
+    "no": "No",
+    "notAnswered": "Not answered",
+    "optional": "(optional)",
+    "calculatedHint": "Worked out as you answer",
+    "noLongerOption": "{value} (no longer an option)",
+    "noLongerOffered": "{label} (no longer offered)",
+    "entryTitle": "Entry {n}",
+    "addAnother": "Add another",
+    "nothingAdded": "Nothing added yet.",
+    "noneAdded": "None added.",
+    "remove": "Remove {name}",
+    "moveUp": "Move {name} up",
+    "moveDown": "Move {name} down",
+    "entryAdded": "{name} added",
+    "entryRemoved": "{name} removed.",
+    "entryRemovedAnnounce": "{name} removed. Undo is next to the add button.",
+    "entryRestored": "{name} restored",
+    "undo": "Undo",
+    "choose": "Choose…",
+    "selectDate": "Select a date",
+    "fileUploadLabel": "Click to upload",
+    "fileUploadHint": "or drag & drop",
+    "uploading": "Uploading…",
+    "uploadFailed": "The file could not be uploaded. Try again.",
+    "checking": "Checking…",
+    "searchSource": "Search {name}…",
+    "search": "Search…",
+    "clear": "Clear",
+    "tryAgain": "Try again",
+    "listUnavailable": "This list isn’t available right now.",
+    "savedAnswer": "Saved answer: {answer}.",
+    "chooseFirst": "Choose {name} first.",
+    "typeToSearch": "Type at least {n} characters to search.",
+    "loadFailed": "Couldn’t load the list.",
+    "searching": "Searching…",
+    "loadingMore": "Loading more…",
+    "noMatches": "No matches for “{query}”.",
+    "nothingToChoose": "Nothing to choose from.",
+    "requiredField": "{label} is required.",
+    "requiredQuestion": "Answer “{label}”",
+    "requiredTick": "{label} must be ticked.",
+    "compareEq": "the same as",
+    "compareGt": "more than",
+    "compareGte": "at least",
+    "compareLt": "less than",
+    "compareLte": "at most",
+    "dateToday": "today",
+    "dateInDays": "{n} days from today",
+    "dateDaysAgo": "{n} days ago",
+    "validatorInvalid": "{label} is not valid.",
+    "validatorEmail": "Enter an email address like name@example.com.",
+    "validatorUrl": "Enter a web address like example.com.",
+    "validatorPhone": "Enter a phone number, like +44 20 7946 0958.",
+    "validatorMinLength": "{label} must be at least {min} characters.",
+    "validatorMaxLength": "{label} must be {max} characters or fewer.",
+    "validatorMinWords": "{label} must be at least {min} words.",
+    "validatorMaxWords": "{label} must be {max} words or fewer.",
+    "validatorPattern": "{label} contains characters that are not allowed.",
+    "validatorMin": "{label} must be {min} or more.",
+    "validatorMax": "{label} must be {max} or less.",
+    "validatorInteger": "{label} must be a whole number.",
+    "validatorDecimalPlaces": "{label} can have at most {places} decimal places.",
+    "validatorMinDate": "{label} must be on or after {date}.",
+    "validatorMaxDate": "{label} must be on or before {date}.",
+    "validatorAgeAtLeast": "You must be at least {years} years old.",
+    "validatorAgeAtMost": "You must be {years} years old or younger.",
+    "validatorEarliestTime": "{label} must be {time} or later.",
+    "validatorLatestTime": "{label} must be {time} or earlier.",
+    "validatorMinSelected": "Choose at least {count} options for {label}.",
+    "validatorMaxSelected": "Choose no more than {count} options for {label}.",
+    "validatorFileType": "Upload files of these types: {accept}.",
+    "validatorMaxFileSize": "Each file must be {mb} MB or smaller.",
+    "validatorMaxFiles": "Upload no more than {count} files.",
+    "validatorEqualsField": "{label} must match {field}.",
+    "validatorCompareField": "{label} must be {comparison} {field}."
+  },
+  "dv": {
+    "submit": "ހުށަހަޅާ",
+    "saveChanges": "ބަދަލުތައް ރައްކާކުރޭ",
+    "next": "ކުރިއަށް",
+    "back": "ފަހަތަށް",
+    "stepOf": "ފިޔަވަޅު {total} އިން {n}",
+    "problemOne": "މައްސަލައެއް ހުރެއެވެ",
+    "problemMany": "{n} މައްސަލަ ހުރެއެވެ",
+    "errorLabel": "މައްސަލަ:",
+    "changeOne": "ބަދަލު 1",
+    "changeMany": "ބަދަލު {n}",
+    "noChanges": "ބަދަލެއް ނެތް",
+    "empty": "ހުސް",
+    "yes": "އާނ",
+    "no": "ނޫން",
+    "notAnswered": "ޖަވާބެއް ނުދީ",
+    "optional": "(އިޚްތިޔާރީ)",
+    "calculatedHint": "ޖަވާބު ދެއްވާ ވަރަކަށް ހިސާބުކުރެވޭނެ",
+    "noLongerOption": "{value} (މިހާރު ޚިޔާރެއް ނޫން)",
+    "noLongerOffered": "{label} (މިހާރު ހުށަހަޅާފައެއް ނުވޭ)",
+    "entryTitle": "އެންޓްރީ {n}",
+    "addAnother": "އިތުރު އެއް އިތުރުކުރޭ",
+    "nothingAdded": "އަދި އެއްވެސް އެއްޗެއް އިތުރެއް ނުކުރެއެވެ.",
+    "noneAdded": "އެއްވެސް އެއްޗެއް އިތުރެއް ނުކުރެއެވެ.",
+    "remove": "{name} ނައްތާލާ",
+    "moveUp": "{name} މަތިއަށް ބަދަލުކުރޭ",
+    "moveDown": "{name} ތިރިއަށް ބަދަލުކުރޭ",
+    "entryAdded": "{name} އިތުރުކުރެވިއްޖެ",
+    "entryRemoved": "{name} ނައްތާލެވިއްޖެ.",
+    "entryRemovedAnnounce": "{name} ނައްތާލެވިއްޖެ. އަނބުރާކުރުމުގެ ބަޓަން އިތުރުކުރާ ބަޓަނުގެ ކައިރީގައި ހުރެއެވެ.",
+    "entryRestored": "{name} އަނބުރާ ލެވިއްޖެ",
+    "undo": "އަނބުރާކުރޭ",
+    "choose": "ހޮވާ…",
+    "selectDate": "ތާރީޚެއް ހޮވާ",
+    "fileUploadLabel": "ކްލިކްކޮށް އަޕްލޯޑް ކުރޭ",
+    "fileUploadHint": "ނުވަތަ ދަމައިގެން ލާ",
+    "uploading": "އަޕްލޯޑުކުރަނީ…",
+    "uploadFailed": "ފައިލް އަޕްލޯޑު ނުކުރެވުނެވެ. އަލުން މަސައްކަތް ކުރައްވާ.",
+    "checking": "ބަލަނީ…",
+    "searchSource": "{name} ހޯދާ…",
+    "search": "ހޯދާ…",
+    "clear": "ފޮހެލާ",
+    "tryAgain": "އަލުން މަސައްކަތް ކުރޭ",
+    "listUnavailable": "މި ލިސްޓް މިހާރު ލިބެން ނެތެވެ.",
+    "savedAnswer": "ރައްކާކުރެވިފައިވާ ޖަވާބު: {answer}.",
+    "chooseFirst": "ފުރަތަމަ {name} ހޮވާ.",
+    "typeToSearch": "ހޯދުމަށް މަދުވެގެން {n} އަކުރު ޓައިޕްކުރައްވާ.",
+    "loadFailed": "ލިސްޓް ލޯޑު ނުކުރެވުނެވެ.",
+    "searching": "ހޯދަނީ…",
+    "loadingMore": "އިތުރު ލޯޑުވަނީ…",
+    "noMatches": "“{query}” އާ ގުޅޭ އެއްޗެއް ނުފެނުނެވެ.",
+    "nothingToChoose": "ހޮވަން އެއްޗެއް ނެތެވެ.",
+    "requiredField": "{label} ފުރިހަމަ ކުރަންޖެހެއެވެ.",
+    "requiredQuestion": "“{label}” ގެ ޖަވާބު ދެއްވާ.",
+    "requiredTick": "{label} ޓިކްކުރަންޖެހެއެވެ.",
+    "compareEq": "އާ އެއްގޮތް",
+    "compareGt": "އަށްވުރެ ބޮޑު",
+    "compareGte": "އާ އެއްވަރު ނުވަތަ އެއަށްވުރެ ބޮޑު",
+    "compareLt": "އަށްވުރެ ކުޑަ",
+    "compareLte": "އާ އެއްވަރު ނުވަތަ އެއަށްވުރެ ކުޑަ",
+    "dateToday": "މިއަދު",
+    "dateInDays": "މިއަދުން {n} ދުވަސް ފަހުން",
+    "dateDaysAgo": "{n} ދުވަސް ކުރިން",
+    "validatorInvalid": "{label} ރަނގަޅެއް ނޫނެވެ.",
+    "validatorEmail": "name@example.com ފަދަ އީމެއިލް އެޑްރެހެއް ލިޔުއްވާ.",
+    "validatorUrl": "example.com ފަދަ ވެބް އެޑްރެހެއް ލިޔުއްވާ.",
+    "validatorPhone": "ފޯނު ނަންބަރެއް ލިޔުއްވާ، މިސާލަކަށް +960 777 1234.",
+    "validatorMinLength": "{label} ގައި މަދުވެގެން {min} އަކުރު ހުންނަންޖެހެއެވެ.",
+    "validatorMaxLength": "{label} ގައި {max} އަކުރަށްވުރެ ގިނަ ނުވާންވާނެއެވެ.",
+    "validatorMinWords": "{label} ގައި މަދުވެގެން {min} ބަސް ހުންނަންޖެހެއެވެ.",
+    "validatorMaxWords": "{label} ގައި {max} ބަހަށްވުރެ ގިނަ ނުވާންވާނެއެވެ.",
+    "validatorPattern": "{label} ގައި ބޭނުންކުރުމަށް ހުއްދަ ނުދެވޭ އަކުރުތައް ހިމެނިފައިވެއެވެ.",
+    "validatorMin": "{label} އަކީ {min} ނުވަތަ އެއަށްވުރެ ބޮޑު އަދަދެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorMax": "{label} އަކީ {max} ނުވަތަ އެއަށްވުރެ ކުޑަ އަދަދެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorInteger": "{label} އަކީ ފުރިހަމަ އަދަދެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorDecimalPlaces": "{label} ގައި ޑެސިމަލް ތަންތަން {places} އަށްވުރެ ގިނަ ނުވާންވާނެއެވެ.",
+    "validatorMinDate": "{label} އަކީ {date} ނުވަތަ އޭގެ ފަހުގެ ތާރީޚެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorMaxDate": "{label} އަކީ {date} ނުވަތަ އޭގެ ކުރީގެ ތާރީޚެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorAgeAtLeast": "އުމުރު މަދުވެގެން {years} އަހަރު ވާންޖެހެއެވެ.",
+    "validatorAgeAtMost": "އުމުރު {years} އަހަރު ނުވަތަ އެއަށްވުރެ ކުޑަ ވާންޖެހެއެވެ.",
+    "validatorEarliestTime": "{label} އަކީ {time} ނުވަތަ އޭގެ ފަހުގެ ވަގުތެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorLatestTime": "{label} އަކީ {time} ނުވަތަ އޭގެ ކުރީގެ ވަގުތެއް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorMinSelected": "{label} އަށް މަދުވެގެން {count} ޚިޔާރު ހޮވާ.",
+    "validatorMaxSelected": "{label} އަށް {count} ޚިޔާރަށްވުރެ ގިނަ ނުހޮވާ.",
+    "validatorFileType": "މި ބާވަތްތަކުގެ ފައިލްތައް އަޕްލޯޑުކުރައްވާ: {accept}.",
+    "validatorMaxFileSize": "ކޮންމެ ފައިލެއް {mb} އެމްބީ ނުވަތަ އެއަށްވުރެ ކުޑަ ވާންޖެހެއެވެ.",
+    "validatorMaxFiles": "ފައިލް {count} އަށްވުރެ ގިނަ އަޕްލޯޑު ނުކުރައްވާ.",
+    "validatorEqualsField": "{label} އަކީ {field} އާ އެއްގޮތް ކަމުގައި ވާންޖެހެއެވެ.",
+    "validatorCompareField": "{label} އަކީ {field} {comparison} ކަމުގައި ވާންޖެހެއެވެ."
+  },
+  "resolve": [
+    {
+      "name": "exact code",
+      "locale": "en",
+      "base": "en"
+    },
+    {
+      "name": "exact code dv",
+      "locale": "dv",
+      "base": "dv"
+    },
+    {
+      "name": "base language of a regional code",
+      "locale": "dv-MV",
+      "base": "dv"
+    },
+    {
+      "name": "underscore regional code",
+      "locale": "en_GB",
+      "base": "en"
+    },
+    {
+      "name": "unknown language falls back to English",
+      "locale": "fr",
+      "base": "en"
+    },
+    {
+      "name": "override of the exact code",
+      "locale": "dv",
+      "overrides": {
+        "dv": {
+          "submit": "ފޮނުވާ"
+        }
+      },
+      "base": "dv",
+      "set": {
+        "submit": "ފޮނުވާ"
+      }
+    },
+    {
+      "name": "override of the base language applies to a regional code",
+      "locale": "dv-MV",
+      "overrides": {
+        "dv": {
+          "back": "އަނބުރާ"
+        }
+      },
+      "base": "dv",
+      "set": {
+        "back": "އަނބުރާ"
+      }
+    },
+    {
+      "name": "regional override beats the base override",
+      "locale": "dv-MV",
+      "overrides": {
+        "dv": {
+          "submit": "A",
+          "back": "B"
+        },
+        "dv-MV": {
+          "submit": "C"
+        }
+      },
+      "base": "dv",
+      "set": {
+        "submit": "C",
+        "back": "B"
+      }
+    },
+    {
+      "name": "a language with no table gets English plus its overrides",
+      "locale": "fr",
+      "overrides": {
+        "fr": {
+          "submit": "Envoyer",
+          "back": "Retour"
+        }
+      },
+      "base": "en",
+      "set": {
+        "submit": "Envoyer",
+        "back": "Retour"
+      }
+    },
+    {
+      "name": "overrides of another language are ignored",
+      "locale": "dv",
+      "overrides": {
+        "en": {
+          "submit": "Send"
+        }
+      },
+      "base": "dv"
+    },
+    {
+      "name": "null overrides",
+      "locale": "en",
+      "overrides": null,
+      "base": "en"
+    }
+  ]
+}

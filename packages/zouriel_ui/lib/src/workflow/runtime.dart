@@ -54,7 +54,7 @@ String wfRemarksCounter(String? text) {
   if (s.files.values.any((f) => f.isNotEmpty)) {
     return (data: null, error: 'The files picked in this form can’t be sent: the form needs an upload address for them.');
   }
-  return (data: s.data, error: null);
+  return (data: s.values, error: null);
 }
 
 /// A skipped step's result as its registry type wants it (a number as a number, yes/no as a

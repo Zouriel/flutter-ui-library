@@ -25,6 +25,7 @@ import '../../theme/theme.dart';
 import '../engine/conditions.dart';
 import '../engine/engine.dart';
 import '../engine/field_types.dart';
+import '../engine/form_strings.dart';
 import '../engine/format.dart';
 import '../engine/js.dart';
 import '../engine/schema.dart';
@@ -86,6 +87,9 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
   bool _focused = false;
   bool _uploading = false;
   String _uploadError = '';
+  bool _uploadFailed = false;
+
+  UiFbStrings get _w => _e.strings;
   int _pickSeq = 0;
   String? _lastParams;
 
@@ -194,7 +198,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         if (o.value == c) old = o;
       }
       // Old answers show (and stay chosen) instead of silently vanishing.
-      live.add((label: '${old != null ? _e.text(old.label) : c} (no longer offered)', value: c));
+      live.add((label: fbFormat(_w.noLongerOffered, {'label': old != null ? _e.text(old.label) : c}), value: c));
     }
     return live;
   }
@@ -229,6 +233,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     setState(() {
       _pickSeq++;
       _uploadError = '';
+      _uploadFailed = false;
     });
     _e.markTouched(_f.id, row);
     if (up == null) {
@@ -244,7 +249,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
       final done = await Future.wait([for (final p in picked) up(p, _f)]);
       _e.setValue(_f.id, row, [...keep, for (final d in done) d.toJson()]);
     } catch (_) {
-      if (mounted) setState(() => _uploadError = 'The file could not be uploaded. Try again.');
+      if (mounted) setState(() => _uploadFailed = true);
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -273,7 +278,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     final shown = st.errors.isNotEmpty && _e.errorsShown(_f.id, widget.row);
     final error = shown ? st.errors.first : '';
     final warnings = _e.errorsShown(_f.id, widget.row) ? st.warnings : const <String>[];
-    final display = formatValue(_f, st.value, textLocale: _e.locale, defaultLocale: _e.defaultLocale);
+    final display = formatValue(_f, st.value, textLocale: _e.locale, defaultLocale: _e.defaultLocale, strings: _w);
     final pos = _labelPos;
     final small = ty.body.copyWith(fontSize: t.fontSizeSm, height: 1.35);
 
@@ -283,7 +288,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
     final body = <Widget>[];
     if (_viewing) {
       body.add(Text(
-        display.isEmpty ? 'Not answered' : display,
+        display.isEmpty ? _w.notAnswered : display,
         style: ty.body.copyWith(
           fontSize: t.fontSizeMd,
           height: 1.4,
@@ -305,13 +310,13 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
       ));
       if (_helpText.isNotEmpty) body.add(Text(_helpText, style: small.copyWith(color: t.textSecondary)));
       if (shown) {
-        final announced = Semantics(liveRegion: true, container: true, label: 'Error: $error', child: const SizedBox.shrink());
+        final announced = Semantics(liveRegion: true, container: true, label: '${_w.errorLabel} $error', child: const SizedBox.shrink());
         body.add(_errInside
             ? announced
             : Semantics(
                 liveRegion: true,
                 container: true,
-                label: 'Error: $error',
+                label: '${_w.errorLabel} $error',
                 excludeSemantics: true,
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: 5, children: [
                   Padding(
@@ -326,7 +331,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         body.add(Text(w, style: small.copyWith(color: t.warning)));
       }
       if (st.pending && _e.touched.contains(addr)) {
-        body.add(Semantics(liveRegion: true, child: Text('Checking…', style: small.copyWith(color: t.textMuted))));
+        body.add(Semantics(liveRegion: true, child: Text(_w.checking, style: small.copyWith(color: t.textMuted))));
       }
     }
     final bodyCol = Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, spacing: t.space1, children: body);
@@ -362,7 +367,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         TextSpan(text: _labelText),
         if (marker == 'asterisk' && st.required) TextSpan(text: ' *', style: TextStyle(color: t.danger), semanticsLabel: ''),
         if (marker == 'optional' && !st.required && !_viewing && _f.type != UiFbFieldType.calculated)
-          TextSpan(text: ' (optional)', style: TextStyle(color: t.textMuted, fontWeight: FontWeight.w400)),
+          TextSpan(text: ' ${_w.optional}', style: TextStyle(color: t.textMuted, fontWeight: FontWeight.w400)),
       ]),
       style: ty.label.copyWith(color: t.text, height: 1.35, fontSize: t.fontSizeSm),
     );
@@ -477,7 +482,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         return Semantics(
           liveRegion: true,
           child: Text(
-            'This list isn’t available right now.${display.isNotEmpty ? ' Saved answer: $display.' : ''}',
+            '${_w.listUnavailable}${display.isNotEmpty ? ' ${fbFormat(_w.savedAnswer, {'answer': display})}' : ''}',
             style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.danger),
           ),
         );
@@ -487,7 +492,8 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         params: _e.sourceParams(f.id, widget.row),
         multiple: f.type == UiFbFieldType.multiselect,
         value: v,
-        placeholder: _placeholder.isNotEmpty ? _placeholder : 'Search ${src.label.toLowerCase()}…',
+        strings: _w,
+        placeholder: _placeholder.isNotEmpty ? _placeholder : fbFormat(_w.searchSource, {'name': src.label.toLowerCase()}),
         enabled: enabled,
         invalid: invalid,
         onChanged: _set,
@@ -531,7 +537,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
         return UiDatePicker(
           value: v is String && v.isNotEmpty ? v : null,
           onChanged: _set,
-          placeholder: _placeholder.isNotEmpty ? _placeholder : 'Select a date',
+          placeholder: _placeholder.isNotEmpty ? _placeholder : _w.selectDate,
           min: _dateBound('minDate'),
           max: _dateBound('maxDate'),
           invalid: invalid,
@@ -544,7 +550,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           options: [for (final o in _options(v)) UiSelectOption(label: o.label, value: o.value)],
           value: text.isEmpty ? null : text,
           onChanged: _set,
-          placeholder: _placeholder.isNotEmpty ? _placeholder : 'Choose…',
+          placeholder: _placeholder.isNotEmpty ? _placeholder : _w.choose,
           label: _labelText,
           invalid: invalid,
           enabled: enabled,
@@ -571,7 +577,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
           options: [for (final o in _options(v)) UiComboboxOption(label: o.label, value: o.value)],
           value: list,
           onChanged: _set,
-          placeholder: _placeholder.isNotEmpty ? _placeholder : 'Choose…',
+          placeholder: _placeholder.isNotEmpty ? _placeholder : _w.choose,
           label: _labelText,
           invalid: invalid,
           enabled: enabled,
@@ -584,7 +590,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
       case UiFbFieldType.toggle:
         return Align(
           alignment: AlignmentDirectional.centerStart,
-          child: UiSwitch(value: v == true, onChanged: enabled ? _set : null, label: _captionText.isNotEmpty ? _captionText : 'Yes', semanticLabel: '$_labelText: ${_captionText.isNotEmpty ? _captionText : 'Yes'}'),
+          child: UiSwitch(value: v == true, onChanged: enabled ? _set : null, label: _captionText.isNotEmpty ? _captionText : _w.yes, semanticLabel: '$_labelText: ${_captionText.isNotEmpty ? _captionText : _w.yes}'),
         );
       case UiFbFieldType.rating:
         return UiRating(value: v is num ? v.toInt() : 0, onChanged: enabled ? _set : null, max: (p?.maxRating ?? 5).toInt(), label: _labelText);
@@ -603,7 +609,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
       case UiFbFieldType.calculated:
         return Semantics(
           label: _labelText,
-          value: display.isEmpty ? 'Worked out as you answer' : display,
+          value: display.isEmpty ? _w.calculatedHint : display,
           readOnly: true,
           container: true,
           excludeSemantics: true,
@@ -621,7 +627,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
                 UiIcon(HugeIcons.strokeRoundedCalculator, size: 15, color: t.textMuted),
                 Expanded(
                   child: Text(
-                    display.isEmpty ? 'Worked out as you answer' : display,
+                    display.isEmpty ? _w.calculatedHint : display,
                     style: ty.body.copyWith(
                       fontSize: display.isEmpty ? t.fontSizeSm : t.fontSizeMd,
                       color: display.isEmpty ? t.textMuted : t.text,
@@ -661,6 +667,9 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
       UiFileUpload(
         key: ValueKey(_pickSeq),
         picker: widget.filePicker,
+        // The English words stay the library's own ("Tap to upload" on touch screens); other wording comes from the form strings.
+        label: _w.fileUploadLabel == uiFbStringsEn.fileUploadLabel ? null : _w.fileUploadLabel,
+        hint: _w.fileUploadHint == uiFbStringsEn.fileUploadHint ? null : _w.fileUploadHint,
         multiple: _f.props?.multiple == true,
         accept: _f.props?.accept,
         enabled: !st.disabled,
@@ -686,7 +695,7 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
                   UiInteractive(
                     onTap: () => _unpick(i),
                     enabled: !st.disabled,
-                    semanticLabel: 'Remove ${jsString(files[i]['name'])}',
+                    semanticLabel: fbFormat(_w.remove, {'name': jsString(files[i]['name'])}),
                     excludeChildSemantics: true,
                     pressScale: false,
                     builder: (context, s) => Container(
@@ -705,8 +714,8 @@ class UiFbFieldViewState extends State<UiFbFieldView> {
               ),
           ]),
         ),
-      if (_uploading) Semantics(liveRegion: true, child: Text('Uploading…', style: small.copyWith(color: t.textMuted))),
-      if (_uploadError.isNotEmpty) Semantics(liveRegion: true, child: Text(_uploadError, style: small.copyWith(color: t.danger))),
+      if (_uploading) Semantics(liveRegion: true, child: Text(_w.uploading, style: small.copyWith(color: t.textMuted))),
+      if (_uploadFailed || _uploadError.isNotEmpty) Semantics(liveRegion: true, child: Text(_uploadFailed ? _w.uploadFailed : _uploadError, style: small.copyWith(color: t.danger))),
     ]);
   }
 }

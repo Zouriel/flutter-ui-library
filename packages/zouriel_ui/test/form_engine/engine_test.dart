@@ -114,7 +114,7 @@ void main() {
       expect(s.submittedAt, '2026-10-13T09:30:00.123Z');
       expect(s.files.keys, ['docs[0].file']);
       expect(identical(s.files['docs[0].file']!.single.handle, handle), isTrue);
-      expect(s.data, {'docs': [{'file': [{'name': 'cv.pdf', 'size': 1200, 'type': 'application/pdf'}]}]});
+      expect(s.values, {'docs': [{'file': [{'name': 'cv.pdf', 'size': 1200, 'type': 'application/pdf'}]}]});
       // Files the host already uploaded carry their URL and need no handover.
       e.setFiles('file', row, const [], uploaded: const [UiFbFileValue(name: 'cv.pdf', size: 1200, type: 'application/pdf', url: 'https://x.test/cv.pdf')]);
       expect(e.submit()!.files, isEmpty);

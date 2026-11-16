@@ -35,7 +35,7 @@ class UiWfSubmissionPayload {
     required this.submittedAt,
     this.workflowId,
     this.serviceCode,
-    required this.data,
+    required this.values,
     required this.fields,
   });
 
@@ -45,7 +45,7 @@ class UiWfSubmissionPayload {
   final String submittedAt;
   final String? workflowId;
   final String? serviceCode;
-  final UiJson data;
+  final UiJson values;
   final List<UiFbSubmissionField> fields;
 
   UiJson toJson() => {
@@ -55,7 +55,7 @@ class UiWfSubmissionPayload {
     'submittedAt': submittedAt,
     if (workflowId != null) 'workflowId': workflowId,
     if (serviceCode != null) 'serviceCode': serviceCode,
-    'data': data,
+    'values': values,
     'fields': [for (final f in fields) f.toJson()],
   };
 }
@@ -68,7 +68,7 @@ UiWfSubmissionPayload wfSubmissionPayload(UiFormSubmission s) => UiWfSubmissionP
   submittedAt: s.submittedAt,
   workflowId: s.workflowId == null || s.workflowId!.isEmpty ? null : s.workflowId,
   serviceCode: s.serviceCode == null || s.serviceCode!.isEmpty ? null : s.serviceCode,
-  data: jsonClone(s.data) as UiJson,
+  values: jsonClone(s.values) as UiJson,
   fields: List.of(s.fields),
 );
 
@@ -109,7 +109,7 @@ Future<UiWfInstance> wfStartFromSubmission(UiWorkflowApi api, UiWorkflowDefiniti
   if (s.files.values.any((f) => f.isNotEmpty)) {
     throw StateError('The files picked in this form can’t be sent: the form needs an upload address for them.');
   }
-  return api.startManual(workflow.key, null, null, input: wfSubmissionPayload(s).data);
+  return api.startManual(workflow.key, null, null, input: wfSubmissionPayload(s).values);
 }
 
 // ── Reading answers in conditions ─────────────────────────────────────────
@@ -139,7 +139,7 @@ class _Ctx implements UiFbConditionContext {
   @override
   Object? value(String ref) {
     for (final prefix in const ['entity.', 'input.', 'trigger.data.']) {
-      if (ref.startsWith(prefix)) return wfAnswerAt(payload.data, ref.substring(prefix.length));
+      if (ref.startsWith(prefix)) return wfAnswerAt(payload.values, ref.substring(prefix.length));
     }
     switch (ref) {
       case 'trigger.formId':

@@ -109,7 +109,7 @@ void main() {
       expect(e.locale, 'dv');
       expect(e.dir, UiFbDir.rtl);
       expect(e.text(t('A', 'B')), 'B');
-      expect(e.instanceState('name', null).errors, ['ފުރިހަމަ ނަން is required.']);
+      expect(e.instanceState('name', null).errors, ['ފުރިހަމަ ނަން ފުރިހަމަ ކުރަންޖެހެއެވެ.']);
       e.setLocale('xx');
       expect(e.locale, 'en');
       expect(e.text(UiFbText.localized({'fr': 'Seulement'})), 'Seulement');
@@ -140,7 +140,7 @@ void main() {
         {'path': 'name', 'key': 'name', 'label': 'ފުރިހަމަ ނަން', 'type': 'text'},
         {'path': 'city', 'key': 'city', 'label': 'ސިޓީ', 'type': 'select'},
       ], 'fields');
-      expect(s.toJson().keys.toList(), ['formId', 'revision', 'locale', 'data', 'submittedAt', 'workflowId', 'serviceCode', 'fields']);
+      expect(s.toJson().keys.toList(), ['formId', 'revision', 'locale', 'values', 'submittedAt', 'workflowId', 'serviceCode', 'fields']);
       e.dispose();
     });
 

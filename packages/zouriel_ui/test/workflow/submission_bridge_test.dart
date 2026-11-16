@@ -20,7 +20,7 @@ UiFormSubmission submission(UiJson data, {String? workflowId = 'wf-leave', Strin
   formId: 'leave',
   revision: 3,
   locale: 'dv',
-  data: data,
+  values: data,
   submittedAt: '2026-11-16T08:00:00Z',
   workflowId: workflowId,
   serviceCode: serviceCode,
@@ -78,7 +78,7 @@ void main() {
       final j = p.toJson();
       expect({...j}..remove('fields'), {
         'formId': 'leave', 'revision': 3, 'locale': 'dv', 'submittedAt': '2026-11-16T08:00:00Z', 'workflowId': 'wf-leave', 'serviceCode': 'HR-LEAVE',
-        'data': {'days': 5},
+        'values': {'days': 5},
       });
       expect([for (final f in p.fields) f.path], ['days', 'address.city', 'children[].age', 'cert']);
       expect(j.containsKey('files'), isFalse);
@@ -95,7 +95,7 @@ void main() {
       final data = <String, Object?>{'days': 5};
       final p = wfSubmissionPayload(submission(data));
       data['days'] = 9;
-      expect(p.data, {'days': 5});
+      expect(p.values, {'days': 5});
     });
   });
 

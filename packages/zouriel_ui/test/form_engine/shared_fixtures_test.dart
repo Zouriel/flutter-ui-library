@@ -25,7 +25,7 @@ void main() {
     final files = Directory(_dir).listSync().map((f) => f.uri.pathSegments.last).where((n) => n.endsWith('.json')).toList()..sort();
     expect(files, [
       'calc.json', 'conditions.json', 'definition.json', 'describe.json', 'engine-locale.json', 'engine-rules.json', //
-      'engine-scholarship.json', 'http-sources.json', 'localize.json', 'migrate.json', 'scholarship.answers.json', //
+      'engine-scholarship.json', 'form-strings.json', 'http-sources.json', 'localize.json', 'migrate.json', 'scholarship.answers.json', //
       'scholarship.definition.json', 'slug.json', 'submission-fields.json', 'values.json',
     ]);
   });
@@ -38,6 +38,7 @@ void main() {
   definitionHelpers();
   localizeMigrateAndFields();
   httpSources();
+  formStrings();
 }
 
 // ── Engine scenarios ──────────────────────────────────────────────────────────────────────────
@@ -569,6 +570,44 @@ void httpSources() {
       final settings = UiFormGlobalSettings.fromJson(g['settings']);
       expectJson(sourcesFromSettings(settings).map((x) => x.type).toList(), g['expectedTypes'], 'types');
       expectJson(settings.toJson(), g['settings'], 'settings round-trip');
+    });
+  });
+}
+
+// ── The renderer's own words ──────────────────────────────────────────────────────────────────
+
+void formStrings() {
+  final fx = obj(load('form-strings.json'));
+  List<String> holes(String v) => (RegExp(r'\{\w+\}').allMatches(v).map((m) => m.group(0)!).toList()..sort());
+  Map<String, String> strs(Object? v) => (v as Map).cast<String, String>();
+  group('form-strings.json', () {
+    test('has the same English table as the code', () {
+      expect(uiFbStringsEn.toMap(), strs(fx['en']));
+      expect(UiFbStrings.keys, strs(fx['en']).keys.toList());
+    });
+    test('has the same Dhivehi table as the code', () {
+      expect(uiFbStringsDv.toMap(), strs(fx['dv']));
+      expect(UiFbStrings.keys, strs(fx['dv']).keys.toList());
+    });
+    test('registers en and dv', () {
+      expect(uiFbStrings.keys.toList()..sort(), ['dv', 'en']);
+    });
+    test('words every phrase in Dhivehi with the same placeholders, in Thaana', () {
+      for (final e in strs(fx['en']).entries) {
+        final dv = strs(fx['dv'])[e.key]!;
+        expect(dv, isNotEmpty, reason: e.key);
+        expect(holes(dv), holes(e.value), reason: '${e.key} placeholders');
+        if (RegExp(r'[A-Za-z]').hasMatch(e.value.replaceAll(RegExp(r'\{\w+\}'), ''))) {
+          expect(RegExp(r'[\u0780-\u07BF]').hasMatch(dv), isTrue, reason: '${e.key} thaana');
+        }
+      }
+    });
+    test('picks the words for a language', () {
+      for (final c in arr(fx['resolve']).map(obj)) {
+        final expected = {...strs(fx[c['base']]), ...(c['set'] == null ? const <String, String>{} : strs(c['set']))};
+        final overrides = c['overrides'] == null ? null : {for (final e in obj(c['overrides']).entries) e.key: strs(e.value)};
+        expect(fbStrings(c['locale'] as String, overrides).toMap(), expected, reason: c['name'] as String);
+      }
     });
   });
 }

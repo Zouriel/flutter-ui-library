@@ -232,7 +232,7 @@ UiWorkflowBuilder(definition: wf, schema: wfSubmissionRegistry(fbSubmissionField
   String? reason;
 }''',
           api: const [
-            ApiRow('wfSubmissionPayload(s)', 'UiFormSubmission → UiWfSubmissionPayload', 'The plain JSON a workflow start receives: formId, revision, locale, submittedAt, workflowId, serviceCode, data, fields. No picked files.'),
+            ApiRow('wfSubmissionPayload(s)', 'UiFormSubmission → UiWfSubmissionPayload', 'The plain JSON a workflow start receives: formId, revision, locale, submittedAt, workflowId, serviceCode, values, fields. No picked files.'),
             ApiRow('wfPickWorkflow(list, formId:, workflowId:, serviceCode:)', 'List<Object> → UiWorkflowDefinition?', 'By workflowId (a definition id or key), else serviceCode (binding.serviceCodes), else formId (binding.formIds). A workflowId that matches nothing returns null. The list holds UiWfSubmissionBindings or bare definitions.'),
             ApiRow('wfStartFromSubmission(api, wf, s)', 'Future<UiWfInstance>', 'Starts the workflow on an engine with the answers as input. Throws a StateError when files were picked and have no upload address.'),
             ApiRow('wfRouteSubmission(wf, s, ...)', 'decisions:, registry:, today: → UiWfRoute', 'Client-side route. A branch takes its first path whose condition holds, else otherwise; a switch compares its value to each case; parallel paths are all walked; approvals follow approved (or decisions[stepId]); tasks follow their first outcome. Waits, loops and go-tos are listed, not entered.'),

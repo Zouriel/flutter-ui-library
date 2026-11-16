@@ -16,6 +16,7 @@ import '../../theme/theme.dart';
 import '../engine/calc.dart';
 import '../engine/definition.dart';
 import '../engine/engine.dart' show requiredMessage;
+import '../engine/form_strings.dart' show uiFbStringsEn;
 import '../engine/field_types.dart';
 import '../engine/js.dart';
 import '../engine/localize.dart';
@@ -486,7 +487,7 @@ class _CheckBox extends StatelessWidget {
         final v = _raw(p);
         vars[p.key] = p.kind == 'field' ? '“${store.name(v == null ? '' : jsString(v))}”' : p.kind == 'date' ? describeDateParam(v) : p.key == 'comparison' ? comparisonWords(v) : v;
       }
-      return formatMessage(d.defaultMessage, vars);
+      return formatMessage(validatorMessage(d, uiFbStringsEn), vars);
     }
 
     Widget paramInput(UiFbParamSpec p) {

@@ -13,6 +13,7 @@ import '../../forms/choice/file_upload.dart';
 import '../../overlay/anchored.dart';
 import '../../theme/theme.dart';
 import '../engine/engine.dart';
+import '../engine/form_strings.dart';
 import '../engine/format.dart';
 import '../engine/global_settings.dart';
 import '../engine/http_sources.dart';
@@ -20,6 +21,7 @@ import '../engine/js.dart';
 import '../engine/option_sources.dart';
 import '../engine/schema.dart';
 import '../engine/validators.dart';
+import 'form_strings_scope.dart';
 import 'renderer_field.dart';
 
 const _span = {'full': 12, 'two-thirds': 8, 'half': 6, 'third': 4};
@@ -27,7 +29,7 @@ const _span = {'full': 12, 'two-thirds': 8, 'half': 6, 'third': 4};
 /// `ui-form-renderer`: fills in a form built with the form builder.
 ///
 /// Give it a [definition] (a [UiFormDefinition] or its stored JSON, migrated on load) and, to edit
-/// or view saved answers, the saved [data]. [onSubmitted] gets a [UiFormSubmission] whose `data` is
+/// or view saved answers, the saved [data]. [onSubmitted] gets a [UiFormSubmission] whose `values` is
 /// the JSON to store, in exactly the shape the web renderer saves (sourced choices as
 /// `{value, label}`, repeats as lists, sections as nested objects).
 ///
@@ -57,6 +59,7 @@ class UiFormRenderer extends StatefulWidget {
     this.cancelLabel,
     this.busy = false,
     this.locale,
+    this.strings,
     this.link,
     this.today,
     this.onSubmitted,
@@ -109,6 +112,10 @@ class UiFormRenderer extends StatefulWidget {
   /// language. Changing it keeps the answers; the layout follows the language's direction.
   final String? locale;
 
+  /// The renderer's own words (buttons, step text, messages) per language code, on top of the built-in
+  /// English and Dhivehi, e.g. `{'fr': {'submit': 'Envoyer'}}`. Wins, key by key, over [UiFormStringsScope].
+  final UiFbStringOverrides? strings;
+
   /// Copied onto each submission (`workflowId`, `serviceCode`).
   final UiFbSubmissionLink? link;
 
@@ -142,6 +149,9 @@ class UiFormRendererState extends State<UiFormRenderer> {
   Timer? _removedTimer;
   UiJson? _lastData;
   bool? _lastDirty;
+  UiFbStringOverrides? _scopeStrings;
+
+  UiFbStringOverrides? get _overrides => mergeFbStringOverrides(_scopeStrings, widget.strings);
 
   /// The running form: `data`, `dirty`, `changes` and the rest.
   UiFormEngine get engine => _engine;
@@ -149,7 +159,18 @@ class UiFormRendererState extends State<UiFormRenderer> {
   @override
   void initState() {
     super.initState();
+    _scopeStrings = UiFormStringsScope.read(context);
     _create();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scoped = UiFormStringsScope.maybeOf(context);
+    if (!fbStringOverridesEqual(scoped, _scopeStrings)) {
+      _scopeStrings = scoped;
+      _engine.setStrings(_overrides);
+    }
   }
 
   @override
@@ -171,6 +192,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     // Language and link follow their inputs without restarting the form, so answers survive.
     if (old.locale != w.locale) _engine.setLocale(w.locale);
     if (old.link != w.link) _engine.setLink(w.link);
+    if (!fbStringOverridesEqual(old.strings, w.strings)) _engine.setStrings(_overrides);
   }
 
   @override
@@ -195,6 +217,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
       optionSources: [...sourcesFromSettings(w.globalSettings, w.httpSources), ...w.optionSources],
       today: w.today,
       locale: w.locale,
+      strings: _overrides,
       link: w.link,
     );
     _engine.addListener(_onEngine);
@@ -267,12 +290,12 @@ class UiFormRendererState extends State<UiFormRenderer> {
 
   String _entryLabel(UiFbGroup g, int n) {
     final text = _engine.text(g.repeat?.itemLabel);
-    return (text.isEmpty ? 'Entry {n}' : text).replaceFirst('{n}', '${n + 1}');
+    return (text.isEmpty ? _engine.strings.entryTitle : text).replaceFirst('{n}', '${n + 1}');
   }
 
   void _addRow(UiFbGroup g) {
     if (_engine.addRow(g.id) == null) return;
-    setState(() => _announce = '${_entryLabel(g, _engine.rows(g.id).length - 1)} added');
+    setState(() => _announce = fbFormat(_engine.strings.entryAdded, {'name': _entryLabel(g, _engine.rows(g.id).length - 1)}));
   }
 
   void _removeRow(UiFbGroup g, String row, int n) {
@@ -281,7 +304,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final label = _entryLabel(g, n);
     setState(() {
       _removed = (row: snapshot, label: label);
-      _announce = '$label removed. Undo is next to the add button.';
+      _announce = fbFormat(_engine.strings.entryRemovedAnnounce, {'name': label});
     });
     _removedTimer?.cancel();
     _removedTimer = Timer(const Duration(seconds: 12), () {
@@ -301,7 +324,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     _engine.restoreRow(r.row);
     setState(() {
       _removed = null;
-      _announce = '${r.label} restored';
+      _announce = fbFormat(_engine.strings.entryRestored, {'name': r.label});
     });
   }
 
@@ -326,7 +349,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
   void _pageChanged() {
     final e = _engine;
     final title = e.text(e.page.title);
-    setState(() => _announce = 'Step ${e.step + 1} of ${e.path.length}${title.isNotEmpty ? ': $title' : ''}');
+    setState(() => _announce = '${fbFormat(e.strings.stepOf, {'n': e.step + 1, 'total': e.path.length})}${title.isNotEmpty ? ': $title' : ''}');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       // Bring the top of the form back into view if the page was scrolled past it.
@@ -343,7 +366,8 @@ class UiFormRendererState extends State<UiFormRenderer> {
   }
 
   String _show(UiFbChange c, Object? v) {
-    if (v == null || v == '') return 'Empty';
+    final w = _engine.strings;
+    if (v == null || v == '') return w.empty;
     final plain = c.path.replaceAll(RegExp(r'\[\d+\]'), '');
     UiFbField? field;
     for (final x in _engine.index.values) {
@@ -353,8 +377,8 @@ class UiFormRendererState extends State<UiFormRenderer> {
       }
     }
     if (field != null) {
-      final s = formatValue(field, v, textLocale: _engine.locale, defaultLocale: _engine.defaultLocale);
-      return s.isEmpty ? 'Empty' : s;
+      final s = formatValue(field, v, textLocale: _engine.locale, defaultLocale: _engine.defaultLocale, strings: w);
+      return s.isEmpty ? w.empty : s;
     }
     return v is Map || v is List ? jsonStringify(v) : jsString(v);
   }
@@ -476,7 +500,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
         ]),
       ),
       Text(
-        'Step ${e.step + 1} of ${e.path.length}${pageTitle.isNotEmpty ? ': $pageTitle' : ''}',
+        '${fbFormat(e.strings.stepOf, {'n': e.step + 1, 'total': e.path.length})}${pageTitle.isNotEmpty ? ': $pageTitle' : ''}',
         style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, fontWeight: FontWeight.w500, color: t.textSecondary),
       ),
     ]);
@@ -486,7 +510,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final theme = context.uiTheme;
     final t = theme.tokens;
     final ty = context.uiText;
-    final title = items.length == 1 ? 'There is a problem' : 'There are ${items.length} problems';
+    final title = items.length == 1 ? _engine.strings.problemOne : fbFormat(_engine.strings.problemMany, {'n': items.length});
     return Focus(
       key: _summaryKey,
       focusNode: _summaryFocus,
@@ -659,14 +683,14 @@ class UiFormRendererState extends State<UiFormRenderer> {
         content.add(KeyedSubtree(key: ValueKey('entry-${rows[n]}'), child: _Enter(child: _entry(context, g, rows, n, cols))));
       }
       if (rows.isEmpty) {
-        content.add(Text(viewing ? 'None added.' : 'Nothing added yet.', style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)));
+        content.add(Text(viewing ? e.strings.noneAdded : e.strings.nothingAdded, style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)));
       }
       if (!viewing) {
         final removed = _removed;
         if (removed != null && removed.row.groupId == g.id) {
           content.add(Row(spacing: t.space1, children: [
-            Flexible(child: Text('${removed.label} removed.', style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textSecondary))),
-            UiButton(label: 'Undo', variant: UiButtonVariant.link, size: UiSize.sm, onPressed: _undoRemove),
+            Flexible(child: Text(fbFormat(e.strings.entryRemoved, {'name': removed.label}), style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textSecondary))),
+            UiButton(label: e.strings.undo, variant: UiButtonVariant.link, size: UiSize.sm, onPressed: _undoRemove),
           ]));
         }
         final max = g.repeat!.max;
@@ -676,7 +700,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
             variant: UiButtonVariant.outline,
             size: UiSize.sm,
             icon: const UiIcon(HugeIcons.strokeRoundedAdd01, size: 15),
-            label: e.text(g.repeat!.addLabel).isNotEmpty ? e.text(g.repeat!.addLabel) : 'Add another',
+            label: e.text(g.repeat!.addLabel).isNotEmpty ? e.text(g.repeat!.addLabel) : e.strings.addAnother,
             onPressed: e.canAddRow(g.id) && !e.instanceState(g.id, row).disabled ? () => _addRow(g) : null,
           ),
           if (max != null) Text('${rows.length} of ${max.toInt()}', style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)),
@@ -724,10 +748,10 @@ class UiFormRendererState extends State<UiFormRenderer> {
               ),
               if (editing) ...[
                 if (rows.length > 1) ...[
-                  _EntryTool(icon: HugeIcons.strokeRoundedArrowUp01, label: 'Move $label up', onTap: n == 0 ? null : () => e.moveRow(g.id, r, -1)),
-                  _EntryTool(icon: HugeIcons.strokeRoundedArrowDown01, label: 'Move $label down', onTap: n == rows.length - 1 ? null : () => e.moveRow(g.id, r, 1)),
+                  _EntryTool(icon: HugeIcons.strokeRoundedArrowUp01, label: fbFormat(e.strings.moveUp, {'name': label}), onTap: n == 0 ? null : () => e.moveRow(g.id, r, -1)),
+                  _EntryTool(icon: HugeIcons.strokeRoundedArrowDown01, label: fbFormat(e.strings.moveDown, {'name': label}), onTap: n == rows.length - 1 ? null : () => e.moveRow(g.id, r, 1)),
                 ],
-                if (e.canRemoveRow(g.id)) _EntryTool(icon: HugeIcons.strokeRoundedDelete02, label: 'Remove $label', danger: true, onTap: () => _removeRow(g, r, n)),
+                if (e.canRemoveRow(g.id)) _EntryTool(icon: HugeIcons.strokeRoundedDelete02, label: fbFormat(e.strings.remove, {'name': label}), danger: true, onTap: () => _removeRow(g, r, n)),
               ],
             ]),
           ),
@@ -743,21 +767,21 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final e = _engine;
     final s = e.definition.settings;
     final primaryLabel = !e.isLastPage
-        ? (e.text(s?.nextLabel).isNotEmpty ? e.text(s?.nextLabel) : 'Continue')
-        : (widget.submitLabel ?? (e.text(s?.submitLabel).isNotEmpty ? e.text(s?.submitLabel) : (e.mode == UiFormMode.edit ? 'Save changes' : 'Submit')));
+        ? (e.text(s?.nextLabel).isNotEmpty ? e.text(s?.nextLabel) : e.strings.next)
+        : (widget.submitLabel ?? (e.text(s?.submitLabel).isNotEmpty ? e.text(s?.submitLabel) : (e.mode == UiFormMode.edit ? e.strings.saveChanges : e.strings.submit)));
     final start = <Widget>[
       if (_multiPage && e.step > 0)
         UiButton(
           variant: UiButtonVariant.outline,
           icon: const UiIcon(HugeIcons.strokeRoundedArrowLeft01, size: 14),
-          label: e.text(s?.backLabel).isNotEmpty ? e.text(s?.backLabel) : 'Back',
+          label: e.text(s?.backLabel).isNotEmpty ? e.text(s?.backLabel) : e.strings.back,
           onPressed: _back,
         ),
       if (widget.cancelLabel != null) UiButton(variant: UiButtonVariant.ghost, label: widget.cancelLabel, onPressed: widget.onCancelled ?? () {}),
     ];
     final end = <Widget>[
       if (e.mode == UiFormMode.edit)
-        if (e.dirty) _changesButton(context) else Text('No changes', style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)),
+        if (e.dirty) _changesButton(context) else Text(e.strings.noChanges, style: ty.body.copyWith(fontSize: t.fontSizeSm, color: t.textMuted)),
       UiButton(
         label: primaryLabel,
         loading: widget.busy,
@@ -783,7 +807,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final t = theme.tokens;
     final ty = context.uiText;
     final changes = _engine.changes;
-    final label = changes.length == 1 ? '1 change' : '${changes.length} changes';
+    final label = changes.length == 1 ? _engine.strings.changeOne : fbFormat(_engine.strings.changeMany, {'n': changes.length});
     final small = ty.body.copyWith(fontSize: t.fontSizeSm, height: 1.35);
     return UiAnchoredOverlay(
       controller: _changes,

@@ -69,7 +69,7 @@ void main() {
       await typeInto(tester, 'A', 'x');
       await typeInto(tester, 'B', 'b@example.com');
       await pressButton(tester, 'Submit');
-      expect(got.single.data, {'a': 'x', 'b': 'b@example.com'});
+      expect(got.single.values, {'a': 'x', 'b': 'b@example.com'});
       expect(find.textContaining('There '), findsNothing);
     });
 
@@ -200,7 +200,7 @@ void main() {
       expect(find.text('transcript.pdf'), findsNWidgets(2), reason: 'multiple keeps what was picked before');
       await tapIn(tester, find.bySemanticsLabel('Remove transcript.pdf').first);
       await pressButton(tester, 'Submit');
-      expect(got.single.data['docs'], [{'name': 'transcript.pdf', 'size': 184320, 'type': 'application/pdf'}]);
+      expect(got.single.values['docs'], [{'name': 'transcript.pdf', 'size': 184320, 'type': 'application/pdf'}]);
       expect(got.single.files['docs']!.single.name, 'transcript.pdf');
     });
 
@@ -263,7 +263,7 @@ void main() {
       await tester.tap(find.text('Malé'));
       await tester.pumpAndSettle();
       await pressButton(tester, 'Save changes');
-      expect(got.single.data['city'], {'value': 'mle', 'label': 'Malé'});
+      expect(got.single.values['city'], {'value': 'mle', 'label': 'Malé'});
       engineOf(key).setValue('country', null, 'uk');
       await tester.pumpAndSettle();
       expect(engineOf(key).data['city'], isNull);

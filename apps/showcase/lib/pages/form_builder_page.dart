@@ -77,7 +77,7 @@ class _FormBuilderPageState extends State<FormBuilderPage> {
             ],
           ]),
           code: '''UiFormRenderer(definition: formJson, optionSources: [students, courses], onSubmitted: save)
-UiFormRenderer(definition: formJson, data: saved, onSubmitted: (s) => update(s.data))   // edit
+UiFormRenderer(definition: formJson, data: saved, onSubmitted: (s) => update(s.values))   // edit
 UiFormRenderer(definition: formJson, data: saved, mode: UiFormMode.view)                  // read only
 
 // Your own buttons: showActions: false, then
@@ -94,18 +94,20 @@ key.currentState!.engine.dirty;      // and data, changes, pageIndex...''',
             ApiRow('filePicker', 'UiFilePicker?', 'Opens the platform file picker for file questions (wrap file_picker or file_selector).'),
             ApiRow('uploader', 'UiFbUploader?', '(file, field) => Future<UiFbFileValue>: uploads as files are picked. Without it, picked files come back in submission.files.'),
             ApiRow('locale', 'String?', 'The language to show the form in (en, dv, or dv-MV for the same language). Unknown codes fall back to the form’s default language. Changing it keeps the answers, and right-to-left languages lay the form out right to left.'),
+            ApiRow('strings', 'UiFbStringOverrides?', 'The renderer’s own words (Submit, Continue, Back, Step x of y, Yes/No, default error messages, …) per language code, on top of the built-in English and Dhivehi: {\'fr\': {\'submit\': \'Envoyer\'}}. Wins, key by key, over UiFormStringsScope. Words the form author wrote always win over these.'),
             ApiRow('submitLabel / cancelLabel', 'String?', 'Last button’s text (else the form’s, then Submit / Save changes); a Cancel button.'),
             ApiRow('busy', 'bool', 'Shows the submit button as busy while you save.', def: 'false'),
             ApiRow('showTitle / showActions', 'bool', 'The form’s title and description; the buttons.', def: 'true'),
             ApiRow('today', 'String Function()?', 'Fixes today (YYYY-MM-DD) for date rules and ages.'),
           ],
           callbacks: const [
-            ApiRow('onSubmitted', 'ValueChanged<UiFormSubmission>', '{formId, revision, locale, data, submittedAt, fields, files} once everything on the route is valid. locale is the language it was filled in; fields lists each answer’s path, key, label (in that language) and type. Store data with revision.'),
+            ApiRow('onSubmitted', 'ValueChanged<UiFormSubmission>', '{formId, revision, locale, values, submittedAt, fields, files} once everything on the route is valid. locale is the language it was filled in; fields lists each answer’s path, key, label (in that language) and type. Store data with revision.'),
             ApiRow('onValueChanged', 'ValueChanged<UiJson>', 'The data as it would be saved, after every change.'),
             ApiRow('onDirtyChanged', 'ValueChanged<bool>', 'Whether the answers differ from what the form opened with.'),
             ApiRow('onCancelled', 'VoidCallback', 'The Cancel button was pressed.'),
             ApiRow('submit() / reset()', 'UiFormRendererState', 'Validate and submit; start over from the given data on the first page.'),
             ApiRow('engine', 'UiFormEngine', 'The running form: data, dirty, changes, pageIndex, setValue...'),
+            ApiRow('engine.strings / engine.setStrings(overrides)', 'UiFbStrings / void', 'The engine’s and renderer’s own words in the language in use (built-in table plus the strings option). Messages are worded again when the language or the overrides change. UiFormEngine(strings: …) sets them up front.'),
           ],
         ),
         const DocSection(
@@ -168,14 +170,14 @@ final form = migrateDefinition(await api.getForm(id));
 
 // 2. Fill in. Store data with the revision it was made against.
 UiFormRenderer(definition: form, optionSources: sources,
-  onSubmitted: (s) => api.saveAnswers(formId: s.formId, revision: s.revision, data: s.data));
+  onSubmitted: (s) => api.saveAnswers(formId: s.formId, revision: s.revision, data: s.values));
 
 // 3. Edit or view: pass the stored data back.
-UiFormRenderer(definition: form, data: answer.data, onSubmitted: (s) => api.updateAnswers(answer.id, s.data));
+UiFormRenderer(definition: form, data: answer.data, onSubmitted: (s) => api.updateAnswers(answer.id, s.values));
 UiFormRenderer(definition: form, data: answer.data, mode: UiFormMode.view);
 
 // Without UI: the same engine the renderer runs (rules, checks, calculations, data shaping).
-final engine = UiFormEngine.fromJson(form, data: saved);
+final engine = UiFormEngine.fromJson(form, data: saved, locale: 'dv', strings: {'dv': {'next': 'ދެން'}});
 engine.setValue('f_name', null, 'Aminath');
 final submission = engine.submit();   // null when something is wrong''',
         ),
@@ -219,11 +221,11 @@ class _AnswersStudioState extends State<_AnswersStudio> {
     setState(() {
       final open = _open!;
       if (open.id == 0) {
-        _answers.add(_Answer(++_seq, s.data, s.revision, s.submittedAt));
+        _answers.add(_Answer(++_seq, s.values, s.revision, s.submittedAt));
         _jsonFor = _seq;
       } else {
         final a = _find(open.id)!;
-        a.data = s.data;
+        a.data = s.values;
         a.savedAt = s.submittedAt;
         _jsonFor = a.id;
       }

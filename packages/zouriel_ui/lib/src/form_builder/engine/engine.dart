@@ -5,6 +5,7 @@ import 'calc.dart';
 import 'conditions.dart';
 import 'definition.dart';
 import 'field_types.dart';
+import 'form_strings.dart';
 import 'js.dart';
 import 'localize.dart';
 import 'option_sources.dart';
@@ -120,10 +121,10 @@ class _Inflight {
 }
 
 /// "Email is required." — or, for a label that is a question, "Answer “Are you a student?”".
-String requiredMessage(UiFbField f, String label) {
-  if (label.trim().endsWith('?')) return 'Answer “{label}”';
-  if (valueKindOf(f.type) == UiFbValueKind.boolean && f.type == UiFbFieldType.checkbox) return '{label} must be ticked.';
-  return '{label} is required.';
+String requiredMessage(UiFbField f, String label, [UiFbStrings strings = uiFbStringsEn]) {
+  if (label.trim().endsWith('?')) return strings.requiredQuestion;
+  if (valueKindOf(f.type) == UiFbValueKind.boolean && f.type == UiFbFieldType.checkbox) return strings.requiredTick;
+  return strings.requiredField;
 }
 
 String addrOf(String id, String? row) => row != null && row.isNotEmpty ? '$row/$id' : id;
@@ -213,9 +214,11 @@ class UiFormEngine {
     String Function()? today,
     DateTime Function()? now,
     String? locale,
+    UiFbStringOverrides? strings,
     UiFbSubmissionLink? link,
   }) : definition = migrateDefinition(definition),
        _requestedLocale = locale,
+       _stringOverrides = strings,
        _link = link,
        mode = mode ?? (data != null ? UiFormMode.edit : UiFormMode.create),
        _today = today ?? todayIso,
@@ -249,6 +252,7 @@ class UiFormEngine {
     String Function()? today,
     DateTime Function()? now,
     String? locale,
+    UiFbStringOverrides? strings,
     UiFbSubmissionLink? link,
   }) => UiFormEngine(
     definition: migrateDefinition(definition),
@@ -259,6 +263,7 @@ class UiFormEngine {
     today: today,
     now: now,
     locale: locale,
+    strings: strings,
     link: link,
   );
 
@@ -286,6 +291,18 @@ class UiFormEngine {
     final next = fbResolveLocale(definition, code);
     if (next == _locale) return;
     _locale = next;
+    _strings = null;
+    _state = null;
+    _notify();
+  }
+
+  /// The engine's and renderer's own words in the language in use (built-in table plus the overrides).
+  UiFbStrings get strings => _strings ??= fbStrings(_locale, _stringOverrides);
+
+  /// Replaces the wording overrides (see the `strings` option). Answers are kept; messages are worded again.
+  void setStrings(UiFbStringOverrides? overrides) {
+    _stringOverrides = overrides;
+    _strings = null;
     _state = null;
     _notify();
   }
@@ -309,6 +326,8 @@ class UiFormEngine {
   final Map<String, ({String hash, Object? result})> _asyncResults = {};
   String? _requestedLocale;
   late String _locale;
+  UiFbStringOverrides? _stringOverrides;
+  UiFbStrings? _strings;
   UiFbSubmissionLink? _link;
   final Set<String> _touched = {};
   final Set<String> _attempted = {};
@@ -546,7 +565,7 @@ class UiFormEngine {
     if (row == null || entry?.repeat == null) return name;
     final n = rows(entry!.repeat!.id).indexOf(row) + 1;
     final itemText = text(entry.repeat!.repeat?.itemLabel);
-    final item = (itemText.isEmpty ? 'Entry {n}' : itemText).replaceFirst('{n}', '$n');
+    final item = (itemText.isEmpty ? strings.entryTitle : itemText).replaceFirst('{n}', '$n');
     return '$name ($item)';
   }
 
@@ -686,7 +705,7 @@ class UiFormEngine {
       formId: definition.id,
       revision: definition.revision,
       locale: _locale,
-      data: data,
+      values: data,
       submittedAt: _isoNow(),
       workflowId: link?.workflowId != null && link!.workflowId!.isNotEmpty ? link.workflowId : null,
       serviceCode: link?.serviceCode != null && link!.serviceCode!.isNotEmpty ? link.serviceCode : null,
@@ -856,6 +875,7 @@ class UiFormEngine {
     final asyncResults = _asyncResults;
     final locale = _locale;
     final dl = defaultLocale;
+    final strings = this.strings;
     String tx(UiFbText? t) => fbText(t, locale, dl);
     String nameOf(String id) => elementName(idx[id]?.element, def, locale);
     final memo = <String, Object?>{};
@@ -1004,7 +1024,7 @@ class UiFormEngine {
           final empty = isEmptyValue(v) || (valueKindOf(f.type) == UiFbValueKind.boolean && v != true);
           if (required(id, row) && empty) {
             final custom = tx(f.requiredMessage);
-            errs.add(formatMessage(custom.isNotEmpty ? custom : requiredMessage(f, label), {'label': label}));
+            errs.add(formatMessage(custom.isNotEmpty ? custom : requiredMessage(f, label, strings), {'label': label}));
             return res();
           }
           final rules = [...?f.validators];
@@ -1030,13 +1050,13 @@ class UiFormEngine {
                 vars[spec.key] = spec.kind == 'field'
                     ? '“${nameOf(jsString(pv))}”'
                     : spec.kind == 'date'
-                    ? describeDateParam(pv)
+                    ? describeDateParam(pv, strings)
                     : spec.key == 'comparison'
-                    ? comparisonWords(pv)
+                    ? comparisonWords(pv, strings)
                     : pv;
               }
               final custom = tx(rule.message);
-              return formatMessage(custom.isNotEmpty ? custom : vdef.defaultMessage, vars);
+              return formatMessage(custom.isNotEmpty ? custom : validatorMessage(vdef, strings, locale), vars);
             }
 
             void push(Object? result) {

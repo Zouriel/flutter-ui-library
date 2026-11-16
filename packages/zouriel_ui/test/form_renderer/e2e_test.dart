@@ -104,7 +104,7 @@ void main() {
 
     expect(got, hasLength(1));
     final s = got.single;
-    expect(jsonEquals(s.data, want), isTrue, reason: 'got  ${jsonEncode(s.data)}\nwant ${jsonEncode(want)}');
+    expect(jsonEquals(s.values, want), isTrue, reason: 'got  ${jsonEncode(s.values)}\nwant ${jsonEncode(want)}');
     expect(s.formId, 'scholarship-2027');
     expect(s.revision, 4);
     expect(s.files['documents']!.single.name, 'transcript.pdf');
@@ -129,6 +129,6 @@ void main() {
     }
     await _tap(tester, find.widgetWithText(UiButton, 'Save changes'));
     final want = (((fixtureMap('engine-scholarship.json')['cases'] as List)[1] as Map)['steps'] as List)[0]['expect']['data'];
-    expect(jsonEquals(got.single.data, want), isTrue, reason: 'got  ${jsonEncode(got.single.data)}\nwant ${jsonEncode(want)}');
+    expect(jsonEquals(got.single.values, want), isTrue, reason: 'got  ${jsonEncode(got.single.values)}\nwant ${jsonEncode(want)}');
   });
 }

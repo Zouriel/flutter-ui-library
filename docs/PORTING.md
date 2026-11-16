@@ -1467,6 +1467,9 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
 - `UiWfSubmissionPayload` is a class with `toJson()` (plain JSON, no files, link keys left out when unset); the web
   returns a plain object. `UiWfRoute`/`UiWfRouteStep`/`UiWfRouteDecision` are classes; `result` stays a string
   (`completed` / `failed`).
+- Breaking rename (0.84.1): the submission's answers field `data` is now `values` (`UiFormSubmission.values`,
+  `UiWfSubmissionPayload.values`, and the `values` key in both `toJson()`s), so it no longer reads like the renderer's
+  `data` (saved answers to load). No alias. Workflow refs (`trigger.data.<path>`, `input.<path>`) are unchanged.
 - `wfStartFromSubmission(api, wf, s)` takes the whole `UiWorkflowApi` (no `Pick<>`; a test fake extends it) and throws a
   `StateError` synchronously when files are picked, like the web throws before returning the promise.
 - `wfFormFields(form, [locale])` reads a localized label (a string or a locale map in the form JSON) with `fbText`, in
@@ -1495,3 +1498,33 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
   button. The dialog is `showUiModal` with `UiFbLanguages` (not exported, as on the web). Preview has its own language
   switcher (only with more than one language) that starts at, and resets to, the edit language when that changes.
 - Goldens `builder_phone*.png` and `builder_tablet.png` were regenerated: the toolbar has the Languages button.
+
+## Form builder: the renderer's own words (`UiFbStrings`)
+
+The web's `form-strings.ts` is ported to `engine/form_strings.dart`; the 88 phrases, the English table and the Dhivehi
+table are generated from `fixtures/form-strings.json` (so they are byte-identical to the web's) and checked against it in
+`shared_fixtures_test.dart`.
+
+- `UiFbStrings` is a `const` class with one `String` field per key (same names as the web), `toMap()`, `merge(map)`,
+  `[key]` and value equality. The tables are `uiFbStringsEn`, `uiFbStringsDv` and `uiFbStrings` (`{'en': …, 'dv': …}`).
+- Override shape: `typedef UiFbStringOverrides = Map<String, Map<String, String>>` (language code, then key name). The web's
+  `Partial<Record<string, Partial<UiFbStrings>>>` has no Dart twin; a map keeps the keys identical to the web and lets the
+  same JSON fixture drive both. An unknown key is ignored (the web would copy it onto the object and never read it).
+  `fbStrings(locale, [overrides])`, `mergeFbStringOverrides` and `fbFormat` behave exactly like the web functions
+  (`fbFormat` leaves a placeholder alone only for a null value).
+- Engine: `UiFormEngine(strings:)`, `engine.strings` (a getter, cached per language and overrides) and
+  `engine.setStrings(overrides)`, which re-words messages and notifies listeners. `requiredMessage`, `describeDateParam`,
+  `comparisonWords`, `formatValue` and `optionLabel` take the strings as an optional last (named, for the two formatters)
+  parameter that defaults to English.
+- `UiFbValidatorDef.defaultMessage` is `Object?` (a `String`, or a `Map<String, String>` by language code); built-ins leave
+  it out. `validatorMessage(def, strings, [locale])` resolves it; `validatorMessageFor(type, defaultMessage, strings, [locale])`
+  is the same from the two parts. The checks editor's preview stays English (the builder's own screens are English).
+- App-wide wording: `UiFormStringsScope(strings:, child:)`, an `InheritedWidget` (the web's `provideUiFormStrings`). The renderer
+  merges the scope with its own `strings` parameter per key (parameter wins) and passes the result to the engine; it follows
+  changes of either with `setStrings`, so answers survive.
+- `UiFbSourcePicker.placeholder` is now nullable (`null` = the strings' "Search…") and takes `strings`.
+- File drop area: the web passes `fileUploadLabel` / `fileUploadHint` ("Click to upload" / "or drag & drop") to its
+  `ui-file-upload`. `UiFileUpload` here already says "Tap to upload" on touch screens (`UiStrings`), so the renderer only
+  passes the form words when they differ from the English table (another language or an override); English output is unchanged.
+- Words the web table does not have and Flutter still writes in English: the "n of max" count of a repeat, the change list's
+  "Changes / was / now", "Chosen files", and the "isn't a file type this question takes" rejection note.

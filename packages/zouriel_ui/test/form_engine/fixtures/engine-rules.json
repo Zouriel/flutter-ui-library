@@ -1135,7 +1135,7 @@
           "submit": {
             "formId": "form1",
             "revision": 3,
-            "data": {
+            "values": {
               "a": "hi"
             }
           }

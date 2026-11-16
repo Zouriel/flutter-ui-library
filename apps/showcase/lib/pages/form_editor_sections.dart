@@ -166,7 +166,10 @@ class _LanguagesSectionState extends State<_LanguagesSection> {
           'add a language from Languages in the top bar, write everything in the default language first, then pick the other language in the '
           'switcher to translate each text with the default shown underneath. Right-to-left languages such as Dhivehi (Thaana) lay the canvas, '
           'the form and its inputs out right to left. Data keys and option values are never translated. A text with no translation shows in '
-          'the default language, and the builder lists missing translations under Logic.',
+          'the default language, and the builder lists missing translations under Logic. The words the renderer says itself (Submit, Continue, Back, Step x of y, '
+          'Yes and No, Choose…, Add another, Undo, the error summary heading, and the default message of every built-in check such as “is required” or '
+          '“must be at least 5 characters”) follow the same language: English and Dhivehi are built in, and any other language, or different wording, is set '
+          'with the strings parameter, UiFormStringsScope or the engine’s strings option. A label or message written in the form always wins. The builder’s own screens stay English.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
         Align(
           alignment: Alignment.centerLeft,
@@ -192,8 +195,23 @@ final form = {
 };
 
 fbText(label, 'dv', 'en')        // the text in dv, else en, else the first one written
-UiFormRenderer(definition: form, locale: 'dv')   // answers survive switching language''',
+UiFormRenderer(definition: form, locale: 'dv')   // answers survive switching language
+
+// The renderer's own words (buttons, step text, default error messages) follow the language too.
+// English and Dhivehi are built in; change or add wording per language code:
+UiFormRenderer(definition: form, locale: 'fr', strings: {'fr': {'submit': 'Envoyer', 'back': 'Retour'}})
+
+// Or once for the whole app (the strings parameter is laid on top, key by key):
+UiFormStringsScope(strings: {'fr': {'submit': 'Envoyer'}, 'dv': {'back': 'އަނބުރާ'}}, child: app)
+
+fbStrings('dv-MV').submit        // the dv table: exact code, then base language, else English
+UiFormEngine(definition: form, locale: 'dv', strings: {'dv': {'next': 'ދެން'}})''',
       api: const [
+        ApiRow('UiFbStrings / uiFbStringsEn / uiFbStringsDv / uiFbStrings', 'class / tables', 'One field per built-in phrase ({placeholders} filled by the code, same names as the web), the English and Dhivehi tables, and the tables by language code. toMap() / merge(map) / [key] read and copy them.'),
+        ApiRow('fbStrings(locale, [overrides])', 'UiFbStrings', 'The words for a language: the table of that exact code, else of its base language (dv-MV uses dv), else English; overrides for the base language, then for the exact code, are laid on top. A language with no table but with overrides gets English plus them.'),
+        ApiRow('UiFormStringsScope(strings:) / UiFbStringOverrides', 'widget / typedef', 'Sets the renderer’s wording once for everything below it (the web provideUiFormStrings): Map<languageCode, Map<key, String>>, keys named like the UiFbStrings fields. The renderer’s strings parameter is laid on top.'),
+        ApiRow('validatorMessage(def, strings, [locale])', 'String', 'The message a check shows by default in a language: a registered check’s defaultMessage (a String, or a Map by language code), else the built-in wording from strings (validatorMinLength, …). Built-in checks leave defaultMessage out.'),
+        ApiRow('Built-in words', 'UiFbStrings keys', 'submit, saveChanges, next, back, stepOf; problemOne, problemMany, errorLabel; yes, no, empty, notAnswered, optional, calculatedHint; entryTitle, addAnother, nothingAdded, noneAdded, remove, moveUp, moveDown, entryAdded, entryRemoved, entryRemovedAnnounce, entryRestored, undo; choose, selectDate, fileUploadLabel, fileUploadHint, uploading, uploadFailed, checking; the source picker words; requiredField, requiredQuestion, requiredTick; compareEq … compareLte, dateToday, dateInDays, dateDaysAgo; and validator + the check’s type with a capital for each built-in check.'),
         ApiRow('UiFbText / UiFbText.localized(map)', 'class', 'A plain text, or one text per language code. Its JSON is a string or an object.'),
         ApiRow('fbText(text, [locale, defaultLocale])', 'String', 'A text in a language: that language, else the same base language, else the default, else the first text written.'),
         ApiRow('fbTextIn(text, locale, [defaultLocale]) / fbSetText(text, locale, value, [defaultLocale])', 'String / UiFbText', 'Read exactly one language (blank when missing), or write one. A text stays a plain string until a second language is written.'),

@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import 'conditions.dart';
+import 'form_strings.dart';
 import 'js.dart';
 import 'localize.dart';
 import 'option_sources.dart';
@@ -11,14 +12,14 @@ import 'schema.dart';
 /// [textLocale] and [defaultLocale] pick the language of the option's label (the web's
 /// `locale` / `defaultLocale` arguments); they are separate from the number/date `locale` of
 /// [formatValue].
-String optionLabel(UiFbField field, Object? value, {String? textLocale, String? defaultLocale}) {
+String optionLabel(UiFbField field, Object? value, {String? textLocale, String? defaultLocale, UiFbStrings strings = uiFbStringsEn}) {
   // Sourced answers carry the label they were picked with.
   if (isChoice(value)) return jsString((value as Map)['label']);
   final s = jsString(value);
   for (final o in field.options ?? const <UiFbOption>[]) {
     if (o.value == s) return fbText(o.label, textLocale, defaultLocale);
   }
-  return '$s (no longer an option)';
+  return fbFormat(strings.noLongerOption, {'value': s});
 }
 
 String? _locale(String? locale) => locale ?? Intl.getCurrentLocale();
@@ -148,16 +149,16 @@ String formatDate(String iso, {String? locale}) {
 /// defaults to `Intl.getCurrentLocale()` (the web version uses the browser's) and formats numbers
 /// and dates. [textLocale] and [defaultLocale] are the form language for option labels (the web
 /// passes those as its `locale` / `defaultLocale`).
-String formatValue(UiFbField field, Object? value, {String? locale, String? textLocale, String? defaultLocale}) {
+String formatValue(UiFbField field, Object? value, {String? locale, String? textLocale, String? defaultLocale, UiFbStrings strings = uiFbStringsEn}) {
   if (isEmptyValue(value)) return '';
   final loc = _locale(locale);
   switch (field.type) {
     case UiFbFieldType.select || UiFbFieldType.radio:
-      return optionLabel(field, value, textLocale: textLocale, defaultLocale: defaultLocale);
+      return optionLabel(field, value, textLocale: textLocale, defaultLocale: defaultLocale, strings: strings);
     case UiFbFieldType.checkboxes || UiFbFieldType.multiselect:
-      return (value is List ? value : [value]).map((v) => optionLabel(field, v, textLocale: textLocale, defaultLocale: defaultLocale)).join(', ');
+      return (value is List ? value : [value]).map((v) => optionLabel(field, v, textLocale: textLocale, defaultLocale: defaultLocale, strings: strings)).join(', ');
     case UiFbFieldType.checkbox || UiFbFieldType.toggle:
-      return value == true ? 'Yes' : 'No';
+      return value == true ? strings.yes : strings.no;
     case UiFbFieldType.date:
       return formatDate(jsString(value), locale: loc);
     case UiFbFieldType.file:

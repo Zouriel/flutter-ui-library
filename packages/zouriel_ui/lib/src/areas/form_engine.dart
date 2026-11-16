@@ -9,6 +9,7 @@ export '../form_builder/engine/conditions.dart';
 export '../form_builder/engine/definition.dart';
 export '../form_builder/engine/engine.dart';
 export '../form_builder/engine/field_types.dart';
+export '../form_builder/engine/form_strings.dart';
 export '../form_builder/engine/format.dart';
 export '../form_builder/engine/global_settings.dart';
 export '../form_builder/engine/http_sources.dart';

@@ -52,7 +52,7 @@ class _UiFbPreviewState extends State<UiFbPreview> {
 
   void _setMode(UiFormMode m) {
     // Moving to edit/view starts from what was just filled in, which is the natural thing to test.
-    if (m != UiFormMode.create && _mode == UiFormMode.create) _dataText = _pretty.convert(_last?.data ?? _live);
+    if (m != UiFormMode.create && _mode == UiFormMode.create) _dataText = _pretty.convert(_last?.values ?? _live);
     setState(() {
       _mode = m;
       _restart();
