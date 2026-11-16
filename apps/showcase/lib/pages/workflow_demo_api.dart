@@ -54,12 +54,17 @@ class DemoWorkflowApi implements UiWorkflowApi {
     ],
     'signals': [
       {'key': 'payment.received', 'label': 'Payment received', 'entity': 'application', 'fields': [{'key': 'amount', 'label': 'Amount paid', 'type': 'currency'}]},
+      {'key': 'documents.requested', 'label': 'Documents requested', 'entity': 'application', 'fields': <Object?>[]},
+      {'key': 'documents.received', 'label': 'Documents received', 'entity': 'application', 'fields': <Object?>[]},
     ],
     'channels': [{'key': 'email', 'label': 'Email'}, {'key': 'inApp', 'label': 'In-app message'}],
     'roles': [
       {'key': 'reviewer', 'label': 'Reviewers'}, {'key': 'finance', 'label': 'Finance'}, {'key': 'head', 'label': 'Head of office'}, {'key': 'admin', 'label': 'Admins'},
     ],
     'groups': [{'key': 'committee', 'label': 'Scholarship committee'}],
+    'departments': [{'key': 'licensing', 'label': 'Licensing department'}],
+    'portals': [{'key': 'citizen', 'label': 'Citizen portal'}],
+    'queues': [{'key': 'frontdesk', 'label': 'Front desk queue'}],
   });
 
   static const _users = [
@@ -88,11 +93,12 @@ class DemoWorkflowApi implements UiWorkflowApi {
   /// The lifecycle the workflow panel shows (published, so automations can be triggered by it).
   static UiWorkflowDefinition statusLifecycle() => UiWorkflowDefinition.fromJson({
     'specVersion': 1, 'id': 'wf_status', 'key': 'applicationStatus', 'kind': 'lifecycle', 'title': 'Application status', 'entity': 'application',
+    'publicProcessingTime': {'estimate': '5 working days', 'display': true},
     'lifecycle': {
       'field': 'status', 'mode': 'enforce',
       'states': [
         {'id': 'st_draft', 'key': 'draft', 'label': 'Draft', 'category': 'initial', 'tone': 'neutral'},
-        {'id': 'st_review', 'key': 'review', 'label': 'In review', 'category': 'active', 'tone': 'info', 'sla': {'within': 'P5D', 'steps': <Object?>[]}},
+        {'id': 'st_review', 'key': 'review', 'label': 'In review', 'category': 'active', 'tone': 'info', 'sla': {'within': 'P5D', 'calendar': 'working', 'steps': <Object?>[], 'pauseOnStatus': ['st_draft'], 'pauseOnEvent': ['documents.requested'], 'resumeOnEvent': ['documents.received']}},
         {'id': 'st_approved', 'key': 'approved', 'label': 'Approved', 'category': 'terminal', 'tone': 'success'},
         {'id': 'st_rejected', 'key': 'rejected', 'label': 'Rejected', 'category': 'terminal', 'tone': 'danger'},
       ],
@@ -122,6 +128,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
           'id': 'p_big', 'label': 'Over 5,000', 'when': {'match': 'all', 'conditions': [{'ref': 'entity.amount', 'op': 'gt', 'value': {'const': 5000}}]},
           'steps': [{
             'id': 's_fin', 'type': 'approval', 'title': 'Finance sign-off', 'assignees': [{'role': 'finance'}], 'rule': {'type': 'any'}, 'due': 'P3D', 'reminders': ['P1D'],
+            'makerChecker': {'excludeInitiator': true, 'excludePreviousApprover': true, 'requiredRole': 'finance'},
             'outcomes': {
               'approved': [{'id': 's_inv', 'type': 'action', 'action': 'finance.createInvoice', 'input': {'amount': {'ref': 'entity.amount'}}}],
               'rejected': [{'id': 's_tell', 'type': 'notify', 'channel': 'email', 'to': [{'field': 'entity.applicant'}], 'subject': 'About your application', 'body': ['Finance could not approve ', {'ref': 'entity.title'}, '.']}],
@@ -198,6 +205,7 @@ class DemoWorkflowApi implements UiWorkflowApi {
     _records['1'] = {
       'entity': 'application', 'id': '1', 'title': 'Marine biology degree, Ali Rasheed', 'lifecycle': 'applicationStatus', 'lifecycleTitle': 'Application status',
       'state': 'review', 'stateLabel': 'In review', 'stateTone': 'info', 'status': 'active', 'stateEnteredAt': _ago(const Duration(hours: 3)),
+      'publicProcessingTime': '5 working days',
       'instances': <Object?>[],
       'manual': [{'key': 'askDocuments', 'label': 'Ask for documents', 'form': null}],
       'states': [

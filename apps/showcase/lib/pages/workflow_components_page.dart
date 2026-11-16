@@ -196,7 +196,8 @@ class _WorkflowComponentsPageState extends State<WorkflowComponentsPage> {
               'on the screen\'s edge as a rail of dots when the page is busy. A record type with no lifecycle still shows its manual '
               'workflows, open tasks and history. Under Running it lists the record\'s workflows still going, each opening its steps; one '
               'that stopped (a payment the bank refused, say) opens by itself, and people who may intervene try it again, skip the step '
-              'giving what it would have produced, or cancel it, right there.',
+              'giving what it would have produced, or cancel it, right there. When the record\'s lifecycle publishes a processing time, '
+              'the panel says Usual processing time under the state.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
             Wrap(spacing: t.space3, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: [
               UiButton(label: 'Show a stopped payment', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: _stoppable ? _stopPayment : null),

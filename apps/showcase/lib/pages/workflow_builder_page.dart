@@ -156,6 +156,39 @@ UiWorkflowBuilder(definition: workflow, schema: UiWorkflowSchema(registry: regis
             ApiRow('save()', 'UiWorkflowBuilderState', 'Saves the draft (creates it the first time). Ctrl/Cmd+S does the same.'),
           ],
         ),
+        const DocSection(
+          name: 'Departments, separation of duties, paused clocks and processing times',
+          widget: 'registry, approval, state, settings',
+          summary: 'People lists also offer departments, portals and queues when the registry lists them (Licensing department, Citizen portal, '
+              'Front desk queue in the demo). An approval has a Separation of duties section: the person who started it, or whoever approved '
+              'the step before, cannot approve, and a role can be required. A state with a time limit can pause its clock while the record is in '
+              'other states or when an event happens, and start it again on another event; paused time does not count. Workflow settings have a '
+              'Public processing time that apps may show to people outside the office, and the workflow panel shows it as Usual processing time. '
+              'The demo office keeps these fields in the definition but does not enforce them; the .NET engine does.',
+          code: '''// registry: departments, portals and queues next to roles and groups
+{ "departments": [{"key": "licensing", "label": "Licensing department"}],
+  "portals": [{"key": "citizen", "label": "Citizen portal"}],
+  "queues": [{"key": "frontdesk", "label": "Front desk queue"}] }
+
+// an assignee is one key: {"department": "licensing"}, {"portal": "citizen"} or {"queue": "frontdesk"}
+
+// approval step
+"makerChecker": {"excludeInitiator": true, "excludePreviousApprover": true, "requiredRole": "finance"}
+
+// lifecycle state
+"sla": {"within": "P5D", "calendar": "working", "steps": [],
+        "pauseOnStatus": ["st_draft"], "pauseOnEvent": ["documents.requested"], "resumeOnEvent": ["documents.received"]}
+
+// workflow
+"publicProcessingTime": {"estimate": "5 working days", "display": true}''',
+          api: [
+            ApiRow('UiWfAssignee.department · portal · queue', 'UiWfAssignee', 'Everyone in the department, who works the portal, or who serves the queue; the host app says who belongs.'),
+            ApiRow('UiWfApprovalStep.makerChecker', 'UiWfMakerChecker?', 'excludeInitiator, excludePreviousApprover, requiredRole. Turning every rule off removes the key.'),
+            ApiRow('UiWfSla.pauseOnStatus · pauseOnEvent · resumeOnEvent', 'List<String>?', 'State ids, and signal keys. An empty list is removed from the JSON.'),
+            ApiRow('UiWorkflowDefinition.publicProcessingTime', 'UiWfPublicProcessingTime?', 'estimate (max 200 characters) and display.'),
+            ApiRow('UiWfRecord.publicProcessingTime', 'String?', 'Set by the engine only when the lifecycle publishes it; the panel shows it.'),
+          ],
+        ),
         DocSection(
           name: 'Using workflows in your app',
           widget: 'Workflow components',
