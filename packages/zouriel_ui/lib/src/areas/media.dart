@@ -4,6 +4,7 @@ library;
 export '../layout/floating_panel.dart';
 export '../layout/layout.dart';
 export '../layout/panel_section.dart';
+export '../layout/sidebar_account.dart';
 export '../layout/sidebar_layout.dart';
 export '../layout/splitter.dart';
 export '../layout/swipe_screens.dart';

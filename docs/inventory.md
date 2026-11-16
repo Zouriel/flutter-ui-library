@@ -1251,6 +1251,13 @@ File: `layout/src/sidebar-layout.ts`
 - Slots (0.41): `[sidebar-header]`, `[sidebar-footer]` fixed around the scrolling `[sidebar]` (Flutter `sidebarHeader` / `sidebarFooter`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiSidebarAccount (component, `ui-sidebar-account`, 0.86.0)
+File: `layout/src/sidebar-account.ts`  
+`ui-sidebar-account` — the signed-in person at the bottom of a sidebar (`[sidebar-footer]`): avatar, name, subtitle, optional badge and hint, unfold chevron. One real button; works as the `menu-trigger` of `ui-menu block`. `collapsed` shows only the avatar with a tooltip.  
+- Inputs: `name` (required); `subtitle`; `src` (Flutter `image`); `badge`; `badgeTone`: UiStatus = 'neutral'; `hint`; `showChevron` = true; `disabled` = false; `collapsed` = false
+- Outputs: `activate` (Flutter `onPressed`); Flutter adds `expanded` (the web gets `aria-expanded` from `ui-menu`) and `focusNode`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiSpacer (component, `ui-spacer`)
 File: `layout/src/spacer.ts`  
 `ui-spacer` — flexible gap that pushes siblings apart inside a flex layout.  
@@ -1494,7 +1501,7 @@ File: `overlay/src/context-menu.ts`
 ### UiMenu (component, `ui-menu`)
 File: `overlay/src/menu.ts`  
 `ui-menu` — dropdown menu anchored to a trigger (CDK Overlay). Project the trigger with `[menu-trigger]`; pass `items` and listen to `(select)`. Arrow keys move focus, Enter activates, Escape closes (WAI-ARIA menu). Choosing an item or pressing Escape puts focus back on the trigger; Tab closes the menu and moves on from the trigger.  
-- Inputs: `items`: UiMenuItem[] = []; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius
+- Inputs: `items`: UiMenuItem[] = []; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius; `block` = false (0.86.0, web only: a full-width menu and trigger; a Flutter trigger already takes the width its parent gives it)
 - Two-way: `open` = false
 - Outputs: `select`: UiMenuItem
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase

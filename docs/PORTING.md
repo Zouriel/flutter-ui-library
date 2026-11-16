@@ -1564,3 +1564,19 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
 - No client-side lint mirrors: the builder checks nothing comparable (`unknownGroup`, `unknownRole`) itself; the engine's
   problems arrive through `api.validate`.
 
+## 0.86.0: UiSidebarAccount
+
+- `UiSidebarAccount` (`lib/src/layout/sidebar_account.dart`, exported with the layout area) is the twin of
+  `ui-sidebar-account`: the same inputs, with `src` as `image` (an `ImageProvider`, like `UiAvatar`) and `(activate)` as
+  `onPressed` (null also disables it, as on `UiButton`; `disabled` is kept for the same API).
+- Menu trigger: the web `ui-menu` finds the account's inner `<button>` and sets `aria-haspopup` / `aria-expanded` on it.
+  Flutter's `UiMenu` hands the trigger `toggle` and `open` through its builder, so the widget takes `expanded`, sets the
+  semantics `expanded` state from it and tints itself with `selected` while it is true (the web tints on
+  `aria-expanded="true"`). `UiMenu` gets no `block` option: a Flutter trigger already takes the width its parent gives it,
+  which is all the web `block` does.
+- Semantics: one merged button node labelled "name, subtitle, badge" (child text excluded, so it is not read twice), the
+  hint as the semantic hint (the web `aria-describedby`). Collapsed, the label is also the `UiTooltip` message
+  (`position: right`, which flips when there is no room, as on the web).
+- Height: at least `sizeTouch` (44), and 48 on touch platforms (the web uses `--ui-size-touch`); the subtitle and hint are
+  12px muted, the name `fontSizeSm` semibold, one line each with an ellipsis.
+- `UiSidebarLayout` has no rail mode on either side, so `collapsed` is set by the app on both.

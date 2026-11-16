@@ -40,6 +40,11 @@ class _LayoutPageState extends State<LayoutPage> {
   String _chat = 'Dr Aminath';
   int _screen = 0;
   bool _screensRtl = false;
+  bool _accountRail = false;
+  bool _accountRtl = false;
+  bool _accountReadOnly = true;
+  int _accountPresses = 0;
+  String _accountPicked = '';
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +52,7 @@ class _LayoutPageState extends State<LayoutPage> {
     return DocPage(
       eyebrow: 'Layout',
       title: 'Layout & grid',
-      lead: 'Structural primitives: grid, stack, spacer, container, aspect ratio, scroll area, splitter, resize handle, panel section and the sidebar app shell.',
+      lead: 'Structural primitives: grid, stack, spacer, container, aspect ratio, scroll area, splitter, resize handle, panel section, the sidebar app shell and its account button.',
       children: [
         DocSection(
           name: 'Floating panel',
@@ -374,6 +379,94 @@ class _LayoutPageState extends State<LayoutPage> {
           callbacks: const [
             ApiRow('UiSidebarLayout.of(context)', 'UiSidebarLayoutScope', 'Inside the layout: compact (drawer mode), open, toggle(), close(). maybeOf is null outside.'),
             ApiRow('toggle() / close() / compact', 'UiSidebarLayoutState', 'Through a GlobalKey.'),
+          ],
+        ),
+        DocSection(
+          name: 'Sidebar account',
+          widget: 'UiSidebarAccount',
+          summary: 'The signed-in person at the bottom of a sidebar, for sidebarFooter (0.86.0): avatar (the photo, or initials without one), name, a subtitle such as job title · section, an optional badge (Read-only) and a small hint line (Switch test account), with an unfold chevron saying it opens something. It is one button the full width of the footer: focusable, pressed with Enter or Space, with hover, pressed and focus-ring states, and disabled (or a null onPressed). Screen readers hear the name, subtitle and badge as its label and the hint as its hint. Long names and subtitles end in an ellipsis; in right-to-left text everything mirrors. onPressed opens your switcher or drawer (a UiDrawer, say); to open a UiMenu, build it as the menu\'s trigger, pass toggle as onPressed and the open state as expanded, which is announced and tints the button while the menu shows. collapsed shows only the avatar with the label as a tooltip, for a sidebar narrowed to an icon rail (UiSidebarLayout has no rail mode of its own, so the app sets it).',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            Wrap(spacing: t.space4, runSpacing: t.space2, children: [
+              UiSwitch(value: _accountRail, onChanged: (v) => setState(() => _accountRail = v), label: 'Rail'),
+              UiSwitch(value: _accountRtl, onChanged: (v) => setState(() => _accountRtl = v), label: 'Right to left'),
+              UiSwitch(value: _accountReadOnly, onChanged: (v) => setState(() => _accountReadOnly = v), label: 'Read-only'),
+            ]),
+            Directionality(
+              textDirection: _accountRtl ? TextDirection.rtl : TextDirection.ltr,
+              child: SizedBox(
+                height: 300,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radius),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(border: Border.all(color: t.border)),
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeTop: true,
+                      removeBottom: true,
+                      removeLeft: true,
+                      removeRight: true,
+                      child: UiSidebarLayout(
+                        bar: false,
+                        fill: true,
+                        breakpoint: 0,
+                        sidebarWidth: _accountRail ? 76 : 220,
+                        sidebar: _accountRail
+                            ? const SizedBox()
+                            : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                                for (final n in ['Dashboard', 'Cases', 'Settings']) UiButton(label: n, block: true, variant: UiButtonVariant.ghost, onPressed: () {}),
+                              ]),
+                        sidebarFooter: UiSidebarAccount(
+                          name: _accountRtl ? 'އައިޝަތު މުހައްމަދު' : 'Aishath Mohamed Ibrahim Didi',
+                          subtitle: _accountRtl ? 'ކްލާކް · ސެކްރެޓޭރިއެޓް' : 'Senior Clerk · Secretariat of the Addu City Council',
+                          badge: _accountReadOnly ? (_accountRtl ? 'ކިޔުމަށް' : 'Read-only') : null,
+                          badgeTone: UiStatus.warning,
+                          hint: _accountRtl ? 'ޓެސްޓް އެކައުންޓް ބަދަލުކުރޭ' : 'Switch test account',
+                          collapsed: _accountRail,
+                          onPressed: () => setState(() => _accountPresses++),
+                        ),
+                        body: Padding(
+                          padding: EdgeInsets.all(t.space4),
+                          child: UiText('Pressed $_accountPresses time${_accountPresses == 1 ? '' : 's'}: an app opens its account switcher here.', variant: UiTextVariant.caption),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const UiText('As a menu trigger:', variant: UiTextVariant.caption),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: SizedBox(
+                width: 260,
+                child: UiMenu(
+                  items: const [
+                    UiMenuItem(label: 'Profile', value: 'profile'),
+                    UiMenuItem(label: 'Switch account', value: 'switch'),
+                    UiMenuItem(label: 'Sign out', value: 'sign-out', danger: true),
+                  ],
+                  onSelect: (item) => setState(() => _accountPicked = item.label),
+                  builder: (context, toggle, open) => UiSidebarAccount(name: 'Ali Hassan', subtitle: 'Director · Planning', expanded: open, onPressed: toggle),
+                ),
+              ),
+            ),
+            UiText('Last chosen: ${_accountPicked.isEmpty ? 'nothing yet' : _accountPicked}', variant: UiTextVariant.caption),
+          ]),
+          code: 'UiSidebarLayout(\n  sidebar: nav,\n  sidebarFooter: UiSidebarAccount(\n    name: user.name,\n    subtitle: \'Clerk · Secretariat\',\n    badge: \'Read-only\',\n    badgeTone: UiStatus.warning,\n    hint: \'Switch test account\',\n    collapsed: rail,\n    onPressed: openSwitcher,\n  ),\n  body: page,\n)\n\n// Opening a menu:\nUiMenu(\n  items: accountItems,\n  onSelect: onAccount,\n  builder: (context, toggle, open) => UiSidebarAccount(name: name, subtitle: role, expanded: open, onPressed: toggle),\n)',
+          api: const [
+            ApiRow('name', 'String', 'The person\'s name; the avatar\'s initials when there is no image. Required.'),
+            ApiRow('subtitle', 'String?', 'Second line, e.g. job title · section.'),
+            ApiRow('image', 'ImageProvider?', 'Photo (the web src); initials without one or when it fails to load.'),
+            ApiRow('badge / badgeTone', 'String? / UiStatus', 'A short label after the name (Read-only), part of the label.', def: 'neutral'),
+            ApiRow('hint', 'String?', 'A small third line saying what it does (Switch test account); the semantic hint.'),
+            ApiRow('showChevron', 'bool', 'The unfold chevron at the end.', def: 'true'),
+            ApiRow('disabled', 'bool', 'Dimmed and not pressable (as is a null onPressed).', def: 'false'),
+            ApiRow('collapsed', 'bool', 'Only the avatar, the label in a tooltip: for a sidebar narrowed to a rail.', def: 'false'),
+            ApiRow('expanded', 'bool?', 'Whether the menu it opens is showing (the web gets aria-expanded from ui-menu): announced, and tinted while true.'),
+            ApiRow('focusNode', 'FocusNode?', 'Its focus.'),
+          ],
+          callbacks: const [
+            ApiRow('onPressed', 'VoidCallback?', 'Tap, click, Enter or Space. Null disables it. As a UiMenu trigger, pass the builder\'s toggle.'),
           ],
         ),
         DocSection(

@@ -85,6 +85,13 @@ page: an icon in a tinted badge, eyebrow, title, description and an action, with
 accent, brand, neutral), `layout` (vertical, horizontal) and `size` (md, lg); with `onPressed` the
 whole card is one button.
 
+**Sidebar account button (0.86.0):** `UiSidebarAccount` is the signed-in person for
+`UiSidebarLayout.sidebarFooter`: avatar (photo or initials), `name`, `subtitle` (job title · section), an optional
+`badge` + `badgeTone` (Read-only) and `hint` (Switch test account), and an unfold chevron (`showChevron`). One
+full-width button (Enter/Space, focus ring, `disabled`), labelled by name, subtitle and badge with the hint as its
+semantic hint. `onPressed` opens a switcher or `UiDrawer`; as a `UiMenu` trigger pass `toggle` and `expanded: open`.
+`collapsed` shows only the avatar with the label as a tooltip, for a sidebar narrowed to a rail.
+
 **Compact tinted feature card (0.38):** `UiFeatureCard` gains `size: UiSize.sm` (16 padding, 40 badge,
 20 icon, body-strong title), `surface: UiFeatureSurface.tinted` (a soft wash in the tone, no border,
 shadow only on hover), `controlRadius` (a text field's corners), `trailingArrow` (with `onPressed` and
