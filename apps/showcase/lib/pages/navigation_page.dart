@@ -22,9 +22,18 @@ class _NavigationPageState extends State<NavigationPage> {
   String? _menu;
   final ScrollController _anchorScroll = ScrollController();
   final List<GlobalKey> _anchorKeys = [for (var i = 0; i < 4; i++) GlobalKey()];
+  final FocusNode _skipTarget = FocusNode(debugLabel: 'skip link demo main');
+  bool _skipped = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _skipTarget.addListener(() => setState(() => _skipped = _skipTarget.hasFocus));
+  }
 
   @override
   void dispose() {
+    _skipTarget.dispose();
     _anchorScroll.dispose();
     super.dispose();
   }
@@ -47,7 +56,7 @@ class _NavigationPageState extends State<NavigationPage> {
     return DocPage(
       eyebrow: 'Components',
       title: 'Navigation',
-      lead: 'Move between views: app bar, tabs, side nav, bottom nav, breadcrumbs, pagination, stepper, menubar and anchor nav.',
+      lead: 'Move between views: app bar, tabs, side nav, bottom nav, breadcrumbs, pagination, stepper, menubar, anchor nav and the skip link.',
       children: [
         DocSection(
           name: 'Navbar',
@@ -331,6 +340,40 @@ class _NavigationPageState extends State<NavigationPage> {
             ApiRow('offset', 'double', 'Height of a header covering the top.', def: '0'),
             ApiRow('axis', 'Axis', 'vertical list or horizontal strip.', def: 'vertical'),
             ApiRow('label', 'String', 'Landmark name.', def: "'On this page'"),
+          ],
+        ),
+        DocSection(
+          name: 'Skip link',
+          widget: 'UiSkipLink',
+          summary: '"Skip to content" (0.87.0): the first thing a keyboard reaches on a page, so keyboard users can jump past the navigation. It takes no room and shows nothing until it has keyboard focus; then a primary pill appears at the top-start corner of the overlay (the top right in right-to-left text). Enter, Space or a tap moves focus to target, the focus node of the page\'s main content, and scrolls it into view. The words are the strings\' skipToContent (Dhivehi included) unless label says otherwise. Put it first in the page. In this demo it has an overlay of its own, so the pill shows at the corner of the box: Tab into the box.',
+          demo: SizedBox(
+            height: 260,
+            child: Overlay.wrap(
+            child: Container(
+              decoration: BoxDecoration(border: Border.all(color: t.border), borderRadius: BorderRadius.circular(t.radius)),
+              padding: EdgeInsets.all(t.space4),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
+                UiSkipLink(target: _skipTarget),
+                Wrap(spacing: t.space2, children: [
+                  for (final l in ['Home', 'Services', 'Payments', 'Help']) UiButton(label: l, variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () {}),
+                ]),
+                Focus(
+                  focusNode: _skipTarget,
+                  child: Container(
+                    padding: EdgeInsets.all(t.space2),
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusSm), boxShadow: _skipped ? t.focusRing : const []),
+                    child: const UiText('Main content', variant: UiTextVariant.h4, heading: false),
+                  ),
+                ),
+                UiText(_skipped ? 'Focus is on the main content.' : 'Tab into the box, then press Enter.', variant: UiTextVariant.caption),
+              ]),
+            ),
+          ),
+          ),
+          code: 'final main = FocusNode();\n\nColumn(children: [\n  UiSkipLink(target: main),\n  navigation,\n  Focus(focusNode: main, child: page),\n])',
+          api: const [
+            ApiRow('target', 'FocusNode', 'The page\'s main content: focused (and scrolled into view) when the link is used. Required.'),
+            ApiRow('label', 'String?', 'The link\'s words; null: the strings\' skipToContent ("Skip to content").'),
           ],
         ),
       ],

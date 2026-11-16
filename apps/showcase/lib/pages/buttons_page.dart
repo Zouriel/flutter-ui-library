@@ -24,6 +24,7 @@ class _ButtonsPageState extends State<ButtonsPage> {
   String? _align = 'left';
   bool _bold = true, _italic = false;
   String _log = 'Nothing yet';
+  String _route = '/cases';
   UiFabPosition _sosAt = UiFabPosition.topCenter;
   double _fabPeek = 72;
 
@@ -97,8 +98,42 @@ UiButton(label: 'Saving', loading: true, onPressed: save)''',
             ApiRow('block', 'bool', 'Full width.', def: 'false'),
             ApiRow('glass', 'bool', 'Frosted translucent fill.', def: 'false'),
             ApiRow('radius', 'bool?', 'Rounded corners; defaults to UiConfig.radius.'),
+            ApiRow('href', 'String?', 'Makes it a link (0.87.0): announced as one with this address; with onPressed null a tap goes to UiLinkScope.navigate. See Link buttons below.'),
+            ApiRow('current', 'bool?', 'The page that is open: selected semantics, and on ghost / outline the selected background with primary text. Null asks UiLinkScope.isCurrent(href).'),
           ],
           shapes: 'enum UiButtonVariant { primary, secondary, outline, ghost, link, destructive, brand }\nenum UiSize { sm, md, lg }',
+        ),
+        DocSection(
+          name: 'Link buttons',
+          widget: 'UiButton(href:) · UiIconButton(href:) · UiLinkScope',
+          summary: 'A button that leads somewhere (0.87.0, the web <a class="ui-btn">): give it an href. It looks the same, but is announced as a link with that address, and with onPressed null a tap (or Enter / Space) hands the href to the UiLinkScope above it, the app\'s router, given once near the root. onPressed, when set, still wins. Without a scope a tap does nothing. current marks the page that is open: announced as selected, and ghost and outline buttons take the selected background with primary text, so a row of them works as a section nav. Left null, the scope\'s isCurrent(href) decides. UiIconButton takes href too.',
+          demo: UiLinkScope(
+            // A pretend router: navigating sets the route, and the button of the route shown is current.
+            navigate: (href) => setState(() => _route = href),
+            isCurrent: (href) => href == _route,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+              Wrap(spacing: t.space2, runSpacing: t.space2, crossAxisAlignment: WrapCrossAlignment.center, children: const [
+                UiButton(label: 'Cases', href: '/cases', variant: UiButtonVariant.ghost, onPressed: null),
+                UiButton(label: 'Payments', href: '/payments', variant: UiButtonVariant.ghost, onPressed: null),
+                UiButton(label: 'Reports', href: '/reports', variant: UiButtonVariant.ghost, onPressed: null),
+                UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedSettings01), label: 'Settings', href: '/settings', onPressed: null),
+              ]),
+              Wrap(spacing: t.space2, runSpacing: t.space2, children: const [
+                UiButton(label: 'Week', href: '/cases?view=week', variant: UiButtonVariant.outline, size: UiSize.sm, current: true, onPressed: null),
+                UiButton(label: 'Month', href: '/cases?view=month', variant: UiButtonVariant.outline, size: UiSize.sm, current: false, onPressed: null),
+                UiButton(label: 'New case', href: '/cases/new', onPressed: null),
+              ]),
+              UiText('Route: $_route', variant: UiTextVariant.caption),
+            ]),
+          ),
+          code: "// Once, above the pages:\nUiLinkScope(\n  navigate: (href) => router.go(href),\n  isCurrent: (href) => router.location == href,\n  child: app,\n)\n\nUiButton(label: 'Cases', href: '/cases', variant: UiButtonVariant.ghost, onPressed: null)\nUiIconButton(icon: UiIcon(HugeIcons.strokeRoundedSettings01), label: 'Settings', href: '/settings', onPressed: null)",
+          api: const [
+            ApiRow('href', 'String?', 'UiButton and UiIconButton: a link to it; with onPressed null a tap goes to UiLinkScope.navigate.'),
+            ApiRow('current', 'bool?', 'UiButton: the page that is open (selected look on ghost / outline, selected semantics). Null asks the scope.'),
+            ApiRow('UiLinkScope.navigate', 'void Function(String href)', 'Goes to an href: hand it your router (or launchUrl for addresses outside the app). Required.'),
+            ApiRow('UiLinkScope.isCurrent', 'bool Function(String href)?', 'Whether href is the page shown. Rebuild the scope when the route changes.'),
+            ApiRow('UiLinkScope.maybeOf(context)', 'UiLinkScope?', 'The nearest scope, for your own links.'),
+          ],
         ),
         DocSection(
           name: 'Hold button',
@@ -307,6 +342,7 @@ UiSocialSignInButton(
             ApiRow('round', 'bool', 'Circle instead of rounded square.', def: 'false'),
             ApiRow('badge / badgeTone / badgeLabel', 'String? / UiBadgeTone / String?', 'A count bubble at the top-end corner (0.44.0, UiButton too): danger or primary, read after the name as badgeLabel or its text.', def: 'null / danger / null'),
             ApiRow('uiBadgeCount(n, {max: 9})', 'String?', 'null for 0 or less, "9+" past max, else the number.'),
+            ApiRow('href', 'String?', 'A link to it (0.87.0), as on UiButton: with onPressed null a tap goes to UiLinkScope.navigate.'),
           ],
         ),
         DocSection(

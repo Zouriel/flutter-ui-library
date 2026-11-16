@@ -1580,3 +1580,33 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
 - Height: at least `sizeTouch` (44), and 48 on touch platforms (the web uses `--ui-size-touch`); the subtitle and hint are
   12px muted, the name `fontSizeSm` semibold, one line each with an ellipsis.
 - `UiSidebarLayout` has no rail mode on either side, so `collapsed` is set by the app on both.
+
+## 0.87.0: table row activation, link buttons and UiLinkScope, current page, UiSkipLink, UiDateTimePicker
+
+- **UiLinkScope** (`lib/src/core/link_scope.dart`, exported from the root) is the web `UI_LINK_NAVIGATOR`: an
+  `InheritedWidget` with `navigate(href)`, optional `isCurrent(href)` and `maybeOf(context)`. Flutter has no browser to fall
+  back on, so every href is handed over (external ones too; the app opens them) and there is no internal-href or modifier
+  check. Rebuild the scope when the route changes so links re-ask `isCurrent`. `@zouriel/ui/router` is Angular only.
+- **Links through the scope**: `UiLink` with no `onTap`, and `UiButton` / `UiIconButton` with `href` and no `onPressed`, call
+  `navigate(href)`; `onTap` / `onPressed` win. An href makes them enabled even without a scope (a tap then does nothing),
+  like a web `<a href>` that is always live. `UiInteractive` gained `link` / `linkUrl` for this; a button with an href is
+  announced as a link (not a button). There is no `target` (no tabs) and no `disabled`: pass `href: null` to disable one.
+  `UiBreadcrumbs`, `UiFeatureCard` and `UiSideNav` items have no `href` in Flutter (callbacks only), so they are unchanged.
+- **Current page**: `current: bool?` on `UiLink`, `UiButton` and `UiIconButton` (null asks `isCurrent`; never for an
+  external `UiLink`), as `selected` semantics (Flutter has no aria-current). Looks as the web: link text colour, w600,
+  solid 2px underline; buttons w600; ghost/outline (and icon-button link) the `selected` fill with primary text; the link
+  variant the text colour and a 2px underline. Ghost/outline icons keep the theme icon colour, as on the web.
+- **Table**: Flutter's `Table` has no row widget, so the row is not literally one `UiInteractive`: the first data cell is a
+  `UiInteractive` (focus stop, Enter/Space, focus ring round its content, button semantics named `rowLabel` or its text,
+  48dp tall on touch), and the other cells (not the selection box or the row actions) open the row through gesture
+  detectors, so inner buttons win the gesture arena and keep their own taps. Rows show the hover fill and a click cursor,
+  and the first cell's text is underlined while the row is hovered (the web `tr:hover .row-open`). No text-selection check:
+  table text isn't selectable in Flutter.
+- **UiSkipLink(target: FocusNode, label)**: a zero-size `UiInteractive` (no touch padding) whose pill shows in an
+  `OverlayPortal` (the nearest `Overlay`) at top-start, below the safe area, while it has focus. Activating requests focus
+  on `target` and `Scrollable.ensureVisible`s it. The visible pill also takes a tap.
+- **UiDateTimePicker** (`lib/src/datepicker/date_time_picker.dart`): a `UiDatePicker` and a 136px `UiTimePicker` in a
+  `LayoutBuilder` (stacked at 320px or less, the web container query) inside a container `Semantics` (no group role in
+  Flutter). The parts' names use the pickers' existing `label` (the web's new `ariaLabel`). A time picked before a date is
+  kept until a date comes; neither Flutter picker can be cleared, so "clearing the time" has no trigger here.
+- Strings: `skipToContent`, `dateLabel`, `timeLabel` (en + dv).

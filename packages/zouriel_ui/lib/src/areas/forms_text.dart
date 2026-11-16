@@ -8,6 +8,7 @@ export '../datepicker/calendar.dart';
 export '../datepicker/calendar_view.dart';
 export '../datepicker/date_names.dart';
 export '../datepicker/date_picker.dart';
+export '../datepicker/date_time_picker.dart';
 export '../datepicker/date_range_picker.dart';
 export '../forms/text/editable_text.dart';
 export '../forms/text/form_field.dart' show UiFormField, UiFieldScope, UiFieldLink, uiFieldInvalid;

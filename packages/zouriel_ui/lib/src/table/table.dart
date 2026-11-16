@@ -99,6 +99,11 @@ bool _isDigits(String s) => s.codeUnitAt(0) >= 48 && s.codeUnitAt(0) <= 57;
 /// forgotten when they leave [data]. With no rows it shows [emptyText]. On a narrow screen the table
 /// keeps its natural width and scrolls sideways inside its border, with the cut-off edge faded,
 /// instead of squeezing the columns.
+///
+/// [onRowActivate] (0.87.0, the web `activatable` + `(rowActivate)`) opens a row: a tap anywhere on
+/// it (except the selection box and the row actions, which keep their own taps) or Enter/Space on it.
+/// The row's first cell is its one focus stop and button, with the focus ring round its content and
+/// [rowLabel] as its name (else the cell's text); rows show the hover background and a pointer.
 class UiTable<T> extends StatefulWidget {
   const UiTable({
     super.key,
@@ -109,6 +114,8 @@ class UiTable<T> extends StatefulWidget {
     this.emptyText,
     this.radius,
     this.onSelectionChanged,
+    this.onRowActivate,
+    this.rowLabel,
   });
 
   final List<UiColumn<T>> columns;
@@ -119,6 +126,12 @@ class UiTable<T> extends StatefulWidget {
   final String? emptyText;
   final bool? radius;
   final ValueChanged<List<T>>? onSelectionChanged;
+
+  /// Called with a row the person opens (0.87.0); non-null makes rows activatable.
+  final ValueChanged<T>? onRowActivate;
+
+  /// A row's accessible name when it is activatable ("Open Aminath Ali"); null: its first cell's text.
+  final String Function(T row)? rowLabel;
 
   @override
   State<UiTable<T>> createState() => _UiTableState<T>();
@@ -198,13 +211,23 @@ class _UiTableState<T> extends State<UiTable<T>> {
 
     Alignment align(UiColumnAlign a) => switch (a) { UiColumnAlign.start => Alignment.centerLeft, UiColumnAlign.center => Alignment.center, UiColumnAlign.end => Alignment.centerRight };
     TextAlign textAlign(UiColumnAlign a) => switch (a) { UiColumnAlign.start => TextAlign.start, UiColumnAlign.center => TextAlign.center, UiColumnAlign.end => TextAlign.end };
+    Widget cell(UiColumn<T> col, T row, {bool underline = false}) {
+      final style = underline ? body.copyWith(decoration: TextDecoration.underline) : body;
+      return col.cellBuilder != null
+        ? DefaultTextStyle(style: style, textAlign: textAlign(col.align), child: Builder(builder: (context) => col.cellBuilder!(context, row)))
+        : Text(col.text(row), style: style, textAlign: textAlign(col.align), maxLines: col.nowrap ? 1 : null, softWrap: !col.nowrap);
+    }
 
-    Widget hoverable(int i, Widget child) => MouseRegion(
+    final activate = widget.onRowActivate;
+
+    Widget hoverable(int i, Widget child, {bool activates = false}) => MouseRegion(
+          cursor: activates ? SystemMouseCursors.click : MouseCursor.defer,
           onEnter: (_) => setState(() => _hover = i),
           onExit: (_) => setState(() {
             if (_hover == i) _hover = null;
           }),
-          child: child,
+          // The rest of an activatable row opens it too; the first cell is its focusable button.
+          child: activates ? GestureDetector(behavior: HitTestBehavior.opaque, excludeFromSemantics: true, onTap: () => activate!(rows[i]), child: child) : child,
         );
 
     final header = TableRow(
@@ -251,17 +274,21 @@ class _UiTableState<T> extends State<UiTable<T>> {
                 padding: EdgeInsets.symmetric(horizontal: t.space3),
                 child: _Check(checked: current.contains(rows[i]), label: uiFormatString(context.uiStrings.selectRow, {'n': i + 1}), onChanged: (_) => _toggleRow(rows[i])),
               )),
-            for (final col in widget.columns)
-              hoverable(i, Padding(
-                padding: pad,
-                child: Align(
+            for (final (k, col) in widget.columns.indexed)
+              if (k == 0 && activate != null)
+                hoverable(i, _RowOpen(
+                  label: widget.rowLabel?.call(rows[i]),
                   alignment: align(col.align),
-                  widthFactor: 1,
-                  child: col.cellBuilder != null
-                      ? DefaultTextStyle(style: body, textAlign: textAlign(col.align), child: Builder(builder: (context) => col.cellBuilder!(context, rows[i])))
-                      : Text(col.text(rows[i]), style: body, textAlign: textAlign(col.align), maxLines: col.nowrap ? 1 : null, softWrap: !col.nowrap),
-                ),
-              )),
+                  padding: pad,
+                  onTap: () => activate(rows[i]),
+                  // Underlined while the row is hovered, as on the web.
+                  child: cell(col, rows[i], underline: _hover == i),
+                ))
+              else
+                hoverable(i, activates: activate != null, Padding(
+                  padding: pad,
+                  child: Align(alignment: align(col.align), widthFactor: 1, child: cell(col, rows[i])),
+                )),
             if (hasActions)
               hoverable(i, Padding(
                 // The same cell padding as the data cells, so action rows are as tall as the web (42px)
@@ -458,6 +485,42 @@ class _SortPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SortPainter old) => old.color != color || old.dir != dir;
+}
+
+/// The first cell of an activatable row (0.87.0, the web `button.row-open`): the row's focus stop and
+/// button, filling the cell (48dp tall on touch), with the focus ring round the cell's content.
+class _RowOpen extends StatelessWidget {
+  const _RowOpen({required this.label, required this.alignment, required this.padding, required this.onTap, required this.child});
+  final String? label;
+  final Alignment alignment;
+  final EdgeInsets padding;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    return UiInteractive(
+      onTap: onTap,
+      semanticLabel: label,
+      excludeChildSemantics: label != null,
+      pressScale: false,
+      minTouchSize: const Size(0, uiMinTouchTarget),
+      touchAlignment: alignment,
+      builder: (context, s) => Padding(
+        padding: padding,
+        child: Align(
+          alignment: alignment,
+          widthFactor: 1,
+          child: AnimatedContainer(
+            duration: context.uiAnimate ? t.motionFast : Duration.zero,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(t.radiusXs), boxShadow: s.focused ? t.focusRing : const []),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ActionButton extends StatelessWidget {

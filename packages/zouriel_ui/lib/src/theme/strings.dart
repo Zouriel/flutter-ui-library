@@ -222,6 +222,9 @@ class UiStrings {
     this.checklistItemDone = 'Done',
     this.checklistItemToDo = 'Not done yet',
     this.refresh = 'Refresh',
+    this.skipToContent = 'Skip to content',
+    this.dateLabel = 'Date',
+    this.timeLabel = 'Time',
     this.locale = '',
     this.months = const [],
     this.monthsShort = const [],
@@ -444,6 +447,9 @@ class UiStrings {
     checklistItemDone: 'ނިމިފައި',
     checklistItemToDo: 'އަދި ނުނިމޭ',
     refresh: 'ރިފްރެޝް ކުރޭ',
+    skipToContent: 'ކޮންޓެންޓަށް ދާން',
+    dateLabel: 'ތާރީޚު',
+    timeLabel: 'ގަޑި',
     locale: 'dv',
     months: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
     monthsShort: ['ޖަނަވަރީ', 'ފެބުރުއަރީ', 'މާރިޗު', 'އެޕްރީލް', 'މޭ', 'ޖޫން', 'ޖުލައި', 'އޯގަސްޓު', 'ސެޕްޓެމްބަރު', 'އޮކްޓޫބަރު', 'ނޮވެމްބަރު', 'ޑިސެމްބަރު'],
@@ -1073,6 +1079,12 @@ class UiStrings {
   /// Pull to refresh: the screen reader action (0.72.0, Flutter only).
   final String refresh;
 
+  /// [UiSkipLink] (0.87.0).
+  final String skipToContent;
+
+  /// [UiDateTimePicker] (0.87.0): the names of its two parts.
+  final String dateLabel, timeLabel;
+
   /// The locale for date names and formats, e.g. 'dv'; empty uses the app's locale.
   final String locale;
 
@@ -1299,6 +1311,9 @@ class UiStrings {
     String? checklistItemDone,
     String? checklistItemToDo,
     String? refresh,
+    String? skipToContent,
+    String? dateLabel,
+    String? timeLabel,
     String? locale,
     List<String>? months,
     List<String>? monthsShort,
@@ -1516,6 +1531,9 @@ class UiStrings {
         checklistItemDone: checklistItemDone ?? this.checklistItemDone,
         checklistItemToDo: checklistItemToDo ?? this.checklistItemToDo,
         refresh: refresh ?? this.refresh,
+        skipToContent: skipToContent ?? this.skipToContent,
+        dateLabel: dateLabel ?? this.dateLabel,
+        timeLabel: timeLabel ?? this.timeLabel,
         locale: locale ?? this.locale,
         months: months ?? this.months,
         monthsShort: monthsShort ?? this.monthsShort,
@@ -1735,6 +1753,9 @@ class UiStrings {
         'checklistItemDone': checklistItemDone,
         'checklistItemToDo': checklistItemToDo,
         'refresh': refresh,
+        'skipToContent': skipToContent,
+        'dateLabel': dateLabel,
+        'timeLabel': timeLabel,
       };
 
   @override

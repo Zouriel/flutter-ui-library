@@ -8,6 +8,7 @@ export '../feedback/progress_circle.dart';
 export '../feedback/result.dart';
 export '../text/kbd.dart';
 export '../text/link.dart';
+export '../text/skip_link.dart';
 export '../navigation/anchor_nav.dart';
 export '../navigation/bottom_nav.dart';
 export '../navigation/breadcrumbs.dart';
