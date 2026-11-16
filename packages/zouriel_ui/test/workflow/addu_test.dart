@@ -232,6 +232,8 @@ void main() {
 
       // Other states only: the state itself is not offered.
       expect(find.descendant(of: _checks('Pause the clock while the record is in'), matching: find.text('Review')), findsNothing);
+      // A final state ends the clock, so it is not offered either.
+      expect(find.descendant(of: _checks('Pause the clock while the record is in'), matching: find.text('Done')), findsNothing);
       await _toggle(tester, 'Pause the clock while the record is in', 'On hold');
       await _toggle(tester, 'Pause the clock while the record is in', 'Draft');
       expect(_sla(c)['pauseOnStatus'], ['draft', 'hold']);

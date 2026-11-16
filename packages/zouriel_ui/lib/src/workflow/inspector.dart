@@ -516,7 +516,7 @@ Widget _multiSelect(String label, List<WfOption> options, List<String> value, Va
 /// The clock's pause and resume settings, inside a state's time limit: other states, and (when the
 /// app has signals) signals that pause it and start it again.
 List<Widget> _pauseControls(UiWorkflowBuilderController store, UiWfState s, UiWfSla sla, void Function(String key, List<String> list) set) {
-  final others = [for (final o in store.def.lifecycle?.states ?? const <UiWfState>[]) if (o.id != s.id) (value: o.id, label: o.label)];
+  final others = [for (final o in store.def.lifecycle?.states ?? const <UiWfState>[]) if (o.id != s.id && o.category != 'terminal') (value: o.id, label: o.label)];
   final signals = [for (final g in store.registry?.signals ?? const <UiWfSignalDescriptor>[]) (value: g.key, label: g.label.isEmpty ? g.key : g.label)];
   // Keys the list holds that are no longer offered stay listed, so nothing is dropped unseen.
   List<WfOption> withStale(List<WfOption> o, List<String> v) => [...o, for (final x in v) if (!o.any((e) => e.value == x)) (value: x, label: '$x (not available)')];
