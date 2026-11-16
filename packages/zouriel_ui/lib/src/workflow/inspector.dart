@@ -519,7 +519,7 @@ List<Widget> _pauseControls(UiWorkflowBuilderController store, UiWfState s, UiWf
   final others = [for (final o in store.def.lifecycle?.states ?? const <UiWfState>[]) if (o.id != s.id) (value: o.id, label: o.label)];
   final signals = [for (final g in store.registry?.signals ?? const <UiWfSignalDescriptor>[]) (value: g.key, label: g.label.isEmpty ? g.key : g.label)];
   // Keys the list holds that are no longer offered stay listed, so nothing is dropped unseen.
-  List<WfOption> withStale(List<WfOption> o, List<String> v) => [...o, for (final x in v) if (!o.any((e) => e.value == x)) (value: x, label: '$x (unknown)')];
+  List<WfOption> withStale(List<WfOption> o, List<String> v) => [...o, for (final x in v) if (!o.any((e) => e.value == x)) (value: x, label: '$x (not available)')];
   final status = sla.pauseOnStatus ?? const <String>[];
   final pause = sla.pauseOnEvent ?? const <String>[];
   final resume = sla.resumeOnEvent ?? const <String>[];

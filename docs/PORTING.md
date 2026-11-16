@@ -1552,7 +1552,7 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
   `segregationOfDuties` errors show the server message through the existing `wfErrorText` (no new code).
 - Time limit pause: `UiWfSla.pauseOnStatus` / `pauseOnEvent` / `resumeOnEvent`. There is no multi-select control in the
   library, so the three lists use `WfChecks` (a wrap of checkboxes, as the Switch step's "Values" does) under an
-  `FbSetting` label. A key the list holds but the app no longer offers stays listed as "<key> (unknown)" so it is never
+  `FbSetting` label. A key the list holds but the app no longer offers stays listed as "<key> (not available)" so it is never
   dropped unseen. The signal lists are hidden when the registry has no signals (unless the list already holds keys).
   `removeState` also removes the state from other states' `pauseOnStatus` (the web store's cleaning does the same).
 - Public processing time: `UiWorkflowDefinition.publicProcessingTime` (`UiWfPublicProcessingTime`) in the workflow
