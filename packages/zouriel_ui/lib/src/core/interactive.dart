@@ -97,6 +97,8 @@ class UiInteractive extends StatefulWidget {
     this.semanticLabel,
     this.semanticHint,
     this.button = true,
+    this.link = false,
+    this.linkUrl,
     this.toggled,
     this.selected,
     this.checked,
@@ -123,6 +125,10 @@ class UiInteractive extends StatefulWidget {
 
   /// Announce as a button (most controls); set false for rows, tiles and custom roles.
   final bool button;
+
+  /// Announce as a link (0.87.0: buttons with an `href`), with [linkUrl] as its address.
+  final bool link;
+  final Uri? linkUrl;
   final bool? toggled;
   final bool? selected;
   final bool? checked;
@@ -257,6 +263,8 @@ class _UiInteractiveState extends State<UiInteractive> {
     return MergeSemantics(
       child: Semantics(
       button: widget.button,
+      link: widget.link ? true : null,
+      linkUrl: widget.linkUrl,
       enabled: _enabled,
       label: widget.semanticLabel,
       hint: widget.semanticHint,

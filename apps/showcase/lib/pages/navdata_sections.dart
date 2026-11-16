@@ -50,6 +50,7 @@ class _TableSectionState extends State<_TableSection> {
   ];
   int _selected = 0;
   String? _last;
+  String? _opened;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +58,7 @@ class _TableSectionState extends State<_TableSection> {
     return DocSection(
       name: 'Table',
       widget: 'UiTable<T>',
-      summary: 'A data table with tap-to-sort headers, optional row selection and per-row actions. Sorting cycles ascending, descending, unsorted; numbers compare as numbers, text naturally and case-insensitively ("Item 9" before "Item 10"), and empty cells go last. Selection is tracked by row identity and forgets rows that leave data; the header box shows "some" for a partial selection. Row actions are real buttons that can be off per row and named per row. With no rows it shows emptyText. On a narrow screen the table keeps its natural width and scrolls sideways.',
+      summary: 'A data table with tap-to-sort headers, optional row selection and per-row actions. Sorting cycles ascending, descending, unsorted; numbers compare as numbers, text naturally and case-insensitively ("Item 9" before "Item 10"), and empty cells go last. Selection is tracked by row identity and forgets rows that leave data; the header box shows "some" for a partial selection. Row actions are real buttons that can be off per row and named per row. With no rows it shows emptyText. On a narrow screen the table keeps its natural width and scrolls sideways. onRowActivate (0.87.0) makes each row open something: a tap anywhere on the row (but not on its selection box or row actions, which keep their own taps), or Enter or Space on it. The first cell is the row\'s one focus stop and button, with the focus ring round its text, named by rowLabel (else the cell\'s text); rows show the hover background and a pointer.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
         UiTable<_Member>(
           selectable: true,
@@ -81,6 +82,21 @@ class _TableSectionState extends State<_TableSection> {
           ],
         ),
         UiText('$_selected selected${_last == null ? '' : ' · $_last'}', variant: UiTextVariant.caption),
+        // Rows that open: a tap anywhere on the row, or Enter / Space on its first cell.
+        UiTable<_Member>(
+          columns: const [
+            UiColumn(key: 'name', header: 'Case'),
+            UiColumn(key: 'role', header: 'Status', nowrap: true),
+          ],
+          data: const [
+            {'name': 'Land lease renewal, Hithadhoo', 'role': 'In review'},
+            {'name': 'Building permit, Feydhoo', 'role': 'Approved'},
+          ],
+          rowLabel: (r) => 'Open ${r['name']}',
+          onRowActivate: (r) => setState(() => _opened = '${r['name']}'),
+          actions: [UiRowAction(label: 'Assign', run: (r) => setState(() => _opened = 'Assign (not opened): ${r['name']}'))],
+        ),
+        UiText(_opened == null ? 'Tap a row, or Tab to one and press Enter.' : 'Opened: $_opened', variant: UiTextVariant.caption),
         const UiTable<_Member>(columns: [UiColumn(key: 'name', header: 'Name'), UiColumn(key: 'role', header: 'Role')], data: [], emptyText: 'No members yet'),
         // Many columns in a box too narrow for them all: long headings wrap, the status stays on one line (nowrap) and
         // names keep at least 144 wide (minWidth). On a phone the table scrolls instead.
@@ -102,7 +118,7 @@ class _TableSectionState extends State<_TableSection> {
           ],
         ),
       ]),
-      code: "UiTable<Map<String, Object?>>(\n  selectable: true,\n  columns: [\n    UiColumn(key: 'name', header: 'Name', sortable: true),\n    UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end, format: (v, _) => v == null ? '\\u2014' : '\$v'),\n  ],\n  data: rows,\n  actions: [UiRowAction(label: 'Edit', run: edit)],\n  onSelectionChanged: (rows) => setState(() => picked = rows),\n)",
+      code: "UiTable<Map<String, Object?>>(\n  onRowActivate: (row) => open(row['id']),\n  rowLabel: (row) => 'Open \${row['name']}',\n  selectable: true,\n  columns: [\n    UiColumn(key: 'name', header: 'Name', sortable: true),\n    UiColumn(key: 'seats', header: 'Seats', sortable: true, align: UiColumnAlign.end, format: (v, _) => v == null ? '\\u2014' : '\$v'),\n  ],\n  data: rows,\n  actions: [UiRowAction(label: 'Edit', run: edit)],\n  onSelectionChanged: (rows) => setState(() => picked = rows),\n)",
       api: const [
         ApiRow('columns', 'List<UiColumn<T>>', 'key, header, sortable, align, value (reader), format; nowrap keeps a column on one line, minWidth is the width it never goes under. Long headings wrap.'),
         ApiRow('data', 'List<T>', 'Rows; maps are read by column key.'),
@@ -111,6 +127,8 @@ class _TableSectionState extends State<_TableSection> {
         ApiRow('UiRowActions', 'widget: children, align (start / end)', 'For a table you build yourself: a row\'s buttons space2 apart at the end, wrapping when narrow.'),
         ApiRow('emptyText', 'String', 'Shown with no rows.', def: "'No data'"),
         ApiRow('onSelectionChanged', 'ValueChanged<List<T>>?', 'The selected rows after each change.'),
+        ApiRow('onRowActivate', 'ValueChanged<T>?', 'A row was opened (tap on the row, Enter or Space). Non-null makes rows activatable (0.87.0, the web activatable + rowActivate).'),
+        ApiRow('rowLabel', 'String Function(T)?', 'An activatable row\'s accessible name ("Open Aminath Ali"); null: its first cell\'s text.'),
       ],
     );
   }
@@ -503,6 +521,7 @@ class _LinkKbdSection extends StatefulWidget {
 
 class _LinkKbdSectionState extends State<_LinkKbdSection> {
   String? _opened;
+  String _route = '/media';
 
   @override
   Widget build(BuildContext context) {
@@ -510,21 +529,34 @@ class _LinkKbdSectionState extends State<_LinkKbdSection> {
     return DocSection(
       name: 'Link & kbd',
       widget: 'UiLink · UiKbd',
-      summary: 'UiLink is themed link text, underlined at rest so it never relies on colour alone, in primary, muted or plain tone. The app opens the address in onTap; href is reported to accessibility services, and external adds an arrow and tells screen readers it leaves the app. UiKbd is a key-cap hint sized from the surrounding text.',
+      summary: 'UiLink is themed link text, underlined at rest so it never relies on colour alone, in primary, muted or plain tone. The app opens the address in onTap; href is reported to accessibility services, and external adds an arrow and tells screen readers it leaves the app. With no onTap, a tap hands href to the UiLinkScope above it (0.87.0): give that your router once and links need no handlers. current marks the page that is open (text colour, semibold, a solid underline, announced as selected); left null, the scope\'s isCurrent decides (never for an external link). UiKbd is a key-cap hint sized from the surrounding text.',
       demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
         Wrap(spacing: t.space4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           UiLink('Read the docs', href: 'https://example.com/docs', onTap: () => setState(() => _opened = 'docs')),
           UiLink('Muted', tone: UiLinkTone.muted, onTap: () => setState(() => _opened = 'muted')),
           UiLink('GitHub', external: true, href: 'https://github.com', onTap: () => setState(() => _opened = 'GitHub')),
         ]),
+        // A pretend router: the scope navigates by setting the route, and marks the link of the route shown.
+        UiLinkScope(
+          navigate: (href) => setState(() => _route = href),
+          isCurrent: (href) => href == _route,
+          child: Wrap(spacing: t.space4, children: const [
+            UiLink('Home', href: '/'),
+            UiLink('Media', href: '/media'),
+            UiLink('News', href: '/news'),
+          ]),
+        ),
+        UiText('Route: $_route', variant: UiTextVariant.caption),
         Row(spacing: t.space1, children: const [UiKbd('Ctrl'), UiKbd('Shift'), UiKbd('P'), SizedBox(width: 8), UiText('opens the command palette', variant: UiTextVariant.caption)]),
         UiText(_opened == null ? 'Tap a link.' : 'Would open: $_opened', variant: UiTextVariant.caption),
       ]),
-      code: "UiLink('Docs', href: url, onTap: () => launchUrl(Uri.parse(url)))\nUiLink('GitHub', external: true, onTap: openGitHub)\nUiKbd('Ctrl')",
+      code: "UiLink('Docs', href: url, onTap: () => launchUrl(Uri.parse(url)))\nUiLink('GitHub', external: true, onTap: openGitHub)\n\n// Once, above the pages: links with an href and no onTap go through it.\nUiLinkScope(\n  navigate: (href) => router.go(href),\n  isCurrent: (href) => router.location == href,\n  child: app,\n)\nUiLink('Media', href: '/media')\nUiKbd('Ctrl')",
       api: const [
         ApiRow('UiLink(label)', 'String', 'Link text.'),
-        ApiRow('onTap', 'VoidCallback?', 'Open the address.'),
-        ApiRow('href', 'String?', 'Reported to accessibility services.'),
+        ApiRow('onTap', 'VoidCallback?', 'Open the address. Null: the href goes to UiLinkScope.navigate (nothing happens without a scope).'),
+        ApiRow('href', 'String?', 'Reported to accessibility services; followed through UiLinkScope when there is no onTap.'),
+        ApiRow('current', 'bool?', 'The page that is open: current look, selected semantics. Null asks UiLinkScope.isCurrent(href) (0.87.0).'),
+        ApiRow('UiLinkScope', 'navigate, isCurrent?, child', 'The app\'s router for library links (UiLink, UiButton / UiIconButton with href). maybeOf(context) finds it. Rebuild it when the route changes.'),
         ApiRow('external', 'bool', 'Arrow marker; says it leaves the app.', def: 'false'),
         ApiRow('tone', 'UiLinkTone', 'primary, muted, plain.', def: 'primary'),
         ApiRow('UiKbd(key)', 'String', 'Key text; semanticLabel for symbols.'),

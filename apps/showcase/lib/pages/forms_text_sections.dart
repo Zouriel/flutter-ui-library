@@ -68,6 +68,8 @@ class _FormsTextSectionsState extends State<FormsTextSections> {
   String _otp = '';
   String _title = 'Quarterly roadmap';
   String? _date;
+  String? _dateTime = '2026-12-03T14:30';
+  bool _dateTimeNarrow = false;
   String? _day = '2026-10-21';
   UiDateRange _range = const UiDateRange(start: '2026-10-08', end: '2026-10-15');
 
@@ -502,6 +504,34 @@ UiInput(leading: UiIcon(HugeIcons.strokeRoundedMail01), semanticLabel: 'Email')'
           ApiRow('min / max', 'String?', 'Earliest / latest day that can be picked (ISO).'),
           ApiRow('placeholder', 'String', 'Shown while empty.', def: "'Select a date'"),
           ApiRow('label', 'String?', 'Accessible name without a UiFormField.'),
+          _sizeRow, _invalidRow, _radiusRow, _enabledRow,
+        ],
+      ),
+      DocSection(
+        name: 'Date and time',
+        widget: 'UiDateTimePicker',
+        summary:
+            "A date picker and a time picker side by side for one local date-time (0.87.0). Value type: String 'YYYY-MM-DDTHH:MM' ('HH:MM:SS' when step is under 60), null while there is no date. The date takes the room left beside a 136px time field; in a box narrower than 320px the two stack. Picking a date before any time emits it with defaultTime (09:00 unless you say), and the time field shows it; changing either part emits the two together. A time picked before a date waits for the date. min and max may be date-times or dates: their date part limits the calendar. The two parts are named Date and Time (the strings dateLabel / timeLabel, Dhivehi included) unless dateLabel / timeLabel say otherwise, inside one group.",
+        demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+          UiSwitch(value: _dateTimeNarrow, onChanged: (v) => setState(() => _dateTimeNarrow = v), label: 'In a 280px box'),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SizedBox(
+              width: _dateTimeNarrow ? 280 : 420,
+              child: UiDateTimePicker(value: _dateTime, step: 900, min: uiIsoDate(uiToday()), onChanged: (v) => setState(() => _dateTime = v)),
+            ),
+          ),
+          _caption('Date-time: ${_dateTime ?? 'null'}'),
+          UiButton(label: 'Clear', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => setState(() => _dateTime = null)),
+        ]),
+        code: "UiDateTimePicker(\n  value: startsAt, // '2026-12-03T14:30'\n  step: 900,\n  min: '2026-12-01',\n  defaultTime: '09:00',\n  onChanged: (v) => setState(() => startsAt = v),\n)",
+        api: const [
+          ApiRow('value / onChanged', 'String? / ValueChanged<String?>', "Local 'YYYY-MM-DDTHH:MM' (or HH:MM:SS with step < 60); null without a date."),
+          ApiRow('min / max', 'String?', 'Date-times or dates; their date part limits the calendar.'),
+          ApiRow('step', 'int', 'Time granularity in seconds; under 60 shows seconds.', def: '60'),
+          ApiRow('defaultTime', 'String', 'The time a date gets when it is picked before a time.', def: "'09:00'"),
+          ApiRow('dateLabel / timeLabel', 'String?', "The parts' accessible names; null: the strings dateLabel / timeLabel (Date / Time)."),
+          ApiRow('placeholder', 'String?', "The date field's placeholder.", def: "'Select a date'"),
           _sizeRow, _invalidRow, _radiusRow, _enabledRow,
         ],
       ),

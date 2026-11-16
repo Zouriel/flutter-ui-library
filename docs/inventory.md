@@ -139,7 +139,7 @@ File: `button/src/button-group.ts`
 ### UiButton (component, `ui-button`)
 File: `button/src/button.ts`  
 `ui-button` — the action primitive. Wires `glass`/`radius` to the global UiConfig defaults (overridable per instance) and uses only design tokens.  
-- Inputs: `variant`: UiButtonVariant = 'primary'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `loading` = false; `block` = false; `glass` = false; `radius`: boolean = this.config.radius; `badge` / `badgeTone` / `badgeLabel` (0.44; helper `uiBadgeCount`)
+- Inputs: `variant`: UiButtonVariant = 'primary'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `loading` = false; `block` = false; `glass` = false; `radius`: boolean = this.config.radius; `badge` / `badgeTone` / `badgeLabel` (0.44; helper `uiBadgeCount`); `href` / `target` / `current` (0.87.0; Flutter `href`, `current: bool?`, tap through `UiLinkScope` when `onPressed` is null)
 - [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
 - type `UiButtonVariant` (button.ts)
@@ -160,7 +160,7 @@ File: `button/src/fab.ts`
 ### UiIconButton (component, `ui-icon-button`)
 File: `button/src/icon-button.ts`  
 `ui-icon-button` — square, icon-only action. `label` is REQUIRED and applied as `aria-label` so the control is named for assistive tech (WCAG).  
-- Inputs: `label`: string; `variant`: UiButtonVariant = 'ghost'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `round` = false; `glass` = false; `radius`: boolean = this.config.radius; `badge` / `badgeTone` / `badgeLabel` (0.44)
+- Inputs: `label`: string; `variant`: UiButtonVariant = 'ghost'; `size`: UiSize = 'md'; `type`: 'button' | 'submit' | 'reset' = 'button'; `disabled` = false; `round` = false; `glass` = false; `radius`: boolean = this.config.radius; `badge` / `badgeTone` / `badgeLabel` (0.44); `href` / `target` / `current` (0.87.0; Flutter `href`, `current`)
 - [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
 ### UiSegmented (component, `ui-segmented`)
@@ -413,6 +413,12 @@ File: `datepicker/src/calendar.ts`
 File: `datepicker/src/date-picker.ts`  
 `ui-date-picker` — calendar popover (CVA; value is an ISO `YYYY-MM-DD` string). Backed by the CDK Overlay; closes on outside click / Escape. Keyboard: Enter, Space or ArrowDown on the field opens it with focus on the chosen day (or today). Arrow keys move by day and week (crossing months), PageUp/PageDown by month, Home/End to the month's ends; Enter picks. The month and year grids (opened from the heading) work the same way: one tab stop, Arrow keys move (Up/Down by a row of three), Home/End to the first/last cell, PageUp/PageDown by a year (month grid) or a page of 12 years (year grid), Enter or Space picks; opening a grid focuses the month or year in view. Tab stays inside the popover; Escape closes it and returns to the field.  
 - Inputs: `placeholder` = 'Select a date'; `size`: UiSize = 'md'; `radius`: boolean = this.config.radius; `min`: string | null = null; `max`: string | null = null
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiDateTimePicker (component, `ui-date-time-picker`, 0.87.0)
+File: `datepicker/src/date-time-picker.ts`  
+`ui-date-time-picker` — a date picker and a time picker for one local `YYYY-MM-DDTHH:MM` value; stacks at 320px or less; a date picked first takes `defaultTime`.  
+- Inputs: `size`; `radius`; `min` / `max` (date part limits the calendar); `step` = 60; `invalid`; `placeholder`; `defaultTime` = '09:00'; `dateLabel` / `timeLabel` (strings `dateLabel` / `timeLabel`). Flutter adds `value` / `onChanged` and `enabled`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiDateRangePicker (component, `ui-date-range-picker`)
@@ -1299,7 +1305,18 @@ File: `link/src/kbd.ts`
 ### UiLink (component, `ui-link`)
 File: `link/src/link.ts`  
 `ui-link` — themed anchor. External links get safe rel + a visual marker.  
-- Inputs: `href`: string; `external` = false; `tone`: 'primary' | 'muted' | 'plain' = 'primary'
+- Inputs: `href`: string; `external` = false; `tone`: 'primary' | 'muted' | 'plain' = 'primary'; `current`: boolean | null = null (0.87.0; Flutter `current: bool?`; with no `onTap` a tap goes through `UiLinkScope`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSkipLink (component, `ui-skip-link`, 0.87.0)
+File: `link/src/skip-link.ts`  
+`ui-skip-link` — "Skip to content": hidden until keyboard focus, then a primary pill at the top-start corner; activating focuses the main content and scrolls it into view.  
+- Inputs: `target` = 'main' (Flutter `target: FocusNode`, required); `label`: string | null = null (strings `skipToContent`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiLinkNavigator / provideUiLinkNavigator (core, 0.87.0)
+File: `src/lib/link-navigator.ts`  
+How library links navigate; Flutter `UiLinkScope({navigate, isCurrent?, child})` with `maybeOf(context)` (`lib/src/core/link_scope.dart`). `@zouriel/ui/router` (`provideUiRouterLinks`) is Angular only.  
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 
@@ -1667,8 +1684,8 @@ A tiny round picture and a name for a photo tile's corner or a feed post.
 ### UiTable (component, `ui-table`)
 File: `table/src/table.ts`  
 `ui-table` — accessible data table with click-to-sort headers and optional row selection. Pass `columns` + `data`; listen to `(selectionChange)`. (Virtual scroll / CDK table integration is a planned extension.)  
-- Inputs: `columns`: UiColumn<T>[] = []; `data`: T[] = []; `selectable` = false; `actions`: UiRowAction<T>[] = []; `emptyText` = 'No data'; `radius`: boolean = this.config.radius
-- Outputs: `selectionChange`: T[]
+- Inputs: `columns`: UiColumn<T>[] = []; `data`: T[] = []; `selectable` = false; `actions`: UiRowAction<T>[] = []; `emptyText` = 'No data'; `radius`: boolean = this.config.radius; `activatable` = false, `rowLabel` (0.87.0; Flutter `onRowActivate` makes rows activatable, `rowLabel: String Function(T)?`)
+- Outputs: `selectionChange`: T[]; `rowActivate`: T (0.87.0, Flutter `onRowActivate`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiColumn` (table.ts)

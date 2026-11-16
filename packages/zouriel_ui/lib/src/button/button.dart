@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
+import '../core/link_scope.dart';
 import '../core/types.dart';
 import '../feedback/spinner.dart';
 import '../theme/glass_rim.dart';
@@ -197,6 +198,14 @@ Widget _withBadge(Widget box, String? badge, UiBadgeTone tone) => badge == null
 /// The accessible name with the badge read after it ("Chat, 2 unread").
 String? _badgedName(String? name, String? badge, String? badgeLabel) => badge == null ? name : (name == null ? badgeLabel ?? badge : '$name, ${badgeLabel ?? badge}');
 
+/// What a button with an [href] does (0.87.0): [onPressed] wins; else the href goes to the
+/// [UiLinkScope] (a no-op without one). [current] null asks the scope.
+({VoidCallback? onTap, bool current}) _linkOf(BuildContext context, String? href, VoidCallback? onPressed, bool? current) {
+  if (href == null) return (onTap: onPressed, current: current ?? false);
+  final scope = UiLinkScope.maybeOf(context);
+  return (onTap: onPressed ?? () => scope?.navigate(href), current: current ?? (scope?.current(href) ?? false));
+}
+
 /// `ui-button`: the action primitive.
 ///
 /// Pass a [label] (or any [child]) and optional [icon] / [trailingIcon]. While [loading] it shows a
@@ -204,6 +213,12 @@ String? _badgedName(String? name, String? badge, String? badgeLabel) => badge ==
 ///
 /// [badge] (0.44.0) shows a count bubble at the top-end corner ([uiBadgeCount] gives "9+") in
 /// [badgeTone], read after the name: [badgeLabel] when given ("2 unread"), else the badge text.
+///
+/// [href] (0.87.0, the web `<a class="ui-btn">`) makes it a link: announced as one with that address,
+/// and with no [onPressed] a tap hands the href to the [UiLinkScope] above it (nothing happens
+/// without one). [current] marks the page that is open: selected semantics, and on ghost and outline
+/// buttons the selected background with primary text (link buttons: the text colour, a heavier
+/// underline), semibold; null asks [UiLinkScope.isCurrent].
 class UiButton extends StatelessWidget {
   const UiButton({
     super.key,
@@ -228,7 +243,15 @@ class UiButton extends StatelessWidget {
     this.badgeTone = UiBadgeTone.danger,
     this.badgeLabel,
     this.tier,
+    this.href,
+    this.current,
   }) : assert(label != null || child != null || (icon != null && semanticLabel != null), 'Give the button a label, a child, or an icon and a semanticLabel.');
+
+  /// Where the button leads (0.87.0): a link to it, followed through [UiLinkScope] when [onPressed] is null.
+  final String? href;
+
+  /// The page that is open (0.87.0); null asks [UiLinkScope.isCurrent] about [href].
+  final bool? current;
 
   /// A plan tier's metal (the web `tier`): the tier's sheen, contrast label and edge, its own focus
   /// ring, and for platinum a soft light sweep on hover. Wins over [variant].
@@ -283,10 +306,17 @@ class UiButton extends StatelessWidget {
     final padX = switch (size) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6, UiSize.xl => t.space8 };
     final r = !rounded ? 0.0 : isBrand ? t.radiusPill : size == UiSize.xl ? t.radiusLg : t.radius;
     final shape = UiButtonJoin.shape(context, r);
+    final link = _linkOf(context, href, onPressed, current);
+    // The page that is open, on a button that sits on the page: the look of a selected item.
+    final selectedLook = link.current && metal == null && _neutral(variant);
 
     return UiInteractive(
-      onTap: loading ? null : onPressed,
-      enabled: onPressed != null && !loading,
+      onTap: loading ? null : link.onTap,
+      enabled: link.onTap != null && !loading,
+      button: href == null,
+      link: href != null,
+      linkUrl: href == null ? null : Uri.tryParse(href!),
+      selected: link.current ? true : null,
       focusNode: focusNode,
       autofocus: autofocus,
       semanticLabel: _badgedName(semanticLabel ?? (loading ? '${label ?? ''} (busy)'.trim() : (badge != null ? label : null)), badge, badgeLabel),
@@ -294,15 +324,22 @@ class UiButton extends StatelessWidget {
       // With a badge the name is built here, so the label isn't read twice.
       excludeChildSemantics: badge != null && (semanticLabel != null || label != null || loading),
       builder: (context, s) {
-        final look = metal != null ? _tierLook(metal, t, s) : _look(variant, t, s);
+        final look = metal != null
+            ? _tierLook(metal, t, s)
+            : selectedLook
+                ? _Look(fill: t.selected, fg: t.primary, border: variant == UiButtonVariant.outline ? t.border : null)
+                : isLink && link.current
+                    ? _Look(fg: t.text)
+                    : _look(variant, t, s);
         final style = theme.typography.body.copyWith(
           fontSize: fontSize,
-          fontWeight: isBrand || metal != null || size == UiSize.xl ? FontWeight.w600 : FontWeight.w500,
+          fontWeight: isBrand || metal != null || size == UiSize.xl || link.current ? FontWeight.w600 : FontWeight.w500,
           letterSpacing: t.trackingTight * fontSize,
           height: 1.2,
           color: look.fg,
           decoration: isLink ? TextDecoration.underline : TextDecoration.none,
           decorationColor: look.fg,
+          decorationThickness: isLink && link.current ? 2 : null,
         );
         final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 22.0 };
         final content = <Widget>[
@@ -383,7 +420,9 @@ class UiButton extends StatelessWidget {
 
 /// `ui-icon-button`: a square, icon-only action. [label] is required: it is the accessible name
 /// (and the tooltip on platforms with hover). [badge] (0.44.0) as on [UiButton]: a count bubble at
-/// the top-end corner, read after the label ("Chat, 2 unread").
+/// the top-end corner, read after the label ("Chat, 2 unread"). [href] (0.87.0) as on [UiButton]: a
+/// link, followed through [UiLinkScope] when [onPressed] is null; [current] marks the page that is
+/// open (selected semantics; ghost, outline and link: the selected background).
 class UiIconButton extends StatelessWidget {
   const UiIconButton({
     super.key,
@@ -400,6 +439,8 @@ class UiIconButton extends StatelessWidget {
     this.badge,
     this.badgeTone = UiBadgeTone.danger,
     this.badgeLabel,
+    this.href,
+    this.current,
   });
 
   /// A count bubble at the top-end corner (0.44.0); null for none.
@@ -408,6 +449,12 @@ class UiIconButton extends StatelessWidget {
 
   /// What screen readers hear for the badge ("2 unread"); null: the badge text.
   final String? badgeLabel;
+
+  /// Where the button leads (0.87.0): a link to it, followed through [UiLinkScope] when [onPressed] is null.
+  final String? href;
+
+  /// The page that is open (0.87.0); null asks [UiLinkScope.isCurrent] about [href].
+  final bool? current;
 
   final Widget icon;
 
@@ -431,16 +478,23 @@ class UiIconButton extends StatelessWidget {
     final r = round ? t.radiusPill : rounded ? t.radius : 0.0;
     final shape = UiButtonJoin.shape(context, r);
     final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 24.0 };
+    final link = _linkOf(context, href, onPressed, current);
+    final onTap = link.onTap;
     return UiInteractive(
-      onTap: onPressed,
-      enabled: onPressed != null,
+      onTap: onTap,
+      enabled: onTap != null,
+      selected: link.current ? true : null,
+      button: href == null,
+      link: href != null,
+      linkUrl: href == null ? null : Uri.tryParse(href!),
       focusNode: focusNode,
       semanticLabel: _badgedName(label, badge, badgeLabel),
       excludeChildSemantics: true,
       builder: (context, s) {
         // Link has no fill of its own as an icon button; it behaves like ghost.
         final v = variant == UiButtonVariant.link ? UiButtonVariant.ghost : variant;
-        final look = _look(v, t, s);
+        final selectedLook = link.current && _neutral(v);
+        final look = selectedLook ? _Look(fill: t.selected, fg: t.primary) : _look(v, t, s);
         final transparentBorder = v == UiButtonVariant.ghost || look.fill != null && v != UiButtonVariant.outline;
         return _withBadge(AnimatedOpacity(
           opacity: s.disabled ? 0.5 : 1,

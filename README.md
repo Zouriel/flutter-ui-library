@@ -95,6 +95,12 @@ shown as `UiStrings.workflowUnavailable` with a closed "Technical details" toggl
 path under the questions and in the summary (unmatched ones listed first, reported by `onServerErrorsUnmatched`); the engine
 has `prefill`, `setServerErrors` and `serverUnmatched`.
 
+**Links, current page, skip link, date and time (0.87.0):** wrap the app in `UiLinkScope(navigate: router.go, isCurrent: ...)`
+and `UiLink`, `UiButton(href:)` and `UiIconButton(href:)` navigate through it with no handlers, announced as links; `current`
+(or the scope's `isCurrent`) marks the page that is open. `UiTable(onRowActivate:, rowLabel:)` opens a row on a tap anywhere
+on it or Enter/Space. `UiSkipLink(target: mainFocusNode)` is the keyboard's "Skip to content". `UiDateTimePicker` edits one
+local `YYYY-MM-DDTHH:MM` value with a date and a time picker.
+
 **Sidebar account button (0.86.0):** `UiSidebarAccount` is the signed-in person for
 `UiSidebarLayout.sidebarFooter`: avatar (photo or initials), `name`, `subtitle` (job title · section), an optional
 `badge` + `badgeTone` (Read-only) and `hint` (Switch test account), and an unfold chevron (`showChevron`). One
