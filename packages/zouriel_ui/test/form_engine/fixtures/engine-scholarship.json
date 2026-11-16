@@ -86,7 +86,7 @@
                 }
               ]
             },
-            "data": {
+            "values": {
               "full_name": null,
               "preferred_name": null,
               "email": null,
@@ -302,7 +302,7 @@
                 }
               ]
             },
-            "dataPath": {
+            "valuePath": {
               "f_dep_other@0": "dependants[0].relationship_other"
             }
           }
@@ -336,7 +336,7 @@
                 }
               ]
             },
-            "dataPath": {
+            "valuePath": {
               "f_dep_name@1": "dependants[1].name"
             }
           }
@@ -513,7 +513,7 @@
         },
         {
           "expect": {
-            "data": {
+            "values": {
               "full_name": "Aminath Shareef",
               "preferred_name": null,
               "email": "aminath@example.mv",
@@ -562,7 +562,7 @@
     {
       "name": "editing saved answers: everything loads, nothing is lost, changes are listed",
       "today": "2026-10-13",
-      "dataFile": "scholarship.answers.json",
+      "valuesFile": "scholarship.answers.json",
       "steps": [
         {
           "expect": {
@@ -603,7 +603,7 @@
               "f_pref": "",
               "f_phone": "+960 777 4021"
             },
-            "data": {
+            "values": {
               "full_name": "Aminath Shareef",
               "email": "aminath.shareef@example.mv",
               "phone": "+960 777 4021",
@@ -694,7 +694,7 @@
           "expect": {
             "changes": [],
             "dirty": false,
-            "data": {
+            "values": {
               "full_name": "Aminath Shareef",
               "email": "aminath.shareef@example.mv",
               "phone": "+960 777 4021",
@@ -793,11 +793,11 @@
         },
         {
           "expect": {
-            "dataLacks": [
+            "valuesLacks": [
               "dependants",
               "income"
             ],
-            "dataHas": {
+            "valuesHas": {
               "has_dependants": false,
               "submitted_from": "kiosk-3"
             }
@@ -808,7 +808,7 @@
     {
       "name": "an answer hidden since it was saved is kept until the person sees it",
       "today": "2026-10-13",
-      "data": {
+      "values": {
         "full_name": "Aminath Shareef",
         "email": "aminath.shareef@example.mv",
         "phone": "+960 777 4021",
@@ -860,7 +860,7 @@
             "visible": {
               "f_inst": false
             },
-            "dataHas": {
+            "valuesHas": {
               "institution": "Old University",
               "student_record": {
                 "value": "S240117",
@@ -879,7 +879,7 @@
             "visible": {
               "f_inst": true
             },
-            "dataHas": {
+            "valuesHas": {
               "institution": "Old University"
             }
           }
@@ -890,7 +890,7 @@
         },
         {
           "expect": {
-            "dataLacks": [
+            "valuesLacks": [
               "institution",
               "student_record"
             ],
@@ -919,7 +919,7 @@
       "name": "view mode shows saved answers and never validates or changes",
       "today": "2026-10-13",
       "mode": "view",
-      "dataFile": "scholarship.answers.json",
+      "valuesFile": "scholarship.answers.json",
       "steps": [
         {
           "set": "f_name",
@@ -944,7 +944,7 @@
             "canAddRow": {
               "g_deps": false
             },
-            "data": {
+            "values": {
               "full_name": "Aminath Shareef",
               "email": "aminath.shareef@example.mv",
               "phone": "+960 777 4021",

@@ -86,7 +86,7 @@
                   "args": []
                 },
                 "props": {
-                  "excludeFromData": true
+                  "excludeFromValues": true
                 }
               },
               {
@@ -262,7 +262,7 @@
                   "args": []
                 },
                 "props": {
-                  "excludeFromData": true
+                  "excludeFromValues": true
                 }
               },
               {

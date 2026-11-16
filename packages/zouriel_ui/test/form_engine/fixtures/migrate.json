@@ -333,6 +333,103 @@
           }
         ]
       }
+    },
+    {
+      "name": "props.excludeFromData becomes excludeFromValues, in groups too",
+      "raw": {
+        "schemaVersion": 2,
+        "id": "a",
+        "title": "T",
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ],
+        "settings": {},
+        "pages": [
+          {
+            "id": "p",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "f1",
+                "type": "calculated",
+                "key": "total",
+                "label": "Total",
+                "props": {
+                  "excludeFromData": true,
+                  "decimals": 2
+                }
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "kids",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "type": "calculated",
+                    "key": "x",
+                    "label": "X",
+                    "props": {
+                      "excludeFromData": false
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "schemaVersion": 2,
+        "id": "a",
+        "title": "T",
+        "defaultLocale": "en",
+        "supportedLocales": [
+          {
+            "code": "en"
+          }
+        ],
+        "settings": {},
+        "pages": [
+          {
+            "id": "p",
+            "elements": [
+              {
+                "kind": "field",
+                "id": "f1",
+                "type": "calculated",
+                "key": "total",
+                "label": "Total",
+                "props": {
+                  "decimals": 2,
+                  "excludeFromValues": true
+                }
+              },
+              {
+                "kind": "group",
+                "id": "g",
+                "key": "kids",
+                "elements": [
+                  {
+                    "kind": "field",
+                    "id": "f2",
+                    "type": "calculated",
+                    "key": "x",
+                    "label": "X",
+                    "props": {
+                      "excludeFromValues": false
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

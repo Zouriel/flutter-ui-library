@@ -75,7 +75,7 @@ class _UiFbPreviewState extends State<UiFbPreview> {
       key: ValueKey(_run),
       definition: store.def,
       locale: locale,
-      data: _mode == UiFormMode.create ? null : (parsed.ok ?? const {}),
+      values: _mode == UiFormMode.create ? null : (parsed.ok ?? const {}),
       mode: _mode,
       validators: [for (final v in store.validatorDefs) if (!builtIn.contains(v.type)) v],
       optionSources: store.optionSourceDefs,

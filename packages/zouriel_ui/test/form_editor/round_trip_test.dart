@@ -89,7 +89,7 @@ void main() {
     final row = engine.rows(kids.id).first;
     engine.setValue(age.id, row, 7);
     expect(engine.instanceState(total.id, null).value, 7);
-    final data = engine.data;
+    final data = engine.values;
     expect(data['already_a_member'], true);
     expect(data['membership_number'], 'M-100');
     expect(data['children'], [

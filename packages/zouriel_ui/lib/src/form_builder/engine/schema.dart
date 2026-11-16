@@ -595,7 +595,7 @@ class UiFbFieldProps {
     this.autocomplete,
     this.caption,
     this.format,
-    this.excludeFromData,
+    this.excludeFromValues,
     UiJson? extra,
   }) : extra = extra ?? {};
 
@@ -620,14 +620,14 @@ class UiFbFieldProps {
       autocomplete: _str(j['autocomplete']),
       caption: _text(j['caption']),
       format: _str(j['format']),
-      excludeFromData: _bool(j['excludeFromData']),
+      excludeFromValues: _bool(j['excludeFromValues']),
       extra: _extra(j, _keys),
     );
   }
 
   static const _keys = {
     'min', 'max', 'step', 'decimals', 'currency', 'prefix', 'suffix', 'rows', 'maxRows', 'maxRating', 'orientation', //
-    'selectAll', 'multiple', 'accept', 'autocomplete', 'caption', 'format', 'excludeFromData',
+    'selectAll', 'multiple', 'accept', 'autocomplete', 'caption', 'format', 'excludeFromValues',
   };
 
   num? min;
@@ -655,7 +655,7 @@ class UiFbFieldProps {
   String? format;
 
   /// For calculated fields: leave the result out of the submitted data.
-  bool? excludeFromData;
+  bool? excludeFromValues;
   final UiJson extra;
 
   UiJson toJson() {
@@ -677,7 +677,7 @@ class UiFbFieldProps {
     _put(out, 'autocomplete', autocomplete);
     _put(out, 'caption', caption?.toJson());
     _put(out, 'format', format);
-    _put(out, 'excludeFromData', excludeFromData);
+    _put(out, 'excludeFromValues', excludeFromValues);
     return _withExtra(out, extra);
   }
 }

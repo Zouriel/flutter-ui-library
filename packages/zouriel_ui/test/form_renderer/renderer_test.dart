@@ -164,13 +164,13 @@ void main() {
       await typeInto(tester, 'NAME', 'Ali', at: 0);
       await typeInto(tester, 'NAME', 'Zara', at: 1);
       await tapIn(tester, find.bySemanticsLabel('Move Child 2 up'));
-      expect(engineOf(key).data['kids'], [{'name': 'Zara'}, {'name': 'Ali'}]);
+      expect(engineOf(key).values['kids'], [{'name': 'Zara'}, {'name': 'Ali'}]);
       await tapIn(tester, find.bySemanticsLabel('Remove Child 2'));
       expect(entries(), ['Child 1']);
       expect(find.text('Child 2 removed.'), findsOneWidget);
       await pressButton(tester, 'Undo');
       expect(entries(), ['Child 1', 'Child 2']);
-      expect(engineOf(key).data['kids'], [{'name': 'Zara'}, {'name': 'Ali'}]);
+      expect(engineOf(key).values['kids'], [{'name': 'Zara'}, {'name': 'Ali'}]);
       // The undo offer goes away on its own.
       await tapIn(tester, find.bySemanticsLabel('Remove Child 1'));
       await tester.pump(const Duration(seconds: 13));
@@ -229,11 +229,11 @@ void main() {
       await tapIn(tester, find.text('Apple').at(1)); // checkboxes
       await tapIn(tester, find.descendant(of: fieldView('TOGGLE'), matching: find.byType(UiSwitch)));
       final e = engineOf(key);
-      expect(e.data['radio'], 'b');
-      expect(e.data['checkboxes'], ['a']);
-      expect(e.data['toggle'], true);
-      expect(e.data['hidden'], 'kept');
-      expect(e.data['number'], 40);
+      expect(e.values['radio'], 'b');
+      expect(e.values['checkboxes'], ['a']);
+      expect(e.values['toggle'], true);
+      expect(e.values['hidden'], 'kept');
+      expect(e.values['number'], 40);
     });
   });
 
@@ -256,7 +256,7 @@ void main() {
 
     testWidgets('saves the picked value with its label, and clears a dependent answer when what it depends on changes', (tester) async {
       final got = <UiFormSubmission>[];
-      final key = await pumpForm(tester, definition: def, data: {'country': 'mv'}, sources: [cities], onSubmitted: got.add);
+      final key = await pumpForm(tester, definition: def, values: {'country': 'mv'}, sources: [cities], onSubmitted: got.add);
       await tapIn(tester, find.descendant(of: fieldView('City'), matching: find.byType(EditableText)));
       final rows = find.descendant(of: find.byType(ListView), matching: find.byType(Text));
       expect([for (final e in rows.evaluate()) (e.widget as Text).data], ['Malé', 'Addu']);
@@ -266,11 +266,11 @@ void main() {
       expect(got.single.values['city'], {'value': 'mle', 'label': 'Malé'});
       engineOf(key).setValue('country', null, 'uk');
       await tester.pumpAndSettle();
-      expect(engineOf(key).data['city'], isNull);
+      expect(engineOf(key).values['city'], isNull);
     });
 
     testWidgets('a list the app does not provide says so and keeps the saved answer readable', (tester) async {
-      await pumpForm(tester, definition: def, data: {'country': 'mv', 'city': {'value': 'mle', 'label': 'Malé'}});
+      await pumpForm(tester, definition: def, values: {'country': 'mv', 'city': {'value': 'mle', 'label': 'Malé'}});
       expect(find.text('This list isn’t available right now. Saved answer: Malé.'), findsOneWidget);
     });
   });
@@ -279,7 +279,7 @@ void main() {
     testWidgets('edit mode: Save changes, a change list with old and new values', (tester) async {
       final dirty = <bool>[];
       final key = GlobalKey<UiFormRendererState>();
-      await pumpForm(tester, definition: fixture('scholarship.definition.json')!, data: fixtureMap('scholarship.answers.json'), sources: sources);
+      await pumpForm(tester, definition: fixture('scholarship.definition.json')!, values: fixtureMap('scholarship.answers.json'), sources: sources);
       expect(find.text('No changes'), findsOneWidget);
       expect(key.currentState, isNull);
       await tapIn(tester, find.text('Full time'));
@@ -309,7 +309,7 @@ void main() {
         home: SingleChildScrollView(
           child: UiFormRenderer(
             definition: form([f('a', 'text')]),
-            data: const {'a': 'x'},
+            values: const {'a': 'x'},
             onValueChanged: values.add,
             onDirtyChanged: dirty.add,
           ),
@@ -325,7 +325,7 @@ void main() {
       await pumpForm(
         tester,
         definition: form([f('c', 'select', {'options': [{'id': 'o1', 'value': 'mv', 'label': 'Maldives'}]}), f('n', 'text')]),
-        data: {'c': 'mv', 'n': ''},
+        values: {'c': 'mv', 'n': ''},
         mode: UiFormMode.view,
       );
       expect(find.text('Maldives'), findsOneWidget);
@@ -342,7 +342,7 @@ void main() {
           {'id': 'p2', 'title': 'Skipped', 'visibility': {'action': 'show', 'when': {'ref': 'a', 'op': 'eq', 'value': {'const': 'yes'}}}, 'elements': [f('b', 'text')]},
           {'id': 'p3', 'title': 'Last', 'elements': [f('c', 'text')]},
         ],
-      }, data: {'a': 'no', 'c': 'done'}, mode: UiFormMode.view);
+      }, values: {'a': 'no', 'c': 'done'}, mode: UiFormMode.view);
       expect(find.text('First'), findsOneWidget);
       expect(find.text('Last'), findsOneWidget);
       expect(find.text('Skipped'), findsNothing);

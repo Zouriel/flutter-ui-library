@@ -50,11 +50,11 @@ String wfRemarksCounter(String? text) {
 /// The answers of a filled form, read from its submission (which, unlike value changes, also holds
 /// answers nobody touched: defaults and prefilled values). With an error when they can't be sent:
 /// picked files need an upload address on the form, as the engine takes JSON only.
-({UiJson? data, String? error}) wfFormAnswers(UiFormSubmission s) {
+({UiJson? values, String? error}) wfFormAnswers(UiFormSubmission s) {
   if (s.files.values.any((f) => f.isNotEmpty)) {
-    return (data: null, error: 'The files picked in this form can’t be sent: the form needs an upload address for them.');
+    return (values: null, error: 'The files picked in this form can’t be sent: the form needs an upload address for them.');
   }
-  return (data: s.values, error: null);
+  return (values: s.values, error: null);
 }
 
 /// A skipped step's result as its registry type wants it (a number as a number, yes/no as a
@@ -231,7 +231,7 @@ Future<UiWfTask?> showWfDecideDialog(BuildContext context, {required UiWfTask ta
         st.set(() => st.error = a.error!);
         return;
       }
-      data = a.data!;
+      data = a.values!;
     }
     if (wfCommentRequired(task, outcome) && st.comment.trim().isEmpty) {
       st.set(() {
@@ -655,7 +655,7 @@ class _WfRecordActionsState extends State<WfRecordActions> {
           d.set(() => d.error = a.error!);
           return;
         }
-        d.input = a.data!;
+        d.input = a.values!;
       }
       if (p.remarks == UiWfRemarks.required && d.remark.trim().isEmpty) {
         d.set(() {

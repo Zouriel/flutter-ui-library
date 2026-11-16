@@ -1,6 +1,8 @@
 // Multilingual forms (English + Dhivehi, right to left): the Dart port of the web `localize.spec.ts`.
 // The shared JSON fixtures (localize, migrate, submission-fields, engine-locale) run in
 // shared_fixtures_test.dart; these cover what they can't say: widgets and the helper edge cases.
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -90,6 +92,36 @@ void main() {
       expect([for (final l in d.supportedLocales!) l.toJson()], [{'code': 'dv'}, {'code': 'en'}]);
     });
 
+    test('upgrades props.excludeFromData to excludeFromValues, nested groups included, idempotently', () {
+      Map<String, Object?> calc(String id, Object? props) => {'id': id, 'kind': 'field', 'type': 'calculated', 'key': id, 'props': props};
+      final raw = {
+        'id': 'f',
+        'title': 'T',
+        'pages': [
+          {
+            'id': 'p',
+            'elements': [
+              calc('a', {'excludeFromData': true}),
+              {
+                'id': 'g',
+                'kind': 'group',
+                'key': 'g',
+                'elements': [calc('b', {'excludeFromData': false, 'caption': 'x'}), calc('c', {'excludeFromValues': true})],
+              },
+            ],
+          },
+        ],
+      };
+      final once = migrateDefinition(raw).toJson();
+      expect(jsonEncode(once), isNot(contains('excludeFromData')));
+      final els = ((once['pages'] as List)[0] as Map)['elements'] as List;
+      expect(((els[0] as Map)['props'] as Map)['excludeFromValues'], true);
+      final inner = (els[1] as Map)['elements'] as List;
+      expect(((inner[0] as Map)['props'] as Map), {'excludeFromValues': false, 'caption': 'x'});
+      expect(((inner[1] as Map)['props'] as Map)['excludeFromValues'], true);
+      expectJson(migrateDefinition(once).toJson(), once, 'twice');
+    });
+
     test('new forms start with English', () {
       final d = createDefinition();
       expect(d.schemaVersion, 2);
@@ -126,7 +158,7 @@ void main() {
       expect(heard, before + 1);
       e.setLocale('dv');
       expect(heard, before + 1, reason: 'no change, no notification');
-      expect(e.data['name'], 'Aisha');
+      expect(e.values['name'], 'Aisha');
       expect(e.instanceState('name', null).errors, isEmpty);
       e.dispose();
     });
@@ -235,7 +267,7 @@ void main() {
       expect(find.text('ފޯމް'), findsOneWidget);
       expect(find.text('ފޮނުވާ'), findsOneWidget);
       expect(find.text('ކާޑުގައިވާ ގޮތަށް'), findsOneWidget);
-      expect(host.key.currentState!.engine.data['name'], 'Aisha');
+      expect(host.key.currentState!.engine.values['name'], 'Aisha');
       expect(tester.widget<EditableText>(find.byType(EditableText).first).controller.text, 'Aisha');
 
       host.locale.value = null;
@@ -243,7 +275,7 @@ void main() {
       expect(dirOf(tester).textDirection, TextDirection.ltr);
       expect(find.textContaining('Full name'), findsWidgets);
       expect(find.text('Send'), findsOneWidget);
-      expect(host.key.currentState!.engine.data['name'], 'Aisha');
+      expect(host.key.currentState!.engine.values['name'], 'Aisha');
     });
 
     testWidgets('lays out right to left: the first control sits at the right edge', (tester) async {

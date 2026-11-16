@@ -99,7 +99,7 @@ void main() {
       expect(n, 2);
     });
 
-    test('picked files are kept for the submission under their data path', () {
+    test('picked files are kept for the submission under their value path', () {
       final e = UiFormEngine(
         definition: form([
           UiFbGroup(id: 'g', key: 'docs', repeat: UiFbRepeat(min: 1), elements: [f('file', UiFbFieldType.file)]),

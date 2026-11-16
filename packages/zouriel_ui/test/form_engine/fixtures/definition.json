@@ -1628,7 +1628,7 @@
                   "autocomplete": "bday",
                   "caption": "c",
                   "format": "text",
-                  "excludeFromData": true,
+                  "excludeFromValues": true,
                   "mask": "9999"
                 },
                 "validators": [

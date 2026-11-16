@@ -45,7 +45,7 @@ class UiFormRenderer extends StatefulWidget {
   const UiFormRenderer({
     super.key,
     required this.definition,
-    this.data,
+    this.values,
     this.mode,
     this.validators = const [],
     this.optionSources = const [],
@@ -72,7 +72,7 @@ class UiFormRenderer extends StatefulWidget {
   final Object definition;
 
   /// Saved answers to edit or view. Unknown keys and answers hidden at the time are kept.
-  final UiJson? data;
+  final UiJson? values;
 
   /// Defaults to [UiFormMode.edit] when [data] is given, otherwise [UiFormMode.create].
   final UiFormMode? mode;
@@ -147,7 +147,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
   String _announce = '';
   ({UiFbRemovedRow row, String label})? _removed;
   Timer? _removedTimer;
-  UiJson? _lastData;
+  UiJson? _lastValues;
   bool? _lastDirty;
   UiFbStringOverrides? _scopeStrings;
 
@@ -179,7 +179,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final old = oldWidget;
     final w = widget;
     if (!identical(old.definition, w.definition) ||
-        !identical(old.data, w.data) ||
+        !identical(old.values, w.values) ||
         old.mode != w.mode ||
         old.today != w.today ||
         old.globalSettings != w.globalSettings ||
@@ -211,7 +211,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final w = widget;
     _engine = UiFormEngine.fromJson(
       w.definition is UiFormDefinition ? (w.definition as UiFormDefinition).toJson() : w.definition,
-      data: w.data,
+      values: w.values,
       mode: w.mode,
       validators: w.validators,
       optionSources: [...sourcesFromSettings(w.globalSettings, w.httpSources), ...w.optionSources],
@@ -221,7 +221,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
       link: w.link,
     );
     _engine.addListener(_onEngine);
-    _lastData = _engine.data;
+    _lastValues = _engine.values;
     _lastDirty = _engine.dirty;
     _removed = null;
     _removedTimer?.cancel();
@@ -230,9 +230,9 @@ class UiFormRendererState extends State<UiFormRenderer> {
   void _onEngine() {
     if (!mounted) return;
     setState(() {});
-    final data = _engine.data;
-    if (!jsonEquals(data, _lastData)) {
-      _lastData = data;
+    final data = _engine.values;
+    if (!jsonEquals(data, _lastValues)) {
+      _lastValues = data;
       widget.onValueChanged?.call(data);
     }
     final dirty = _engine.dirty;
@@ -371,7 +371,7 @@ class UiFormRendererState extends State<UiFormRenderer> {
     final plain = c.path.replaceAll(RegExp(r'\[\d+\]'), '');
     UiFbField? field;
     for (final x in _engine.index.values) {
-      if (x.kind == 'field' && _engine.dataPath(x.id, null) == plain) {
+      if (x.kind == 'field' && _engine.valuePath(x.id, null) == plain) {
         field = x.asField;
         break;
       }

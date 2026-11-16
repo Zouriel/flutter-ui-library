@@ -30,7 +30,7 @@ disagree, fix the Dart port, never the fixture.
 | `http-sources.json` | Request URLs, reading replies (and their error messages), label patterns, the origin allow-list, global settings |
 
 Runner format (both sides implement it): an engine case has `definition`/`definitionFile`,
-optional `data`/`dataFile`, `mode` and `today`, then `steps`. A step either acts (`set`, `touch`,
+optional `data`/`dataFile` (the saved answers; `expect` blocks use `values`), `mode` and `today`, then `steps`. A step either acts (`set`, `touch`,
 `addRow`, `removeRow`, `moveRow`, `next`, `back`, `goTo`, `submit`) or checks (`expect`). Field
 instances are written `id` or `id@N` (the N-th entry of the field's repeatable group). The web runner
 calls `TestBed.tick()` after every step, which is the state the Dart engine is always in (see
@@ -131,8 +131,8 @@ Differences: `createDefinition({title, defaults})` and `createField(type, {def, 
 ```dart
 final engine = UiFormEngine.fromJson(
   storedDefinitionJson,          // migrated to the current schema
-  data: savedAnswers,            // omit for a new form (mode create)
-  mode: UiFormMode.edit,         // create | edit | view (default: edit with data, else create)
+  values: savedAnswers,            // omit for a new form (mode create)
+  mode: UiFormMode.edit,         // create | edit | view (default: edit with values, else create)
   validators: [studentIdExists], // app checks; built-ins are always on
   optionSources: [students],
 );
@@ -144,12 +144,12 @@ final submission = engine.submit();   // null (and moved to the first page with 
 
 | Angular (signals) | Dart |
 | --- | --- |
-| `new UiFormEngine({ definition, data, mode, validators, optionSources, today, injector })` | `UiFormEngine(definition:, data:, mode:, validators:, optionSources:, today:, now:)` or `UiFormEngine.fromJson(json, ...)`. No injector; `now` stamps `submittedAt` |
+| `new UiFormEngine({ definition, values, mode, validators, optionSources, today, injector })` | `UiFormEngine(definition:, values:, mode:, validators:, optionSources:, today:, now:)` or `UiFormEngine.fromJson(json, ...)`. No injector; `now` stamps `submittedAt` |
 | `path()`, `page()`, `step()`, `isLastPage()`, `pageIndex()` / `.set()` | getters `path`, `page`, `step`, `isLastPage`, `pageIndex` (settable) |
-| `data()`, `dirty()`, `changes()` | getters `data`, `dirty`, `changes` |
+| `values()`, `dirty()`, `changes()` | getters `values`, `dirty`, `changes` |
 | `touched()`, `attempted()` | read-only `touched`, `attempted` sets |
 | `settings` | `settings` (`UiFbEngineSettings`) |
-| `instanceState`, `rows`, `rawValue`, `answerFor`, `field`, `optionSource`, `errorsShown`, `instancesOn`, `pageErrors`, `pagePending`, `instanceLabel`, `dataPath` | same |
+| `instanceState`, `rows`, `rawValue`, `answerFor`, `field`, `optionSource`, `errorsShown`, `instancesOn`, `pageErrors`, `pagePending`, `instanceLabel`, `valuePath` | same |
 | `setValue`, `markTouched`, `canAddRow`, `canRemoveRow`, `addRow`, `removeRow`, `restoreRow`, `moveRow`, `next`, `back`, `goTo`, `submit`, `setFiles` | same (`setFiles(id, row, picked, {uploaded})`) |
 | `files: Map<string, File[]>` | `files: Map<String, List<UiFbPickedFile>>` |
 | `destroy()` | `dispose()` |
@@ -195,10 +195,10 @@ Known, deliberate gaps (not reachable from forms the builder makes):
 | Angular | Flutter |
 | --- | --- |
 | `[definition]` | `definition:` a `UiFormDefinition` or its JSON map |
-| `[data]`, `[mode]`, `[validators]`, `[optionSources]`, `[globalSettings]`, `[today]` | same names; `httpSources:` replaces `provideUiFormHttpSources` |
+| `[data]`, `[mode]`, `[validators]`, `[optionSources]`, `[globalSettings]`, `[today]` | `values:` (web `[values]` since 0.84.2; it was `[data]`), then the same names; `httpSources:` replaces `provideUiFormHttpSources` |
 | `[uploader]` `(file, field) => Promise` | `uploader:` `(UiPickedFile, UiFbField) => Future<UiFbFileValue>` |
 | the browser's file dialog | `filePicker:` a `UiFilePicker` from the app (file_picker / file_selector) |
-| `(submitted)`, `(cancelled)`, `(valueChange)`, `(dirtyChange)` | `onSubmitted`, `onCancelled`, `onValueChanged` (only when the data actually changes), `onDirtyChanged` |
+| `(submitted)`, `(cancelled)`, `(valueChange)`, `(dirtyChange)` | `onSubmitted`, `onCancelled`, `onValueChanged` (only when the values actually changes), `onDirtyChanged` |
 | `submit()`, `reset()`, `engine()` | `GlobalKey<UiFormRendererState>`: `submit()`, `reset()`, `engine` |
 
 Same JSON: `test/form_renderer/e2e_test.dart` fills the sample form in through the widgets and

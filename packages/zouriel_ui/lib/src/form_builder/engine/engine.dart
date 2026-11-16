@@ -207,7 +207,7 @@ class _Ctx implements UiFbConditionContext, UiFbCalcContext {
 class UiFormEngine {
   UiFormEngine({
     required UiFormDefinition definition,
-    UiJson? data,
+    UiJson? values,
     UiFormMode? mode,
     List<UiFbValidatorDef> validators = const [],
     List<UiFbOptionSourceDef> optionSources = const [],
@@ -220,10 +220,10 @@ class UiFormEngine {
        _requestedLocale = locale,
        _stringOverrides = strings,
        _link = link,
-       mode = mode ?? (data != null ? UiFormMode.edit : UiFormMode.create),
+       mode = mode ?? (values != null ? UiFormMode.edit : UiFormMode.create),
        _today = today ?? todayIso,
        _now = now ?? DateTime.now,
-       _initialData = data != null ? jsonCloneMap(data) : <String, Object?>{} {
+       _savedValues = values != null ? jsonCloneMap(values) : <String, Object?>{} {
     index = indexDefinition(this.definition);
     defaultLocale = fbDefaultLocale(this.definition);
     _locale = fbResolveLocale(this.definition, _requestedLocale);
@@ -238,14 +238,14 @@ class UiFormEngine {
     _sourceDefs = {for (final d in optionSources) d.type: d};
     _load();
     // The first full picture (calculations included) is the "unchanged" baseline.
-    _baseline = this.data;
+    _baseline = this.values;
     _settle();
   }
 
   /// Opens a form from stored JSON (migrated to the current schema).
   factory UiFormEngine.fromJson(
     Object? definition, {
-    UiJson? data,
+    UiJson? values,
     UiFormMode? mode,
     List<UiFbValidatorDef> validators = const [],
     List<UiFbOptionSourceDef> optionSources = const [],
@@ -256,7 +256,7 @@ class UiFormEngine {
     UiFbSubmissionLink? link,
   }) => UiFormEngine(
     definition: migrateDefinition(definition),
-    data: data,
+    values: values,
     mode: mode,
     validators: validators,
     optionSources: optionSources,
@@ -317,9 +317,9 @@ class UiFormEngine {
   late final Map<String, UiFbOptionSourceDef> _sourceDefs;
   final String Function() _today;
   final DateTime Function() _now;
-  final UiJson _initialData;
+  final UiJson _savedValues;
 
-  Map<String, Object?> _values = {};
+  Map<String, Object?> _answers = {};
   Map<String, List<String>> _rowIds = {};
   // Kept raw (`null` = passed, a String or `false` = failed): a message from the rule is worded when
   // read, in the language then in use.
@@ -428,9 +428,9 @@ class UiFormEngine {
     }
 
     for (final p in definition.pages) {
-      loadEls(p.elements, _initialData, null, fresh);
+      loadEls(p.elements, _savedValues, null, fresh);
     }
-    _values = values;
+    _answers = values;
     _rowIds = rows;
   }
 
@@ -484,7 +484,7 @@ class UiFormEngine {
   /// The entry ids of a repeatable group, in order.
   List<String> rows(String groupId) => List.unmodifiable(_rowIds[groupId] ?? const <String>[]);
 
-  Object? rawValue(String id, String? row) => _values[addrOf(id, row)];
+  Object? rawValue(String id, String? row) => _answers[addrOf(id, row)];
 
   /// The registered source a field searches, if it has one and the app provides it.
   UiFbOptionSourceDef? optionSource(String? type) => type == null ? null : _sourceDefs[type];
@@ -574,7 +574,7 @@ class UiFormEngine {
   void setValue(String id, String? row, Object? value) {
     if (mode == UiFormMode.view) return;
     final f = field(id);
-    _values = {..._values, addrOf(id, row): f != null ? coerceValue(f, value) : value};
+    _answers = {..._answers, addrOf(id, row): f != null ? coerceValue(f, value) : value};
     _changed();
   }
 
@@ -609,7 +609,7 @@ class UiFormEngine {
     }
 
     walk(g.elements);
-    _values = {..._values, ...defaults};
+    _answers = {..._answers, ...defaults};
     _rowIds = {..._rowIds, groupId: [...?_rowIds[groupId], id]};
     _changed();
     return id;
@@ -619,9 +619,9 @@ class UiFormEngine {
   UiFbRemovedRow? removeRow(String groupId, String rowId) {
     if (!canRemoveRow(groupId)) return null;
     final at = rows(groupId).indexOf(rowId);
-    final values = {for (final e in _values.entries) if (e.key.startsWith('$rowId/')) e.key: e.value};
+    final values = {for (final e in _answers.entries) if (e.key.startsWith('$rowId/')) e.key: e.value};
     _rowIds = {..._rowIds, groupId: [...?_rowIds[groupId]]..remove(rowId)};
-    _values = {for (final e in _values.entries) if (!e.key.startsWith('$rowId/')) e.key: e.value};
+    _answers = {for (final e in _answers.entries) if (!e.key.startsWith('$rowId/')) e.key: e.value};
     _changed();
     return UiFbRemovedRow(groupId: groupId, rowId: rowId, index: at, values: values);
   }
@@ -629,7 +629,7 @@ class UiFormEngine {
   /// Puts a removed entry back where it was, answers and all.
   void restoreRow(UiFbRemovedRow removed) {
     if (rows(removed.groupId).contains(removed.rowId)) return;
-    _values = {..._values, ...removed.values};
+    _answers = {..._answers, ...removed.values};
     final list = [...?_rowIds[removed.groupId]];
     list.insert(math.min(math.max(removed.index, 0), list.length), removed.rowId);
     _rowIds = {..._rowIds, removed.groupId: list};
@@ -697,7 +697,7 @@ class UiFormEngine {
       final slash = addr.indexOf('/');
       final row = slash >= 0 ? addr.substring(0, slash) : null;
       final id = slash >= 0 ? addr.substring(slash + 1) : addr;
-      if (instanceState(id, row).visible) out[dataPath(id, row)] = list;
+      if (instanceState(id, row).visible) out[valuePath(id, row)] = list;
     }
     _notify();
     final link = _link;
@@ -705,7 +705,7 @@ class UiFormEngine {
       formId: definition.id,
       revision: definition.revision,
       locale: _locale,
-      values: data,
+      values: values,
       submittedAt: _isoNow(),
       workflowId: link?.workflowId != null && link!.workflowId!.isNotEmpty ? link.workflowId : null,
       serviceCode: link?.serviceCode != null && link!.serviceCode!.isNotEmpty ? link.serviceCode : null,
@@ -726,15 +726,15 @@ class UiFormEngine {
   // ── Output ─────────────────────────────────────────────────────────────────────────────────
 
   /// The answers as they would be saved right now.
-  UiJson get data => _buildData();
+  UiJson get values => _buildValues();
 
   /// Whether the answers differ from what the form was opened with (calculations included).
-  bool get dirty => !jsonEquals(data, _baseline);
+  bool get dirty => !jsonEquals(values, _baseline);
 
   /// Each answer that differs from what the form was opened with.
   List<UiFbChange> get changes {
     final out = <UiFbChange>[];
-    final vals = _values;
+    final vals = _answers;
     final rowIds = _rowIds;
     final states = _current.states;
     for (final MapEntry(key: id, value: entry) in index.entries) {
@@ -742,7 +742,7 @@ class UiFormEngine {
       if (entry.kind == 'group' && group!.repeat != null) {
         final before = _initialRows[id] ?? const <String>[];
         final now = rowIds[id] ?? const <String>[];
-        if (before.length != now.length) out.add(UiFbChange(path: dataPath(id, null), label: elementName(group, definition, _locale), from: before.length, to: now.length));
+        if (before.length != now.length) out.add(UiFbChange(path: valuePath(id, null), label: elementName(group, definition, _locale), from: before.length, to: now.length));
       }
       if (entry.kind != 'field') continue;
       final f = entry.asField!;
@@ -755,14 +755,14 @@ class UiFormEngine {
         final from = _toJsonValue(_initialValues[addr]);
         final o = _output(f, addr, states[addr] ?? UiFbInstanceState.hidden, vals);
         final to = _toJsonValue(o.include ? o.value : null);
-        if (!jsonEquals(from, to)) out.add(UiFbChange(path: dataPath(id, row), label: instanceLabel(id, row), from: from, to: to));
+        if (!jsonEquals(from, to)) out.add(UiFbChange(path: valuePath(id, row), label: instanceLabel(id, row), from: from, to: to));
       }
     }
     return out;
   }
 
   /// Where a field's answer sits in the data, e.g. `dependants[1].name`.
-  String dataPath(String id, String? row) {
+  String valuePath(String id, String? row) {
     final entry = index[id];
     if (entry == null) return id;
     final parts = <String>[];
@@ -792,11 +792,11 @@ class UiFormEngine {
     return (include: false, value: null);
   }
 
-  UiJson _buildData() {
+  UiJson _buildValues() {
     final states = _current.states;
-    final vals = _values;
+    final vals = _answers;
     final rowIds = _rowIds;
-    final out = jsonCloneMap(_initialData);
+    final out = jsonCloneMap(_savedValues);
     final clears = settings.clearHidden != 'never';
     void write(List<UiFbElement> els, Map<String, Object?> obj, String? row) {
       for (final el in els) {
@@ -807,7 +807,7 @@ class UiFormEngine {
           for (final k in el.keyHistory ?? const <String>[]) {
             if (k != el.key) obj.remove(k);
           }
-          if (el.type == UiFbFieldType.calculated && el.props?.excludeFromData == true) {
+          if (el.type == UiFbFieldType.calculated && el.props?.excludeFromValues == true) {
             obj.remove(el.key);
             continue;
           }
@@ -870,7 +870,7 @@ class UiFormEngine {
     final idx = index;
     final def = definition;
     final today = _today();
-    final values = _values;
+    final values = _answers;
     final rows = _rowIds;
     final asyncResults = _asyncResults;
     final locale = _locale;
@@ -1227,7 +1227,7 @@ class UiFormEngine {
       }
     }
     if (updates.isEmpty) return false;
-    _values = {..._values, ...updates};
+    _answers = {..._answers, ...updates};
     _state = null;
     return true;
   }

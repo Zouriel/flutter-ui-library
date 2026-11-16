@@ -49,10 +49,10 @@ void runEngine(String file) {
     for (final c in arr(fx['cases']).map(obj)) {
       test(c['name'] as String, () {
         final definition = c['definition'] ?? (c['definitionFile'] != null ? load(c['definitionFile'] as String) : fx['definition'] ?? load(fx['definitionFile'] as String));
-        final data = c['data'] ?? (c['dataFile'] != null ? load(c['dataFile'] as String) : null);
+        final data = c['values'] ?? (c['valuesFile'] != null ? load(c['valuesFile'] as String) : null);
         final mode = c['mode'] == null ? null : UiFormMode.values.byName(c['mode'] as String);
         final link = c['link'] == null ? null : linkOf(c['link']);
-        final e = UiFormEngine.fromJson(definition, data: data == null ? null : obj(data), mode: mode, today: () => c['today'] as String, locale: c['locale'] as String?, link: link);
+        final e = UiFormEngine.fromJson(definition, values: data == null ? null : obj(data), mode: mode, today: () => c['today'] as String, locale: c['locale'] as String?, link: link);
         (String, String?) at(String addr) {
           final parts = addr.split('@');
           if (parts.length == 1) return (addr, null);
@@ -154,7 +154,7 @@ void checkEngine(UiFormEngine e, UiJson x, String where, (String, String?) Funct
   per('warnings', (id, row) => e.instanceState(id, row).warnings);
   per('errorsShown', (id, row) => e.errorsShown(id, row));
   per('display', (id, row) => formatValue(e.field(id)!, e.instanceState(id, row).value, locale: 'en_US', textLocale: e.locale, defaultLocale: e.defaultLocale));
-  per('dataPath', (id, row) => e.dataPath(id, row));
+  per('valuePath', (id, row) => e.valuePath(id, row));
   per('instanceLabel', (id, row) => e.instanceLabel(id, row));
   per('sourceParams', (id, row) => e.sourceParams(id, row));
   for (final MapEntry(key: g, value: n) in obj(x['rows'] ?? const {}).entries) {
@@ -170,12 +170,12 @@ void checkEngine(UiFormEngine e, UiJson x, String where, (String, String?) Funct
     final got = [for (final it in e.pageErrors(int.parse(p))) {'field': name(it.id, it.row), 'label': it.label, 'message': it.message}];
     expectJson(got, want, '$where: pageErrors of page $p');
   }
-  if (x.containsKey('data')) expectJson(e.data, x['data'], '$where: data');
-  for (final MapEntry(key: k, value: v) in obj(x['dataHas'] ?? const {}).entries) {
-    expectJson(e.data[k], v, '$where: data.$k');
+  if (x.containsKey('values')) expectJson(e.values, x['values'], '$where: values');
+  for (final MapEntry(key: k, value: v) in obj(x['valuesHas'] ?? const {}).entries) {
+    expectJson(e.values[k], v, '$where: values.$k');
   }
-  for (final k in arr(x['dataLacks'] ?? const [])) {
-    expect(e.data.containsKey(k), isFalse, reason: '$where: data lacks $k');
+  for (final k in arr(x['valuesLacks'] ?? const [])) {
+    expect(e.values.containsKey(k), isFalse, reason: '$where: values lack $k');
   }
   if (x.containsKey('dirty')) expect(e.dirty, x['dirty'], reason: '$where: dirty');
   if (x.containsKey('changes')) expectJson([for (final ch in e.changes) ch.toJson()], x['changes'], '$where: changes');

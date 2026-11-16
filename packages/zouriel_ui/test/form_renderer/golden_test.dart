@@ -29,7 +29,7 @@ void main() {
       'renderer_edit_tablet',
       (context) => UiFormRenderer(
         definition: fixture('scholarship.definition.json')!,
-        data: fixtureMap('scholarship.answers.json'),
+        values: fixtureMap('scholarship.answers.json'),
         optionSources: sources,
         today: () => '2026-10-13',
       ),
@@ -53,7 +53,7 @@ void main() {
     await expectThemedGolden(
       tester,
       'renderer_placements',
-      (context) => UiFormRenderer(definition: def, data: const {'a': 'Aminath', 'd': 'a@b.mv'}),
+      (context) => UiFormRenderer(definition: def, values: const {'a': 'Aminath', 'd': 'a@b.mv'}),
       width: 600,
       height: 640,
     );
@@ -73,7 +73,7 @@ void main() {
       'renderer_view',
       (context) => UiFormRenderer(
         definition: fixture('scholarship.definition.json')!,
-        data: fixtureMap('scholarship.answers.json'),
+        values: fixtureMap('scholarship.answers.json'),
         mode: UiFormMode.view,
         optionSources: sources,
         today: () => '2026-10-13',

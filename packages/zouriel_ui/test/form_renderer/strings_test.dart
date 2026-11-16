@@ -22,11 +22,11 @@ Map<String, Object?> def(List<UiJson> elements, {bool twoPages = false, UiJson? 
 String _today() => '2026-10-13';
 
 class _Host extends StatefulWidget {
-  const _Host({super.key, required this.definition, this.locale, this.strings, this.data, this.mode, this.scope});
+  const _Host({super.key, required this.definition, this.locale, this.strings, this.values, this.mode, this.scope});
   final Object definition;
   final String? locale;
   final UiFbStringOverrides? strings;
-  final UiJson? data;
+  final UiJson? values;
   final UiFormMode? mode;
   final UiFbStringOverrides? scope;
   @override
@@ -55,16 +55,16 @@ class _HostState extends State<_Host> {
   Widget build(BuildContext context) {
     Widget child = SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: UiFormRenderer(definition: widget.definition, data: widget.data, mode: widget.mode, locale: locale, strings: strings, today: _today),
+      child: UiFormRenderer(definition: widget.definition, values: widget.values, mode: widget.mode, locale: locale, strings: strings, today: _today),
     );
     if (scope != null) child = UiFormStringsScope(strings: scope!, child: child);
     return SizedBox(width: 390, height: 844, child: child);
   }
 }
 
-Future<GlobalKey<_HostState>> _pumpHost(WidgetTester tester, Object definition, {String? locale, UiFbStringOverrides? strings, UiFbStringOverrides? scope, UiJson? data, UiFormMode? mode}) async {
+Future<GlobalKey<_HostState>> _pumpHost(WidgetTester tester, Object definition, {String? locale, UiFbStringOverrides? strings, UiFbStringOverrides? scope, UiJson? values, UiFormMode? mode}) async {
   final key = GlobalKey<_HostState>();
-  await pumpUi(tester, _Host(key: key, definition: definition, locale: locale, strings: strings, scope: scope, data: data, mode: mode));
+  await pumpUi(tester, _Host(key: key, definition: definition, locale: locale, strings: strings, scope: scope, values: values, mode: mode));
   return key;
 }
 
@@ -91,12 +91,12 @@ void main() {
 
   testWidgets('shows the last page words and Yes/No in Dhivehi', (tester) async {
     await _pumpHost(tester, def([f('c', 'checkbox', {'label': 'C'}), f('t', 'toggle', {'label': 'T'})]),
-        locale: 'dv', data: {'c': true, 't': false}, mode: UiFormMode.view);
+        locale: 'dv', values: {'c': true, 't': false}, mode: UiFormMode.view);
     expect(find.text(uiFbStringsDv.yes), findsOneWidget);
     expect(find.text(uiFbStringsDv.no), findsOneWidget);
     await _pumpHost(tester, def([f('a', 'text')]), locale: 'dv');
     expect(find.widgetWithText(UiButton, uiFbStringsDv.submit), findsOneWidget);
-    await _pumpHost(tester, def([f('a', 'text')]), locale: 'dv', data: {'a': 'x'});
+    await _pumpHost(tester, def([f('a', 'text')]), locale: 'dv', values: {'a': 'x'});
     expect(find.widgetWithText(UiButton, uiFbStringsDv.saveChanges), findsOneWidget);
     expect(find.text(uiFbStringsDv.noChanges), findsOneWidget);
   });

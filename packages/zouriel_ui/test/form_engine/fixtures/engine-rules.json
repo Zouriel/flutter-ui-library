@@ -64,7 +64,7 @@
         },
         {
           "expect": {
-            "data": {
+            "values": {
               "married": true,
               "spouse": "Sam"
             }
@@ -76,7 +76,7 @@
         },
         {
           "expect": {
-            "data": {
+            "values": {
               "married": false
             }
           }
@@ -511,7 +511,7 @@
               "line@1": 20,
               "lines": 2
             },
-            "data": {
+            "values": {
               "items": [
                 {
                   "qty": 2,
@@ -531,7 +531,7 @@
             "instanceLabel": {
               "qty@1": "QTY (Entry 2)"
             },
-            "dataPath": {
+            "valuePath": {
               "note@1": "items[1].note"
             }
           }
@@ -643,7 +643,7 @@
             "raw": {
               "name": "Ada"
             },
-            "data": {
+            "values": {
               "full_name": "Ada",
               "show": false,
               "secret": "kept",
@@ -670,7 +670,7 @@
         },
         {
           "expect": {
-            "dataLacks": [
+            "valuesLacks": [
               "secret"
             ],
             "dirty": true,
@@ -685,7 +685,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "name": "Ada",
         "show": false,
         "secret": "kept",
@@ -741,7 +741,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "a": "x",
         "b": 1
       }
@@ -939,7 +939,7 @@
               0
             ],
             "isLastPage": true,
-            "data": {
+            "values": {
               "stop": true
             }
           }
@@ -1015,7 +1015,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "country": "uk",
         "currency": "EUR"
       }
@@ -1178,7 +1178,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "a": ""
       },
       "mode": "view"
@@ -1221,7 +1221,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "a": ""
       }
     },
@@ -1283,7 +1283,7 @@
             "visible": {
               "x": false
             },
-            "data": {
+            "values": {
               "t": false,
               "x": "keep me"
             }
@@ -1362,7 +1362,7 @@
                 "x"
               ]
             },
-            "data": {
+            "values": {
               "a": "hello",
               "n": 7,
               "h": "src-web",
@@ -1413,7 +1413,7 @@
               "a": null,
               "h": "src-web"
             },
-            "data": {
+            "values": {
               "other": 1,
               "a": null,
               "h": "src-web"
@@ -1421,7 +1421,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "other": 1
       }
     },
@@ -1490,7 +1490,7 @@
                   ]
                 },
                 "props": {
-                  "excludeFromData": true
+                  "excludeFromValues": true
                 }
               }
             ]
@@ -1512,7 +1512,7 @@
               "full": "Ada Lovelace",
               "tmp": 5
             },
-            "data": {
+            "values": {
               "first": "Ada",
               "last": "Lovelace",
               "full": "Ada Lovelace"
@@ -1583,7 +1583,7 @@
             "raw": {
               "street": "1 Main St"
             },
-            "data": {
+            "values": {
               "address": {
                 "street": "1 Main St",
                 "zip": "kept",
@@ -1591,14 +1591,14 @@
               },
               "note": "n"
             },
-            "dataPath": {
+            "valuePath": {
               "street": "address.street",
               "note": "note"
             }
           }
         }
       ],
-      "data": {
+      "values": {
         "addr": {
           "street": "1 Main St",
           "zip": "kept"
@@ -2352,7 +2352,7 @@
                 "Answer “Are you sure? ”"
               ]
             },
-            "data": {
+            "values": {
               "terms": false,
               "sw": false,
               "q": null
@@ -2652,7 +2652,7 @@
           }
         }
       ],
-      "data": {
+      "values": {
         "c": "zz",
         "price": 1234.5,
         "mvr": 1234.5,

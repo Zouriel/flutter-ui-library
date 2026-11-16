@@ -1470,6 +1470,14 @@ backdrop scopes a `UiTheme` with the same token overrides as the web.
 - Breaking rename (0.84.1): the submission's answers field `data` is now `values` (`UiFormSubmission.values`,
   `UiWfSubmissionPayload.values`, and the `values` key in both `toJson()`s), so it no longer reads like the renderer's
   `data` (saved answers to load). No alias. Workflow refs (`trigger.data.<path>`, `input.<path>`) are unchanged.
+- Breaking rename (0.84.2): a form's answers are `values` everywhere in the form builder. `UiFormRenderer(data:)` is
+  `values:`; `UiFormEngine(data:)`, `UiFormEngine.fromJson(data:)` and the `data` getter are `values`; `dataPath` is
+  `valuePath`; `UiFbFieldProps.excludeFromData` is `excludeFromValues` (JSON `props.excludeFromValues`, and
+  `migrateDefinition` upgrades a stored `excludeFromData` on every field, nested groups included, dropping the old key);
+  `wfFormAnswers` returns `(values:, error:)`. The engine's private answers map `_values` became `_answers`. No aliases.
+  Not renamed: drag payloads, HTTP response `data` in option sources, other widgets' `data`, and the workflow wire names
+  (`trigger.data.<path>`, `input.<path>`, the task `decide` payload's `data`). Shared fixtures: the answers key `data`
+  inside engine `expect` blocks is `values`; a case's own saved-answers input stays `data`/`dataFile` in the runner.
 - `wfStartFromSubmission(api, wf, s)` takes the whole `UiWorkflowApi` (no `Pick<>`; a test fake extends it) and throws a
   `StateError` synchronously when files are picked, like the web throws before returning the promise.
 - `wfFormFields(form, [locale])` reads a localized label (a string or a locale map in the form JSON) with `fbText`, in

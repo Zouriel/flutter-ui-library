@@ -714,7 +714,7 @@ class _FieldPanel extends StatelessWidget {
             text('Currency code', 'currency', p?.currency ?? 'USD', 'USD', map: (v) => v.toUpperCase())
           else if (format != 'text')
             FbPair(children: [text('Before it', 'prefix', p?.prefix, 'e.g. #'), text('After it', 'suffix', p?.suffix, 'e.g. years')]),
-          FbSwitch(size: UiSize.sm, value: p?.excludeFromData == true, label: 'Show it, but don’t save it', onChanged: (v) => prop('excludeFromData', v ? true : null)),
+          FbSwitch(size: UiSize.sm, value: p?.excludeFromValues == true, label: 'Show it, but don’t save it', onChanged: (v) => prop('excludeFromValues', v ? true : null)),
         ];
     }
     return const [];

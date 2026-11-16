@@ -10,8 +10,8 @@ Map<String, Object?> def(List<Map<String, Object?>> elements) => {
   'pages': [{'id': 'p1', 'elements': elements}],
 };
 
-UiFormEngine engine(Map<String, Object?> d, {UiJson? data, String? locale, UiFbStringOverrides? strings, List<UiFbValidatorDef> validators = const []}) =>
-    UiFormEngine.fromJson(d, data: data, locale: locale, strings: strings, validators: validators, today: () => '2026-10-11');
+UiFormEngine engine(Map<String, Object?> d, {UiJson? values, String? locale, UiFbStringOverrides? strings, List<UiFbValidatorDef> validators = const []}) =>
+    UiFormEngine.fromJson(d, values: values, locale: locale, strings: strings, validators: validators, today: () => '2026-10-11');
 
 void main() {
   group('fbStrings', () {
@@ -88,8 +88,8 @@ void main() {
         f('a', 'number', {'label': 'A'}),
         f('b', 'number', {'label': 'B', 'validators': [{'id': 'c', 'type': 'compareField', 'params': {'comparison': 'gt', 'field': 'a'}}]}),
       ]);
-      expect(engine(d, data: {'a': 5, 'b': 1}).instanceState('b', null).errors, ['B must be more than “A”.']);
-      expect(engine(d, data: {'a': 5, 'b': 1}, locale: 'dv').instanceState('b', null).errors.first, contains(uiFbStringsDv.compareGt));
+      expect(engine(d, values: {'a': 5, 'b': 1}).instanceState('b', null).errors, ['B must be more than “A”.']);
+      expect(engine(d, values: {'a': 5, 'b': 1}, locale: 'dv').instanceState('b', null).errors.first, contains(uiFbStringsDv.compareGt));
       expect(describeDateParam('today+3'), '3 days from today');
       expect(describeDateParam('today-2', uiFbStringsDv), fbFormat(uiFbStringsDv.dateDaysAgo, {'n': 2}));
       expect(describeDateParam('today', uiFbStringsDv), uiFbStringsDv.dateToday);
@@ -98,7 +98,7 @@ void main() {
     test('takes a message by language from a registered check', () {
       final check = UiFbValidatorDef(type: 'taken', label: 'Taken', defaultMessage: const {'en': 'Taken.', 'dv': 'ނެގިފައި.'}, validate: (v, p, c) => false);
       final d = def([f('a', 'text', {'validators': [{'id': 'r', 'type': 'taken'}]})]);
-      final e = engine(d, validators: [check], data: {'a': 'x'});
+      final e = engine(d, validators: [check], values: {'a': 'x'});
       expect(e.instanceState('a', null).errors, ['Taken.']);
       e.setLocale('dv');
       expect(e.instanceState('a', null).errors, ['ނެގިފައި.']);

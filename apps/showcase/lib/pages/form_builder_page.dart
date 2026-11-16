@@ -45,7 +45,7 @@ class _FormBuilderPageState extends State<FormBuilderPage> {
           widget: 'UiFormRenderer',
           summary: 'Fills in a definition. Problems show when a question is left (or only on Continue, per form), and when someone tries '
               'to move on, all of the page’s problems are listed at the top; tapping one jumps to the question. Hidden questions never block '
-              'submitting. Give it saved data to edit (it tracks dirty and lists the changes next to Save) or to view, where every page shows '
+              'submitting. Give it saved values to edit (it tracks dirty and lists the changes next to Save) or to view, where every page shows '
               'at once as text. Long forms come in steps with Back and Continue and a progress bar. It doesn’t scroll itself: put it in a scroll view.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
             Align(
@@ -65,7 +65,7 @@ class _FormBuilderPageState extends State<FormBuilderPage> {
             UiFormRenderer(
               key: ValueKey(_mode),
               definition: sampleForm,
-              data: _mode == UiFormMode.create ? null : sampleAnswers,
+              values: _mode == UiFormMode.create ? null : sampleAnswers,
               mode: _mode,
               optionSources: demoSources,
               filePicker: _fakePicker,
@@ -77,17 +77,17 @@ class _FormBuilderPageState extends State<FormBuilderPage> {
             ],
           ]),
           code: '''UiFormRenderer(definition: formJson, optionSources: [students, courses], onSubmitted: save)
-UiFormRenderer(definition: formJson, data: saved, onSubmitted: (s) => update(s.values))   // edit
-UiFormRenderer(definition: formJson, data: saved, mode: UiFormMode.view)                  // read only
+UiFormRenderer(definition: formJson, values: saved, onSubmitted: (s) => update(s.values))   // edit
+UiFormRenderer(definition: formJson, values: saved, mode: UiFormMode.view)                  // read only
 
 // Your own buttons: showActions: false, then
 final key = GlobalKey<UiFormRendererState>();
 key.currentState!.submit();          // the submission, or null (problems shown)
-key.currentState!.engine.dirty;      // and data, changes, pageIndex...''',
+key.currentState!.engine.dirty;      // and values, changes, pageIndex...''',
           api: const [
             ApiRow('definition', 'Object', 'The form: a UiFormDefinition or its stored JSON map (migrated on load). Usually the published version.'),
-            ApiRow('data', 'UiJson?', 'Saved answers to edit or view. Unknown keys and answers to questions hidden at the time are kept.'),
-            ApiRow('mode', 'UiFormMode?', 'edit shows “Save changes” and a change list; view shows every page as text and never validates.', def: 'edit with data, else create'),
+            ApiRow('values', 'UiJson?', 'Saved answers to edit or view. Unknown keys and answers to questions hidden at the time are kept.'),
+            ApiRow('mode', 'UiFormMode?', 'edit shows “Save changes” and a change list; view shows every page as text and never validates.', def: 'edit with values, else create'),
             ApiRow('validators', 'List<UiFbValidatorDef>', 'App checks (sync or async), on top of the built-in ones.', def: '[]'),
             ApiRow('optionSources', 'List<UiFbOptionSourceDef>', 'Lists sourced dropdowns search. Use the same ones the builder had.', def: '[]'),
             ApiRow('globalSettings / httpSources', 'UiFormGlobalSettings? / UiFbHttpSourcesOptions', 'Makes the lists from the global settings searchable, through your fetch (login, allowed origins).'),
@@ -102,11 +102,11 @@ key.currentState!.engine.dirty;      // and data, changes, pageIndex...''',
           ],
           callbacks: const [
             ApiRow('onSubmitted', 'ValueChanged<UiFormSubmission>', '{formId, revision, locale, values, submittedAt, fields, files} once everything on the route is valid. locale is the language it was filled in; fields lists each answer’s path, key, label (in that language) and type. Store data with revision.'),
-            ApiRow('onValueChanged', 'ValueChanged<UiJson>', 'The data as it would be saved, after every change.'),
+            ApiRow('onValueChanged', 'ValueChanged<UiJson>', 'The values as it would be saved, after every change.'),
             ApiRow('onDirtyChanged', 'ValueChanged<bool>', 'Whether the answers differ from what the form opened with.'),
             ApiRow('onCancelled', 'VoidCallback', 'The Cancel button was pressed.'),
-            ApiRow('submit() / reset()', 'UiFormRendererState', 'Validate and submit; start over from the given data on the first page.'),
-            ApiRow('engine', 'UiFormEngine', 'The running form: data, dirty, changes, pageIndex, setValue...'),
+            ApiRow('submit() / reset()', 'UiFormRendererState', 'Validate and submit; start over from the given values on the first page.'),
+            ApiRow('engine', 'UiFormEngine', 'The running form: values, dirty, changes, pageIndex, setValue...'),
             ApiRow('engine.strings / engine.setStrings(overrides)', 'UiFbStrings / void', 'The engine’s and renderer’s own words in the language in use (built-in table plus the strings option). Messages are worded again when the language or the overrides change. UiFormEngine(strings: …) sets them up front.'),
           ],
         ),
@@ -168,16 +168,16 @@ UiFbSourcePicker(source: students, value: picked, onChanged: (v) => setState(() 
           code: '''// 1. Load: stored forms go through migrateDefinition, which fills in defaults and upgrades older versions.
 final form = migrateDefinition(await api.getForm(id));
 
-// 2. Fill in. Store data with the revision it was made against.
+// 2. Fill in. Store the values with the revision it was made against.
 UiFormRenderer(definition: form, optionSources: sources,
-  onSubmitted: (s) => api.saveAnswers(formId: s.formId, revision: s.revision, data: s.values));
+  onSubmitted: (s) => api.saveAnswers(formId: s.formId, revision: s.revision, values: s.values));
 
-// 3. Edit or view: pass the stored data back.
-UiFormRenderer(definition: form, data: answer.data, onSubmitted: (s) => api.updateAnswers(answer.id, s.values));
-UiFormRenderer(definition: form, data: answer.data, mode: UiFormMode.view);
+// 3. Edit or view: pass the stored values back.
+UiFormRenderer(definition: form, values: answer.values, onSubmitted: (s) => api.updateAnswers(answer.id, s.values));
+UiFormRenderer(definition: form, values: answer.values, mode: UiFormMode.view);
 
-// Without UI: the same engine the renderer runs (rules, checks, calculations, data shaping).
-final engine = UiFormEngine.fromJson(form, data: saved, locale: 'dv', strings: {'dv': {'next': 'ދެން'}});
+// Without UI: the same engine the renderer runs (rules, checks, calculations, values shaping).
+final engine = UiFormEngine.fromJson(form, values: saved, locale: 'dv', strings: {'dv': {'next': 'ދެން'}});
 engine.setValue('f_name', null, 'Aminath');
 final submission = engine.submit();   // null when something is wrong''',
         ),
@@ -195,9 +195,9 @@ class _AnswersStudio extends StatefulWidget {
 }
 
 class _Answer {
-  _Answer(this.id, this.data, this.revision, this.savedAt);
+  _Answer(this.id, this.values, this.revision, this.savedAt);
   final int id;
-  UiJson data;
+  UiJson values;
   final num? revision;
   String savedAt;
 }
@@ -225,7 +225,7 @@ class _AnswersStudioState extends State<_AnswersStudio> {
         _jsonFor = _seq;
       } else {
         final a = _find(open.id)!;
-        a.data = s.values;
+        a.values = s.values;
         a.savedAt = s.submittedAt;
         _jsonFor = a.id;
       }
@@ -253,7 +253,7 @@ class _AnswersStudioState extends State<_AnswersStudio> {
         UiFormRenderer(
           key: ValueKey(open),
           definition: sampleForm,
-          data: a?.data,
+          values: a?.values,
           mode: open.mode,
           optionSources: demoSources,
           filePicker: _fakePicker,
@@ -278,8 +278,8 @@ class _AnswersStudioState extends State<_AnswersStudio> {
         UiCard(
           padding: UiSize.sm,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
-            Text('${a.data['full_name'] ?? 'No name'}', style: ty.body.copyWith(fontWeight: FontWeight.w600, color: t.text)),
-            Text('#${a.id} · ${a.data['programme'] ?? 'no programme'} · revision ${a.revision ?? '-'} · ${a.savedAt}',
+            Text('${a.values['full_name'] ?? 'No name'}', style: ty.body.copyWith(fontWeight: FontWeight.w600, color: t.text)),
+            Text('#${a.id} · ${a.values['programme'] ?? 'no programme'} · revision ${a.revision ?? '-'} · ${a.savedAt}',
                 style: ty.caption.copyWith(color: t.textMuted)),
             Wrap(spacing: t.space2, runSpacing: t.space2, children: [
               UiButton(label: 'Edit', size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _open = (id: a.id, mode: UiFormMode.edit))),
@@ -293,7 +293,7 @@ class _AnswersStudioState extends State<_AnswersStudio> {
             ]),
           ]),
         ),
-      if (shown != null) DocCode(code: _json.convert(shown.data), language: 'JSON'),
+      if (shown != null) DocCode(code: _json.convert(shown.values), language: 'JSON'),
     ]);
   }
 }

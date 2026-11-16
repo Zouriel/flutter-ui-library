@@ -38,7 +38,7 @@ void main() {
   testWidgets('the sample form filled in through the UI saves exactly what the web engine saves', (tester) async {
     final cases = fixtureMap('engine-scholarship.json')['cases'] as List;
     final steps = (cases[0] as Map)['steps'] as List;
-    final want = ((steps.last as Map)['expect'] as Map)['data'];
+    final want = ((steps.last as Map)['expect'] as Map)['values'];
     final got = <UiFormSubmission>[];
     final key = await pumpForm(
       tester,
@@ -117,7 +117,7 @@ void main() {
     await pumpForm(
       tester,
       definition: fixture('scholarship.definition.json')!,
-      data: answers,
+      values: answers,
       sources: [peopleSource().def, coursesSource],
       onSubmitted: got.add,
     );
@@ -128,7 +128,7 @@ void main() {
       await _tap(tester, find.widgetWithText(UiButton, 'Continue'));
     }
     await _tap(tester, find.widgetWithText(UiButton, 'Save changes'));
-    final want = (((fixtureMap('engine-scholarship.json')['cases'] as List)[1] as Map)['steps'] as List)[0]['expect']['data'];
+    final want = (((fixtureMap('engine-scholarship.json')['cases'] as List)[1] as Map)['steps'] as List)[0]['expect']['values'];
     expect(jsonEquals(got.single.values, want), isTrue, reason: 'got  ${jsonEncode(got.single.values)}\nwant ${jsonEncode(want)}');
   });
 }

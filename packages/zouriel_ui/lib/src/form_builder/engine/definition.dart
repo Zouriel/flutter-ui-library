@@ -966,7 +966,7 @@ List<UiFbSubmissionField> fbSubmissionFields(UiFormDefinition def, [String? loca
         final k = el.key;
         visit(el.elements, k != null && k.isNotEmpty ? '$prefix$k${el.repeat != null ? '[]' : ''}.' : prefix);
       } else if (el is UiFbField) {
-        if (el.props?.excludeFromData == true) continue;
+        if (el.props?.excludeFromValues == true) continue;
         final label = fbText(el.label, loc, dl);
         out.add(UiFbSubmissionField(path: '$prefix${el.key}', key: el.key, label: label.isNotEmpty ? label : el.key, type: el.type));
       }
@@ -1029,7 +1029,25 @@ UiFormDefinition migrateDefinition(Object? raw) {
         return {...m, 'id': pid != null && pid.isNotEmpty ? pid : fbUid('page'), 'elements': m['elements'] ?? <Object?>[]};
       }(),
   ];
+  for (final p in d['pages'] as List) {
+    _migrateExcludeFromData((p as Map)['elements']);
+  }
   return UiFormDefinition.fromJson(d);
+}
+
+/// Older forms stored `props.excludeFromData`; it is `props.excludeFromValues` now. Walks pages and
+/// nested groups, keeps an `excludeFromValues` already there and drops the old key.
+void _migrateExcludeFromData(Object? elements) {
+  if (elements is! List) return;
+  for (final el in elements) {
+    if (el is! Map) continue;
+    final props = el['props'];
+    if (props is Map && props.containsKey('excludeFromData')) {
+      final old = props.remove('excludeFromData');
+      if (!props.containsKey('excludeFromValues')) props['excludeFromValues'] = old;
+    }
+    _migrateExcludeFromData(el['elements']);
+  }
 }
 
 class UiFbRenamedKey {

@@ -65,7 +65,7 @@ Finder _remarksBox() => find.descendant(of: find.byWidgetPredicate((w) => w is U
 void main() {
   group('helpers', () {
     test('reads every answer from the submission and refuses picked files that have nowhere to go', () {
-      expect(wfFormAnswers(const UiFormSubmission(formId: 'f', revision: null, locale: 'en', values: {'a': 1}, submittedAt: '', files: {})).data, {'a': 1});
+      expect(wfFormAnswers(const UiFormSubmission(formId: 'f', revision: null, locale: 'en', values: {'a': 1}, submittedAt: '', files: {})).values, {'a': 1});
       final withFile = wfFormAnswers(UiFormSubmission(formId: 'f', revision: null, locale: 'en', values: const {}, submittedAt: '', files: {
         'doc': [UiFbPickedFile(name: 'x.txt', size: 1, type: 'text/plain')],
       }));
