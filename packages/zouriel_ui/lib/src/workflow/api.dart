@@ -237,6 +237,10 @@ extension type const UiWfRecord._(UiJson json) implements Object {
   /// Why the record is in `incident` (masked); null otherwise. Older engines leave it out.
   String? get error => wfStrOrNull(json['error']);
   String? get stateEnteredAt => wfStrOrNull(json['stateEnteredAt']);
+
+  /// What people are told about how long this usually takes; present only when the lifecycle
+  /// publishes it. Older engines leave it out.
+  String? get publicProcessingTime => wfStrOrNull(json['publicProcessingTime']);
   List<UiWfTransitionOption> get transitions => wfList(json['transitions'], UiWfTransitionOption.fromJson);
   List<UiWfTask> get tasks => wfList(json['tasks'], UiWfTask.fromJson);
   List<UiWfInstance> get instances => wfList(json['instances'], UiWfInstance.fromJson);

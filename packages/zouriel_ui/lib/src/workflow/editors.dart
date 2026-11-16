@@ -253,7 +253,7 @@ class WfDurationInput extends StatelessWidget {
 final RegExp _email = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
 
 /// `ui-wf-assignees`: who a task is for, who may apply a transition, or who gets a message: roles,
-/// groups, people, a person stored on the record, someone's manager, or whoever started the run.
+/// groups, departments, portals, queues, people, a person stored on the record, someone's manager, or whoever started the run.
 class WfAssigneesEditor extends StatefulWidget {
   const WfAssigneesEditor({
     super.key,
@@ -353,6 +353,9 @@ class _WfAssigneesEditorState extends State<WfAssigneesEditor> {
     _push(switch (kind) {
       'role' => UiWfAssignee.role(key),
       'group' => UiWfAssignee.group(key),
+      'department' => UiWfAssignee.department(key),
+      'portal' => UiWfAssignee.portal(key),
+      'queue' => UiWfAssignee.queue(key),
       'field' => UiWfAssignee.field(key),
       'managerOf' => UiWfAssignee.managerOf(key),
       _ => UiWfAssignee.initiator(),
@@ -403,6 +406,9 @@ class _WfAssigneesEditorState extends State<WfAssigneesEditor> {
     final options = <WfOption>[
       for (final r in reg?.roles ?? const <UiWfLabelled>[]) (value: 'role:${r.key}', label: 'Everyone with a role › ${r.label}'),
       for (final g in reg?.groups ?? const <UiWfLabelled>[]) (value: 'group:${g.key}', label: 'A group › ${g.label}'),
+      for (final d in reg?.departments ?? const <UiWfLabelled>[]) (value: 'department:${d.key}', label: 'A department › ${d.label}'),
+      for (final d in reg?.portals ?? const <UiWfLabelled>[]) (value: 'portal:${d.key}', label: 'A portal › ${d.label}'),
+      for (final d in reg?.queues ?? const <UiWfLabelled>[]) (value: 'queue:${d.key}', label: 'A queue › ${d.label}'),
       for (final u in users) (value: 'field:${u.path}', label: 'A person on the record › ${u.group} › ${u.label}'),
       (value: 'initiator', label: 'Whoever started it'),
       (value: 'managerOf:initiator', label: 'The manager of whoever started it'),

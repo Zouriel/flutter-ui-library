@@ -59,7 +59,7 @@ const Map<String, String> _auditActions = {
   'step.started': 'Step started', 'step.completed': 'Step done', 'step.failed': 'Step failed', 'step.retryScheduled': 'Retry scheduled',
   'step.skipped': 'Step skipped', 'step.branchTaken': 'Path chosen', 'step.waiting': 'Step waiting',
   'lifecycle.created': 'Lifecycle started', 'lifecycle.transitioned': 'Record moved', 'lifecycle.autoTransitioned': 'Moved automatically',
-  'lifecycle.autoSkipped': 'Automatic move skipped', 'lifecycle.slaBreached': 'Stayed too long in a state', 'lifecycle.forced': 'Moved by an admin', 'lifecycle.reset': 'Workflow started over',
+  'lifecycle.autoSkipped': 'Automatic move skipped', 'lifecycle.slaBreached': 'Stayed too long in a state', 'lifecycle.slaPaused': 'Time limit paused', 'lifecycle.slaResumed': 'Time limit running again', 'lifecycle.forced': 'Moved by an admin', 'lifecycle.reset': 'Workflow started over',
   'lifecycle.writeRefused': 'Direct state change refused', 'lifecycle.writeObserved': 'Direct state change seen', 'lifecycle.outOfSync': 'State out of sync',
   'task.created': 'Task created', 'task.assigned': 'Task assigned', 'task.reminded': 'Reminder sent', 'task.escalated': 'Task escalated',
   'task.delegated': 'Task handed to someone else', 'task.reassigned': 'Task reassigned', 'task.decided': 'Decided', 'task.cancelled': 'Task cancelled',
@@ -104,6 +104,10 @@ String wfDescribeHistory(UiWfAuditEntry h, String Function(Object? key) stateLab
       return 'A direct change to the state was refused';
     case 'lifecycle.slaBreached':
       return 'Stayed too long in ${stateLabel(data['state'] ?? before['state'] ?? after['state'])}';
+    case 'lifecycle.slaPaused':
+      return 'Time limit paused in ${stateLabel(data['state'] ?? before['state'] ?? after['state'])}';
+    case 'lifecycle.slaResumed':
+      return 'Time limit running again in ${stateLabel(data['state'] ?? before['state'] ?? after['state'])}';
     case 'lifecycle.outOfSync':
       return 'The state was changed outside the workflow';
     case 'task.created':

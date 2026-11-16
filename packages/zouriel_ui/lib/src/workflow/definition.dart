@@ -964,6 +964,9 @@ String describeAssignees(List<UiWfAssignee>? list, UiWfDescribeContext ctx) {
       switch (a.kind) {
         'role' => ctx.registry?.roles?.where((r) => r.key == a.value).firstOrNull?.label ?? a.value,
         'group' => ctx.registry?.groups?.where((g) => g.key == a.value).firstOrNull?.label ?? a.value,
+        'department' => ctx.registry?.departments?.where((g) => g.key == a.value).firstOrNull?.label ?? a.value,
+        'portal' => ctx.registry?.portals?.where((g) => g.key == a.value).firstOrNull?.label ?? a.value,
+        'queue' => ctx.registry?.queues?.where((g) => g.key == a.value).firstOrNull?.label ?? a.value,
         'user' => ctx.userName?.call(a.value) ?? a.value,
         'field' => ctx.tokens != null ? tokenLabel(ctx.tokens!, a.value) : a.value,
         'managerOf' => a.value == 'initiator'
@@ -1155,7 +1158,7 @@ UiWorkflowDefinition updateTransition(UiWorkflowDefinition def, String id, UiJso
 
 /// Removes a state with the transitions into and out of it, and the reset's references to it: a
 /// reset back to it goes back to the starting state instead, and it is no longer among the states
-/// the reset is offered in.
+/// the reset is offered in. Other states' time limits stop pausing on it.
 UiWorkflowDefinition removeState(UiWorkflowDefinition def, String id) => updateLifecycle(def, (lc) {
   final layout = <String, Object?>{...?wfMapOrNull(lc.json['layout'])}..remove(id);
   final transitions = <Object?>[];
@@ -1178,5 +1181,13 @@ UiWorkflowDefinition removeState(UiWorkflowDefinition def, String id) => updateL
       if (reset.states != null) 'states': [for (final x in reset.states!) if (x != id) x],
     }..removeWhere((_, v) => v == null);
   }
-  return lc.patch({'states': lc.states.where((s) => s.id != id).toList(), 'transitions': transitions, 'layout': layout, 'reset': ?resetJson});
+  // A time limit that paused on the removed state no longer names it (and drops the list when it was the last).
+  UiWfState unpause(UiWfState s) {
+    final sla = s.sla;
+    if (sla == null || !(sla.pauseOnStatus?.contains(id) ?? false)) return s;
+    final rest = [for (final x in sla.pauseOnStatus!) if (x != id) x];
+    return s.patch({'sla': wfPatch(sla.json, {'pauseOnStatus': rest.isEmpty ? null : rest})});
+  }
+
+  return lc.patch({'states': [for (final s in lc.states) if (s.id != id) unpause(s)], 'transitions': transitions, 'layout': layout, 'reset': ?resetJson});
 });

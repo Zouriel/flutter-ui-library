@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 
 import '../core/icon.dart';
 import '../core/interactive.dart';
@@ -266,6 +267,10 @@ class WfWorkflowEditor extends StatelessWidget {
     void patch(UiJson p, [String? mergeKey]) => store.patch(p, mergeKey: mergeKey == null ? null : 'wf:$mergeKey');
     void patchSettings(UiJson p) => patch({'settings': wfPatch(settings, p)});
 
+    /// A blank estimate with the switch off removes the key (never `{}` or empty text).
+    void setPublicTime(String estimate, bool display, [String? mergeKey]) =>
+        patch({'publicProcessingTime': estimate.trim().isEmpty && !display ? null : {'estimate': estimate, 'display': display}}, mergeKey);
+
     void setLifecycleField(String field) {
       if (lc == null) return;
       final f = fieldOf(store.registry, def.entity, field);
@@ -375,6 +380,25 @@ class WfWorkflowEditor extends StatelessWidget {
         WfAssigneesEditor(value: def.settings?.owners ?? const [], registry: store.registry, api: store.api, emptyText: 'Nobody yet.', label: 'owners', onChanged: (v) => patchSettings({'owners': v})),
         WfSwitch(value: def.settings?.notifyOwnersOnIncident ?? false, label: 'Tell them when a run gets stuck', onChanged: (on) => patchSettings({'notifyOwnersOnIncident': on ? true : null})),
       ]),
+      WfSection(title: 'Public processing time', children: [
+        FbSetting(
+          label: 'What people are told',
+          child: UiInput(
+            size: UiSize.sm,
+            value: def.publicProcessingTime?.estimate ?? '',
+            placeholder: 'e.g. 5 working days',
+            inputFormatters: [LengthLimitingTextInputFormatter(200)],
+            semanticLabel: 'What people are told',
+            onChanged: (v) => setPublicTime(v, def.publicProcessingTime?.display ?? false, 'publicTime'),
+          ),
+        ),
+        WfSwitch(
+          value: def.publicProcessingTime?.display ?? false,
+          label: 'Show this to the public',
+          onChanged: (on) => setPublicTime(def.publicProcessingTime?.estimate ?? '', on),
+        ),
+        const FbHint('Shown to people outside the office, for example on the service page. It does not change any time limit.'),
+      ]),
       WfSection(title: 'Variables', children: [
         for (var i = 0; i < vars.length; i++)
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: [
@@ -468,12 +492,43 @@ class WfStateEditor extends StatelessWidget {
           if (sla != null) ...[
             FbSetting(label: 'Longer than', child: WfDurationInput(value: sla.within, label: 'Time limit', onChanged: (v) => patch({'sla': {...sla.json, 'within': v}}))),
             WfSwitch(value: sla.calendar == 'working', label: 'Count working time only', onChanged: (on) => patch({'sla': wfPatch(sla.json, {'calendar': on ? 'working' : null})})),
+            ..._pauseControls(store, s, sla, (key, list) => patch({'sla': wfPatch(sla.json, {key: list.isEmpty ? null : list})})),
           ],
         ]),
       WfSwitch(value: s.keepRunsOnExit, label: 'Keep its steps running after the record leaves', onChanged: (on) => patch({'keepRunsOnExit': on ? true : null})),
       const FbHint('Edit what happens on entering, leaving or running late in the steps panel under the diagram.'),
     ]);
   }
+}
+
+/// A multi-select as a row of checkboxes under a label (the library's existing pattern, see [WfChecks]).
+/// Picks keep the order of [options]; an empty list is handed back as `[]` for the caller to drop.
+Widget _multiSelect(String label, List<WfOption> options, List<String> value, ValueChanged<List<String>> onChanged) => FbSetting(
+  label: label,
+  child: WfChecks(
+    label: label,
+    options: options,
+    isChecked: value.contains,
+    onChanged: (v, on) => onChanged([for (final o in options) if (o.value == v ? on : value.contains(o.value)) o.value]),
+  ),
+);
+
+/// The clock's pause and resume settings, inside a state's time limit: other states, and (when the
+/// app has signals) signals that pause it and start it again.
+List<Widget> _pauseControls(UiWorkflowBuilderController store, UiWfState s, UiWfSla sla, void Function(String key, List<String> list) set) {
+  final others = [for (final o in store.def.lifecycle?.states ?? const <UiWfState>[]) if (o.id != s.id) (value: o.id, label: o.label)];
+  final signals = [for (final g in store.registry?.signals ?? const <UiWfSignalDescriptor>[]) (value: g.key, label: g.label.isEmpty ? g.key : g.label)];
+  // Keys the list holds that are no longer offered stay listed, so nothing is dropped unseen.
+  List<WfOption> withStale(List<WfOption> o, List<String> v) => [...o, for (final x in v) if (!o.any((e) => e.value == x)) (value: x, label: '$x (unknown)')];
+  final status = sla.pauseOnStatus ?? const <String>[];
+  final pause = sla.pauseOnEvent ?? const <String>[];
+  final resume = sla.resumeOnEvent ?? const <String>[];
+  return [
+    if (others.isNotEmpty || status.isNotEmpty) _multiSelect('Pause the clock while the record is in', withStale(others, status), status, (l) => set('pauseOnStatus', l)),
+    if (signals.isNotEmpty || pause.isNotEmpty) _multiSelect('Pause the clock when', withStale(signals, pause), pause, (l) => set('pauseOnEvent', l)),
+    if (signals.isNotEmpty || resume.isNotEmpty) _multiSelect('Start it again when', withStale(signals, resume), resume, (l) => set('resumeOnEvent', l)),
+    const FbHint('Time spent paused does not count towards the limit.'),
+  ];
 }
 
 const List<WfOption> _transitionTones = wfToneOptions;

@@ -98,19 +98,22 @@ extension type const UiWfCondition._(UiJson json) implements Object {
   UiJson toJson() => json;
 }
 
-/// One entry of a people list: exactly one of `role`, `group`, `user`, `field`, `managerOf`,
+/// One entry of a people list: exactly one of `role`, `group`, `department`, `portal`, `queue`, `user`, `field`, `managerOf`,
 /// `initiator`, or (recipients only) `email`.
 extension type const UiWfAssignee._(UiJson json) implements Object {
   UiWfAssignee.fromJson(Object? j) : json = wfMap(j);
   UiWfAssignee.role(String key) : json = {'role': key};
   UiWfAssignee.group(String key) : json = {'group': key};
+  UiWfAssignee.department(String key) : json = {'department': key};
+  UiWfAssignee.portal(String key) : json = {'portal': key};
+  UiWfAssignee.queue(String key) : json = {'queue': key};
   UiWfAssignee.user(String id) : json = {'user': id};
   UiWfAssignee.field(String path) : json = {'field': path};
   UiWfAssignee.managerOf(String of) : json = {'managerOf': of};
   UiWfAssignee.initiator() : json = {'initiator': true};
   UiWfAssignee.email(UiWfTemplate email) : json = {'email': email.json};
 
-  static const kinds = ['role', 'group', 'user', 'field', 'managerOf', 'initiator', 'email'];
+  static const kinds = ['role', 'group', 'department', 'portal', 'queue', 'user', 'field', 'managerOf', 'initiator', 'email'];
 
   /// Which key is set.
   String get kind => kinds.firstWhere(json.containsKey, orElse: () => '');
@@ -306,8 +309,20 @@ extension type const UiWfHumanStep._(UiJson json) implements UiWfStep {
   String? get requireComment => wfStrOrNull(json['requireComment']);
 }
 
+/// An approval's separation of duties: `{excludeInitiator?, excludePreviousApprover?, requiredRole?}`.
+/// All three are optional; an absent or empty object means no rule.
+extension type const UiWfMakerChecker._(UiJson json) implements Object {
+  UiWfMakerChecker.fromJson(Object? j) : json = wfMap(j);
+  bool get excludeInitiator => json['excludeInitiator'] == true;
+  bool get excludePreviousApprover => json['excludePreviousApprover'] == true;
+  String? get requiredRole => wfStrOrNull(json['requiredRole']);
+}
+
 extension type const UiWfApprovalStep._(UiJson json) implements UiWfHumanStep {
   UiWfApprovalStep.of(UiWfStep s) : json = s.json;
+
+  /// Null when the step has no separation-of-duties rule.
+  UiWfMakerChecker? get makerChecker => json['makerChecker'] is Map ? UiWfMakerChecker.fromJson(json['makerChecker']) : null;
 
   /// `any`, `all`, `count` or `percent`.
   String get ruleType => wfStr(wfMap(json['rule'])['type'], 'any');
@@ -462,6 +477,13 @@ extension type const UiWfSla._(UiJson json) implements Object {
   String get within => wfStr(json['within']);
   String? get calendar => wfStrOrNull(json['calendar']);
   List<UiWfStep> get steps => wfList(json['steps'], UiWfStep.fromJson);
+
+  /// State ids (of the same lifecycle) in which the clock is paused instead of dropped.
+  List<String>? get pauseOnStatus => wfStringsOrNull(json['pauseOnStatus']);
+
+  /// Signal keys that pause / start the clock again.
+  List<String>? get pauseOnEvent => wfStringsOrNull(json['pauseOnEvent']);
+  List<String>? get resumeOnEvent => wfStringsOrNull(json['resumeOnEvent']);
 }
 
 extension type const UiWfState._(UiJson json) implements Object {
@@ -612,6 +634,14 @@ extension type const UiWfDefinitionSettings._(UiJson json) implements Object {
   String? get calendar => wfStrOrNull(json['calendar']);
 }
 
+/// `{estimate, display}`: the processing time people outside the office are told.
+extension type const UiWfPublicProcessingTime._(UiJson json) implements Object {
+  UiWfPublicProcessingTime.fromJson(Object? j) : json = wfMap(j);
+  UiWfPublicProcessingTime({required String estimate, required bool display}) : json = {'estimate': estimate, 'display': display};
+  String get estimate => wfStr(json['estimate']);
+  bool get display => json['display'] == true;
+}
+
 /// A workflow: an automation (a trigger and steps) or a lifecycle (states and transitions).
 extension type const UiWorkflowDefinition._(UiJson json) implements Object {
   UiWorkflowDefinition.fromJson(Object? j) : json = wfMap(j);
@@ -632,6 +662,7 @@ extension type const UiWorkflowDefinition._(UiJson json) implements Object {
   UiWfLifecycle? get lifecycle => json['lifecycle'] is Map ? UiWfLifecycle.fromJson(json['lifecycle']) : null;
   List<UiWfVariable>? get variables => wfListOrNull(json['variables'], UiWfVariable.fromJson);
   UiWfDefinitionSettings? get settings => json['settings'] is Map ? UiWfDefinitionSettings.fromJson(json['settings']) : null;
+  UiWfPublicProcessingTime? get publicProcessingTime => json['publicProcessingTime'] is Map ? UiWfPublicProcessingTime.fromJson(json['publicProcessingTime']) : null;
 
   /// A copy with [p] merged in (null values remove keys).
   UiWorkflowDefinition patch(UiJson p) => UiWorkflowDefinition._(wfPatch(json, p));
@@ -728,6 +759,9 @@ extension type const UiWorkflowRegistry._(UiJson json) implements Object {
   List<UiWfLabelled>? get channels => wfListOrNull(json['channels'], UiWfLabelled.fromJson);
   List<UiWfLabelled>? get roles => wfListOrNull(json['roles'], UiWfLabelled.fromJson);
   List<UiWfLabelled>? get groups => wfListOrNull(json['groups'], UiWfLabelled.fromJson);
+  List<UiWfLabelled>? get departments => wfListOrNull(json['departments'], UiWfLabelled.fromJson);
+  List<UiWfLabelled>? get portals => wfListOrNull(json['portals'], UiWfLabelled.fromJson);
+  List<UiWfLabelled>? get queues => wfListOrNull(json['queues'], UiWfLabelled.fromJson);
   UiJson toJson() => json;
 }
 

@@ -539,6 +539,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
             Text('since ${wfAgo(r.stateEnteredAt, now)}', style: context.uiText.body.copyWith(fontSize: 12, color: t.textMuted)),
             if (r.status == 'outOfSync') const WfChip('Out of sync', tone: 'warning'),
           ]),
+          ?_processingTime(context, r),
           if (!horizontal)
             UiStepper(
               steps: steps,
@@ -570,6 +571,13 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
         ]));
       },
     );
+  }
+
+  /// "Usual processing time: 5 working days", only when the record view carries it.
+  Widget? _processingTime(BuildContext context, UiWfRecord r) {
+    final text = r.publicProcessingTime;
+    if (text == null || text.trim().isEmpty) return null;
+    return Text('Usual processing time: $text', style: context.uiText.body.copyWith(fontSize: 12, color: context.ui.textMuted));
   }
 
   /// Said under the history when only the newest entries were read.
@@ -682,6 +690,7 @@ class UiWorkflowPanelState extends State<UiWorkflowPanel> with WidgetsBindingObs
         ] else
           const FbHint('No lifecycle for this record type.'),
       ]),
+      ?_processingTime(context, r),
       if (r.states.length > 1)
         Semantics(
           container: true,

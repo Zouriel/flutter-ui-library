@@ -188,6 +188,42 @@ class _WfStepEditorState extends State<WfStepEditor> {
     return WfStack(spacing: t.space3, children: children);
   }
 
+  /// An approval's "Separation of duties": who may not approve, and which role must. Turning every
+  /// rule off removes `makerChecker` (never `{}`).
+  Widget _separationOfDuties(
+    UiWfApprovalStep a,
+    List<UiWfLabelled>? roles,
+    void Function(UiJson p, [String? mergeKey]) patch,
+    Widget Function(bool, String, ValueChanged<bool>) sw,
+  ) {
+    final mc = a.makerChecker;
+    void set(String key, Object? v) {
+      final next = wfPatch(mc?.json ?? const <String, Object?>{}, {key: v});
+      patch({'makerChecker': next.isEmpty ? null : next});
+    }
+
+    final required = mc?.requiredRole;
+    final offered = [for (final r in roles ?? const <UiWfLabelled>[]) (value: r.key, label: r.label.isEmpty ? r.key : r.label)];
+    return WfSection(title: 'Separation of duties', children: [
+      const FbHint('Stops one person from both asking and approving.'),
+      sw(mc?.excludeInitiator ?? false, 'The person who started it cannot approve', (on) => set('excludeInitiator', on ? true : null)),
+      sw(mc?.excludePreviousApprover ?? false, 'Whoever approved the step before cannot approve this one', (on) => set('excludePreviousApprover', on ? true : null)),
+      if (offered.isNotEmpty)
+        field0(
+          'Must hold the role',
+          WfSelect(
+            label: 'Must hold the role',
+            value: required ?? '',
+            unknownSuffix: 'not a role of the app',
+            options: [(value: '', label: 'Any role'), ...offered],
+            onChanged: (v) => set('requiredRole', v.isEmpty ? null : v),
+          ),
+        ),
+    ]);
+  }
+
+  static Widget field0(String label, Widget child) => FbSetting(label: label, child: child);
+
   List<Widget> _typeSection(
     BuildContext context,
     UiWfStep step,
@@ -242,6 +278,7 @@ class _WfStepEditorState extends State<WfStepEditor> {
             ),
           ),
           const FbHint('People can always add remarks; they show in the history and later steps can read them.'),
+          _separationOfDuties(a, reg?.roles, patch, sw),
         ];
       case 'task':
         final tk = UiWfTaskStep.of(step);
