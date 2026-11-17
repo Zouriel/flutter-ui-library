@@ -94,6 +94,16 @@ void main() {
     expect(editable.focusNode.hasFocus, isFalse);
   });
 
+  testWidgets('a tap on a disabled slot button focuses the field (a greyed Send does not swallow the tap)', (tester) async {
+    // onSend null: the button is disabled, as a composer's Send is while the box is empty.
+    await pumpUi(tester, _composer());
+    final editable = tester.widget<EditableText>(find.byType(EditableText));
+    expect(editable.focusNode.hasFocus, isFalse);
+    await tester.tap(find.byKey(const Key('send')));
+    await tester.pump();
+    expect(editable.focusNode.hasFocus, isTrue);
+  });
+
   testWidgets('slots swap sides in RTL, from Directionality, dir or dir auto on Thaana', (tester) async {
     Future<bool> leadingOnRight(Widget w) async {
       await tester.pumpWidget(const SizedBox());

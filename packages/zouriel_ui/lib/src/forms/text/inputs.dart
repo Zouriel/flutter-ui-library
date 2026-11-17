@@ -31,7 +31,8 @@ TextInputType _keyboardFor(UiInputType type) => switch (type) {
 ///
 /// [leading] and [trailing] are content slots inside the border (the web `[input-leading]` /
 /// `[input-trailing]`): an icon or a small [UiIconButton], at the inline start and end (they swap in
-/// RTL), with the text between them. A tap on a slot's empty space focuses the field. [dir] sets the
+/// RTL), with the text between them. A tap on a slot's empty space, or on a disabled button in it,
+/// focuses the field. [dir] sets the
 /// writing direction ([UiTextDir.auto] follows the text typed), [textStyle] is merged over the field
 /// font (e.g. `TextStyle(fontFamily: 'Faruma')` to type Thaana in the app's own font).
 class UiInput extends StatefulWidget {
@@ -176,7 +177,8 @@ class _UiInputState extends State<UiInput> with UiTextControllerMixin {
 ///
 /// [leading] and [trailing] are content slots inside the border (the web `[textarea-leading]` /
 /// `[textarea-trailing]`), at the inline start and end (they swap in RTL), aligned to the last line
-/// so they stay at the bottom while it grows. A tap on a slot's empty space focuses the field; a
+/// so they stay at the bottom while it grows. A tap on a slot's empty space, or on a disabled button
+/// in it (a greyed Send), focuses the field; a
 /// [UiIconButton] in a slot keeps its 48dp touch target without making the box taller. [dir] and
 /// [textStyle] as on [UiInput].
 class UiTextarea extends StatefulWidget {
