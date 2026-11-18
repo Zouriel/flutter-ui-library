@@ -557,10 +557,16 @@ class _AnimatedToast extends StatelessWidget {
     final a = entry.anim;
     final curved = CurvedAnimation(parent: a, curve: t.easeDecelerate, reverseCurve: t.easeAccelerate);
     final blob = entry.toast.variant == UiToastVariant.blob;
-    return SizeTransition(
-      // Collapses the gap as it leaves, so the rest slide into place.
-      sizeFactor: CurvedAnimation(parent: a, curve: const Interval(0, 0.01), reverseCurve: t.easeStandard),
-      alignment: Alignment.topCenter,
+    final size = CurvedAnimation(parent: a, curve: const Interval(0, 0.01), reverseCurve: t.easeStandard);
+    // Collapses the gap as it leaves, so the rest slide into place (a SizeTransition, written out).
+    // A blob paints its shadow outside its box, so it is clipped only while the gap collapses;
+    // clipped at rest, its shadow showed a faint box on a light page (0.88.1).
+    return AnimatedBuilder(
+      animation: a,
+      builder: (context, child) => ClipRect(
+        clipBehavior: !blob || a.status == AnimationStatus.reverse ? Clip.hardEdge : Clip.none,
+        child: Align(alignment: Alignment.topCenter, heightFactor: math.max(size.value, 0), child: child),
+      ),
       child: Padding(
         padding: EdgeInsets.only(top: first ? 0 : t.space2),
         child: AnimatedBuilder(

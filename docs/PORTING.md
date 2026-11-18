@@ -1656,6 +1656,15 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
   kept until a date comes; neither Flutter picker can be cleared, so "clearing the time" has no trigger here.
 - Strings: `skipToContent`, `dateLabel`, `timeLabel` (en + dv).
 
+## 0.88.1: blob toast shadow not clipped in the host
+
+- `_AnimatedToast` (`toast.dart`) collapsed the gap with a `SizeTransition`, which always clips to the toast's box. The
+  blob's shadow is painted by `_BlobPainter` outside that box, so on a light page it was cut off in a faint rectangle
+  (a card fills its box, which hid it). The size transition is now written out (`AnimatedBuilder` + `ClipRect` +
+  `Align(heightFactor)`) and clips a blob toast only while it leaves; card toasts still clip as before. The web is not
+  affected: nothing above `ui-blob-toast` clips (no `overflow` on `.host`, the host element or `.blob`), and its leave
+  is a scale-out with no height collapse. Test: `blob_toast_test.dart` reads the pixels around a hosted blob toast.
+
 ## 0.88.0: blob toast, toast update and promise
 
 - **Shape** (`lib/src/dialog/blob_shape.dart`, the web `blob-shape.ts`): `uiBlobPieces(UiBlobGeometry)` returns the same

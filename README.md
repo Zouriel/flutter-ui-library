@@ -85,6 +85,8 @@ page: an icon in a tinted badge, eyebrow, title, description and an action, with
 accent, brand, neutral), `layout` (vertical, horizontal) and `size` (md, lg); with `onPressed` the
 whole card is one button.
 
+**Blob toast shadow (0.88.1):** in a `UiToastHost` the blob toast's soft shadow is no longer cut off at the toast's box.
+
 **Blob toast, toast update and promise (0.88.0):** `toasts.blob('Changes Saved', tone: UiToastTone.success, message: ...)`
 shows a toast as one liquid shape: a dark pill with the tone's icon and the title, which grows a card beneath it for
 the message, a `content` widget and a full-width `action`, joined by curved shoulders (`UiBlobToast`, `UiToastVariant.blob`).

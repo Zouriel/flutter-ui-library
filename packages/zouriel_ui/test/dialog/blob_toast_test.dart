@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
@@ -401,6 +402,52 @@ void main() {
       c.dismiss(id);
       await tester.pumpAndSettle();
     });
+  });
+
+  // 0.88.1: the host clipped each toast to its box (SizeTransition), so the blob's shadow, which
+  // falls outside its box, was cut off in a faint rectangle on a light page.
+  testWidgets('in a host, the blob shadow is not clipped to the toast box', (tester) async {
+    debugDisableShadows = false;
+    try {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 400);
+      addTearDown(tester.view.reset);
+      final c = UiToastController();
+      addTearDown(c.dispose);
+      final shot = GlobalKey();
+      await tester.pumpWidget(UiApp(
+        theme: UiThemeName.light,
+        builder: (context, child) => RepaintBoundary(key: shot, child: UiToastHost(controller: c, position: UiToastPosition.topCenter, child: child!)),
+        home: const SizedBox.expand(),
+      ));
+      c.blob('Changes Saved', tone: UiToastTone.success, message: 'Changes saved successfully to the database.', duration: Duration.zero);
+      await tester.pumpAndSettle();
+      final r = tester.getRect(find.byType(UiBlobToast));
+      final boundary = shot.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final bytes = (await tester.runAsync(() async {
+        final img = await boundary.toImage();
+        return img.toByteData();
+      }))!;
+      double lum(double x, double y) {
+        final i = (y.round() * 390 + x.round()) * 4;
+        return (bytes.getUint8(i) + bytes.getUint8(i + 1) + bytes.getUint8(i + 2)) / 3;
+      }
+
+      final bg = lum(5, 395);
+      // Below the box and beside it (past the 4px the stack leaves on each side).
+      for (final (name, p) in [('below', (r.center.dx, r.bottom + 4)), ('beside', (r.right + 7, r.center.dy + 20)), ('beside', (r.left - 7, r.center.dy + 20))]) {
+        expect(lum(p.$1, p.$2), lessThan(bg - 2), reason: 'shadow $name the toast at $p (page $bg)');
+      }
+      // A soft falloff, never a step back to the page colour.
+      for (var d = 1.0; d < 14; d++) {
+        final a = lum(r.center.dx, r.bottom + d), b = lum(r.center.dx, r.bottom + d + 1);
+        expect(b - a, lessThan(4), reason: 'hard edge below at +$d ($a -> $b)');
+        final s1 = lum(r.right + d, r.center.dy + 20), s2 = lum(r.right + d + 1, r.center.dy + 20);
+        expect(s2 - s1, lessThan(4), reason: 'hard edge beside at +$d ($s1 -> $s2)');
+      }
+    } finally {
+      debugDisableShadows = true;
+    }
   });
 
   testWidgets('golden: pill, loading, tones, action, pill on a side', (tester) async {
