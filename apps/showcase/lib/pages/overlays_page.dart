@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -34,6 +35,37 @@ class _OverlaysPageState extends State<OverlaysPage> {
   final UiSnackbarController _snacks = UiSnackbarController();
   final OverlayPortalController _toastLayer = OverlayPortalController();
   UiToastPosition _toastPos = UiToastPosition.bottomEnd;
+
+  // The blob toast preview: one toast object per state, swapped by the buttons.
+  static const UiToast _blobSaved = UiToast(
+    id: 0,
+    variant: UiToastVariant.blob,
+    tone: UiToastTone.success,
+    title: 'Changes Saved',
+    message: 'Changes saved successfully to the database. Please refresh the page to see the changes.',
+  );
+  UiToast _blobDemo = _blobSaved;
+  Timer? _blobTimer;
+
+  void _blobState(UiToast toast) {
+    _blobTimer?.cancel();
+    setState(() => _blobDemo = toast);
+  }
+
+  void _blobBooking() {
+    _blobState(const UiToast(id: 0, variant: UiToastVariant.blob, loading: true, title: 'Booking Flight'));
+    _blobTimer = Timer(const Duration(milliseconds: 2200), () {
+      if (!mounted) return;
+      setState(() => _blobDemo = UiToast(
+            id: 0,
+            variant: UiToastVariant.blob,
+            tone: UiToastTone.success,
+            title: 'Booking Confirmed',
+            content: const BlobFlightDemo(),
+            action: UiToastAction(label: 'View Details', run: () {}),
+          ));
+    });
+  }
   String _menuChoice = 'nothing yet';
   String _sheetChoice = 'nothing yet';
   String _contextChoice = 'nothing yet';
@@ -57,6 +89,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
 
   @override
   void dispose() {
+    _blobTimer?.cancel();
     _toasts.dispose();
     _snacks.dispose();
     super.dispose();
@@ -647,6 +680,103 @@ toasts.show('Layer deleted', action: UiToastAction(label: 'Undo', run: undo));''
 UiToastAction({required String label, required VoidCallback run})''',
         ),
         DocSection(
+          name: 'Blob toast',
+          widget: 'UiToastController.blob · update · promise',
+          summary: 'A toast drawn as one liquid shape (0.88.0): a dark pill with the tone\'s icon and the title, which grows a card beneath it for the message, your own content and a full-width action. The pill stays on top as a tab and joins the card with curved shoulders. It uses the inverted surface the snackbar uses (near-black on a light theme, near-white on a dark one) and colours the icon, title and action by tone. Call blob(title, message:, ...), or show(variant: UiToastVariant.blob); with no message, content or action it stays a pill. update(id, ...) changes a showing toast: the card closes to the pill, the title and colour change there, and it opens again. promise(future, loading:, success:, error:) shows a loading pill with a spinner and turns it into the success or error toast when the future settles. Blob toasts sit in the same stack as the others, on the host\'s side (the pill in the middle for a centred host). One blob toast opens its card by itself; when more than one is showing they stay pills, and each opens while the pointer is on it or on a tap of its pill (the host\'s blobExpand: UiBlobExpand.auto, the default; always opens every one, hover none by itself). Tapping the pill of an open toast, or of one with no card, dismisses it; it can also be swiped away.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space3, children: [
+            Container(
+              height: 250,
+              padding: EdgeInsets.symmetric(vertical: t.space6, horizontal: t.space4),
+              alignment: Alignment.topCenter,
+              decoration: BoxDecoration(color: t.bg, borderRadius: BorderRadius.circular(context.uiTheme.radius()), border: Border.all(color: t.border)),
+              child: UiBlobToast(toast: _blobDemo, onAction: () => _blobState(_blobSaved), onDismiss: () => _blobState(_blobSaved)),
+            ),
+            row([
+              UiButton(label: 'Success', variant: UiButtonVariant.outline, onPressed: () => _blobState(_blobSaved)),
+              UiButton(
+                label: 'Error',
+                variant: UiButtonVariant.outline,
+                onPressed: () => _blobState(const UiToast(id: 0, variant: UiToastVariant.blob, tone: UiToastTone.danger, title: 'Something Went Wrong', message: 'We could not reach the server. Check your connection and try again.')),
+              ),
+              UiButton(
+                label: 'Warning',
+                variant: UiButtonVariant.outline,
+                onPressed: () => _blobState(const UiToast(id: 0, variant: UiToastVariant.blob, tone: UiToastTone.warning, title: 'Storage Almost Full', message: 'You have used 92% of your storage. Remove some files or upgrade your plan.')),
+              ),
+              UiButton(
+                label: 'Info with action',
+                variant: UiButtonVariant.outline,
+                onPressed: () => _blobState(UiToast(id: 0, variant: UiToastVariant.blob, title: 'New Update Available', message: 'Version 2.4 is ready, with faster search and a new look.', action: UiToastAction(label: 'Share Now', run: () {}))),
+              ),
+              UiButton(label: 'Promise with custom content', variant: UiButtonVariant.outline, onPressed: _blobBooking),
+              UiButton(
+                label: 'Pill only',
+                variant: UiButtonVariant.outline,
+                onPressed: () => _blobState(const UiToast(id: 0, variant: UiToastVariant.blob, tone: UiToastTone.success, title: 'Link Copied')),
+              ),
+            ]),
+            row([
+              UiButton(
+                label: 'Show in the stack',
+                onPressed: () => _toasts.blob('Changes Saved', tone: UiToastTone.success, message: 'Changes saved successfully to the database. Please refresh the page to see the changes.'),
+              ),
+              UiButton(
+                label: 'Three at once (hover or tap to open)',
+                variant: UiButtonVariant.outline,
+                onPressed: () {
+                  const d = Duration(seconds: 9);
+                  _toasts.blob('Changes Saved', tone: UiToastTone.success, message: 'Changes saved successfully to the database.', duration: d);
+                  _toasts.blob('Storage Almost Full', tone: UiToastTone.warning, message: 'You have used 92% of your storage.', duration: d);
+                  _toasts.blob('New Update Available', message: 'Version 2.4 is ready.', action: UiToastAction(label: 'Share Now', run: () {}), duration: d);
+                },
+              ),
+              UiButton(
+                label: 'Promise in the stack',
+                onPressed: () => _toasts.promise<String>(
+                  Future.delayed(const Duration(milliseconds: 2200), () => 'Q2 204'),
+                  loading: const UiToastState('Booking Flight'),
+                  success: (code) => UiToastState('Booking Confirmed', content: const BlobFlightDemo(), action: UiToastAction(label: 'View Details', run: () {}), duration: const Duration(seconds: 8)),
+                  error: (e) => const UiToastState('Something Went Wrong', message: 'The booking did not go through.'),
+                ),
+              ),
+            ]),
+          ]),
+          code: '''toasts.blob('Changes Saved', tone: UiToastTone.success, message: 'Changes saved successfully to the database.');
+toasts.blob('New Update Available', message: 'Version 2.4 is ready.', action: UiToastAction(label: 'Share Now', run: share));
+
+// a loading pill that becomes a success card, or an error card
+toasts.promise<Booking>(
+  book(),
+  loading: const UiToastState('Booking Flight'),
+  success: (b) => UiToastState('Booking Confirmed', content: FlightSummary(b), action: UiToastAction(label: 'View Details', run: () => open(b))),
+  error: (e) => const UiToastState('Something Went Wrong', message: 'The booking did not go through.'),
+);
+
+// or by hand
+final id = toasts.blob('Uploading', loading: true);
+toasts.update(id, loading: false, tone: UiToastTone.success, title: 'File Uploaded', message: 'report.pdf is in your files.');''',
+          api: const [
+            ApiRow('UiBlobToast: toast', 'UiToast', 'The view the host builds, for placing one yourself (as the preview here does). A different toast replays close, swap, open.'),
+            ApiRow('UiBlobToast: side', 'UiBlobSide', 'left, center, right: where the pill sits over the card. The host passes its own side.', def: 'center'),
+            ApiRow('host: blobExpand', 'UiBlobExpand', 'When blob toasts open their card. auto: a lone blob toast opens by itself; with more than one showing they stay pills and open under the pointer or on a tap of the pill. always: each opens by itself. hover: none opens by itself.', def: 'auto'),
+            ApiRow('UiBlobToast: expanded', 'bool', 'Whether the card opens by itself. When false it opens under the pointer or on a tap of the pill. The host sets it from blobExpand.', def: 'true'),
+            ApiRow('UiBlobToast: onAction / onDismiss', 'VoidCallback?', 'From the action button and from a tap on the pill.'),
+            ApiRow('UiBlobToast.toneOf(context)', 'Color?', "The tone's colour as the toast draws it (adjusted to read on the dark surface), for accents in custom content. The web --ui-toast-tone."),
+            ApiRow('toast: content', 'Widget?', 'Your own content in the card, between the message and the action. It inherits the muted text colour.'),
+            ApiRow('toast: action', 'UiToastAction?', 'A full-width pill button at the bottom of the card, in a tint of the tone. Running it dismisses the toast.'),
+            ApiRow('toast: loading', 'bool', 'A spinner for the icon and a muted title; the toast then stays until updated or dismissed unless you give a duration. Card toasts show the spinner too.', def: 'false'),
+          ],
+          callbacks: const [
+            ApiRow('blob(title, {message, tone, duration, action, loading, content})', 'int', 'Show a blob toast; the same as show(message, title:, variant: UiToastVariant.blob). Returns its id.'),
+            ApiRow('update(id, {title, message, tone, duration, action, loading, content, variant, clearTitle, clearAction, clearContent})', 'void', 'Change a showing toast: what is given replaces what it had, the clear flags remove. A blob toast closes to its pill, changes there and opens again. The countdown restarts with duration, else 4 s when the toast stops loading, else what it had.'),
+            ApiRow('promise<T>(future, {loading, success, error})', 'Future<T>', 'A loading pill that becomes the success toast (tone success) when the future completes, or the error toast (tone danger) when it fails. loading is a UiToastState; success and error build one from the result. Returns the same future.'),
+          ],
+          shapes: '''enum UiToastVariant { card, blob }
+enum UiBlobSide { left, center, right }
+enum UiBlobExpand { auto, always, hover }
+UiToastState(String title, {String message = '', UiToastAction? action, Widget? content, Duration? duration, UiToastTone? tone})''',
+        ),
+        DocSection(
           name: 'Snackbar',
           widget: 'UiSnackbarController · UiSnackbarHost · UiSnackbar',
           summary: 'A short note about something the person just did, with at most one action: Deleted with Undo, Grouped, Keyframe added. It is a compact inverted bar centred at the bottom of the screen, the one the form builder uses. Only one shows at a time; a new one replaces it. Put one UiSnackbarHost near the app root (UiApp.builder) and call show(message) on its controller; UiSnackbarController.of(context) finds it. It leaves after 4 s, or 10 s when it has an action so there is time to reach Undo, and holds while a finger, the pointer or focus is on it. offset lifts it above a bottom bar; it also stays above the keyboard. On touch it is one touch target (48dp) tall. Each notice is a live region, so screen readers announce it. Use toasts instead for messages that should stack or carry a tone, such as errors. Editors that place it themselves (the form builder does) can use the bare UiSnackbar.',
@@ -740,4 +870,55 @@ if (command != null) run(command.value);''',
       child: page,
     );
   }
+}
+
+/// Custom content for the blob toast demo: an airline, a flight number and a dotted route arc in
+/// the toast's tone.
+class BlobFlightDemo extends StatelessWidget {
+  const BlobFlightDemo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final strong = TextStyle(color: t.bg, fontWeight: FontWeight.w600);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: t.space2,
+      children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Maldivian', style: strong), const Text('Q2 204')]),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          spacing: t.space2,
+          children: [
+            Text('MLE', style: strong),
+            Expanded(child: SizedBox(height: 30, child: CustomPaint(painter: _RoutePainter(UiBlobToast.toneOf(context) ?? t.success)))),
+            Text('GAN', style: strong),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _RoutePainter extends CustomPainter {
+  const _RoutePainter(this.color);
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final arc = Path()
+      ..moveTo(4, size.height - 4)
+      ..quadraticBezierTo(size.width / 2, -size.height * 0.8, size.width - 4, size.height - 4);
+    final paint = Paint()..color = color;
+    for (final m in arc.computeMetrics()) {
+      for (var d = 0.0; d <= m.length; d += 7) {
+        final at = m.getTangentForOffset(d);
+        if (at != null) canvas.drawCircle(at.position, 1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RoutePainter old) => old.color != color;
 }

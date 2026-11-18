@@ -14,6 +14,8 @@ export '../dialog/modal.dart';
 export '../dialog/route.dart';
 export '../dialog/bottom_sheet.dart';
 export '../dialog/toast.dart';
+export '../dialog/blob_toast.dart';
+export '../dialog/blob_shape.dart';
 export '../dialog/snackbar.dart';
 export '../dialog/task_progress.dart';
 export '../command_palette/command_palette.dart';

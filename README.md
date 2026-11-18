@@ -85,6 +85,15 @@ page: an icon in a tinted badge, eyebrow, title, description and an action, with
 accent, brand, neutral), `layout` (vertical, horizontal) and `size` (md, lg); with `onPressed` the
 whole card is one button.
 
+**Blob toast, toast update and promise (0.88.0):** `toasts.blob('Changes Saved', tone: UiToastTone.success, message: ...)`
+shows a toast as one liquid shape: a dark pill with the tone's icon and the title, which grows a card beneath it for
+the message, a `content` widget and a full-width `action`, joined by curved shoulders (`UiBlobToast`, `UiToastVariant.blob`).
+`toasts.update(id, ...)` changes a showing toast (a blob closes to its pill, changes there, opens again), and
+`toasts.promise(future, loading:, success:, error:)` turns a loading pill into the success or error toast. `loading: true`
+gives any toast a spinner and keeps it until updated. `message` may now be empty (a blob with only a title stays a pill).
+One blob toast opens by itself; with more than one showing they stay pills and open under the pointer or on a tap
+(`UiToastHost(blobExpand: UiBlobExpand.auto)`, the default; `always` and `hover` are the other two).
+
 **Workflow tour anchors, workflow error text, form prefill and server errors (0.87.0):** `UiWorkflowPanel` and
 `UiWorkflowTasksDrawer` take `anchorPrefix`, making their controls `UiTourAnchor`s (`<prefix>.open`, `.move.<key>`,
 `.manual.<key>`, `.reset`, `.confirm`, `.task-entry`, `.task.<outcome>`, `.stopped`); a tour pointing into a closed drawer

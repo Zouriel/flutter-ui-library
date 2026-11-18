@@ -492,7 +492,16 @@ File: `dialog/src/toast.ts`
 - Inputs: `position`: UiToastPosition = 'bottom-right'
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
+### UiBlobToast (component, `ui-blob-toast`)
+File: `dialog/src/blob-toast.ts`, `dialog/src/blob-shape.ts`  
+`ui-blob-toast` — one toast drawn as a blob: a pill that grows a card as one shape (0.88.0). Service: `blob`, `update`, `promise`.  
+- Inputs: `toast`: UiToast, `side`: 'left' | 'center' | 'right' = 'center', `expanded` = true; host: `blobExpand`: 'auto' | 'always' | 'hover' = 'auto'
+- Outputs: `act`, `dismiss`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 - type `UiToastTone` (toast.ts)
+- type `UiToastVariant`, `UiToastPatch`, `UiToastState`, interface `UiToastPromiseStates` (toast.ts)
+- function `uiBlobPieces`, `uiBlobPath`, class `UiBlobSpring` (blob-shape.ts)
 - type `UiToastPosition` (toast.ts)
 - interface `UiToastOptions` (toast.ts)
 - interface `UiToastAction` (toast.ts)

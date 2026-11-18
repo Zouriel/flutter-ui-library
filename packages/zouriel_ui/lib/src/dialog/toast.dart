@@ -6,9 +6,12 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../button/button.dart';
 import '../core/icon.dart';
+import '../feedback/spinner.dart';
 import '../core/types.dart';
 import '../forms/text/text_dir.dart';
 import '../theme/theme.dart';
+import 'blob_shape.dart';
+import 'blob_toast.dart';
 import 'modal.dart';
 import 'snackbar.dart';
 
@@ -44,6 +47,15 @@ enum UiToastPosition {
   }
 }
 
+/// How a toast is drawn, the web `UiToastVariant`: [card], the bordered card with a tone edge, or
+/// [blob] (0.88.0), a dark pill that grows a card beneath it as one shape ([UiBlobToast]).
+enum UiToastVariant { card, blob }
+
+/// When blob toasts open their card, the web `UiBlobExpand`: [auto], a lone blob toast opens by
+/// itself and several stay pills that open under the pointer or on a tap; [always], each opens by
+/// itself; [hover], never by itself.
+enum UiBlobExpand { auto, always, hover }
+
 /// One button in a toast, e.g. Undo. Running it dismisses the toast.
 @immutable
 class UiToastAction {
@@ -55,9 +67,21 @@ class UiToastAction {
 /// A queued toast, the web `UiToast`.
 @immutable
 class UiToast {
-  const UiToast({required this.id, required this.message, this.title, this.tone = UiToastTone.info, this.duration = const Duration(seconds: 4), this.action});
+  const UiToast({
+    required this.id,
+    this.message = '',
+    this.title,
+    this.tone = UiToastTone.info,
+    this.duration = const Duration(seconds: 4),
+    this.action,
+    this.variant = UiToastVariant.card,
+    this.loading = false,
+    this.content,
+  });
 
   final int id;
+
+  /// The text; may be empty (0.88.0): a blob toast with only a title stays a pill.
   final String message;
   final String? title;
   final UiToastTone tone;
@@ -65,6 +89,31 @@ class UiToast {
   /// Auto-dismiss after this long; [Duration.zero] keeps it until dismissed.
   final Duration duration;
   final UiToastAction? action;
+  final UiToastVariant variant;
+
+  /// Work in progress: a spinner in place of the tone's icon, and on a blob toast a muted title.
+  final bool loading;
+
+  /// Blob toasts only: your own content in the card, between the message and the action.
+  /// [UiBlobToast.toneOf] gives it the tone's colour.
+  final Widget? content;
+}
+
+/// One state of a [UiToastController.promise] toast, the web `UiToastState`: the title, and
+/// anything else the toast should show in that state.
+@immutable
+class UiToastState {
+  const UiToastState(this.title, {this.message = '', this.action, this.content, this.duration, this.tone});
+  final String title;
+  final String message;
+  final UiToastAction? action;
+  final Widget? content;
+
+  /// How long the settled toast stays; 4 s when null. Ignored for the loading state.
+  final Duration? duration;
+
+  /// Overrides the tone the state has by itself (success, danger).
+  final UiToastTone? tone;
 }
 
 /// `UiToastService`: queues transient notifications for a [UiToastHost] to show.
@@ -95,24 +144,118 @@ class UiToastController extends ChangeNotifier {
 
   static UiToastController? maybeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_UiToastScope>()?.controller;
 
-  int show(String message, {String? title, UiToastTone tone = UiToastTone.info, Duration duration = const Duration(seconds: 4), UiToastAction? action}) {
-    final toast = UiToast(id: ++_seq, message: message, title: title, tone: tone, duration: duration, action: action);
+  /// [duration] defaults to 4 s, or to zero (stay) while [loading].
+  int show(
+    String message, {
+    String? title,
+    UiToastTone tone = UiToastTone.info,
+    Duration? duration,
+    UiToastAction? action,
+    UiToastVariant variant = UiToastVariant.card,
+    bool loading = false,
+    Widget? content,
+  }) {
+    final toast = UiToast(
+      id: ++_seq,
+      message: message,
+      title: title,
+      tone: tone,
+      duration: duration ?? (loading ? Duration.zero : const Duration(seconds: 4)),
+      action: action,
+      variant: variant,
+      loading: loading,
+      content: content,
+    );
     _toasts.add(toast);
-    if (duration > Duration.zero) {
-      _remaining[toast.id] = duration;
-      _tick ??= Timer.periodic(_step, (_) => _onTick());
-    }
+    _arm(toast);
     notifyListeners();
     return toast.id;
   }
 
-  int info(String message, {String? title, Duration duration = const Duration(seconds: 4), UiToastAction? action}) =>
+  void _arm(UiToast toast) {
+    _paused.remove(toast.id);
+    if (toast.duration > Duration.zero) {
+      _remaining[toast.id] = toast.duration;
+      _tick ??= Timer.periodic(_step, (_) => _onTick());
+    } else {
+      _remaining.remove(toast.id);
+    }
+  }
+
+  /// A blob toast (0.88.0): a pill with [title], growing a card for the message, content and action.
+  int blob(String title, {String message = '', UiToastTone tone = UiToastTone.info, Duration? duration, UiToastAction? action, bool loading = false, Widget? content}) =>
+      show(message, title: title, tone: tone, duration: duration, action: action, variant: UiToastVariant.blob, loading: loading, content: content);
+
+  /// Changes a showing toast in place (0.88.0): what is given replaces what it had, and
+  /// [clearTitle] / [clearAction] / [clearContent] remove those. The countdown starts again with
+  /// the new duration: [duration], else 4 s when the toast stops loading, else what it had. A blob
+  /// toast closes to its pill, changes there, and opens again.
+  void update(
+    int id, {
+    String? title,
+    String? message,
+    UiToastTone? tone,
+    Duration? duration,
+    UiToastAction? action,
+    UiToastVariant? variant,
+    bool? loading,
+    Widget? content,
+    bool clearTitle = false,
+    bool clearAction = false,
+    bool clearContent = false,
+  }) {
+    final i = _toasts.indexWhere((t) => t.id == id);
+    if (i < 0) return;
+    final old = _toasts[i];
+    final nowLoading = loading ?? old.loading;
+    final next = UiToast(
+      id: id,
+      message: message ?? old.message,
+      title: clearTitle ? null : title ?? old.title,
+      tone: tone ?? old.tone,
+      duration: duration ?? (old.loading && !nowLoading ? const Duration(seconds: 4) : old.duration),
+      action: clearAction ? null : action ?? old.action,
+      variant: variant ?? old.variant,
+      loading: nowLoading,
+      content: clearContent ? null : content ?? old.content,
+    );
+    _toasts[i] = next;
+    _arm(next);
+    notifyListeners();
+  }
+
+  /// A blob toast that follows a future (0.88.0): a loading pill, which becomes the [success] toast
+  /// when the future completes or the [error] toast when it fails. Returns the same future.
+  Future<T> promise<T>(
+    Future<T> future, {
+    required UiToastState loading,
+    required UiToastState Function(T value) success,
+    required UiToastState Function(Object error) error,
+  }) {
+    final id = blob(loading.title, message: loading.message, tone: loading.tone ?? UiToastTone.info, action: loading.action, content: loading.content, loading: true);
+    void settle(UiToastTone tone, UiToastState s) => update(
+          id,
+          tone: s.tone ?? tone,
+          title: s.title,
+          message: s.message,
+          action: s.action,
+          content: s.content,
+          duration: s.duration,
+          loading: false,
+          clearAction: s.action == null,
+          clearContent: s.content == null,
+        );
+    future.then((value) => settle(UiToastTone.success, success(value)), onError: (Object e) => settle(UiToastTone.danger, error(e)));
+    return future;
+  }
+
+  int info(String message, {String? title, Duration? duration, UiToastAction? action}) =>
       show(message, title: title, duration: duration, action: action);
-  int success(String message, {String? title, Duration duration = const Duration(seconds: 4), UiToastAction? action}) =>
+  int success(String message, {String? title, Duration? duration, UiToastAction? action}) =>
       show(message, title: title, tone: UiToastTone.success, duration: duration, action: action);
-  int warning(String message, {String? title, Duration duration = const Duration(seconds: 4), UiToastAction? action}) =>
+  int warning(String message, {String? title, Duration? duration, UiToastAction? action}) =>
       show(message, title: title, tone: UiToastTone.warning, duration: duration, action: action);
-  int danger(String message, {String? title, Duration duration = const Duration(seconds: 4), UiToastAction? action}) =>
+  int danger(String message, {String? title, Duration? duration, UiToastAction? action}) =>
       show(message, title: title, tone: UiToastTone.danger, duration: duration, action: action);
 
   void _onTick() {
@@ -186,10 +329,14 @@ class _UiToastScope extends InheritedWidget {
 /// [textStyle] (0.44.2) is merged over every toast's text, as on the text fields: an app font,
 /// e.g. `TextStyle(fontFamilyFallback: ['Faruma'])` so a Dhivehi name doesn't come out as boxes.
 class UiToastHost extends StatefulWidget {
-  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomEnd, this.snackbar, this.textStyle, this.child});
+  const UiToastHost({super.key, required this.controller, this.position = UiToastPosition.bottomEnd, this.blobExpand = UiBlobExpand.auto, this.snackbar, this.textStyle, this.child});
 
   final UiToastController controller;
   final UiToastPosition position;
+
+  /// When blob toasts open their card (0.88.0). [UiBlobExpand.auto]: one opens by itself; with more
+  /// than one showing they stay pills and open under the pointer or on a tap.
+  final UiBlobExpand blobExpand;
 
   /// Merged over each toast's title, message and action label: a font family or
   /// `fontFamilyFallback` (an app font such as Faruma for Thaana), kept as given (0.44.2).
@@ -205,7 +352,7 @@ class UiToastHost extends StatefulWidget {
 
 class _Entry {
   _Entry(this.toast, this.anim);
-  final UiToast toast;
+  UiToast toast;
   final AnimationController anim;
   bool leaving = false;
 }
@@ -286,10 +433,12 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
     if (!mounted) return;
     final t = context.ui;
     final animate = context.uiAnimate;
-    final live = {for (final x in widget.controller.toasts) x.id};
+    final live = {for (final x in widget.controller.toasts) x.id: x};
     setState(() {
       for (final e in _entries) {
-        if (!e.leaving && !live.contains(e.toast.id)) {
+        // update() replaced it: show the new one in the same place.
+        if (!e.leaving && live[e.toast.id] != null) e.toast = live[e.toast.id]!;
+        if (!e.leaving && !live.containsKey(e.toast.id)) {
           e.leaving = true;
           e.anim.reverseDuration = animate ? t.motionFast : Duration.zero;
           e.anim.reverse().whenComplete(() {
@@ -362,6 +511,13 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
                       first: i == 0,
                       entry: e,
                       from: from,
+                      side: switch (pos) {
+                        UiToastPosition.topLeft || UiToastPosition.bottomLeft => UiBlobSide.left,
+                        UiToastPosition.topCenter || UiToastPosition.bottomCenter => UiBlobSide.center,
+                        _ => UiBlobSide.right,
+                      },
+                      expanded: widget.blobExpand == UiBlobExpand.always ||
+                          (widget.blobExpand == UiBlobExpand.auto && _entries.where((x) => !x.leaving && x.toast.variant == UiToastVariant.blob).length <= 1),
                       onSwiped: () => _swiped(e),
                       controller: widget.controller,
                       textStyle: widget.textStyle,
@@ -382,7 +538,10 @@ class _UiToastHostState extends State<UiToastHost> with TickerProviderStateMixin
 }
 
 class _AnimatedToast extends StatelessWidget {
-  const _AnimatedToast({super.key, required this.entry, required this.from, required this.onSwiped, required this.controller, this.textStyle, this.first = false});
+  const _AnimatedToast({super.key, required this.entry, required this.from, required this.side, required this.expanded, required this.onSwiped, required this.controller, this.textStyle, this.first = false});
+
+  final UiBlobSide side;
+  final bool expanded;
 
   final TextStyle? textStyle;
   final _Entry entry;
@@ -397,6 +556,7 @@ class _AnimatedToast extends StatelessWidget {
     final id = entry.toast.id;
     final a = entry.anim;
     final curved = CurvedAnimation(parent: a, curve: t.easeDecelerate, reverseCurve: t.easeAccelerate);
+    final blob = entry.toast.variant == UiToastVariant.blob;
     return SizeTransition(
       // Collapses the gap as it leaves, so the rest slide into place.
       sizeFactor: CurvedAnimation(parent: a, curve: const Interval(0, 0.01), reverseCurve: t.easeStandard),
@@ -407,7 +567,10 @@ class _AnimatedToast extends StatelessWidget {
           animation: curved,
           builder: (context, child) => Opacity(
             opacity: curved.value.clamp(0.0, 1.0),
-            child: Transform.translate(offset: from * (1 - curved.value), child: child),
+            // A blob toast scales in and out where it is; a card slides from its edge.
+            child: blob
+                ? Transform.scale(scale: 0.96 + 0.04 * curved.value, child: child)
+                : Transform.translate(offset: from * (1 - curved.value), child: child),
           ),
           child: Dismissible(
             key: ValueKey('dismiss$id'),
@@ -424,12 +587,24 @@ class _AnimatedToast extends StatelessWidget {
                   canRequestFocus: false,
                   skipTraversal: true,
                   onFocusChange: (f) => f ? controller.pause(id) : controller.resume(id),
-                  child: UiToastView(
-                    toast: entry.toast,
-                    textStyle: textStyle,
-                    onAction: () => controller.act(id),
-                    onDismiss: () => controller.dismiss(id),
-                  ),
+                  child: blob
+                      ? Align(
+                          alignment: switch (side) { UiBlobSide.left => Alignment.centerLeft, UiBlobSide.right => Alignment.centerRight, UiBlobSide.center => Alignment.center },
+                          child: UiBlobToast(
+                            toast: entry.toast,
+                            side: side,
+                            expanded: expanded,
+                            textStyle: textStyle,
+                            onAction: () => controller.act(id),
+                            onDismiss: () => controller.dismiss(id),
+                          ),
+                        )
+                      : UiToastView(
+                          toast: entry.toast,
+                          textStyle: textStyle,
+                          onAction: () => controller.act(id),
+                          onDismiss: () => controller.dismiss(id),
+                        ),
                 ),
               ),
             ),
@@ -502,7 +677,10 @@ class UiToastView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: t.space2,
                     children: [
-                      SizedBox(height: body.fontSize! * 1.35, child: Center(child: UiIcon(icon, size: 16, color: c, strokeWidth: 2))),
+                      SizedBox(
+                        height: body.fontSize! * 1.35,
+                        child: Center(child: toast.loading ? UiSpinner(size: 14, strokeWidth: 2, color: t.textMuted, decorative: true) : UiIcon(icon, size: 16, color: c, strokeWidth: 2)),
+                      ),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

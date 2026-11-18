@@ -1655,3 +1655,35 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
   Flutter). The parts' names use the pickers' existing `label` (the web's new `ariaLabel`). A time picked before a date is
   kept until a date comes; neither Flutter picker can be cleared, so "clearing the time" has no trigger here.
 - Strings: `skipToContent`, `dateLabel`, `timeLabel` (en + dv).
+
+## 0.88.0: blob toast, toast update and promise
+
+- **Shape** (`lib/src/dialog/blob_shape.dart`, the web `blob-shape.ts`): `uiBlobPieces(UiBlobGeometry)` returns the same
+  pieces from the same numbers as the web (pill, card, the two halves of the neck, the concave joins) and `uiBlobPath`
+  adds them to one `Path`, all clockwise. The web writes SVG path data; the tests on both sides assert the pieces.
+- **UiBlobToast** (`blob_toast.dart`, the web `ui-blob-toast`): a `CustomPaint` of the path (shadow from `shadow2`, drawn
+  with the path, as the web's `drop-shadow`), the card content in a `ClipPath` of the same path, and the pill on top.
+  Progress is an unbounded `AnimationController` run by a `SpringSimulation` with the web's numbers (stiffness 260,
+  damping 24); closing stops at 0 instead of bouncing, as the web's hand-stepped spring does. The pill and card are
+  measured after layout (`_Measure`), the web's ResizeObserver. The 360 ms and 180 ms waits are animation
+  controllers, not timers, so `pumpAndSettle` sees them. The blur in mid-transition is a `MaskFilter` on the shape and
+  an `ImageFiltered` on the card content.
+- **Tone colour**: `uiBlobTone(tone, page)` does in Dart what the web does with
+  `oklch(from color-mix(in oklab, tone 20%, grey at the page's lightness) l calc(c * 5) h)`: the tone's hue and chroma at
+  a lightness 80% of the way to the page's. The Flutter test checks 4.5:1 on the surface and on the action tint in
+  every theme; the web has no per-theme colour test for it, so change the two together.
+- **Pill tap**: a `GestureDetector` left out of semantics (a 38dp pill is under the 48dp target); the host's swipe and
+  its dismiss action are the accessible ways out. The web pill is a button with a "Dismiss" title.
+- **API differences**: `update(id, {...})` takes named values plus `clearTitle` / `clearAction` / `clearContent` (the
+  web passes `undefined` in a patch object). `promise` takes `UiToastState`s, with `success` and `error` always
+  functions (no string-or-object union in Dart). `content` is a `Widget` (the web takes a `TemplateRef`), and reads the
+  tone with `UiBlobToast.toneOf(context)` (the web `--ui-toast-tone`). `show`'s `duration` is now nullable: 4 s, or
+  zero while `loading`.
+- **blobExpand** (`UiToastHost.blobExpand`, `UiBlobToast.expanded`): as the web. Hover is two `MouseRegion`s: entering
+  the pill opens, leaving the whole box closes (the web makes the box hold the pointer while open, `.blob.live`), so the
+  card that grows under the pointer keeps it. No focus trigger (the web opens on `focusin`; here the card is out of
+  the focus order while closed and the pill is not focusable). A tap on a closed pill opens it and holds it open until
+  the toast changes; the next tap dismisses.
+- **Entry and exit**: a blob toast scales in and out in the host (the web `ui-scale-enter` / `-leave`); card toasts
+  still slide. No `role="alert"` split, as for the card toast: one live region.
+
