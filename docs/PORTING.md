@@ -1,5 +1,18 @@
 # Porting @zouriel/ui to Flutter
 
+## Text tones/truncate, media badge & list title/hint
+
+- `UiText`: `truncate` (shorthand for `maxLines: 1, overflow: TextOverflow.ellipsis`) and `tone`
+  (`UiTextTone`: `standard`, `muted`, `onMedia`, mapping web `'default' | 'muted' | 'on-media'`).
+  `onMedia` paints `mediaOnScrim` (90% alpha for `caption`/`h6`) with a 1px dark scrim shadow; an
+  explicit `color` still wins.
+- `UiBadge`: `leading` (icon before `label` with `space1` gap, tinted to the badge ink at 12px) and
+  `onMedia` / `UiBadge.media(...)` (translucent 62% `mediaScrim` fill + `mediaOnScrim` ink, matching
+  `UiLikeCount`). Kept out of `UiStatus` (and separate from `UiBadgeTone` in `button.dart`) so
+  existing `UiStatus` switches stay intact.
+- `UiListItem`: optional `title` (medium weight) and `hint` (muted single-line ellipsized) with a
+  2px vertical gap; `child` is optional when `title` is given.
+
 ## Plan card add-on (0.76.0)
 
 `UiPlanCard.addOn` / `addOnNote` / `addOnValue` / `onAddOnChanged` (web: `addOn`, `addOnNote`,

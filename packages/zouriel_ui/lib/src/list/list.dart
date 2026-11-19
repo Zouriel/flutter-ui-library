@@ -44,13 +44,27 @@ class UiList extends StatelessWidget {
 }
 
 /// `ui-list-item`: a row with optional [leading] and [trailing] widgets (trailing in the muted
-/// colour). With [onTap] the row is a button (48dp tall on touch) with hover, press and an inset
-/// focus ring; [selected] tints it, marks its leading edge with a 2px primary bar (so it can't be
-/// mistaken for a hovered row) and is announced; [enabled] false fades it and ignores taps.
+/// colour). Pass [title] (and optional [hint], single-line ellipsized) for a structured settings row,
+/// or [child] for custom body content. With [onTap] the row is a button (48dp tall on touch) with
+/// hover, press and an inset focus ring; [selected] tints it, marks its leading edge with a 2px
+/// primary bar (so it can't be mistaken for a hovered row) and is announced; [enabled] false fades
+/// it and ignores taps.
 class UiListItem extends StatelessWidget {
-  const UiListItem({super.key, required this.child, this.leading, this.trailing, this.onTap, this.selected = false, this.enabled = true});
+  const UiListItem({
+    super.key,
+    this.child,
+    this.title,
+    this.hint,
+    this.leading,
+    this.trailing,
+    this.onTap,
+    this.selected = false,
+    this.enabled = true,
+  }) : assert(child != null || title != null, 'UiListItem needs either child or title.');
 
-  final Widget child;
+  final Widget? child;
+  final String? title;
+  final String? hint;
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -60,6 +74,25 @@ class UiListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
+    final bodyStyle = context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35);
+    final Widget mainContent = (title == null && hint == null)
+        ? child!
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 2,
+            children: [
+              if (title != null) Text(title!, style: bodyStyle.copyWith(fontWeight: FontWeight.w500)),
+              ?child,
+              if (hint != null)
+                Text(
+                  hint!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: bodyStyle.copyWith(color: t.textMuted),
+                ),
+            ],
+          );
     Widget row(UiStates s, {bool interactive = false}) {
       final hover = s.hovered || s.pressed;
       final bg = selected ? (hover ? uiMix(t.selected, 0.5, t.surfaceHover) : t.selected) : (hover ? t.surfaceHover : null);
@@ -74,10 +107,10 @@ class UiListItem extends StatelessWidget {
           decoration: BoxDecoration(color: bg, border: BorderDirectional(start: BorderSide(color: selected ? t.primary : t.primary.withValues(alpha: 0), width: 2))),
           foregroundDecoration: s.focused ? BoxDecoration(border: Border.all(color: t.borderFocus, width: 2)) : null,
           child: DefaultTextStyle.merge(
-            style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.35),
+            style: bodyStyle,
             child: Row(spacing: t.space3, children: [
               if (leading != null) IconTheme.merge(data: IconThemeData(color: t.icon ?? t.text, size: 20), child: leading!),
-              Expanded(child: child),
+              Expanded(child: mainContent),
               if (trailing != null) DefaultTextStyle.merge(style: TextStyle(color: t.textMuted), child: IconTheme.merge(data: IconThemeData(color: t.icon ?? t.textMuted), child: trailing!)),
             ]),
           ),

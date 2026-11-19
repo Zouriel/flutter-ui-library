@@ -206,6 +206,50 @@ void main() {
       expect(tester.getSize(find.ancestor(of: find.text('Gamma'), matching: find.byType(AnimatedContainer)).first).height, lessThan(48));
       handle.dispose();
     });
+
+    testWidgets('title and hint render medium title with muted single-line ellipsized hint', (tester) async {
+      var tapped = 0;
+      await pumpUi(tester, SizedBox(
+        width: 220,
+        child: UiList(bordered: true, children: [
+          UiListItem(
+            title: 'Feed photos',
+            hint: 'A very long muted description that should clip to one line with an ellipsis',
+            leading: const UiIcon(HugeIcons.strokeRoundedImage01),
+            trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01),
+            onTap: () => tapped++,
+          ),
+        ]),
+      ));
+      final t = tester.element(find.byType(UiListItem)).ui;
+      final titleWidget = tester.widget<Text>(find.text('Feed photos'));
+      expect(titleWidget.style!.fontWeight, FontWeight.w500);
+      final hintWidget = tester.widget<Text>(find.text('A very long muted description that should clip to one line with an ellipsis'));
+      expect(hintWidget.maxLines, 1);
+      expect(hintWidget.overflow, TextOverflow.ellipsis);
+      expect(hintWidget.style!.color, t.textMuted);
+      await tester.tap(find.text('Feed photos'));
+      expect(tapped, 1);
+    });
+
+    testWidgets('golden: list item title and hint', (tester) async {
+      await expectThemedGolden(tester, 'list_title_hint', height: 180, (context) => UiList(bordered: true, children: [
+        UiListItem(
+          title: 'Feed photos',
+          hint: '3 of 6 selected for the album feed',
+          leading: const UiIcon(HugeIcons.strokeRoundedImage01),
+          trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01),
+          onTap: () {},
+        ),
+        UiListItem(
+          title: 'Colours',
+          hint: 'Reply pages & QR table card — a very long hint that ellipsizes cleanly',
+          leading: const UiIcon(HugeIcons.strokeRoundedPaintBoard),
+          trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01),
+          onTap: () {},
+        ),
+      ]));
+    });
   });
 
   testWidgets('guidelines: tap targets, labels and contrast', (tester) async {

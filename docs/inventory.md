@@ -46,8 +46,8 @@ File: `badge/src/avatar.ts`
 ### UiBadge (component, `ui-badge`)
 File: `badge/src/badge.ts`  
 `ui-badge` — small status/count label.  
-- Inputs: `tone`: UiStatus = 'neutral'; `dot` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- Inputs: `tone`: UiBadgeTone = 'neutral' (`UiStatus | 'media'`; Flutter `tone: UiStatus` + `onMedia` / `UiBadge.media(...)`); `tier`: UiBadgeTier | null = null; `dot` = false; Flutter `leading`: Widget?
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiChip (component, `ui-chip`)
 File: `badge/src/chip.ts`  
@@ -1339,8 +1339,8 @@ File: `list/src/list.ts`
 
 ### UiListItem (component, `ui-list-item`)
 File: `list/src/list.ts`  
-`ui-list-item` — a row in `ui-list`. Optional `[item-leading]` / `[item-trailing]` slots.  
-- Inputs: `interactive` = false; `selected` = false; `disabled` = false
+`ui-list-item` — a row in `ui-list`. Optional `[item-leading]` / `[item-hint]` / `[item-trailing]` slots.  
+- Inputs: `title`: string | null = null; `hint`: string | null = null; `interactive` = false; `selected` = false; `disabled` = false
 - Outputs: `activate`: void
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1722,8 +1722,8 @@ File: `tabs/src/tabs.ts`
 ### UiText (component, `ui-text`)
 File: `text/src/text.ts`  
 `ui-text` — the typography primitive and the ONLY text element in the library. Renders the correct semantic tag per variant (keeps a11y/SEO intact) and applies an optional `font` that falls back to the token. `as` overrides the tag while keeping the variant's look, e.g. a heading style on a `<p>` that stays out of the document outline, or an `h2` that looks like an `h4`. Styles are keyed on the variant class, not the tag. Projected content lives in a single `<ng-content>` (captured in the `#content` template) and is stamped into the chosen tag via `ngTemplateOutlet`. A naive "one `<ng-content>` per `@case`" template does NOT work — Angular only fills the last default slot, leaving every other variant empty.  
-- Inputs: `variant`: TextVariant = 'body'; `as`: TextTag; `font`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- Inputs: `variant`: TextVariant = 'body'; `as`: TextTag; `font`: string; `truncate` = false; `align`: UiTextAlign | null = null (Flutter `textAlign`); `tone`: UiTextTone = 'default' (Flutter `UiTextTone.standard | muted | onMedia`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `TextVariant` (text.ts)
 - type `TextTag` (text.ts)
