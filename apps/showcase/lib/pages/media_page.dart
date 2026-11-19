@@ -220,15 +220,18 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Selectable',
           widget: 'UiSelectable',
-          summary: 'Wraps one grid tile for long-press multi-select, like a phone gallery. A tap calls onTap (the app opens the tile, or toggles it while selecting); a long press calls onLongPress with a light haptic, and only for a finger that stays put, so it works inside a scroll view and a scroll never selects. While selecting, a round mark sits in the top corner: an empty ring over a small scrim, or filled with the primary colour and a check, readable on white and black pictures. A selected tile shrinks a little (instantly under reduced motion) with a primary outline and tint. Screen readers hear the label and the selected state, checked or not while selecting, and get the long press as an action. In the demo: press and hold a photo, tap more, then Save to gallery for a fake job.',
+          summary: 'Wraps one grid tile for long-press multi-select, like a phone gallery. A tap calls onTap (the app opens the tile, or toggles it while selecting); a long press calls onLongPress with a light haptic, and only for a finger that stays put, so it works inside a scroll view and a scroll never selects. While selecting, a round mark sits in the top corner: an empty ring over a small scrim, or filled with the primary colour and a check, readable on white and black pictures. A selected tile shrinks a little (instantly under reduced motion) with a primary outline and tint. Non-interactive overlays sit in topEnd, bottomStart and bottomEnd (space1 logical inset); pass order for a 1-based primary badge in topEnd and dimmed when a selection limit is reached. Screen readers hear the label and the selected state, checked or not while selecting, and get the long press as an action. In the demo: press and hold a photo, tap more, then Save to gallery for a fake job.',
           demo: const _SelectDemo(),
-          code: "UiSelectable(\n  semanticLabel: 'Photo 3',\n  selected: picked.contains(3),\n  selecting: picked.isNotEmpty,\n  onTap: () => picked.isEmpty ? open(3) : toggle(3),\n  onLongPress: () => toggle(3),\n  child: Image(image: photo, fit: BoxFit.cover),\n)",
+          code: "UiSelectable(\n  semanticLabel: 'Photo 3',\n  selected: picked.contains(3),\n  selecting: picked.isNotEmpty,\n  topEnd: const UiBadge.media(leading: UiIcon(HugeIcons.strokeRoundedPlay), label: '0:24'),\n  onTap: () => picked.isEmpty ? open(3) : toggle(3),\n  onLongPress: () => toggle(3),\n  child: Image(image: photo, fit: BoxFit.cover),\n)",
           api: const [
             ApiRow('child', 'Widget', 'The tile (a picture).'),
             ApiRow('selected', 'bool', 'Whether this tile is selected.'),
             ApiRow('selecting', 'bool', 'Selection mode: the marks show.'),
             ApiRow('semanticLabel', 'String?', "The tile's name for screen readers."),
             ApiRow('borderRadius', 'BorderRadius?', "The tile's corners; the theme's radius when null."),
+            ApiRow('topEnd / bottomStart / bottomEnd', 'Widget?', 'Logical corner overlay slots (space1 inset, non-interactive) for duration pills or like counts.'),
+            ApiRow('order', 'int?', 'Optional 1-based selection index rendered as a primary badge in topEnd.', def: 'null'),
+            ApiRow('dimmed', 'bool', 'Dims unselected tiles (0.45 opacity) when a maximum selection limit is reached.', def: 'false'),
           ],
           callbacks: const [
             ApiRow('onTap', 'VoidCallback?', 'A tap (open, or toggle while selecting).'),
@@ -239,7 +242,7 @@ class _MediaPageState extends State<MediaPage> {
           name: 'Likes',
           widget: 'UiLikeCount',
           summary: 'Hearts on photos. UiLikeCount is the small heart and number in a tile\'s corner: a dark see-through pill readable on any picture, nothing at all at 0, the heart filled when you liked it, big numbers shortened (1.2k), read as "Liked, 12 likes". It never takes a tap. Liking is a double tap: give UiSelectable an onDoubleTap and it reports the point, while a single tap waits 280ms for a second one before onTap (never while selecting); a press held right after a tap becomes a long press. UiHeartBurst sits over the media and play(offset) pops a big heart there (a fade only with animations off). UiLikeButton is the viewer\'s heart toggle with its count (tone surface on an ordinary background). Double tap a tile or the big photo, or use its heart.',
-          code: 'final burst = GlobalKey<UiHeartBurstState>();\nUiSelectable(\n  selected: false, selecting: false,\n  onTap: () => open(i),\n  onDoubleTap: (at) { like(i); burst.currentState!.play(at); },\n  child: Stack(fit: StackFit.expand, children: [\n    Image(image: photo),\n    UiHeartBurst(key: burst),\n    PositionedDirectional(start: 4, bottom: 4, child: UiLikeCount(count: likes, liked: mine)),\n  ]),\n)\nUiLikeButton(liked: mine, count: likes, onChanged: (v) => setLiked(i, v)',
+          code: 'final burst = GlobalKey<UiHeartBurstState>();\nUiSelectable(\n  selected: false, selecting: false,\n  onTap: () => open(i),\n  onDoubleTap: (at) { like(i); burst.currentState!.play(at); },\n  bottomStart: UiLikeCount(count: likes, liked: mine),\n  child: Stack(fit: StackFit.expand, children: [\n    Image(image: photo),\n    UiHeartBurst(key: burst),\n  ]),\n)\nUiLikeButton(liked: mine, count: likes, onChanged: (v) => setLiked(i, v)',
           api: const [
             ApiRow('UiLikeCount count / liked / size', 'int / bool / UiLikeCountSize', 'Hearts; filled when liked; sm for tiles, md for cards. Nothing shows at 0 unless liked.'),
             ApiRow('UiHeartBurst size', 'double', 'The heart, in logical pixels.', def: '88'),
@@ -269,12 +272,15 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Selection bar',
           widget: 'UiSelectionBar',
-          summary: 'The bar shown while selecting: Cancel (an X) at the start, "12 selected", a Select all toggle that reads Clear once count reaches total (each side hidden when its callback is null), then the actions. Actions are off while nothing is selected or when not enabled; danger draws the destructive style. When the labels don\'t all fit (a 360 phone with three actions) the toggle and the actions with an icon become icon buttons that keep their label for screen readers and as a tooltip, and the count falls back to the number alone, so nothing overflows at 320. Count changes are announced politely. The demo is in Selectable above.',
-          code: "UiSelectionBar(\n  count: picked.length,\n  total: photos.length,\n  onSelectAll: selectAll,\n  onClear: clear,\n  onCancel: clear,\n  actions: const [\n    UiSelectionAction(id: 'share', label: 'Share', icon: UiIcon(HugeIcons.strokeRoundedShare08)),\n    UiSelectionAction(id: 'delete', label: 'Delete', icon: UiIcon(HugeIcons.strokeRoundedDelete02), danger: true),\n  ],\n  onAction: (id) => run(id),\n)",
+          summary: 'The bar shown while selecting: Cancel (an X, or a ghost button when cancelLabel such as "Done" is given) at the start, "12 selected", a Select all toggle that reads Clear once count reaches total (each side hidden when its callback is null), then the actions. With docked true it wraps itself in a bottom surface with a top border, bottom safe-area inset padding, and optional maxWidth. Actions are off while nothing is selected or when not enabled; danger draws the destructive style. When the labels don\'t all fit (a 360 phone with three actions) the toggle and the actions with an icon become icon buttons that keep their label for screen readers and as a tooltip, and the count falls back to the number alone, so nothing overflows at 320. Count changes are announced politely. The demo is in Selectable above.',
+          code: "UiSelectionBar(\n  count: picked.length,\n  total: photos.length,\n  cancelLabel: 'Done',\n  docked: true,\n  maxWidth: 1120,\n  onSelectAll: selectAll,\n  onClear: clear,\n  onCancel: clear,\n  actions: const [\n    UiSelectionAction(id: 'share', label: 'Share', icon: UiIcon(HugeIcons.strokeRoundedShare08)),\n    UiSelectionAction(id: 'delete', label: 'Delete', icon: UiIcon(HugeIcons.strokeRoundedDelete02), danger: true),\n  ],\n  onAction: (id) => run(id),\n)",
           api: const [
             ApiRow('count', 'int', 'How many are selected.'),
             ApiRow('total', 'int?', 'Everything there is; at count == total the toggle reads Clear.'),
             ApiRow('actions', 'List<UiSelectionAction>', 'The buttons at the end.', def: 'const []'),
+            ApiRow('cancelLabel', 'String?', 'Optional text for the cancel button (e.g. "Done"); renders a ghost UiButton instead of the X icon.', def: 'null'),
+            ApiRow('docked', 'bool', 'Wraps the bar in a bottom surface with top border and bottom safe-area inset padding.', def: 'false'),
+            ApiRow('maxWidth', 'double?', 'Optional maximum width for the inner bar row.', def: 'null'),
           ],
           callbacks: const [
             ApiRow('onCancel', 'VoidCallback', 'The X: leave selecting.'),
@@ -613,9 +619,20 @@ class _SelectDemo extends StatefulWidget {
 class _SelectDemoState extends State<_SelectDemo> {
   static const _count = 12;
   final _picked = <int>{};
+  final _ordered = <int>[0, 2];
   String _note = 'Press and hold a photo to start selecting.';
 
   void _toggle(int i) => setState(() => _picked.contains(i) ? _picked.remove(i) : _picked.add(i));
+
+  void _toggleOrdered(int i) {
+    setState(() {
+      if (_ordered.contains(i)) {
+        _ordered.remove(i);
+      } else if (_ordered.length < 3) {
+        _ordered.add(i);
+      }
+    });
+  }
 
   Future<void> _act(String id) async {
     final n = _picked.length;
@@ -642,6 +659,7 @@ class _SelectDemoState extends State<_SelectDemo> {
                 child: UiSelectionBar(
                   count: _picked.length,
                   total: _count,
+                  cancelLabel: 'Done',
                   onSelectAll: () => setState(() => _picked.addAll(List.generate(_count, (i) => i))),
                   onClear: () => setState(_picked.clear),
                   onCancel: () => setState(_picked.clear),
@@ -667,11 +685,41 @@ class _SelectDemoState extends State<_SelectDemo> {
                 semanticLabel: 'Photo ${i + 1}',
                 selected: _picked.contains(i),
                 selecting: selecting,
+                topEnd: i % 4 == 1
+                    ? const UiBadge.media(
+                        leading: UiIcon(HugeIcons.strokeRoundedPlay),
+                        label: '0:24',
+                      )
+                    : null,
                 onTap: () => selecting ? _toggle(i) : setState(() => _note = 'Opened photo ${i + 1}.'),
                 onLongPress: () => _toggle(i),
                 child: Image(image: DemoArt.palette[i % DemoArt.palette.length], fit: BoxFit.cover, excludeFromSemantics: true),
               ),
             ),
+        ]);
+      }),
+      SizedBox(height: t.space2),
+      const UiText('Ordered cover picker (pick up to 3):', variant: UiTextVariant.caption),
+      LayoutBuilder(builder: (context, box) {
+        final size = (math.min(box.maxWidth, 420) - t.space1 * 2) / 3;
+        return Wrap(spacing: t.space1, runSpacing: t.space1, children: [
+          for (var i = 0; i < 6; i++)
+            Builder(builder: (context) {
+              final ord = _ordered.indexOf(i) + 1;
+              return SizedBox(
+                width: size,
+                height: size,
+                child: UiSelectable(
+                  semanticLabel: 'Cover candidate ${i + 1}',
+                  selected: ord > 0,
+                  selecting: true,
+                  order: ord > 0 ? ord : null,
+                  dimmed: ord == 0 && _ordered.length >= 3,
+                  onTap: () => _toggleOrdered(i),
+                  child: Image(image: DemoArt.palette[i % DemoArt.palette.length], fit: BoxFit.cover, excludeFromSemantics: true),
+                ),
+              );
+            }),
         ]);
       }),
     ]);
@@ -780,10 +828,10 @@ class _LikeDemoState extends State<_LikeDemo> {
                   _set(i, !_mine[i]);
                   _bursts[i].currentState!.play(at);
                 },
+                bottomStart: UiLikeCount(count: _counts[i], liked: _mine[i]),
                 child: Stack(fit: StackFit.expand, children: [
                   Image(image: DemoArt.palette[i % DemoArt.palette.length], fit: BoxFit.cover, excludeFromSemantics: true),
                   UiHeartBurst(key: _bursts[i], size: 56),
-                  PositionedDirectional(start: t.space1, bottom: t.space1, child: UiLikeCount(count: _counts[i], liked: _mine[i])),
                 ]),
               ),
             ),

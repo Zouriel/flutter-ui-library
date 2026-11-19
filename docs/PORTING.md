@@ -1,5 +1,16 @@
 # Porting @zouriel/ui to Flutter
 
+## Selectable corner overlays, order badge & SelectionBar Done / docked mode
+
+- `UiSelectable` gains logical corner overlay slots `topEnd`, `bottomStart`, `bottomEnd` (positioned
+  with `PositionedDirectional` at `space1` inset inside `IgnorePointer`), `order` (optional 1-based
+  selection index rendered as a primary `UiBadge` in `topEnd`), `dimmed` (`0.45` opacity), and a
+  default `surfaceRaised` tile background.
+- `UiSelectionBar` gains `cancelLabel` (renders a ghost `UiButton` such as `"Done"` instead of the
+  `Cancel01` icon button, and includes its width in `UiSelectionBar.labelledWidth`), `docked`
+  (`surface` background, `1px` top border, `space2`/`space3` padding plus bottom safe-area inset),
+  and `maxWidth` (constrains and centres the inner bar row).
+
 ## Tabs alignment, glow appearance and strip-only mode
 
 - `UiTabsAlignment.center` is the web `align="center"`: fitting tabs sit in the middle of the

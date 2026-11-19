@@ -1400,14 +1400,14 @@ File: `media/src/poster-view.ts`
 ### UiSelectable (component, `ui-selectable`)
 File: `media/src/selection.ts`  
 `ui-selectable` — wraps one grid tile for long-press multi-select like a phone gallery: tap / 500ms hold (cancelled by 10px or a scroll), a corner mark while selecting, a selected tile shrinks with a primary outline; button, or checkbox while selecting.  
-- Inputs: `selected` = false; `selecting` = false; `label`: string | null; `borderRadius`: string | null
+- Inputs: `selected` = false; `selecting` = false; `label`: string | null; `borderRadius`: string | null; `order`: number | null = null; `dimmed` = false; slots `[tile-top-end]`, `[tile-bottom-start]`, `[tile-bottom-end]` (Flutter `topEnd`, `bottomStart`, `bottomEnd`)
 - Outputs: `tap`: void; `longPress`: void
 - [x] Flutter port (`UiSelectable`, `UiSelectionMark`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSelectionBar (component, `ui-selection-bar`)
 File: `media/src/selection.ts`  
-`ui-selection-bar` — the bar while selecting: Cancel, "N selected", Select all / Clear, actions; icon-only when the labels don't fit.  
-- Inputs: `count` = 0; `total`: number | null; `actions`: UiSelectionAction[] = []; `canSelectAll` = true; `canClear` = true
+`ui-selection-bar` — the bar while selecting: Cancel (or `cancelLabel` button), "N selected", Select all / Clear, actions; icon-only when the labels don't fit; optional `docked` surface and `maxWidth`.  
+- Inputs: `count` = 0; `total`: number | null; `actions`: UiSelectionAction[] = []; `canSelectAll` = true; `canClear` = true; `cancelLabel`: string | null = null; `docked` = false; `maxWidth`: number | null = null
 - Outputs: `selectAll`; `clear`; `cancel`; `action`: string
 - [x] Flutter port (`UiSelectionBar`, `UiSelectionAction`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
