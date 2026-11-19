@@ -1,5 +1,12 @@
 # Porting @zouriel/ui to Flutter
 
+## Tabs alignment and strip-only mode
+
+- `UiTabsAlignment.center` is the web `align="center"`: fitting tabs sit in the middle of the
+  full-width bottom rule, while an overflowing strip begins at tab 0 and scrolls horizontally.
+- `UiTab.child` is optional. When every tab omits it, `UiTabs` renders only the strip, with no panel
+  semantics or `space4` panel gap. If any tab has a child, all panel states stay mounted as before.
+
 ## Card body layout & interactive semantics
 
 - `UiCard` accepts `children` (mutually exclusive with `child`), `gap` (spacing step via `uiSpace`),
@@ -1719,4 +1726,3 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
   the toast changes; the next tap dismisses.
 - **Entry and exit**: a blob toast scales in and out in the host (the web `ui-scale-enter` / `-leave`); card toasts
   still slide. No `role="alert"` split, as for the card toast: one live region.
-

@@ -1706,14 +1706,14 @@ File: `table/src/table.ts`
 
 ### UiTab (component, `ui-tab`)
 File: `tabs/src/tabs.ts`  
-`ui-tab` — a single tab + its panel. Provide a `label` and project the panel content. Inactive panels stay in the DOM but are hidden (`[hidden]`). An optional HugeIcons `icon` draws before the label. With `iconOnly` the label is not shown, but it is still the tab's accessible name and its tooltip, so a screen reader and a hovering mouse both get the words the icon stands for.  
+`ui-tab` — a single tab + its optional panel. Provide a `label`; omit panel content on every tab for strip-only mode. Inactive panels stay in the DOM but are hidden (`[hidden]`). An optional HugeIcons `icon` draws before the label. With `iconOnly` the label is not shown, but it is still the tab's accessible name and its tooltip, so a screen reader and a hovering mouse both get the words the icon stands for.
 - Inputs: `label`: string; `disabled` = false; `icon`: IconSvgObject | undefined = undefined; `iconOnly` = false; `badge`: string | number | null; `badgeLabel`: string (0.79; Flutter `badge` is a String?)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTabs (component, `ui-tabs`)
 File: `tabs/src/tabs.ts`  
 `ui-tabs` — WAI-ARIA tabs. Wraps `ui-tab` children; renders a tablist with roving tabindex and Arrow/Home/End keyboard navigation.  
-- Inputs: `label`: string = 'Tabs'
+- Inputs: `label`: string = 'Tabs'; `align`: 'start' | 'center' = 'start' (Flutter `UiTabsAlignment`)
 - Two-way: `selectedIndex` = 0
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

@@ -7,7 +7,11 @@ import '../core/interactive.dart';
 import '../guidance/tour.dart';
 import '../theme/theme.dart';
 
-/// One tab of a [UiTabs]: its [label] and its panel [child].
+/// Horizontal alignment of tabs along the strip (the web `align` input).
+enum UiTabsAlignment { start, center }
+
+/// One tab of a [UiTabs]: its [label] and optional panel [child]. Omit [child] on every tab for
+/// strip-only mode (no panel gap or tab panels).
 ///
 /// An optional Hugeicons [icon] draws before the label. With [iconOnly] the label isn't shown but is
 /// still the tab's accessible name.
@@ -15,7 +19,7 @@ import '../theme/theme.dart';
 class UiTab {
   const UiTab({
     required this.label,
-    required this.child,
+    this.child,
     this.icon,
     this.iconOnly = false,
     this.disabled = false,
@@ -25,7 +29,7 @@ class UiTab {
   });
 
   final String label;
-  final Widget child;
+  final Widget? child;
   final UiIconData? icon;
   final bool iconOnly;
   final bool disabled;
@@ -49,9 +53,18 @@ class UiTab {
 /// keeps the selected tab in view. Inactive panels stay mounted (their state survives) but take no
 /// space and are hidden from screen readers. Keyboard, as on the web: one tab stop; Left/Right move
 /// and select (wrapping, skipping disabled tabs), Home/End jump to the ends. When every tab is
-/// [UiTab.iconOnly] they share the strip evenly.
+/// [UiTab.iconOnly] they share the strip evenly. With [UiTabsAlignment.center] the strip centres
+/// when tabs fit and scrolls when wider.
+/// When no tab provides a [UiTab.child], only the strip renders (no panel gap).
 class UiTabs extends StatefulWidget {
-  const UiTabs({super.key, required this.tabs, this.selectedIndex = 0, this.onChanged, this.label});
+  const UiTabs({
+    super.key,
+    required this.tabs,
+    this.selectedIndex = 0,
+    this.onChanged,
+    this.label,
+    this.align = UiTabsAlignment.start,
+  });
 
   final List<UiTab> tabs;
   final int selectedIndex;
@@ -60,6 +73,9 @@ class UiTabs extends StatefulWidget {
   /// Accessible name of the tab strip.
   /// The tab list's name; [UiStrings.tabs] when null.
   final String? label;
+
+  /// Alignment of tabs along the strip: start (default) or center.
+  final UiTabsAlignment align;
 
   @override
   State<UiTabs> createState() => _UiTabsState();
@@ -175,6 +191,24 @@ class _UiTabsState extends State<UiTabs> {
           ? Row(spacing: t.space1, children: [for (final w in tabs) Expanded(child: w)])
           : Row(mainAxisSize: MainAxisSize.min, spacing: t.space1, children: tabs),
     );
+    final hasPanels = widget.tabs.any((tab) => tab.child != null);
+    final Widget barContent;
+    if (even) {
+      barContent = strip;
+    } else if (widget.align == UiTabsAlignment.center) {
+      barContent = LayoutBuilder(builder: (context, box) {
+        final minW = box.maxWidth.isFinite ? box.maxWidth : 0.0;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: minW),
+            child: Center(child: strip),
+          ),
+        );
+      });
+    } else {
+      barContent = SingleChildScrollView(scrollDirection: Axis.horizontal, child: strip);
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -182,15 +216,22 @@ class _UiTabsState extends State<UiTabs> {
         // The strip's 1px rule runs under the tabs, so the selected tab's 2px line covers it.
         Stack(children: [
           Positioned(left: 0, right: 0, bottom: 0, height: 1, child: ColoredBox(color: t.border)),
-          if (even) strip else SingleChildScrollView(scrollDirection: Axis.horizontal, child: strip),
+          barContent,
         ]),
-        SizedBox(height: t.space4),
-        for (var i = 0; i < widget.tabs.length; i++)
-          Visibility(
-            visible: i == widget.selectedIndex,
-            maintainState: true,
-            child: Semantics(container: true, role: SemanticsRole.tabPanel, label: widget.tabs[i].label, child: widget.tabs[i].child),
-          ),
+        if (hasPanels) ...[
+          SizedBox(height: t.space4),
+          for (var i = 0; i < widget.tabs.length; i++)
+            Visibility(
+              visible: i == widget.selectedIndex,
+              maintainState: true,
+              child: Semantics(
+                container: true,
+                role: SemanticsRole.tabPanel,
+                label: widget.tabs[i].label,
+                child: widget.tabs[i].child ?? const SizedBox.shrink(),
+              ),
+            ),
+        ],
       ],
     );
   }

@@ -130,6 +130,91 @@ void main() {
       expect(widths.first, closeTo((300 - 8) / 3, 0.01));
       handle.dispose();
     });
+
+    testWidgets('align: center centres fitting tabs along a full-width rule in LTR and RTL', (tester) async {
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        await pumpUi(
+          tester,
+          Directionality(
+            textDirection: dir,
+            child: SizedBox(
+              width: 390,
+              child: UiTabs(
+                align: UiTabsAlignment.center,
+                selectedIndex: 0,
+                onChanged: (_) {},
+                tabs: const [UiTab(label: 'One'), UiTab(label: 'Two')],
+              ),
+            ),
+          ),
+        );
+        final stripRect = tester.getRect(find.byType(UiTabs));
+        final oneRect = tester.getRect(find.text('One'));
+        final twoRect = tester.getRect(find.text('Two'));
+        final groupCenter = (oneRect.left < twoRect.left ? (oneRect.left + twoRect.right) : (twoRect.left + oneRect.right)) / 2;
+        expect(stripRect.width, 390);
+        expect(groupCenter, closeTo(stripRect.center.dx, 1.5));
+      }
+    });
+
+    testWidgets('align: center still starts at tab 0 and scrolls when tabs overflow in LTR and RTL', (tester) async {
+      final tabs = [for (var i = 0; i < 10; i++) UiTab(label: 'Album number $i')];
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        await pumpUi(tester, Directionality(
+          textDirection: dir,
+          child: SizedBox(width: 320, child: UiTabs(align: UiTabsAlignment.center, tabs: tabs, selectedIndex: 0, onChanged: (_) {})),
+        ));
+        final first = tester.getRect(find.text('Album number 0'));
+        expect(first.left, greaterThanOrEqualTo(0));
+        expect(first.right, lessThanOrEqualTo(320));
+      }
+    });
+
+    testWidgets('strip-only tabs omit child, panel gap and tabPanel semantics', (tester) async {
+      final handle = tester.ensureSemantics();
+      var sel = 0;
+      await pumpUi(tester, StatefulBuilder(builder: (context, set) => SizedBox(
+        width: 390,
+        child: UiTabs(
+          align: UiTabsAlignment.center,
+          selectedIndex: sel,
+          onChanged: (i) => set(() => sel = i),
+          tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+        ),
+      )));
+      final stripSize = tester.getSize(find.byType(UiTabs));
+      final btnSize = tester.getSize(find.byType(UiInteractive).first);
+      // No t.space4 (16px) panel gap beneath the strip.
+      expect(stripSize.height, closeTo(btnSize.height, 1.0));
+      await tester.tap(find.text('Reception'));
+      await tester.pump();
+      expect(sel, 1);
+      handle.dispose();
+    });
+
+    testWidgets('golden: centered and strip-only tabs', (tester) async {
+      await expectThemedGolden(tester, 'tabs_centered_strip', height: 220, (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 20,
+        children: [
+          UiTabs(
+            align: UiTabsAlignment.center,
+            selectedIndex: 1,
+            onChanged: (_) {},
+            tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+          ),
+          UiTabs(
+            align: UiTabsAlignment.center,
+            selectedIndex: 0,
+            onChanged: (_) {},
+            tabs: const [
+              UiTab(label: 'Photos', child: UiText('Centered tabs with a panel below.')),
+              UiTab(label: 'Videos', child: UiText('Videos panel.')),
+            ],
+          ),
+        ],
+      ));
+    });
   });
 
   group('UiAccordion', () {
