@@ -88,4 +88,16 @@ void main() {
     await _show(tester, list);
     await pull(true);
   });
+
+  testWidgets('still, play once demo: tapping Play runs one cycle and increments the counter', (tester) async {
+    await _pump(tester, const UiApp(home: ShutterPage()));
+    final play = find.text('Play');
+    await _show(tester, play);
+    expect(find.text('Played 1×'), findsNothing);
+    await tester.tap(play);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 2100));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.text('Played 1×'), findsOneWidget);
+  });
 }

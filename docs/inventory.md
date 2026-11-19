@@ -1661,6 +1661,7 @@ File: `spinner/src/spinner.ts`
 
 ### UiShutterLoader (component, `ui-shutter-loader`, 0.72.0)
 The camera-shutter loader; `UiConfig.spinner` (`UiSpinnerStyle.ring` / `shutter`) makes every UiSpinner draw it.
+- Inputs: `size` = 16; `color`; `label`; `decorative` = false; `still` = false; `controller` (`UiShutterLoaderController` with `play()`); `onCycleEnd`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiPullToRefresh, UiConfig.overscroll (Flutter only, 0.72.0)

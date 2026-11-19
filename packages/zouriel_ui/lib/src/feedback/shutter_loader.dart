@@ -4,6 +4,13 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/theme.dart';
 
+/// Drives one-shot burst cycles on a still [UiShutterLoader]. Call [play] to run one 2.1 s cycle
+/// (or one opacity breathe under reduced motion) and return to rest.
+class UiShutterLoaderController extends ChangeNotifier {
+  /// Runs one burst cycle on any attached still [UiShutterLoader]; calling while running restarts it.
+  void play() => notifyListeners();
+}
+
 /// `ui-shutter-loader` (0.72.0): a camera shutter whose six blades click shut three times, then rest
 /// open; the same size, colour and announcement as [UiSpinner]. With `UiConfig(spinner:
 /// UiSpinnerStyle.shutter)` every [UiSpinner] in the library draws this instead of the ring.
@@ -11,8 +18,21 @@ import '../theme/theme.dart';
 /// The colour is the surrounding text colour (so in a primary button it is the button's text
 /// colour), else [color]. Under reduced motion the blades stay still and the mark pulses gently;
 /// it never freezes, which would read as a hang.
+///
+/// With [still] true, the mark sits open and still with no ticker running (and does not pulse under
+/// reduced motion); pass a [controller] and call [UiShutterLoaderController.play] to run one cycle
+/// and receive [onCycleEnd] when it returns to rest.
 class UiShutterLoader extends StatefulWidget {
-  const UiShutterLoader({super.key, this.size = 16, this.color, this.label, this.decorative = false});
+  const UiShutterLoader({
+    super.key,
+    this.size = 16,
+    this.color,
+    this.label,
+    this.decorative = false,
+    this.still = false,
+    this.controller,
+    this.onCycleEnd,
+  });
 
   final double size;
   final Color? color;
@@ -23,15 +43,67 @@ class UiShutterLoader extends StatefulWidget {
   /// Set when something nearby already announces the busy state.
   final bool decorative;
 
+  /// Drawn at rest (open, still) with no ticker running; trigger one burst with [controller].
+  final bool still;
+
+  /// Drives one-shot cycles when [still] is true.
+  final UiShutterLoaderController? controller;
+
+  /// Called once when a one-shot [UiShutterLoaderController.play] cycle finishes and returns to rest.
+  final VoidCallback? onCycleEnd;
+
   @override
   State<UiShutterLoader> createState() => _UiShutterLoaderState();
 }
 
 class _UiShutterLoaderState extends State<UiShutterLoader> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: uiShutterCycle)..repeat();
+  late final AnimationController _c;
+  bool _oneShot = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: uiShutterCycle);
+    _c.addStatusListener(_onStatus);
+    widget.controller?.addListener(_onPlay);
+    if (!widget.still) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(UiShutterLoader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.removeListener(_onPlay);
+      widget.controller?.addListener(_onPlay);
+    }
+    if (oldWidget.still != widget.still) {
+      _oneShot = false;
+      if (widget.still) {
+        _c.reset();
+      } else {
+        _c.repeat();
+      }
+    }
+  }
+
+  void _onPlay() {
+    if (!widget.still) return;
+    _oneShot = true;
+    _c.forward(from: 0);
+  }
+
+  void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && _oneShot) {
+      _oneShot = false;
+      _c.reset();
+      widget.onCycleEnd?.call();
+    }
+  }
 
   @override
   void dispose() {
+    widget.controller?.removeListener(_onPlay);
+    _c.removeStatusListener(_onStatus);
     _c.dispose();
     super.dispose();
   }

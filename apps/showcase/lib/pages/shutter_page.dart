@@ -19,12 +19,16 @@ class _ShutterPageState extends State<ShutterPage> {
   UiSpinnerStyle _spinner = UiSpinnerStyle.ring;
   UiOverscrollStyle _overscroll = UiOverscrollStyle.platform;
 
+  final UiShutterLoaderController _stillController = UiShutterLoaderController();
+  int _stillCycles = 0;
+
   final List<String> _rows = [for (var i = 1; i <= 12; i++) 'Photo $i'];
   int _refreshes = 0;
   Timer? _done;
 
   @override
   void dispose() {
+    _stillController.dispose();
     _done?.cancel();
     super.dispose();
   }
@@ -124,6 +128,34 @@ class _ShutterPageState extends State<ShutterPage> {
             ApiRow('color', 'Color?', 'Defaults to the surrounding text colour.'),
             ApiRow('label', 'String?', 'Accessible name.', def: "'Loading…'"),
             ApiRow('decorative', 'bool', 'Hide from screen readers when something else announces it.', def: 'false'),
+            ApiRow('still', 'bool', 'Drawn open and still with no ticker running; call controller.play() for a single burst.', def: 'false'),
+            ApiRow('controller', 'UiShutterLoaderController?', 'Drives one-shot play() cycles when still is true.'),
+            ApiRow('onCycleEnd', 'VoidCallback?', 'Called once when a play() cycle finishes and returns to rest.'),
+          ],
+        ),
+        DocSection(
+          name: 'Still, play once',
+          widget: 'UiShutterLoaderController',
+          summary: 'Set still: true to keep the shutter open at rest with no running ticker (e.g. as the icon of a floating button). Call controller.play() to run one 2.1 s burst cycle (or one breathe under reduced motion) and return to rest; onCycleEnd fires when it finishes.',
+          demo: Row(
+            spacing: t.space4,
+            children: [
+              UiShutterLoader(
+                key: const ValueKey('still-shutter'),
+                size: 32,
+                color: t.primary,
+                still: true,
+                decorative: true,
+                controller: _stillController,
+                onCycleEnd: () => setState(() => _stillCycles++),
+              ),
+              UiButton(label: 'Play', variant: UiButtonVariant.secondary, onPressed: _stillController.play),
+              if (_stillCycles > 0) UiText('Played $_stillCycles×', variant: UiTextVariant.caption),
+            ],
+          ),
+          code: 'final controller = UiShutterLoaderController();\n\nUiShutterLoader(\n  size: 32,\n  still: true,\n  controller: controller,\n  onCycleEnd: () => print(\'done\'),\n)\nUiButton(label: \'Play\', onPressed: controller.play)',
+          api: const [
+            ApiRow('play()', 'void', 'Runs one 2.1 s burst cycle while still (restarts if already running).'),
           ],
         ),
         DocSection(

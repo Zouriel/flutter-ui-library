@@ -176,6 +176,136 @@ void main() {
       expect(find.bySemanticsLabel('Loading…'), findsNothing);
       handle.dispose();
     });
+
+    testWidgets('still: draws rest frame, runs no ticker, and does not breathe under reduced motion', (tester) async {
+      final open = uiShutterBlades(1.47);
+      await tester.pumpWidget(const UiApp(home: Center(child: UiShutterLoader(size: 40, still: true))));
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: open[0].$1, p2: open[0].$2));
+
+      // Under reduced motion while still, no ticker runs and no opacity layer is painted.
+      await tester.pumpWidget(const MediaQuery(
+        data: MediaQueryData(disableAnimations: true),
+        child: UiApp(home: Center(child: UiShutterLoader(size: 40, still: true))),
+      ));
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(find.byType(UiShutterLoader), isNot(paints..something((method, _) => method == #saveLayer)));
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: open[0].$1, p2: open[0].$2));
+    });
+
+    testWidgets('still + controller.play(): runs one cycle, calls onCycleEnd once, then stops', (tester) async {
+      final controller = UiShutterLoaderController();
+      addTearDown(controller.dispose);
+      var ends = 0;
+      await tester.pumpWidget(UiApp(
+        home: Center(child: UiShutterLoader(size: 40, still: true, controller: controller, onCycleEnd: () => ends++)),
+      ));
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(ends, 0);
+
+      controller.play();
+      await tester.pump();
+      expect(tester.hasRunningAnimations, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 90));
+      final shut = uiShutterBlades(uiShutterBladeDistance(uiShutterClosedAt(0.09)));
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: shut[0].$1, p2: shut[0].$2));
+
+      await tester.pump(const Duration(milliseconds: 1410)); // 1.5 s: open, finishing rest
+      final open = uiShutterBlades(1.47);
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: open[0].$1, p2: open[0].$2));
+      expect(ends, 0);
+      expect(tester.hasRunningAnimations, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 600)); // 2.1 s
+      await tester.pump(const Duration(milliseconds: 16)); // settles on completion
+      expect(ends, 1);
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: open[0].$1, p2: open[0].$2));
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(ends, 1);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('calling controller.play() mid-cycle restarts it and fires onCycleEnd once', (tester) async {
+      final controller = UiShutterLoaderController();
+      addTearDown(controller.dispose);
+      var ends = 0;
+      await tester.pumpWidget(UiApp(
+        home: Center(child: UiShutterLoader(size: 40, still: true, controller: controller, onCycleEnd: () => ends++)),
+      ));
+
+      controller.play();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(ends, 0);
+
+      // Restart mid-cycle.
+      controller.play();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      final shut = uiShutterBlades(uiShutterBladeDistance(uiShutterClosedAt(0.09)));
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: shut[0].$1, p2: shut[0].$2));
+
+      // Past the original cycle's 2.1 s mark: still running, no callback yet.
+      await tester.pump(const Duration(milliseconds: 1200));
+      expect(ends, 0);
+      expect(tester.hasRunningAnimations, isTrue);
+
+      // End of restarted cycle (90 + 1200 + 810 = 2100 ms, plus one frame to complete).
+      await tester.pump(const Duration(milliseconds: 810));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(ends, 1);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('still + reduced motion: play() breathes once (1 -> 0.55 -> 1) then stops', (tester) async {
+      final controller = UiShutterLoaderController();
+      addTearDown(controller.dispose);
+      var ends = 0;
+      await tester.pumpWidget(MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: UiApp(
+          home: Center(child: UiShutterLoader(size: 40, still: true, controller: controller, onCycleEnd: () => ends++)),
+        ),
+      ));
+      expect(tester.hasRunningAnimations, isFalse);
+
+      controller.play();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1050));
+      final open = uiShutterBlades(1.47);
+      var alpha = 1.0;
+      expect(
+        find.byType(UiShutterLoader),
+        paints
+          ..something((method, args) {
+            if (method != #saveLayer) return false;
+            alpha = (args[1] as Paint).color.a;
+            return true;
+          })
+          ..circle()
+          ..line(p1: open[0].$1, p2: open[0].$2),
+      );
+      expect(alpha, closeTo(0.55, 0.01));
+      expect(ends, 0);
+
+      await tester.pump(const Duration(milliseconds: 1050));
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(ends, 1);
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(find.byType(UiShutterLoader), isNot(paints..something((method, _) => method == #saveLayer)));
+    });
+
+    testWidgets('default (still: false) keeps animating across cycles', (tester) async {
+      await tester.pumpWidget(const UiApp(home: Center(child: UiShutterLoader(size: 40))));
+      expect(tester.hasRunningAnimations, isTrue);
+      await tester.pump(const Duration(milliseconds: 2190)); // 2.1 s + 0.09 s: second cycle's first click
+      expect(tester.hasRunningAnimations, isTrue);
+      final shut = uiShutterBlades(uiShutterBladeDistance(uiShutterClosedAt(0.09)));
+      expect(find.byType(UiShutterLoader), paints..circle()..line(p1: shut[0].$1, p2: shut[0].$2));
+    });
   });
 
   group('UiConfig.spinner', () {

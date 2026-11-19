@@ -1296,7 +1296,10 @@ distance is computed per frame from the same burst formula as the web (`uiShutte
 `context.uiAnimate == false` the blades stay open and the whole mark fades 1 -> 0.55 -> 1 through a
 saveLayer (so joins don't darken), the web's opacity pulse. `UiSpinner` is now a stateless switch:
 with `UiConfig.spinner == shutter` it returns a `UiShutterLoader` with the same size, colour, label
-and decorative; `strokeWidth` applies to the ring only.
+and decorative; `strokeWidth` applies to the ring only. With `still: true` the controller never
+starts (no ticker, no reduced-motion pulse); a `UiShutterLoaderController` (ChangeNotifier) exposes
+`play()` to match the web's `play()` method, running `forward(from: 0)` once, resetting to rest on
+completion and calling `onCycleEnd` (matching Angular's `cycleEnd`).
 
 **Overscroll and pull to refresh (0.72.0, Flutter only).** Both read scroll notifications, never a
 gesture recognizer, so nothing competes with the content's gestures. The pull is the finger's travel
