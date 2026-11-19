@@ -54,6 +54,10 @@
 
 ## Card body layout & interactive semantics
 
+- Web `ui-card [pressable]` (the card itself is the button: role=button, focus, Enter/Space, `activate`) maps to
+  `UiCard(onTap: ...)`. Web `[interactive]` stays a visual hover lift only, for a card wrapped in a link or
+  button; Flutter has no separate flag because a card without `onTap` is never a button.
+
 - `UiCard` accepts `children` (mutually exclusive with `child`), `gap` (spacing step via `uiSpace`),
   `align` (`UiStackAlign`, matching web `align` including centered text alignment), and `enabled`
   (dims to 0.5 and suppresses hover lift/taps when `false`). Angular gained the matching `gap`,
