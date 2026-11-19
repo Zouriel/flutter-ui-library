@@ -11,8 +11,6 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../dialog/bottom_sheet.dart';
-import '../dialog/drawer.dart';
-import '../dialog/route.dart';
 import '../forms/choice/marks.dart';
 import '../forms/text/inputs.dart';
 import '../overlay/anchored.dart';
@@ -313,33 +311,26 @@ class _UiFilterState extends State<UiFilter> {
     _sheetOpen = true;
     final strings = context.uiStrings;
     final heading = _heading(strings);
-    await Navigator.of(context, rootNavigator: true).push<void>(UiDialogRoute<void>.themed(
-      context,
-      transitions: (context, animation, child) => uiSheetTransition(context, animation, child, UiDrawerSide.bottom),
+    await showUiBottomSheet<void>(
+      context: context,
+      title: heading,
+      snaps: const [0, 0.85],
+      maxWidth: 560,
+      closable: true,
       builder: (routeContext) => ValueListenableBuilder<_Live>(
         valueListenable: _live,
-        builder: (context, live, _) => Stack(children: [
-          UiBottomSheet(
-            title: heading,
-            snaps: const [0, 0.85],
-            snap: 1,
-            closable: true,
-            maxWidth: 560,
-            // Closed by its X, a drag or Back: the route goes too.
-            onSnapChanged: (i) {
-              if (i == 0) Navigator.of(routeContext).pop();
-            },
-            footer: UiFilterFooter(
-              count: uiFilterCount(live.value),
-              resultCount: live.resultCount,
-              onClearAll: () => _change(const {}),
-              onDone: () => Navigator.of(routeContext).pop(),
-            ),
-            child: UiFilterPanel(sections: live.sections, value: live.value, onChanged: _change),
-          ),
-        ]),
+        builder: (context, live, _) => UiFilterPanel(sections: live.sections, value: live.value, onChanged: _change),
       ),
-    ));
+      footerBuilder: (routeContext) => ValueListenableBuilder<_Live>(
+        valueListenable: _live,
+        builder: (context, live, _) => UiFilterFooter(
+          count: uiFilterCount(live.value),
+          resultCount: live.resultCount,
+          onClearAll: () => _change(const {}),
+          onDone: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
     _sheetOpen = false;
   }
 

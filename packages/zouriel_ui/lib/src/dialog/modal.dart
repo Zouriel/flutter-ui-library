@@ -11,6 +11,7 @@ import '../core/types.dart';
 import '../theme/app.dart';
 import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
+import 'bottom_sheet.dart';
 import 'route.dart';
 
 /// Modal widths, the web `size`: 360, 480 and 720px, or the whole screen.
@@ -19,14 +20,20 @@ enum UiModalSize { sm, md, lg, full }
 /// Opens a [UiModal] on a [UiDialogRoute] and completes with what it is popped with
 /// (`Navigator.pop(context, value)`), or null when dismissed.
 ///
-/// [builder] is the body; [footerBuilder] the actions (right-aligned). The barrier closes it when
-/// [closeOnBackdrop]; Escape when [closeOnEscape]; the Android back button always does.
+/// [builder] is the body; [footerBuilder] the actions (right-aligned); [footerLeadingBuilder]
+/// optional start-aligned footer metadata (e.g. a counter). When [sheetBelow] is given and the
+/// viewport width is narrower than [sheetBelow], opens [showUiBottomSheet] with [sheetSnaps]
+/// instead of a centred modal. The barrier closes it when [closeOnBackdrop]; Escape when
+/// [closeOnEscape]; the Android back button always does.
 Future<T?> showUiModal<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   String? title,
   WidgetBuilder? footerBuilder,
+  WidgetBuilder? footerLeadingBuilder,
   UiModalSize size = UiModalSize.md,
+  double? sheetBelow,
+  List<double> sheetSnaps = const [0, 0.88],
   bool closeOnBackdrop = true,
   bool closeOnEscape = true,
   bool? glass,
@@ -34,6 +41,20 @@ Future<T?> showUiModal<T>({
   bool useRootNavigator = true,
   RouteSettings? settings,
 }) {
+  if (sheetBelow != null && MediaQuery.sizeOf(context).width < sheetBelow) {
+    return showUiBottomSheet<T>(
+      context: context,
+      builder: builder,
+      title: title,
+      footerBuilder: footerBuilder,
+      footerLeadingBuilder: footerLeadingBuilder,
+      snaps: sheetSnaps,
+      closeOnBackdrop: closeOnBackdrop,
+      closeOnEscape: closeOnEscape,
+      useRootNavigator: useRootNavigator,
+      settings: settings,
+    );
+  }
   return uiNavigatorOf(context, rootNavigator: useRootNavigator).push<T>(UiDialogRoute<T>.themed(
     context,
     dismissible: closeOnBackdrop,
@@ -45,6 +66,7 @@ Future<T?> showUiModal<T>({
       closeOnEscape: closeOnEscape,
       glass: glass,
       radius: radius,
+      footerLeading: footerLeadingBuilder?.call(context),
       footer: footerBuilder?.call(context),
       child: Builder(builder: builder),
     ),
@@ -77,6 +99,7 @@ class UiModal extends StatelessWidget {
     required this.child,
     this.title,
     this.footer,
+    this.footerLeading,
     this.size = UiModalSize.md,
     this.closeOnEscape = true,
     this.glass,
@@ -87,6 +110,9 @@ class UiModal extends StatelessWidget {
   final Widget child;
   final String? title;
   final Widget? footer;
+
+  /// Optional start-aligned widget in the footer bar (the web `[modal-footer-start]` slot), e.g. a counter.
+  final Widget? footerLeading;
   final UiModalSize size;
   final bool closeOnEscape;
   final bool? glass;
@@ -134,12 +160,20 @@ class UiModal extends StatelessWidget {
             children: [
               ?header,
               body,
-              if (footer != null)
+              if (footer != null || footerLeading != null)
                 Container(
                   // Footer buttons carry 48dp touch areas on phones; the padding gives that room back.
                   padding: EdgeInsets.fromLTRB(t.space4, footerPad, t.space4, footerPad + (full ? mq.padding.bottom : 0)),
                   decoration: BoxDecoration(border: Border(top: BorderSide(color: t.border))),
-                  child: Align(alignment: AlignmentDirectional.centerEnd, child: footer),
+                  child: footerLeading == null
+                      ? Align(alignment: AlignmentDirectional.centerEnd, child: footer)
+                      : Row(
+                          spacing: t.space2,
+                          children: [
+                            Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: footerLeading)),
+                            if (footer != null) footer!,
+                          ],
+                        ),
                 ),
             ],
           ),

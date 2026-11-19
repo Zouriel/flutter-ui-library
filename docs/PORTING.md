@@ -1,5 +1,11 @@
 # Porting @zouriel/ui to Flutter
 
+## Responsive sheet-or-modal, footerLeading & showUiBottomSheet
+
+- **`UiModal.footerLeading` / `UiBottomSheet.footerLeading`** (web: `[modal-footer-start]` / `[sheet-footer-start]`): optional inline-start widget in the footer bar (e.g., a `3 / 6` counter), mirrored automatically in RTL via `AlignmentDirectional`. Without `footerLeading`, both keep their existing end-aligned / full-width footer layout.
+- **`showUiBottomSheet<T>`**: route helper pushing a `UiBottomSheet` on `UiDialogRoute` with `uiSheetTransition(..., UiDrawerSide.bottom)`, handling multi-snap state, close-button / drag-to-0 / backdrop / Escape / Back dismissal (`closeOnBackdrop` and `closeOnEscape`). `UiFilter` now reuses `showUiBottomSheet`.
+- **`showUiModal(..., sheetBelow:, sheetSnaps:)`** (web: `ui-modal [sheetBelow] [sheetSnaps]`): below `sheetBelow` logical px, opens `showUiBottomSheet` with the same body, `footerLeadingBuilder`, and `footerBuilder`; at or above `sheetBelow` (or when `sheetBelow` is null), opens a centred `UiModal`.
+
 ## Plan card add-on (0.76.0)
 
 `UiPlanCard.addOn` / `addOnNote` / `addOnValue` / `onAddOnChanged` (web: `addOn`, `addOnNote`,

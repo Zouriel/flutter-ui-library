@@ -338,19 +338,45 @@ class _OverlaysPageState extends State<OverlaysPage> {
                 if (mounted) setState(() => _modalResult = r ?? 'dismissed');
               },
             ),
+            UiButton(
+              label: 'Responsive sheet-or-modal',
+              variant: UiButtonVariant.outline,
+              onPressed: () async {
+                final r = await showUiModal<String>(
+                  context: context,
+                  title: 'Feed photos',
+                  sheetBelow: 768,
+                  builder: (context) => const UiText('Below 768px this opens as a bottom sheet; wider screens show a centred modal, sharing one builder and footer.'),
+                  footerLeadingBuilder: (context) => const UiText('3 / 6', variant: UiTextVariant.caption),
+                  footerBuilder: (context) => Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+                    UiButton(label: 'Clear', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => Navigator.pop(context, 'cleared')),
+                    UiButton(label: 'Save', size: UiSize.sm, onPressed: () => Navigator.pop(context, 'saved')),
+                  ]),
+                );
+                if (mounted) setState(() => _modalResult = r ?? 'dismissed');
+              },
+            ),
             note('Result: $_modalResult'),
           ]),
           code: '''final result = await showUiModal<String>(
   context: context,
-  title: 'Rename project',
-  builder: (context) => RenameForm(),
-  footerBuilder: (context) => UiButton(label: 'Save', onPressed: () => Navigator.pop(context, 'saved')),
+  title: 'Feed photos',
+  sheetBelow: 768, // bottom sheet on phones, centred modal wider
+  builder: (context) => PhotosPicker(),
+  footerLeadingBuilder: (context) => const UiText('3 / 6', variant: UiTextVariant.caption),
+  footerBuilder: (context) => Row(mainAxisSize: MainAxisSize.min, spacing: 8, children: [
+    UiButton(label: 'Clear', variant: UiButtonVariant.ghost, onPressed: clear),
+    UiButton(label: 'Save', onPressed: () => Navigator.pop(context, 'saved')),
+  ]),
 );''',
           api: const [
             ApiRow('builder', 'WidgetBuilder', 'The body; scrolls when it is taller than the dialog.'),
             ApiRow('title', 'String?', 'Header title, also the dialog\'s accessible name. Without it there is no header or close button, so give the dialog a way out in its content.'),
+            ApiRow('footerLeadingBuilder', 'WidgetBuilder?', 'Optional start-aligned footer metadata (e.g. a counter), paired with footerBuilder.'),
             ApiRow('footerBuilder', 'WidgetBuilder?', 'Actions, right-aligned under a divider.'),
             ApiRow('size', 'UiModalSize', 'Max width: sm 360, md 480, lg 720; full fills the screen.', def: 'md'),
+            ApiRow('sheetBelow', 'double?', 'Below this viewport width (logical px), opens showUiBottomSheet with the same builders instead of a centred modal.'),
+            ApiRow('sheetSnaps', 'List<double>', 'Resting snaps used when sheetBelow switches to a bottom sheet.', def: '[0, 0.88]'),
             ApiRow('closeOnBackdrop', 'bool', 'A tap on the dimmed page closes it.', def: 'true'),
             ApiRow('closeOnEscape', 'bool', 'Escape closes it.', def: 'true'),
             ApiRow('glass / radius', 'bool?', 'Frosted panel / rounded corners; default to UiConfig.'),
@@ -579,7 +605,7 @@ if (ok == true) delete();''',
         ),
         DocSection(
           name: 'Bottom sheet',
-          widget: 'UiBottomSheet',
+          widget: 'showUiBottomSheet · UiBottomSheet',
           summary: 'A panel resting at the bottom of the screen that is dragged between heights: the mobile stand-in for a sidebar. Put it last in a Stack over the page. Drag or flick the header to resize it; pulling the body down at the top of its content lowers the sheet, and pushing the body up only ever scrolls the content (bodyExpands brings back growing it first). The handle is a button that steps through the snaps, and ArrowUp/Down on it do the same. Non-modal by default: opening it does not move focus and Tab can leave it. With backdrop it is modal while open: the page dims and a tap on it closes the sheet, focus moves to the handle and stays inside, and screen readers can\'t reach the page. Escape (focus inside) and the back button close it; closing sends focus back where it came from. Focusing a text field inside raises it to its tallest snap on a phone, and while the keyboard is up it rests on top of it. footer (0.44.0) is a sticky bar at the bottom of the visible sheet at every snap, the peek included and while dragging, with the body scrolling above it; it counts in onCoverChanged, rests on the keyboard with the sheet, and an open snap too short for the header and the footer is raised to fit them. A builder\'s scroll view adds UiBottomSheetState.footerHeight to its bottom padding.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             row([
@@ -658,7 +684,9 @@ if (ok == true) delete();''',
             ApiRow('bodyExpands', 'bool', 'Pushing the body up makes the sheet taller (while there is a taller snap) before the content scrolls. Off since 0.69: the body scrolls, and the handle and header resize the sheet.', def: 'false'),
             ApiRow('glass', 'bool', 'See-through surface for a sheet over a map (0.41.2); solid under the high-contrast setting. Not set by UiConfig.glass. See Map › Map page.', def: 'false'),
             ApiRow('glassStrength', 'UiGlassStrength', 'How see-through glass is (0.41.3): clear lets a map in the theme\'s brightness plainly show through, text AA over such a map; frosted is near-opaque, AA over any backdrop.', def: 'clear'),
+            ApiRow('footerLeading', 'Widget?', 'Optional start-aligned widget inside the sticky footer bar (e.g. a counter).'),
             ApiRow('footer', 'Widget?', 'A sticky bar at the bottom of the visible sheet at every snap (0.44.0): the primary action. Counted in the cover; a too-short peek is raised to fit it. On a glass sheet it is always frosted, whatever glassStrength, so the body scrolling under it never shows through (0.44.2).'),
+            ApiRow('showUiBottomSheet', 'helper', 'Opens a UiBottomSheet on a UiDialogRoute and completes with whatever Navigator.pop passes.'),
           ],
           callbacks: const [
             ApiRow('onHeightChanged', 'ValueChanged<double>?', 'Px height once it settles.'),

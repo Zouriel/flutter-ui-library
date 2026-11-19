@@ -9,10 +9,169 @@ import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
 import '../overlay/backdrop.dart';
+import '../theme/app.dart';
 import '../theme/glass_sheet.dart';
 import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
+import 'drawer.dart';
 import 'modal.dart';
+import 'route.dart';
+
+/// Opens a [UiBottomSheet] on a [UiDialogRoute] and completes with what it is popped with
+/// (`Navigator.pop(context, value)`), or null when dismissed.
+///
+/// The route provides the backdrop, focus trap and return, and back-button handling; dragging the
+/// sheet to snap 0, tapping the close button, pressing Escape (when [closeOnEscape]) or tapping
+/// the backdrop (when [closeOnBackdrop]) pops the route.
+Future<T?> showUiBottomSheet<T>({
+  required BuildContext context,
+  WidgetBuilder? builder,
+  Widget Function(BuildContext context, ScrollController controller)? bodyBuilder,
+  String? title,
+  WidgetBuilder? footerBuilder,
+  WidgetBuilder? footerLeadingBuilder,
+  WidgetBuilder? actionsBuilder,
+  List<double> snaps = const [0, 0.88],
+  int? initialSnap,
+  double? maxWidth,
+  bool closable = true,
+  bool hasHeader = false,
+  bool closeOnBackdrop = true,
+  bool closeOnEscape = true,
+  bool expandOnFocus = true,
+  bool bodyExpands = false,
+  bool glass = false,
+  UiGlassStrength glassStrength = UiGlassStrength.clear,
+  bool useRootNavigator = true,
+  RouteSettings? settings,
+}) {
+  assert((builder == null) != (bodyBuilder == null), 'Give showUiBottomSheet either builder or bodyBuilder.');
+  final firstOpen = snaps.indexWhere((s) => s > 0);
+  final startSnap = initialSnap ?? (firstOpen >= 0 ? firstOpen : math.max(0, snaps.length - 1));
+  return uiNavigatorOf(context, rootNavigator: useRootNavigator).push<T>(
+    UiDialogRoute<T>.themed(
+      context,
+      dismissible: closeOnBackdrop,
+      settings: settings,
+      transitions: (context, animation, child) => uiSheetTransition(context, animation, child, UiDrawerSide.bottom),
+      builder: (routeContext) => _UiBottomSheetRouteBody(
+        builder: builder,
+        bodyBuilder: bodyBuilder,
+        title: title ?? '',
+        footerBuilder: footerBuilder,
+        footerLeadingBuilder: footerLeadingBuilder,
+        actionsBuilder: actionsBuilder,
+        snaps: snaps,
+        initialSnap: startSnap,
+        maxWidth: maxWidth,
+        closable: closable,
+        hasHeader: hasHeader || (title != null && title.isNotEmpty),
+        closeOnEscape: closeOnEscape,
+        expandOnFocus: expandOnFocus,
+        bodyExpands: bodyExpands,
+        glass: glass,
+        glassStrength: glassStrength,
+      ),
+    ),
+  );
+}
+
+class _UiBottomSheetRouteBody extends StatefulWidget {
+  const _UiBottomSheetRouteBody({
+    this.builder,
+    this.bodyBuilder,
+    required this.title,
+    this.footerBuilder,
+    this.footerLeadingBuilder,
+    this.actionsBuilder,
+    required this.snaps,
+    required this.initialSnap,
+    this.maxWidth,
+    required this.closable,
+    required this.hasHeader,
+    required this.closeOnEscape,
+    required this.expandOnFocus,
+    required this.bodyExpands,
+    required this.glass,
+    required this.glassStrength,
+  });
+
+  final WidgetBuilder? builder;
+  final Widget Function(BuildContext context, ScrollController controller)? bodyBuilder;
+  final String title;
+  final WidgetBuilder? footerBuilder;
+  final WidgetBuilder? footerLeadingBuilder;
+  final WidgetBuilder? actionsBuilder;
+  final List<double> snaps;
+  final int initialSnap;
+  final double? maxWidth;
+  final bool closable;
+  final bool hasHeader;
+  final bool closeOnEscape;
+  final bool expandOnFocus;
+  final bool bodyExpands;
+  final bool glass;
+  final UiGlassStrength glassStrength;
+
+  @override
+  State<_UiBottomSheetRouteBody> createState() => _UiBottomSheetRouteBodyState();
+}
+
+class _UiBottomSheetRouteBodyState extends State<_UiBottomSheetRouteBody> {
+  late int _snap = widget.initialSnap;
+  bool _popped = false;
+
+  void _pop() {
+    if (_popped || !mounted) return;
+    _popped = true;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Actions(
+      actions: {
+        DismissIntent: CallbackAction<DismissIntent>(onInvoke: (_) {
+          if (widget.closeOnEscape) _pop();
+          return null;
+        }),
+      },
+      child: Focus(
+        autofocus: true,
+        skipTraversal: true,
+        child: Stack(
+          children: [
+            UiBottomSheet(
+              title: widget.title,
+              snaps: widget.snaps,
+              snap: _snap,
+              maxWidth: widget.maxWidth,
+              closable: widget.closable,
+              hasHeader: widget.hasHeader,
+              closeOnEscape: widget.closeOnEscape,
+              expandOnFocus: widget.expandOnFocus,
+              bodyExpands: widget.bodyExpands,
+              glass: widget.glass,
+              glassStrength: widget.glassStrength,
+              actions: widget.actionsBuilder?.call(context),
+              footerLeading: widget.footerLeadingBuilder?.call(context),
+              footer: widget.footerBuilder?.call(context),
+              onSnapChanged: (i) {
+                if ((widget.snaps[i.clamp(0, widget.snaps.length - 1)]) <= 0) {
+                  _pop();
+                } else if (mounted) {
+                  setState(() => _snap = i);
+                }
+              },
+              builder: widget.bodyBuilder,
+              child: widget.builder != null ? Builder(builder: widget.builder!) : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// A fast release (logical px per second) moves one snap in that direction, however short the drag.
 const double _flick = 450;
@@ -76,6 +235,8 @@ class UiBottomSheet extends StatefulWidget {
     this.offset = 0,
     this.topInset = 0,
     this.backdrop = false,
+    this.closeOnBackdrop = true,
+    this.closeOnEscape = true,
     this.closable = true,
     this.hasHeader = false,
     this.actions,
@@ -87,10 +248,14 @@ class UiBottomSheet extends StatefulWidget {
     this.glass = false,
     this.glassStrength = UiGlassStrength.clear,
     this.footer,
+    this.footerLeading,
   }) : assert(child != null || builder != null, 'Give the sheet a child or a builder.');
 
   /// A sticky bar at the bottom of the visible sheet (0.44.0): the primary action.
   final Widget? footer;
+
+  /// Optional start-aligned widget in the footer bar (the web `[sheet-footer-start]` slot), e.g. a counter.
+  final Widget? footerLeading;
 
   /// The content, in a scroll view the sheet provides.
   final Widget? child;
@@ -119,6 +284,12 @@ class UiBottomSheet extends StatefulWidget {
   /// Space kept free above its tallest snap, in px: a header that stays reachable.
   final double topInset;
   final bool backdrop;
+
+  /// A tap on the backdrop closes the sheet (when [backdrop] is true).
+  final bool closeOnBackdrop;
+
+  /// Escape closes (or collapses) the sheet while focus is inside.
+  final bool closeOnEscape;
 
   /// Show a close button in the header.
   final bool closable;
@@ -197,15 +368,17 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   /// The header's and the footer's laid-out heights, measured after layout (0 until then).
   double _headerH = 0, _footerH = 0;
 
+  bool get _hasFooter => widget.footer != null || widget.footerLeading != null;
+
   /// How tall the footer is, safe area included (0 without one): a [UiBottomSheet.builder]'s scroll
   /// view adds it to its bottom padding.
-  double get footerHeight => widget.footer == null ? 0 : _footerH;
+  double get footerHeight => _hasFooter ? _footerH : 0;
 
   /// The snaps in use: the given ones, with an open snap too short for the header and the footer
   /// raised to fit them (kept ascending).
   List<double> get _snaps {
     final given = widget.snaps;
-    if (widget.footer == null || _room <= 0 || _footerH <= 0) return given;
+    if (!_hasFooter || _room <= 0 || _footerH <= 0) return given;
     final least = math.min(1.0, (_headerH + _footerH + 1) / _room);
     final out = <double>[];
     for (final s in given) {
@@ -520,7 +693,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape && _collapsible) {
-      close();
+      if (widget.closeOnEscape) close();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -567,7 +740,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                       opacity: modal ? 1 : 0,
                       duration: context.uiAnimate ? (modal ? t.motionBase : t.motionFast) : Duration.zero,
                       curve: t.easeStandard,
-                      child: UiBackdrop(onTap: modal ? close : null, semanticLabel: modal ? context.uiStrings.close : null, opacity: kAlwaysCompleteAnimation),
+                      child: UiBackdrop(onTap: modal && widget.closeOnBackdrop ? close : null, semanticLabel: modal && widget.closeOnBackdrop ? context.uiStrings.close : null, opacity: kAlwaysCompleteAnimation),
                     ),
                   )
                 : const SizedBox.shrink(),
@@ -618,7 +791,7 @@ class UiBottomSheetState extends State<UiBottomSheet> {
                                     alignment: Alignment.topCenter,
                                     minHeight: maxH,
                                     maxHeight: maxH,
-                                    child: _panel(context, scroll, rr, hidden + (widget.footer != null ? _footerH : mq.padding.bottom * (_bottom > 0 ? 0 : 1))),
+                                    child: _panel(context, scroll, rr, hidden + (_hasFooter ? _footerH : mq.padding.bottom * (_bottom > 0 ? 0 : 1))),
                                   ),
                                 ),
                               ),
@@ -768,7 +941,8 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   /// clipped panel. Without a footer, just the panel.
   Widget _withFooter(BuildContext context, Radius rr, Widget panel) {
     final footer = widget.footer;
-    if (footer == null) return panel;
+    final leading = widget.footerLeading;
+    if (footer == null && leading == null) return panel;
     final t = context.ui;
     final mq = MediaQuery.of(context);
     final safe = _bottom > 0 ? 0.0 : mq.padding.bottom;
@@ -781,7 +955,15 @@ class UiBottomSheetState extends State<UiBottomSheet> {
         border: Border(top: BorderSide(color: _glass ? t.glassBorder : t.borderSubtle)),
       ),
       padding: EdgeInsets.fromLTRB(t.space4, t.space3, t.space4, t.space3 + safe),
-      child: footer,
+      child: leading == null
+          ? Align(alignment: AlignmentDirectional.centerEnd, child: footer)
+          : Row(
+              spacing: t.space2,
+              children: [
+                Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: leading)),
+                if (footer != null) footer,
+              ],
+            ),
     );
     if (_glass) bar = ClipRect(child: BackdropFilter(filter: uiGlassSheetFilter(t, strength: UiGlassStrength.frosted), child: bar));
     return Stack(fit: StackFit.expand, children: [
