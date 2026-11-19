@@ -215,6 +215,117 @@ void main() {
         ],
       ));
     });
+
+    testWidgets('appearance: glow omits underline and rule, places glow under selected only, and moves it on selection', (tester) async {
+      var sel = 0;
+      var appearance = UiTabsAppearance.line;
+      late StateSetter set;
+      await pumpUi(tester, StatefulBuilder(builder: (context, s) {
+        set = s;
+        return SizedBox(
+          width: 390,
+          child: UiTabs(
+            appearance: appearance,
+            align: UiTabsAlignment.fill,
+            selectedIndex: sel,
+            onChanged: (i) => s(() => sel = i),
+            tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+          ),
+        );
+      }));
+
+      // Default line appearance: 1px rule ColoredBox present, no glow, selected tab has 2px non-transparent bottom border.
+      expect(find.byKey(const ValueKey('ui-tab-glow')), findsNothing);
+      expect(find.descendant(of: find.byType(UiTabs), matching: find.byType(ColoredBox)), findsOneWidget);
+      BoxDecoration selectedLineDeco() =>
+          (tester.widget<AnimatedContainer>(find.descendant(of: find.byType(UiInteractive).at(sel), matching: find.byType(AnimatedContainer))).decoration! as BoxDecoration);
+      expect((selectedLineDeco().border! as Border).bottom.color.a, greaterThan(0));
+
+      // Switch to glow appearance: no 1px rule ColoredBox, selected tab bottom border is transparent, one glow positioned under tab 0.
+      set(() => appearance = UiTabsAppearance.glow);
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(UiTabs), matching: find.byType(ColoredBox)), findsNothing);
+      expect((selectedLineDeco().border! as Border).bottom.color.a, 0);
+      expect(find.byKey(const ValueKey('ui-tab-glow')), findsOneWidget);
+
+      final tab0Rect = tester.getRect(find.byType(UiInteractive).at(0));
+      final tab1Rect = tester.getRect(find.byType(UiInteractive).at(1));
+      var glowPos = tester.widget<AnimatedPositioned>(find.byKey(const ValueKey('ui-tab-glow')));
+      expect(glowPos.left, closeTo(0, 0.5));
+      expect(glowPos.width, closeTo(tab0Rect.width, 0.5));
+
+      // Select tab 1: the single glow moves to tab 1.
+      await tester.tap(find.text('Reception'));
+      await tester.pumpAndSettle();
+      expect(sel, 1);
+      expect(find.byKey(const ValueKey('ui-tab-glow')), findsOneWidget);
+      glowPos = tester.widget<AnimatedPositioned>(find.byKey(const ValueKey('ui-tab-glow')));
+      expect(glowPos.left, closeTo(tab1Rect.left - tab0Rect.left, 0.5));
+      expect(glowPos.width, closeTo(tab1Rect.width, 0.5));
+    });
+
+    testWidgets('align: fill gives equal widths, centres labels, and truncates long labels with ellipsis', (tester) async {
+      await pumpUi(
+        tester,
+        SizedBox(
+          width: 300,
+          child: UiTabs(
+            align: UiTabsAlignment.fill,
+            appearance: UiTabsAppearance.glow,
+            selectedIndex: 0,
+            onChanged: (_) {},
+            tabs: const [
+              UiTab(label: 'One'),
+              UiTab(label: 'Two'),
+              UiTab(label: 'A very long portraits album label that cannot fit'),
+            ],
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final interactives = find.byType(UiInteractive).evaluate().toList();
+      final widths = [for (final e in interactives) (e.renderObject! as RenderBox).size.width];
+      expect(widths.length, 3);
+      expect(widths[0], closeTo((300 - 8) / 3, 0.01));
+      expect(widths[1], closeTo(widths[0], 0.01));
+      expect(widths[2], closeTo(widths[0], 0.01));
+
+      // Short label is centred inside its tab share.
+      final tab0Rect = tester.getRect(find.byType(UiInteractive).at(0));
+      final text0Rect = tester.getRect(find.text('One'));
+      expect(text0Rect.center.dx, closeTo(tab0Rect.center.dx, 1.0));
+
+      // Long label uses TextOverflow.ellipsis and stays within its tab share.
+      final longText = tester.widget<Text>(find.text('A very long portraits album label that cannot fit'));
+      expect(longText.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('golden: glow and fill tabs', (tester) async {
+      await expectThemedGolden(tester, 'tabs_glow_fill', height: 220, (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 20,
+        children: [
+          UiTabs(
+            appearance: UiTabsAppearance.glow,
+            align: UiTabsAlignment.fill,
+            selectedIndex: 0,
+            onChanged: (_) {},
+            tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+          ),
+          UiTabs(
+            appearance: UiTabsAppearance.glow,
+            align: UiTabsAlignment.fill,
+            selectedIndex: 1,
+            onChanged: (_) {},
+            tabs: const [
+              UiTab(label: 'Ceremony'),
+              UiTab(label: 'Reception & dinner party'),
+              UiTab(label: 'Portraits'),
+            ],
+          ),
+        ],
+      ));
+    });
   });
 
   group('UiAccordion', () {

@@ -1,9 +1,15 @@
 # Porting @zouriel/ui to Flutter
 
-## Tabs alignment and strip-only mode
+## Tabs alignment, glow appearance and strip-only mode
 
 - `UiTabsAlignment.center` is the web `align="center"`: fitting tabs sit in the middle of the
   full-width bottom rule, while an overflowing strip begins at tab 0 and scrolls horizontally.
+- `UiTabsAlignment.fill` is the web `align="fill"`: every tab gets an equal `Expanded` share of the
+  strip, centres its content, and truncates long labels with `TextOverflow.ellipsis`.
+- `UiTabsAppearance.glow` is the web `appearance="glow"`: omits the 1px strip hairline and 2px
+  selected underline, rendering a single radial-gradient accent glow (`_GlowPainter`) in an
+  `AnimatedPositioned` under the selected tab that moves on selection (instant when `uiAnimate` is
+  false).
 - `UiTab.child` is optional. When every tab omits it, `UiTabs` renders only the strip, with no panel
   semantics or `space4` panel gap. If any tab has a child, all panel states stay mounted as before.
 

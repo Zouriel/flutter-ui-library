@@ -1713,7 +1713,7 @@ File: `tabs/src/tabs.ts`
 ### UiTabs (component, `ui-tabs`)
 File: `tabs/src/tabs.ts`  
 `ui-tabs` — WAI-ARIA tabs. Wraps `ui-tab` children; renders a tablist with roving tabindex and Arrow/Home/End keyboard navigation.  
-- Inputs: `label`: string = 'Tabs'; `align`: 'start' | 'center' = 'start' (Flutter `UiTabsAlignment`)
+- Inputs: `label`: string = 'Tabs'; `align`: 'start' | 'center' | 'fill' = 'start' (Flutter `UiTabsAlignment`); `appearance`: 'line' | 'glow' = 'line' (Flutter `UiTabsAppearance`)
 - Two-way: `selectedIndex` = 0
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
