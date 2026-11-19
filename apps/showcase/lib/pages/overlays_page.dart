@@ -299,6 +299,45 @@ class _OverlaysPageState extends State<OverlaysPage> {
                   if (mounted) setState(() => _modalResult = r ?? 'dismissed');
                 },
               ),
+            UiButton(
+              label: 'Form fields inside modal',
+              variant: UiButtonVariant.outline,
+              onPressed: () async {
+                String? phone;
+                var roles = <String>['vip'];
+                const roleOptions = [
+                  UiComboboxOption(label: 'VIP', value: 'vip'),
+                  UiComboboxOption(label: 'Family', value: 'family'),
+                  UiComboboxOption(label: 'Host', value: 'host'),
+                ];
+                final r = await showUiModal<String>(
+                  context: context,
+                  title: 'Add guest',
+                  builder: (context) => StatefulBuilder(
+                    builder: (context, set) => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: context.ui.space3,
+                      children: [
+                        UiFormField(
+                          label: 'Phone',
+                          child: UiPhoneInput(value: phone, defaultCountry: 'GB', onChanged: (v) => set(() => phone = v)),
+                        ),
+                        UiFormField(
+                          label: 'Roles',
+                          child: UiMultiSelect(options: roleOptions, value: roles, onChanged: (v) => set(() => roles = v)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  footerBuilder: (context) => Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+                    UiButton(label: 'Cancel', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () => Navigator.pop(context)),
+                    UiButton(label: 'Save', size: UiSize.sm, onPressed: () => Navigator.pop(context, 'saved')),
+                  ]),
+                );
+                if (mounted) setState(() => _modalResult = r ?? 'dismissed');
+              },
+            ),
             note('Result: $_modalResult'),
           ]),
           code: '''final result = await showUiModal<String>(
