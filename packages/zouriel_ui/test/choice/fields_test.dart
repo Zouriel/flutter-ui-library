@@ -195,6 +195,44 @@ void main() {
       expect(got, isNull);
     });
 
+    testWidgets('cameraPicker is a full-width primary action, requests one image and emits it', (tester) async {
+      ({bool multiple, List<String> accept})? asked;
+      List<UiPickedFile>? got;
+      await pumpUi(tester, SizedBox(width: 360, child: UiFileUpload(
+        picker: ({required multiple, required accept}) async => null,
+        cameraPicker: ({required multiple, required accept}) async {
+          asked = (multiple: multiple, accept: accept);
+          return [png];
+        },
+        onFilesSelected: (f) => got = f,
+      )));
+      final camera = find.widgetWithText(UiButton, 'Take a photo');
+      expect(camera, findsOneWidget);
+      expect(tester.getSize(camera).width, 360);
+      expect(tester.getTopLeft(camera).dy, lessThan(tester.getTopLeft(find.text('Tap to upload')).dy));
+      await tester.tap(camera);
+      await tester.pumpAndSettle();
+      expect(asked?.multiple, isFalse);
+      expect(asked?.accept, ['image/*']);
+      expect(got, [png]);
+    });
+
+    testWidgets('cameraLabel replaces the words and disabled prevents camera capture', (tester) async {
+      var asked = false;
+      await pumpUi(tester, SizedBox(width: 360, child: UiFileUpload(
+        enabled: false,
+        picker: ({required multiple, required accept}) async => null,
+        cameraPicker: ({required multiple, required accept}) async { asked = true; return [png]; },
+        cameraLabel: 'Open camera',
+      )));
+      final camera = find.widgetWithText(UiButton, 'Open camera');
+      expect(camera, findsOneWidget);
+      expect(tester.widget<UiButton>(camera).onPressed, isNull);
+      await tester.tap(camera, warnIfMissed: false);
+      await tester.pump();
+      expect(asked, isFalse);
+    });
+
     // A 1x1 transparent PNG, so the preview has a real picture to decode.
     final pixel = MemoryImage(Uint8List.fromList(const [
       137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137,
@@ -497,6 +535,16 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Pick colour'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(UiApp), matchesGoldenFile('goldens/fields_open.png'));
+  });
+
+  testWidgets('golden: file upload camera action', (tester) async {
+    Future<List<UiPickedFile>?> none({required bool multiple, required List<String> accept}) async => null;
+    await expectThemedGolden(tester, 'fields_upload_camera', height: 260, (context) => UiFileUpload(
+      picker: none,
+      cameraPicker: none,
+      accept: 'image/*',
+      acceptLabel: 'JPEG, PNG or WebP',
+    ));
   });
 
   testWidgets('golden: file upload with a picture in it (photo + Remove, logo contained) (0.79)', (tester) async {

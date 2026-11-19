@@ -65,6 +65,8 @@ class UiFileUpload extends StatefulWidget {
   const UiFileUpload({
     super.key,
     required this.picker,
+    this.cameraPicker,
+    this.cameraLabel,
     this.onFilesSelected,
     this.onRejected,
     this.multiple = false,
@@ -121,6 +123,13 @@ class UiFileUpload extends StatefulWidget {
 
   /// Null (or [enabled] false) disables the dropzone.
   final UiFilePicker? picker;
+
+  /// Optional camera picker. When present, a primary full-width camera button sits above the
+  /// dropzone and sends its one image through [onFilesSelected].
+  final UiFilePicker? cameraPicker;
+
+  /// Camera button words; defaults to [UiStrings.uploadTakePhoto].
+  final String? cameraLabel;
   final ValueChanged<List<UiPickedFile>>? onFilesSelected;
 
   /// Files that don't match [accept].
@@ -146,8 +155,10 @@ class UiFileUploadState extends State<UiFileUpload> {
   List<UiPickedFile> _files = const [];
   bool _over = false;
   bool _picking = false;
+  bool _cameraPicking = false;
 
   bool get _enabled => widget.enabled && widget.picker != null;
+  bool get _cameraEnabled => widget.enabled && widget.cameraPicker != null;
 
   /// Files the user is dragging over the zone: highlight it.
   void setDragOver(bool over) {
@@ -182,6 +193,17 @@ class UiFileUploadState extends State<UiFileUpload> {
     }
   }
 
+  Future<void> _pickCamera() async {
+    if (!_cameraEnabled || _cameraPicking) return;
+    _cameraPicking = true;
+    try {
+      final picked = await widget.cameraPicker!(multiple: false, accept: const ['image/*']);
+      if (mounted && picked != null && picked.isNotEmpty) _commit(picked.take(1).toList());
+    } finally {
+      _cameraPicking = false;
+    }
+  }
+
   static String formatSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -195,10 +217,22 @@ class UiFileUploadState extends State<UiFileUpload> {
     final r = (widget.radius ?? theme.config.radius) ? t.radius : 0.0;
     final acceptText = widget.acceptLabel ?? widget.accept;
     final body = context.uiText.body;
-    if (widget.preview != null) return _withPreview(context, widget.preview!, r);
+    if (widget.preview != null) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (widget.cameraPicker != null) ...[
+          _cameraButton(context),
+          SizedBox(height: t.space2),
+        ],
+        _withPreview(context, widget.preview!, r),
+      ]);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.cameraPicker != null) ...[
+          _cameraButton(context),
+          SizedBox(height: t.space2),
+        ],
         UiInteractive(
           onTap: _enabled ? _pick : null,
           enabled: _enabled,
@@ -276,6 +310,13 @@ class UiFileUploadState extends State<UiFileUpload> {
       ],
     );
   }
+
+  Widget _cameraButton(BuildContext context) => UiButton(
+        label: widget.cameraLabel ?? context.uiStrings.uploadTakePhoto,
+        icon: const UiIcon(HugeIcons.strokeRoundedCamera01),
+        block: true,
+        onPressed: _cameraEnabled ? _pickCamera : null,
+      );
 }
 
 extension on UiFileUploadState {

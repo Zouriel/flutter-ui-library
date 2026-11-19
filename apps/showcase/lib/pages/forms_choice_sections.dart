@@ -44,6 +44,9 @@ class _FormsChoiceSectionsState extends State<FormsChoiceSections> {
     ];
   }
 
+  Future<List<UiPickedFile>?> _fakeCameraPicker({required bool multiple, required List<String> accept}) async =>
+      const [UiPickedFile(name: 'camera-photo.jpg', size: 128412, mimeType: 'image/jpeg')];
+
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
@@ -218,10 +221,11 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
       DocSection(
         name: 'File upload',
         widget: 'UiFileUpload',
-        summary: 'A dropzone that opens a file picker when tapped and lists the chosen files with their sizes. The library ships no picker, since that needs a plugin: pass a UiFilePicker that wraps file_picker or file_selector. Files that don\'t match accept (extensions, MIME types, image/*) go to onRejected, the rest to onFilesSelected (only the first unless multiple). For drag and drop, wire a drop plugin to setDragOver and addFiles on the state. This demo\'s picker returns three sample files.',
+        summary: 'A dropzone that opens a file picker when tapped and lists the chosen files with their sizes. The library ships no picker, since that needs a plugin: pass a UiFilePicker that wraps file_picker or file_selector. cameraPicker adds a full-width Take a photo action above the dropzone and sends its image through the same callback. Files that don\'t match accept (extensions, MIME types, image/*) go to onRejected, the rest to onFilesSelected (only the first unless multiple). For drag and drop, wire a drop plugin to setDragOver and addFiles on the state. This demo\'s pickers return sample files.',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
           UiFileUpload(
             picker: _fakePicker,
+            cameraPicker: _fakeCameraPicker,
             enabled: enabled,
             multiple: true,
             accept: '.pdf,image/*',
@@ -252,11 +256,14 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
     final r = await FilePicker.platform.pickFiles(allowMultiple: multiple);
     return r?.files.map((f) => UiPickedFile(name: f.name, size: f.size, path: f.path)).toList();
   },
+  cameraPicker: ({required multiple, required accept}) => takePhoto(),
   onFilesSelected: upload,
   onRejected: (files) => toast('Not a PDF or image'),
 )''',
         api: const [
           ApiRow('picker', 'UiFilePicker?', 'Opens the platform picker. Null disables the zone.'),
+          ApiRow('cameraPicker', 'UiFilePicker?', 'Shows a primary full-width camera action; called for one image/* file.'),
+          ApiRow('cameraLabel', 'String?', 'Camera action words.', def: 'strings.uploadTakePhoto (Take a photo)'),
           ApiRow('onFilesSelected', 'ValueChanged<List<UiPickedFile>>?', 'Accepted files.'),
           ApiRow('onRejected', 'ValueChanged<List<UiPickedFile>>?', 'Files that don\'t match accept.'),
           ApiRow('multiple', 'bool', 'Keep every file, not just the first.', def: 'false'),

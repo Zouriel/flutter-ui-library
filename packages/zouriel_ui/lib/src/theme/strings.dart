@@ -31,6 +31,7 @@ class UiStrings {
     this.uploadHint = 'or drag & drop',
     this.uploadReplace = 'Tap to change',
     this.uploadRemove = 'Remove',
+    this.uploadTakePhoto = 'Take a photo',
     this.holdHint = 'Press and hold to confirm',
     this.confirmTitle = 'Are you sure?',
     this.confirm = 'Confirm',
@@ -259,6 +260,7 @@ class UiStrings {
     uploadHint: 'ނުވަތަ ދަމައިގެން ލާ',
     uploadReplace: 'ފިތާލާ ބަދަލު ކުރޭ',
     uploadRemove: 'ނައްތާލާ',
+    uploadTakePhoto: 'ފޮޓޯއެއް ނަގާ',
     holdHint: 'ކަށަވަރުކުރަން ފިތާލައިގެން ހިފަހައްޓާ',
     confirmTitle: 'ޔަގީންތޯ؟',
     confirm: 'ކަށަވަރުކުރޭ',
@@ -511,6 +513,9 @@ class UiStrings {
 
   /// File upload with a picture in it: the button under it that takes the picture away.
   final String uploadRemove;
+
+  /// File upload: the optional camera action above the dropzone.
+  final String uploadTakePhoto;
 
   /// Hold button: what holding does (read with the button).
   final String holdHint;
@@ -1136,6 +1141,7 @@ class UiStrings {
     String? uploadHint,
     String? uploadReplace,
     String? uploadRemove,
+    String? uploadTakePhoto,
     String? holdHint,
     String? confirmTitle,
     String? confirm,
@@ -1359,6 +1365,7 @@ class UiStrings {
         uploadHint: uploadHint ?? this.uploadHint,
         uploadReplace: uploadReplace ?? this.uploadReplace,
         uploadRemove: uploadRemove ?? this.uploadRemove,
+        uploadTakePhoto: uploadTakePhoto ?? this.uploadTakePhoto,
         holdHint: holdHint ?? this.holdHint,
         confirmTitle: confirmTitle ?? this.confirmTitle,
         confirm: confirm ?? this.confirm,
@@ -1584,6 +1591,7 @@ class UiStrings {
         'uploadHint': uploadHint,
         'uploadReplace': uploadReplace,
         'uploadRemove': uploadRemove,
+        'uploadTakePhoto': uploadTakePhoto,
         'holdHint': holdHint,
         'confirmTitle': confirmTitle,
         'confirm': confirm,

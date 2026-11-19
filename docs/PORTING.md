@@ -1,5 +1,9 @@
 # Porting @zouriel/ui to Flutter
 
+## File upload camera capture
+
+- **`UiFileUpload.cameraPicker` / `cameraLabel`** (web: `cameraAction` / `cameraLabel`) adds a primary full-width camera button above the dropzone. It asks the plugin-agnostic picker for one `image/*` file and sends it through `onFilesSelected`; `enabled: false` disables both camera and ordinary picker. The web also exposes `capture` for the ordinary native file input.
+
 ## Filter inline count
 
 - **`UiFilterCountStyle.inline`** (web: `countStyle="inline"`) formats the active button label with `UiStrings.filterCountInline` (`{label} ({n})`) instead of drawing the corner badge. Its semantics stay `"Filter, {n} on"` through `filterOn`; zero shows the plain label. `UiFilter` forwards the style to `UiFilterButton`, and `badge` remains the default.
