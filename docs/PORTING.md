@@ -1796,3 +1796,9 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
   the toast changes; the next tap dismisses.
 - **Entry and exit**: a blob toast scales in and out in the host (the web `ui-scale-enter` / `-leave`); card toasts
   still slide. No `role="alert"` split, as for the card toast: one live region.
+
+## 0.90.0: speed dial entry point (Angular only)
+
+Angular moved `UiSpeedDial` from `@zouriel/ui/button` to its own `@zouriel/ui/speed-dial` entry point so apps that
+import buttons don't ship it on first load. Dart has no entry points and tree-shakes unused widgets, so the Flutter
+side has no code change; the version is bumped to keep both libraries on the same number.
