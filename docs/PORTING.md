@@ -1,5 +1,13 @@
 # Porting @zouriel/ui to Flutter
 
+## Card body layout & interactive semantics
+
+- `UiCard` accepts `children` (mutually exclusive with `child`), `gap` (spacing step via `uiSpace`),
+  `align` (`UiStackAlign`, matching web `align` including centered text alignment), and `enabled`
+  (dims to 0.5 and suppresses hover lift/taps when `false`). Angular gained the matching `gap`,
+  `align`, `activate`, `ariaLabel`, `disabled`, and keyboard Enter/Space activation on `interactive`
+  cards.
+
 ## Text tones/truncate, media badge & list title/hint
 
 - `UiText`: `truncate` (shorthand for `maxLines: 1, overflow: TextOverflow.ellipsis`) and `tone`
