@@ -286,22 +286,23 @@ class _MediaPageState extends State<MediaPage> {
         DocSection(
           name: 'Filter',
           widget: 'UiFilter · UiFilterChips',
-          summary: 'One compact Filter button for a toolbar, however many filters there are: a filter icon, the words and, while filters are on, a count bubble (read as "Filter, 2 on"). It opens a panel of sections. On a screen under narrowAt (600) the panel is a modal bottom sheet with its footer pinned; wider, a 340 popover under the button whose body scrolls between its title and footer. Each section is a titled group: its "all" row (allLabel, e.g. Everyone) first, then its options with counts; multiple sections have checkboxes (any chosen option passes), the others radios, and from searchAt options (8) a search field narrows the rows. Rows are 44 tall (48 to the touch). Every tap calls onChanged at once, so the page behind updates; the footer\'s Show N (resultCount) or Done closes it, Clear all turns everything off. Escape, a tap outside, a drag down and Back close it too. To add a filter, add a section: the toolbar keeps its one button. UiFilterChips shows the filters that are on as removable chips with Clear all, for under the toolbar; uiFilterPrune drops choices the sections no longer offer, so a stale choice never empties the page. UiFilterButton, UiFilterPanel and UiFilterFooter are the parts, for your own container.',
+          summary: 'One compact Filter button for a toolbar, however many filters there are: a filter icon, the words and, while filters are on, a count bubble or UiFilterCountStyle.inline text such as Filter (2); both read as "Filter, 2 on". It opens a panel of sections. On a screen under narrowAt (600) the panel is a modal bottom sheet with its footer pinned; wider, a 340 popover under the button whose body scrolls between its title and footer. Each section is a titled group: its "all" row (allLabel, e.g. Everyone) first, then its options with counts; multiple sections have checkboxes (any chosen option passes), the others radios, and from searchAt options (8) a search field narrows the rows. Rows are 44 tall (48 to the touch). Every tap calls onChanged at once, so the page behind updates; the footer\'s Show N (resultCount) or Done closes it, Clear all turns everything off. Escape, a tap outside, a drag down and Back close it too. To add a filter, add a section: the toolbar keeps its one button. UiFilterChips shows the filters that are on as removable chips with Clear all, for under the toolbar; uiFilterPrune drops choices the sections no longer offer, so a stale choice never empties the page. UiFilterButton, UiFilterPanel and UiFilterFooter are the parts, for your own container.',
           demo: const _FilterDemo(),
-          code: 'UiFilter(\n  sections: sections,\n  value: filter,\n  resultCount: shown.length,\n  onChanged: (v) => setState(() => filter = v),\n),\nUiFilterChips(sections: sections, value: filter, onChanged: (v) => setState(() => filter = v)),',
+          code: 'UiFilter(\n  sections: sections,\n  value: filter,\n  resultCount: shown.length,\n  countStyle: UiFilterCountStyle.inline,\n  onChanged: (v) => setState(() => filter = v),\n),\nUiFilterChips(sections: sections, value: filter, onChanged: (v) => setState(() => filter = v)),',
           api: const [
             ApiRow('sections', 'List<UiFilterSection>', 'The panel, top to bottom. Add one to add a filter.'),
             ApiRow('value', 'UiFilterValue (Map<String, List<String>>)', 'Chosen option ids by section id; missing or empty = everything.'),
             ApiRow('resultCount', 'int?', 'How many pass: the footer reads Show N; null: Done.'),
             ApiRow('label / title', 'String?', "The button's words / the panel's title.", def: "'Filter'"),
             ApiRow('size', 'UiSize', 'The button size (48 to the touch either way).', def: 'UiSize.sm'),
+            ApiRow('countStyle', 'UiFilterCountStyle', 'Corner count bubble, or inline text such as Filter (2).', def: 'UiFilterCountStyle.badge'),
             ApiRow('narrowAt', 'double', 'Below this width the panel is a bottom sheet, else a popover.', def: '600'),
             ApiRow('enabled', 'bool', 'The button on or off.', def: 'true'),
           ],
           callbacks: const [
             ApiRow('onChanged', 'ValueChanged<UiFilterValue>', 'Every tap in the panel, Clear all, and a chip\'s remove.'),
             ApiRow('UiFilterChips(sections, value, onChanged, label)', 'Widget', 'The filters that are on as chips and Clear all; nothing while none is on.'),
-            ApiRow('UiFilterButton(count, onPressed, label, size)', 'Widget', 'Only the button.'),
+            ApiRow('UiFilterButton(count, onPressed, label, size, countStyle)', 'Widget', 'Only the button.'),
             ApiRow('UiFilterPanel(sections, value, onChanged)', 'Widget', 'Only the sections (put it in a scroll view).'),
             ApiRow('UiFilterFooter(count, resultCount, onClearAll, onDone)', 'Widget', 'Only the footer.'),
           ],
@@ -716,7 +717,7 @@ class _FilterDemoState extends State<_FilterDemo> {
     const colours = [Color(0xFF3D5AFE), Color(0xFFE5484D), Color(0xFF2FAA6E), Color(0xFFD9A521), Color(0xFF8A8F98), Color(0xFF5B2A86)];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        UiFilter(sections: s, value: filter, resultCount: shown.length, onChanged: (v) => setState(() => filter = v)),
+        UiFilter(sections: s, value: filter, resultCount: shown.length, countStyle: UiFilterCountStyle.inline, onChanged: (v) => setState(() => filter = v)),
         SizedBox(width: t.space2),
         Text('${shown.length} of ${items.length}', style: context.uiText.caption),
       ]),

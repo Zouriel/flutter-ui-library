@@ -30,8 +30,9 @@ final many = UiFilterSection(
 
 /// A page holding the value, the way an app does: 12 items, 7 by Aisha, 5 by Ali, 3 of them videos.
 class _Host extends StatefulWidget {
-  const _Host({this.initial = const {}});
+  const _Host({this.initial = const {}, this.countStyle = UiFilterCountStyle.badge});
   final UiFilterValue initial;
+  final UiFilterCountStyle countStyle;
   @override
   State<_Host> createState() => _HostState();
 }
@@ -52,6 +53,7 @@ class _HostState extends State<_Host> {
           sections: const [people, kind],
           value: value,
           resultCount: shown,
+          countStyle: widget.countStyle,
           onChanged: (v) => setState(() {
             changes.add(v);
             value = v;
@@ -116,6 +118,23 @@ void main() {
       await pumpUi(tester, UiFilterButton(count: 14, onPressed: () {}));
       expect(find.text('9+'), findsOneWidget);
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      handle.dispose();
+    });
+
+    testWidgets('renders an inline count with no overhanging badge and keeps the active-count name', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpUi(tester, UiFilterButton(count: 2, countStyle: UiFilterCountStyle.inline, onPressed: () {}));
+      expect(find.text('Filter (2)'), findsOneWidget);
+      expect(find.byType(UiButtonBadge), findsNothing);
+      expect(find.bySemanticsLabel('Filter, 2 on'), findsOneWidget);
+
+      await pumpUi(tester, UiFilterButton(count: 2, countStyle: UiFilterCountStyle.inline, label: 'Narrow', onPressed: () {}));
+      expect(find.text('Narrow (2)'), findsOneWidget);
+      expect(find.bySemanticsLabel('Narrow, 2 on'), findsOneWidget);
+
+      await pumpUi(tester, UiFilterButton(count: 0, countStyle: UiFilterCountStyle.inline, onPressed: () {}));
+      expect(find.text('Filter'), findsOneWidget);
+      expect(find.text('Filter (0)'), findsNothing);
       handle.dispose();
     });
   });
@@ -214,6 +233,15 @@ void main() {
   });
 
   group('UiFilter', () {
+    testWidgets('forwards inline count style to its button', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpUi(tester, const _Host(initial: {'who': ['ali']}, countStyle: UiFilterCountStyle.inline));
+      expect(find.text('Filter (1)'), findsOneWidget);
+      expect(find.byType(UiButtonBadge), findsNothing);
+      expect(find.bySemanticsLabel('Filter, 1 on'), findsOneWidget);
+      handle.dispose();
+    });
+
     testWidgets('is a bottom sheet on a phone that changes the page as you tap, with Show N', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpUi(tester, const _Host());
@@ -312,7 +340,13 @@ void main() {
       tester,
       'filter',
       (context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [UiFilterButton(count: 0, onPressed: () {}), const SizedBox(width: 8), UiFilterButton(count: 2, onPressed: () {})]),
+        Row(children: [
+          UiFilterButton(count: 0, onPressed: () {}),
+          const SizedBox(width: 8),
+          UiFilterButton(count: 2, onPressed: () {}),
+          const SizedBox(width: 8),
+          UiFilterButton(count: 2, countStyle: UiFilterCountStyle.inline, onPressed: () {}),
+        ]),
         const SizedBox(height: 8),
         UiFilterChips(sections: const [people, kind], value: const {'who': ['aisha'], 'kind': ['video']}, onChanged: (_) {}),
         const SizedBox(height: 8),

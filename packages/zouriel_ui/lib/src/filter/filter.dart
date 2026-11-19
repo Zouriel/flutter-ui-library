@@ -20,11 +20,14 @@ import 'filter_model.dart';
 
 export 'filter_model.dart';
 
+/// Where [UiFilterButton] draws its active count.
+enum UiFilterCountStyle { badge, inline }
+
 /// `ui-filter-button`: the one compact "Filter" button a toolbar needs however many filters there
-/// are. A filter icon and the label; while filters are on, a count bubble ("2") that screen readers
-/// hear as "Filter, 2 on". [UiFilter] opens its panel from it.
+/// are. A filter icon and the label; while filters are on, a count bubble ("2") or inline count
+/// ("Filter (2)") that screen readers hear as "Filter, 2 on". [UiFilter] opens its panel from it.
 class UiFilterButton extends StatelessWidget {
-  const UiFilterButton({super.key, this.count = 0, required this.onPressed, this.label, this.size = UiSize.sm});
+  const UiFilterButton({super.key, this.count = 0, required this.onPressed, this.label, this.size = UiSize.sm, this.countStyle = UiFilterCountStyle.badge});
 
   /// How many filters are on ([uiFilterCount]): the badge.
   final int count;
@@ -33,19 +36,26 @@ class UiFilterButton extends StatelessWidget {
   /// The visible words; null: the strings' filter ("Filter").
   final String? label;
   final UiSize size;
+  final UiFilterCountStyle countStyle;
 
   @override
   Widget build(BuildContext context) {
     final strings = context.uiStrings;
     final on = count > 0;
+    final baseLabel = label ?? strings.filter;
+    final visibleLabel = on && countStyle == UiFilterCountStyle.inline
+        ? uiFormatString(strings.filterCountInline, {'label': baseLabel, 'n': count})
+        : baseLabel;
+    final activeLabel = '$baseLabel, ${uiFormatString(strings.filterOn, {'n': count})}';
     return UiButton(
-      label: label ?? strings.filter,
+      label: visibleLabel,
       icon: const UiIcon(HugeIcons.strokeRoundedFilterHorizontal),
       variant: on ? UiButtonVariant.secondary : UiButtonVariant.outline,
       size: size,
-      badge: on ? (count > 9 ? '9+' : '$count') : null,
+      badge: on && countStyle == UiFilterCountStyle.badge ? (count > 9 ? '9+' : '$count') : null,
       badgeTone: UiBadgeTone.primary,
-      badgeLabel: on ? uiFormatString(strings.filterOn, {'n': count}) : null,
+      badgeLabel: on && countStyle == UiFilterCountStyle.badge ? uiFormatString(strings.filterOn, {'n': count}) : null,
+      semanticLabel: on && countStyle == UiFilterCountStyle.inline ? activeLabel : null,
       onPressed: onPressed,
     );
   }
@@ -233,6 +243,7 @@ class UiFilter extends StatefulWidget {
     this.label,
     this.title,
     this.size = UiSize.sm,
+    this.countStyle = UiFilterCountStyle.badge,
     this.enabled = true,
     this.narrowAt = 600,
   });
@@ -250,6 +261,7 @@ class UiFilter extends StatefulWidget {
   /// The panel's title; null: the button's words.
   final String? title;
   final UiSize size;
+  final UiFilterCountStyle countStyle;
   final bool enabled;
 
   /// Below this width (logical px) the panel is a bottom sheet.
@@ -397,6 +409,7 @@ class _UiFilterState extends State<UiFilter> {
       },
       child: UiFilterButton(
         count: uiFilterCount(widget.value),
+        countStyle: widget.countStyle,
         label: widget.label,
         size: widget.size,
         onPressed: widget.enabled ? _toggle : null,

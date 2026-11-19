@@ -206,6 +206,7 @@ class UiStrings {
     this.taskStopping = 'Stopping…',
     this.filter = 'Filter',
     this.filterOn = '{n} on',
+    this.filterCountInline = '{label} ({n})',
     this.filterClearAll = 'Clear all',
     this.filterShow = 'Show {n}',
     this.filterDone = 'Done',
@@ -433,6 +434,7 @@ class UiStrings {
     taskStopping: 'ހުއްޓުވަނީ…',
     filter: 'ފިލްޓަރ',
     filterOn: '{n} ހިންގާފައި',
+    filterCountInline: '{label} ({n})',
     filterClearAll: 'ހުރިހާ ފޮހެލާ',
     filterShow: '{n} ދައްކާ',
     filterDone: 'ނިމުނީ',
@@ -1035,6 +1037,9 @@ class UiStrings {
   /// Filter: added to the button's name while filters are on (`{n}` of them): "Filter, 2 on".
   final String filterOn;
 
+  /// Filter: the visible inline count (`{label}`, `{n}`): "Filter (2)".
+  final String filterCountInline;
+
   /// Filter: the panel's and the chips' button that turns every filter off.
   final String filterClearAll;
 
@@ -1306,6 +1311,7 @@ class UiStrings {
     String? taskStopping,
     String? filter,
     String? filterOn,
+    String? filterCountInline,
     String? filterClearAll,
     String? filterShow,
     String? filterDone,
@@ -1528,6 +1534,7 @@ class UiStrings {
         taskStopping: taskStopping ?? this.taskStopping,
         filter: filter ?? this.filter,
         filterOn: filterOn ?? this.filterOn,
+        filterCountInline: filterCountInline ?? this.filterCountInline,
         filterClearAll: filterClearAll ?? this.filterClearAll,
         filterShow: filterShow ?? this.filterShow,
         filterDone: filterDone ?? this.filterDone,
@@ -1752,6 +1759,7 @@ class UiStrings {
         'taskStopping': taskStopping,
         'filter': filter,
         'filterOn': filterOn,
+        'filterCountInline': filterCountInline,
         'filterClearAll': filterClearAll,
         'filterShow': filterShow,
         'filterDone': filterDone,

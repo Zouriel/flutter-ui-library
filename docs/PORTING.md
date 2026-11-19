@@ -1,5 +1,9 @@
 # Porting @zouriel/ui to Flutter
 
+## Filter inline count
+
+- **`UiFilterCountStyle.inline`** (web: `countStyle="inline"`) formats the active button label with `UiStrings.filterCountInline` (`{label} ({n})`) instead of drawing the corner badge. Its semantics stay `"Filter, {n} on"` through `filterOn`; zero shows the plain label. `UiFilter` forwards the style to `UiFilterButton`, and `badge` remains the default.
+
 ## Responsive sheet-or-modal, footerLeading & showUiBottomSheet
 
 - **`UiModal.footerLeading` / `UiBottomSheet.footerLeading`** (web: `[modal-footer-start]` / `[sheet-footer-start]`): optional inline-start widget in the footer bar (e.g., a `3 / 6` counter), mirrored automatically in RTL via `AlignmentDirectional`. Without `footerLeading`, both keep their existing end-aligned / full-width footer layout.
@@ -1704,4 +1708,3 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
   the toast changes; the next tap dismisses.
 - **Entry and exit**: a blob toast scales in and out in the host (the web `ui-scale-enter` / `-leave`); card toasts
   still slide. No `role="alert"` split, as for the card toast: one live region.
-
