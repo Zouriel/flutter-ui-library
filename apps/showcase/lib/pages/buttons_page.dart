@@ -27,6 +27,14 @@ class _ButtonsPageState extends State<ButtonsPage> {
   String _route = '/cases';
   UiFabPosition _sosAt = UiFabPosition.topCenter;
   double _fabPeek = 72;
+  bool _dialOpen = false;
+  String _dialTrigger = 'shutter';
+  String _dialLog = 'Nothing yet';
+
+  static const _dialActions = [
+    UiSpeedDialAction(id: 'upload', label: 'Add photos & videos', icon: UiIcon(HugeIcons.strokeRoundedImageUpload)),
+    UiSpeedDialAction(id: 'camera', label: 'Open the camera', icon: UiIcon(HugeIcons.strokeRoundedCamera01)),
+  ];
 
   static const _menu = [
     UiDropdownItem(label: 'Edit', value: 'edit', icon: UiIcon(HugeIcons.strokeRoundedEdit02)),
@@ -478,7 +486,17 @@ UiSocialSignInButton(
                   child: Container(
                     color: t.surface,
                     padding: EdgeInsets.all(t.space4),
-                    child: UiText('Last action: $_log', color: t.textMuted),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: t.space3,
+                      children: [
+                        UiText('Last action: $_log', color: t.textMuted),
+                        Wrap(spacing: t.space3, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                          UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'Inverted FAB', tone: UiFabTone.inverted, onPressed: () => _did('Inverted')),
+                          UiFab(icon: const UiShutterLoader(size: 32, decorative: true, still: true), label: 'Shutter FAB', tone: UiFabTone.inverted, onPressed: () => _did('Shutter')),
+                        ]),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -567,7 +585,8 @@ UiSocialSignInButton(
             ApiRow('label', 'String', 'Required accessible name.'),
             ApiRow('onPressed', 'VoidCallback?', 'Null disables it.'),
             ApiRow('size', 'UiFabSize', 'sm (40, 48 on phones) or md (52).', def: 'md'),
-            ApiRow('tone', 'UiFabTone', 'primary, or danger (0.44.0) for SOS: the danger fill with a raised-surface ring and a danger halo.', def: 'primary'),
+            ApiRow('tone', 'UiFabTone', 'primary, danger (0.44.0) for SOS, or inverted for a high-contrast fill with a 1px hairline ring and shadow in light and dark.', def: 'primary'),
+            ApiRow('expanded', 'bool?', 'Optional disclosure state announced to assistive tech (used by UiSpeedDial).'),
             ApiRow('text', 'String?', 'An extended pill with the text after the icon (0.44.0); the name is still label.'),
             ApiRow('hold', 'Duration?', 'Press and hold that long to activate (0.44.0), as UiHoldButton: a tap, quick Enter / Space or a screen reader opens the confirm dialog instead.'),
             ApiRow('holdHint / confirmTitle / confirmMessage / confirmLabel / destructive', 'String? / String? / String / String? / bool', 'Read with a held button (UiStrings.holdHint), and the tap fallback dialog.'),
@@ -575,6 +594,73 @@ UiSocialSignInButton(
             ApiRow('UiFabHost.bottomOffset', 'double', 'Px added below a bottom button, for a bottom sheet\'s peek or a bottom navigation; eased when it changes (0.47.1, the web ui-fab bottomOffset).', def: '0'),
             ApiRow('UiFabHost.position', 'UiFabPosition', 'bottomEnd, bottomStart, topEnd, topStart, topCenter, bottomCenter (0.44.0). Offset by the safe area, so top ones sit below the status bar.', def: 'bottomEnd'),
           ],
+        ),
+        DocSection(
+          name: 'Speed dial',
+          widget: 'UiSpeedDial',
+          summary: 'A floating action button that expands into smaller round action FABs stacked above the trigger, each paired with a label pill to its inline-start side. Without icon it draws a + that rotates 45° into an × when open; pass a UiShutterLoader as icon and it automatically stays still at rest (no rotation) and plays one burst on open and on close. Place inside UiFabHost or anywhere in a layout; dismisses on outside tap or Escape (restoring focus to the trigger), announces expanded state, and skips motion when animations are off. The web twin is ui-speed-dial.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space3, children: [
+            SizedBox(
+              height: 240,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(t.radius),
+                child: UiFabHost(
+                  fab: UiSpeedDial(
+                    actions: _dialActions,
+                    label: 'Add media',
+                    closeLabel: 'Close add media options',
+                    actionsLabel: 'Add media options',
+                    tone: UiFabTone.inverted,
+                    open: _dialOpen,
+                    onOpenChanged: (v) => setState(() => _dialOpen = v),
+                    icon: _dialTrigger == 'shutter'
+                        ? const UiShutterLoader(size: 32, decorative: true, still: true)
+                        : null,
+                    onAction: (id) => setState(() => _dialLog = id),
+                  ),
+                  child: Container(
+                    color: t.surface,
+                    padding: EdgeInsets.all(t.space4),
+                    child: UiText('Open: $_dialOpen · Last action: $_dialLog', color: t.textMuted),
+                  ),
+                ),
+              ),
+            ),
+            UiSegmented<String>(
+              label: 'Speed dial trigger',
+              size: UiSize.sm,
+              value: _dialTrigger,
+              onChanged: (v) => setState(() => _dialTrigger = v),
+              options: const [
+                UiSegmentedOption(value: 'shutter', label: 'Shutter trigger'),
+                UiSegmentedOption(value: 'plus', label: '+ to x trigger'),
+              ],
+            ),
+          ]),
+          code: '''UiFabHost(
+  fab: UiSpeedDial(
+    label: 'Add media',
+    closeLabel: 'Close add media options',
+    tone: UiFabTone.inverted,
+    icon: const UiShutterLoader(size: 32, decorative: true, still: true),
+    actions: const [
+      UiSpeedDialAction(id: 'upload', label: 'Add photos & videos', icon: UiIcon(HugeIcons.strokeRoundedImageUpload)),
+      UiSpeedDialAction(id: 'camera', label: 'Open the camera', icon: UiIcon(HugeIcons.strokeRoundedCamera01)),
+    ],
+    onAction: onMediaAction,
+  ),
+  child: pageBody,
+)''',
+          api: const [
+            ApiRow('actions', 'List<UiSpeedDialAction>', 'Actions stacked above the trigger (index 0 sits closest to the trigger).'),
+            ApiRow('label / closeLabel / actionsLabel', 'String / String? / String?', 'Accessible names for the closed trigger, open trigger, and actions group.'),
+            ApiRow('open / onOpenChanged', 'bool? / ValueChanged<bool>?', 'Controlled open state; omit open to manage state internally.'),
+            ApiRow('onAction', 'ValueChanged<String>?', 'Called with the chosen action id after closing the dial.'),
+            ApiRow('icon', 'Widget?', 'Custom trigger icon (e.g. UiShutterLoader); defaults to +.'),
+            ApiRow('rotateIcon', 'bool?', 'Rotate trigger icon 45° when open; null rotates unless icon is a UiShutterLoader.'),
+            ApiRow('tone / size / disabled / focusNode', 'as UiFab', 'Tone (including inverted), trigger size (actions are always sm), disabled state, and trigger focus node.'),
+          ],
+          shapes: 'class UiSpeedDialAction { String id; String label; Widget icon; bool disabled = false; }',
         ),
       ],
     );

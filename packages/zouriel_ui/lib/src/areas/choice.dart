@@ -4,6 +4,7 @@ library;
 export '../button/button_group.dart';
 export '../button/dropdown_button.dart';
 export '../button/fab.dart';
+export '../button/speed_dial.dart';
 export '../button/segmented.dart';
 export '../button/split_button.dart';
 export '../button/toggle_button.dart';
