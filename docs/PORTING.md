@@ -36,6 +36,21 @@
   false).
 - `UiTab.child` is optional. When every tab omits it, `UiTabs` renders only the strip, with no panel
   semantics or `space4` panel gap. If any tab has a child, all panel states stay mounted as before.
+## Cover hero, on-media scope, editable text and context-menu tap
+
+- `UiOnMediaScope` is the inherited twin of the web `[data-on-media]` context. `UiCoverHero` enables
+  it only while a cover image is present; `UiText` standard tone, ghost/link `UiButton`, ghost/link
+  `UiIconButton`, and `UiEditableText` then use `mediaOnScrim`, soft scrim shadows and translucent
+  hover feedback. Explicit `UiText.color`, `UiEditableText.style.color`, and non-media tones still win.
+- `UiEditableText.variant` uses the `UiTextVariant` scale, `block` fills its row, and `onMedia`
+  enables the same view treatment outside a scope. Its edit field remains an opaque surface. The old
+  unconditional `color: t.text` is gone, so an explicit `style.color` survives in both view and edit.
+- `UiContextMenu.openOnTap` adds a primary-tap gesture and semantics action without changing the
+  existing default (right-click, touch/stylus long-press, Menu key and Shift+F10).
+- `UiCoverHero`: `ImageProvider? image`, responsive default height (272; 320 from 900 wide), optional
+  bottom/top/start fades, editable cover menu, and `topStart` / `topEnd` / `child` / `actions` slots.
+  The start gradient is directional; missing and failed images use the page background and ordinary
+  ink. Flutter paints the same four-stop bottom-to-page fade and light top/start scrims as the web.
 
 ## Card body layout & interactive semantics
 

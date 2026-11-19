@@ -17,6 +17,7 @@ export 'src/core/fonts.dart';
 export 'src/core/icon.dart';
 export 'src/core/interactive.dart';
 export 'src/core/link_scope.dart';
+export 'src/core/on_media.dart';
 export 'src/core/types.dart';
 export 'src/feedback/alert.dart';
 export 'src/feedback/spinner.dart';

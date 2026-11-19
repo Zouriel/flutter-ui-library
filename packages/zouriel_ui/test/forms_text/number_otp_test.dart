@@ -265,5 +265,36 @@ void main() {
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       handle.dispose();
     });
+
+    testWidgets('variant styles both states, block fills the row, and an explicit style colour is preserved', (tester) async {
+      await pumpUi(tester, SizedBox(width: 300, child: UiEditableText(
+        value: 'Roadmap',
+        variant: UiTextVariant.h2,
+        block: true,
+        style: const TextStyle(color: Color(0xFF00FF00)),
+        onChanged: (_) {},
+      )));
+      expect(tester.getSize(find.byType(UiEditableText)).width, 300);
+      var text = tester.widget<Text>(find.text('Roadmap'));
+      expect(text.style!.fontSize, tester.element(find.byType(UiEditableText)).uiText.h2.fontSize);
+      expect(text.style!.color, const Color(0xFF00FF00), reason: 'the caller colour is not overwritten by the theme');
+      await tester.tap(find.byType(UiInteractive));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(EditableText)).width, greaterThan(250));
+      expect(tester.widget<EditableText>(find.byType(EditableText)).style.color, const Color(0xFF00FF00));
+    });
+
+    testWidgets('onMedia and UiOnMediaScope use light shadowed ink; the edit field stays opaque', (tester) async {
+      await pumpUi(tester, UiOnMediaScope(child: SizedBox(width: 300, child: UiEditableText(value: 'Event title', onChanged: (_) {}))));
+      final context = tester.element(find.byType(UiEditableText));
+      final text = tester.widget<Text>(find.text('Event title'));
+      expect(text.style!.color, context.ui.mediaOnScrim);
+      expect(text.style!.shadows, isNotEmpty);
+      await tester.tap(find.byType(UiInteractive));
+      await tester.pumpAndSettle();
+      final field = tester.widget<Container>(find.ancestor(of: find.byType(EditableText), matching: find.byType(Container)).first);
+      expect((field.decoration! as BoxDecoration).color, context.ui.surface);
+      expect(tester.widget<EditableText>(find.byType(EditableText)).style.color, context.ui.text);
+    });
   });
 }

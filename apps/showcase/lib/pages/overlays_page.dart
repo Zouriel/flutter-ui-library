@@ -244,22 +244,24 @@ class _OverlaysPageState extends State<OverlaysPage> {
         DocSection(
           name: 'Context menu',
           widget: 'UiContextMenu',
-          summary: 'A menu opened where you press: long-press on a touch screen (with a little haptic tick), right-click with a mouse, or the Menu key / Shift+F10 on a keyboard. It flips and shifts so it never runs off the edge. The first item gets focus; ArrowUp/Down, Home and End move between items. Escape or choosing an item closes it and gives focus back to what had it before; a tap outside or scrolling the page also closes it. Screen readers get it as the long-press action.',
+          summary: 'A menu opened where you press: long-press on a touch screen (with a little haptic tick), right-click with a mouse, or the Menu key / Shift+F10 on a keyboard. openOnTap also enables an ordinary primary tap. It flips and shifts so it never runs off the edge. The first item gets focus; Escape or choosing returns focus, and a tap outside or scrolling closes it. Screen readers get the long-press action and, with openOnTap, a tap action.',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
             UiContextMenu(
               items: _menuItems,
+              openOnTap: true,
               onSelect: (i) => setState(() => _contextChoice = i.label),
               child: Container(
                 height: 120,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(border: Border.all(color: t.borderStrong), borderRadius: BorderRadius.circular(t.radius), color: t.surface),
-                child: UiText('Long-press or right-click here', variant: UiTextVariant.caption),
+                child: UiText('Tap, long-press, or right-click here', variant: UiTextVariant.caption),
               ),
             ),
             note('Chosen: $_contextChoice'),
           ]),
           code: '''UiContextMenu(
   items: items,
+  openOnTap: true,
   onSelect: (item) => run(item.value),
   child: PhotoTile(photo),
 )''',
@@ -268,6 +270,7 @@ class _OverlaysPageState extends State<OverlaysPage> {
             ApiRow('onSelect', 'ValueChanged<UiMenuItem>', 'Chosen item.'),
             ApiRow('child', 'Widget', 'The area that opens it.'),
             ApiRow('enabled', 'bool', 'Off: the gestures do nothing.', def: 'true'),
+            ApiRow('openOnTap', 'bool', 'Also open from an ordinary primary tap.', def: 'false'),
             ApiRow('semanticHint', 'String', 'What the long-press action is called for screen readers.', def: "'Show menu'"),
           ],
         ),
