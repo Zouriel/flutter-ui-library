@@ -4,32 +4,46 @@ import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
 import '../core/types.dart';
+import '../layout/layout.dart';
 import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
 
 /// `ui-card`: a surface with optional [header] and [footer] (the web `[card-header]` /
-/// `[card-footer]` slots). With [onTap] the whole card is the target: it lifts on hover and press
-/// and shows the focus ring around the card.
+/// `[card-footer]` slots). Pass either [child] or [children] (laid out in a vertical column with
+/// [gap] and [align]). With [onTap] the whole card is the target: it lifts on hover and press
+/// and shows the focus ring around the card; set [enabled] false to disable it.
 class UiCard extends StatelessWidget {
   const UiCard({
     super.key,
-    required this.child,
+    this.child,
+    this.children,
     this.header,
     this.footer,
     this.padding = UiSize.md,
+    this.gap = 0,
+    this.align = UiStackAlign.stretch,
     this.glass,
     this.radius,
     this.onTap,
+    this.enabled = true,
     this.semanticLabel,
-  });
+  }) : assert((child == null) != (children == null), 'Provide either child or children.');
 
-  final Widget child;
+  final Widget? child;
+  final List<Widget>? children;
   final Widget? header;
   final Widget? footer;
   final UiSize padding;
+
+  /// Vertical spacing step between [children] (see [uiSpace]).
+  final int gap;
+
+  /// Cross-axis alignment for the card body.
+  final UiStackAlign align;
   final bool? glass;
   final bool? radius;
   final VoidCallback? onTap;
+  final bool enabled;
   final String? semanticLabel;
 
   @override
@@ -39,18 +53,53 @@ class UiCard extends StatelessWidget {
     final isGlass = glass ?? theme.config.glass;
     final r = (radius ?? theme.config.radius) ? t.radiusLg : 0.0;
     final pad = switch (padding) { UiSize.sm => t.space3, UiSize.md => t.space4, UiSize.lg => t.space6, UiSize.xl => t.space8 };
+    final active = onTap != null && enabled;
+
+    final crossAxis = switch (align) {
+      UiStackAlign.start => CrossAxisAlignment.start,
+      UiStackAlign.center => CrossAxisAlignment.center,
+      UiStackAlign.end => CrossAxisAlignment.end,
+      UiStackAlign.stretch => CrossAxisAlignment.stretch,
+    };
+    final bodyAlign = switch (align) {
+      UiStackAlign.start => TextAlign.start,
+      UiStackAlign.center => TextAlign.center,
+      UiStackAlign.end => TextAlign.end,
+      UiStackAlign.stretch => null,
+    };
+    Widget content = children != null
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: crossAxis,
+            spacing: uiSpace(t, gap),
+            children: children!,
+          )
+        : align == UiStackAlign.stretch
+            ? child!
+            : Align(
+                alignment: switch (align) {
+                  UiStackAlign.start => AlignmentDirectional.centerStart,
+                  UiStackAlign.center => Alignment.center,
+                  UiStackAlign.end => AlignmentDirectional.centerEnd,
+                  UiStackAlign.stretch => AlignmentDirectional.centerStart,
+                },
+                child: child!,
+              );
+    if (bodyAlign != null) {
+      content = DefaultTextStyle.merge(textAlign: bodyAlign, child: content);
+    }
 
     Widget body(UiStates s) {
-      final lifted = s.hovered || s.pressed;
+      final lifted = active && (s.hovered || s.pressed);
       Widget card = AnimatedContainer(
         duration: context.uiAnimate ? t.motionBase : Duration.zero,
         curve: t.easeStandard,
-        transform: context.uiAnimate && onTap != null && lifted ? Matrix4.translationValues(0, s.pressed ? -1 : -2, 0) : Matrix4.identity(),
+        transform: context.uiAnimate && lifted ? Matrix4.translationValues(0, s.pressed ? -1 : -2, 0) : Matrix4.identity(),
         decoration: BoxDecoration(
           color: isGlass ? t.glassBg : t.surface,
           borderRadius: BorderRadius.circular(r),
-          border: Border.all(color: isGlass ? t.glassBorder : (onTap != null && lifted ? t.borderStrong : t.border)),
-          boxShadow: [...(onTap != null && lifted ? t.shadow2 : t.shadow1), if (s.focused) ...t.focusRing],
+          border: Border.all(color: isGlass ? t.glassBorder : (lifted ? t.borderStrong : t.border)),
+          boxShadow: [...(lifted ? t.shadow2 : t.shadow1), if (s.focused) ...t.focusRing],
         ),
         // The rim inside the border, so it lifts with the card.
         child: UiGlassRim(
@@ -64,7 +113,7 @@ class UiCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (header != null) _Section(pad: pad, border: Border(bottom: BorderSide(color: t.border)), child: header!),
-              Padding(padding: EdgeInsets.all(pad), child: child),
+              Padding(padding: EdgeInsets.all(pad), child: content),
               if (footer != null) _Section(pad: pad, border: Border(top: BorderSide(color: t.border)), child: footer!),
             ],
           ),
@@ -77,12 +126,16 @@ class UiCard extends StatelessWidget {
           child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2), child: card),
         );
       }
+      if (onTap != null && !enabled) {
+        card = Opacity(opacity: 0.5, child: card);
+      }
       return card;
     }
 
     if (onTap == null) return body(const UiStates());
     return UiInteractive(
       onTap: onTap,
+      enabled: enabled,
       button: true,
       semanticLabel: semanticLabel,
       padTouchTarget: false,

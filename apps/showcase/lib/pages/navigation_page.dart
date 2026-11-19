@@ -14,6 +14,8 @@ class NavigationPage extends StatefulWidget {
 class _NavigationPageState extends State<NavigationPage> {
   int _tab = 0;
   int _iconTab = 0;
+  int _albumTab = 0;
+  int _glowTab = 0;
   String _side = 'inbox';
   String _bottom = 'home';
   String? _crumb;
@@ -109,7 +111,7 @@ class _NavigationPageState extends State<NavigationPage> {
         DocSection(
           name: 'Tabs',
           widget: 'UiTabs · UiTab',
-          summary: 'Tabs over panels. One tab stop; Left/Right select the next tab (wrapping, skipping disabled ones), Home/End jump to the ends. The strip scrolls sideways when the tabs do not fit and keeps the selected one in view. Inactive panels stay mounted, so their state survives, but take no space and are hidden from screen readers. A tab may carry a Hugeicons icon; with iconOnly the label stays its accessible name, and an all-icon strip shares the width evenly. A tab can show a count after its label with badge (nothing for null or \'0\'), read out as badgeLabel when given (0.79).',
+          summary: 'Tabs over panels, or a strip on its own when no tab has a child. One tab stop; Left/Right select the next tab (wrapping, skipping disabled ones), Home/End jump to the ends. The strip scrolls sideways when the tabs do not fit and keeps the selected one in view; align.center centres it while it fits, and align.fill gives every tab an equal share with ellipsized labels. appearance.glow replaces both lines with a moving accent glow beneath the selected label. Inactive panels stay mounted, so their state survives, but take no space and are hidden from screen readers. A tab may carry a Hugeicons icon; with iconOnly the label stays its accessible name, and an all-icon strip shares the width evenly. A tab can show a count after its label with badge (nothing for null or \'0\'), read out as badgeLabel when given (0.79).',
           demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space4, children: [
             UiTabs(
               selectedIndex: _tab,
@@ -133,10 +135,27 @@ class _NavigationPageState extends State<NavigationPage> {
                 UiTab(label: 'Settings', icon: HugeIcons.strokeRoundedSettings01, iconOnly: true, child: UiText('Settings panel')),
               ],
             ),
+            UiTabs(
+              label: 'Albums (centred, strip only)',
+              align: UiTabsAlignment.center,
+              selectedIndex: _albumTab,
+              onChanged: (i) => setState(() => _albumTab = i),
+              tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+            ),
+            UiTabs(
+              label: 'Glow, evenly spread',
+              appearance: UiTabsAppearance.glow,
+              align: UiTabsAlignment.fill,
+              selectedIndex: _glowTab,
+              onChanged: (i) => setState(() => _glowTab = i),
+              tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+            ),
           ]),
-          code: "UiTabs(\n  selectedIndex: tab,\n  onChanged: (i) => setState(() => tab = i),\n  tabs: [\n    UiTab(label: 'Overview', child: OverviewPanel()),\n    UiTab(label: 'Billing', disabled: true, child: BillingPanel()),\n  ],\n)",
+          code: "UiTabs(\n  appearance: UiTabsAppearance.glow,\n  align: UiTabsAlignment.fill,\n  selectedIndex: tab,\n  onChanged: (i) => setState(() => tab = i),\n  tabs: const [\n    UiTab(label: 'Ceremony'),\n    UiTab(label: 'Reception'),\n    UiTab(label: 'Portraits'),\n  ],\n)",
           api: const [
-            ApiRow('tabs', 'List<UiTab>', 'label, child, icon, iconOnly, disabled, anchor.'),
+            ApiRow('tabs', 'List<UiTab>', 'label, optional child, icon, iconOnly, disabled, anchor.'),
+            ApiRow('align', 'UiTabsAlignment', 'start, center or fill; fill gives each tab an equal share and ellipsizes long labels.', def: 'start'),
+            ApiRow('appearance', 'UiTabsAppearance', 'line (underline + rule) or glow (one moving accent glow under the selected tab).', def: 'line'),
             ApiRow('tab.anchor', 'String?', "A UiTourAnchor id for this tab's button, so a tour step can point at it.", def: 'null'),
             ApiRow('tab.badge', 'String?', 'A small count after the label; nothing for null, empty or 0 (0.79).', def: 'null'),
             ApiRow('tab.badgeLabel', 'String?', 'What screen readers hear for the badge ("3 new").', def: 'null'),

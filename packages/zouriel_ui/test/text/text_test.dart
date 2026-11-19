@@ -35,6 +35,58 @@ void main() {
     expect(tester.widget<Text>(find.text('pkg')).style!.fontFamily, 'packages/zouriel_ui/Space Grotesk');
   });
 
+  testWidgets('truncate clips to one line with ellipsis and tone sets muted / onMedia styling', (tester) async {
+    await pumpUi(tester, const SizedBox(
+      width: 120,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        UiText('A very long name that should truncate nicely', variant: UiTextVariant.label, truncate: true),
+        UiText('Muted body', tone: UiTextTone.muted),
+        UiText('Hero title', variant: UiTextVariant.h2, tone: UiTextTone.onMedia),
+        UiText('Hero date', variant: UiTextVariant.caption, tone: UiTextTone.onMedia),
+      ]),
+    ));
+    final t = tester.element(find.text('Muted body')).ui;
+    final trunc = tester.widget<Text>(find.text('A very long name that should truncate nicely'));
+    expect(trunc.maxLines, 1);
+    expect(trunc.overflow, TextOverflow.ellipsis);
+
+    final muted = tester.widget<Text>(find.text('Muted body'));
+    expect(muted.style!.color, t.textMuted);
+
+    final heroTitle = tester.widget<Text>(find.text('Hero title'));
+    expect(heroTitle.style!.color, t.mediaOnScrim);
+    expect(heroTitle.style!.shadows, isNotEmpty);
+
+    final heroDate = tester.widget<Text>(find.text('Hero date'));
+    expect(heroDate.style!.color, t.mediaOnScrim.withValues(alpha: 0.9));
+    expect(heroDate.style!.shadows, isNotEmpty);
+  });
+
+  testWidgets('golden: text tones and truncation', (tester) async {
+    await expectThemedGolden(tester, 'text_tones_truncate', height: 220, (context) {
+      final t = context.ui;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 8,
+        children: [
+          const Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SizedBox(width: 160, child: UiText('A very long label that truncates cleanly with ellipsis', variant: UiTextVariant.label, truncate: true)),
+          ),
+          const UiText('Centered muted body copy', tone: UiTextTone.muted, textAlign: TextAlign.center),
+          Container(
+            padding: EdgeInsets.all(t.space3),
+            decoration: BoxDecoration(color: t.mediaBg, borderRadius: BorderRadius.circular(t.radius)),
+            child: const Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 4, children: [
+              UiText('On-media heading', variant: UiTextVariant.h3, tone: UiTextTone.onMedia),
+              UiText('On-media caption line', variant: UiTextVariant.caption, tone: UiTextTone.onMedia),
+            ]),
+          ),
+        ],
+      );
+    });
+  });
+
   testWidgets('golden: the type scale', (tester) async {
     await expectThemedGolden(tester, 'text_variants', height: 520, (context) => const Column(
       crossAxisAlignment: CrossAxisAlignment.start,

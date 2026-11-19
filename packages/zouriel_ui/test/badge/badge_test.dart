@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 
 import '../helpers.dart';
@@ -49,6 +50,36 @@ void main() {
     await pumpUi(tester, const SizedBox(width: 300, child: Wrap(children: [UiBadge(label: 'New')])));
     expect(tester.getSize(find.byType(UiBadge)).width, lessThan(60));
     expect(tester.getSize(find.byType(UiBadge)).height, 20);
+  });
+
+  testWidgets('media badge uses translucent dark scrim fill and leading icon sits before label', (tester) async {
+    await pumpUi(tester, const UiBadge.media(label: '0:24', leading: UiIcon(HugeIcons.strokeRoundedPlay)));
+    final t = tester.element(find.byType(UiBadge)).ui;
+    final box = tester.widget<Container>(find.descendant(of: find.byType(UiBadge), matching: find.byType(Container)).first).decoration! as BoxDecoration;
+    expect(box.color, t.mediaScrim.withValues(alpha: 0.62));
+    expect((box.border! as Border).top.color, const Color(0x00000000));
+    final textStyle = tester.renderObject<RenderParagraph>(find.text('0:24')).text.style!;
+    expect(textStyle.color, t.mediaOnScrim);
+    final iconRect = tester.getRect(find.byType(UiIcon));
+    final textRect = tester.getRect(find.text('0:24'));
+    expect(iconRect.right, lessThanOrEqualTo(textRect.left));
+    expect(textRect.left - iconRect.right, closeTo(t.space1, 0.5));
+    expect(iconRect.width, 12);
+  });
+
+  testWidgets('golden: media badge and leading icon', (tester) async {
+    await expectThemedGolden(tester, 'badge_media_leading', height: 96, (context) {
+      final t = context.ui;
+      return Container(
+        padding: EdgeInsets.all(t.space3),
+        decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radius)),
+        child: const Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          UiBadge.media(label: '0:24', leading: UiIcon(HugeIcons.strokeRoundedPlay)),
+          UiBadge.media(label: 'HD'),
+          UiBadge(label: 'Pinned', tone: UiStatus.primary, leading: UiIcon(HugeIcons.strokeRoundedStar)),
+        ]),
+      );
+    });
   });
 
   group('tier', () {

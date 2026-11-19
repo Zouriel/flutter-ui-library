@@ -13,6 +13,50 @@
 - **`UiModal.footerLeading` / `UiBottomSheet.footerLeading`** (web: `[modal-footer-start]` / `[sheet-footer-start]`): optional inline-start widget in the footer bar (e.g., a `3 / 6` counter), mirrored automatically in RTL via `AlignmentDirectional`. Without `footerLeading`, both keep their existing end-aligned / full-width footer layout.
 - **`showUiBottomSheet<T>`**: route helper pushing a `UiBottomSheet` on `UiDialogRoute` with `uiSheetTransition(..., UiDrawerSide.bottom)`, handling multi-snap state, close-button / drag-to-0 / backdrop / Escape / Back dismissal (`closeOnBackdrop` and `closeOnEscape`). `UiFilter` now reuses `showUiBottomSheet`.
 - **`showUiModal(..., sheetBelow:, sheetSnaps:)`** (web: `ui-modal [sheetBelow] [sheetSnaps]`): below `sheetBelow` logical px, opens `showUiBottomSheet` with the same body, `footerLeadingBuilder`, and `footerBuilder`; at or above `sheetBelow` (or when `sheetBelow` is null), opens a centred `UiModal`.
+## Selectable corner overlays, order badge & SelectionBar Done / docked mode
+
+- `UiSelectable` gains logical corner overlay slots `topEnd`, `bottomStart`, `bottomEnd` (positioned
+  with `PositionedDirectional` at `space1` inset inside `IgnorePointer`), `order` (optional 1-based
+  selection index rendered as a primary `UiBadge` in `topEnd`), `dimmed` (`0.45` opacity), and a
+  default `surfaceRaised` tile background.
+- `UiSelectionBar` gains `cancelLabel` (renders a ghost `UiButton` such as `"Done"` instead of the
+  `Cancel01` icon button, and includes its width in `UiSelectionBar.labelledWidth`), `docked`
+  (`surface` background, `1px` top border, `space2`/`space3` padding plus bottom safe-area inset),
+  and `maxWidth` (constrains and centres the inner bar row).
+
+## Tabs alignment, glow appearance and strip-only mode
+
+- `UiTabsAlignment.center` is the web `align="center"`: fitting tabs sit in the middle of the
+  full-width bottom rule, while an overflowing strip begins at tab 0 and scrolls horizontally.
+- `UiTabsAlignment.fill` is the web `align="fill"`: every tab gets an equal `Expanded` share of the
+  strip, centres its content, and truncates long labels with `TextOverflow.ellipsis`.
+- `UiTabsAppearance.glow` is the web `appearance="glow"`: omits the 1px strip hairline and 2px
+  selected underline, rendering a single radial-gradient accent glow (`_GlowPainter`) in an
+  `AnimatedPositioned` under the selected tab that moves on selection (instant when `uiAnimate` is
+  false).
+- `UiTab.child` is optional. When every tab omits it, `UiTabs` renders only the strip, with no panel
+  semantics or `space4` panel gap. If any tab has a child, all panel states stay mounted as before.
+
+## Card body layout & interactive semantics
+
+- `UiCard` accepts `children` (mutually exclusive with `child`), `gap` (spacing step via `uiSpace`),
+  `align` (`UiStackAlign`, matching web `align` including centered text alignment), and `enabled`
+  (dims to 0.5 and suppresses hover lift/taps when `false`). Angular gained the matching `gap`,
+  `align`, `activate`, `ariaLabel`, `disabled`, and keyboard Enter/Space activation on `interactive`
+  cards.
+
+## Text tones/truncate, media badge & list title/hint
+
+- `UiText`: `truncate` (shorthand for `maxLines: 1, overflow: TextOverflow.ellipsis`) and `tone`
+  (`UiTextTone`: `standard`, `muted`, `onMedia`, mapping web `'default' | 'muted' | 'on-media'`).
+  `onMedia` paints `mediaOnScrim` (90% alpha for `caption`/`h6`) with a 1px dark scrim shadow; an
+  explicit `color` still wins.
+- `UiBadge`: `leading` (icon before `label` with `space1` gap, tinted to the badge ink at 12px) and
+  `onMedia` / `UiBadge.media(...)` (translucent 62% `mediaScrim` fill + `mediaOnScrim` ink, matching
+  `UiLikeCount`). Kept out of `UiStatus` (and separate from `UiBadgeTone` in `button.dart`) so
+  existing `UiStatus` switches stay intact.
+- `UiListItem`: optional `title` (medium weight) and `hint` (muted single-line ellipsized) with a
+  2px vertical gap; `child` is optional when `title` is given.
 
 ## Plan card add-on (0.76.0)
 

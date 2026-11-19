@@ -263,6 +263,112 @@ void main() {
         ]),
       );
     });
+
+    testWidgets('corner slots position logically in LTR and RTL, order badge renders primary pill in topEnd, dimmed lowers opacity, and tile has surfaceRaised background', (tester) async {
+      var tapped = 0;
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        await pumpUi(
+          tester,
+          Directionality(
+            textDirection: dir,
+            child: SizedBox(
+              width: 120,
+              height: 120,
+              child: UiSelectable(
+                selected: true,
+                selecting: true,
+                order: 3,
+                dimmed: true,
+                onTap: () => tapped++,
+                topEnd: const Text('0:24', key: ValueKey('te')),
+                bottomStart: const Text('12', key: ValueKey('bs')),
+                bottomEnd: const Text('HD', key: ValueKey('be')),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        );
+        final ctx = tester.element(find.byType(UiSelectable));
+        final tileContainer = tester.widget<AnimatedContainer>(find.descendant(of: find.byType(AnimatedScale), matching: find.byType(AnimatedContainer)).first);
+        expect((tileContainer.decoration! as BoxDecoration).color, ctx.ui.surfaceRaised);
+
+        final opacity = tester.widget<Opacity>(find.descendant(of: find.byType(UiSelectable), matching: find.byType(Opacity)).first);
+        expect(opacity.opacity, closeTo(0.45, 0.001));
+
+        final badge = tester.widget<UiBadge>(find.byType(UiBadge));
+        expect(badge.label, '3');
+        expect(badge.tone, UiStatus.primary);
+
+        final tileRect = tester.getRect(find.byType(UiSelectable));
+        final teRect = tester.getRect(find.byKey(const ValueKey('te')));
+        final bsRect = tester.getRect(find.byKey(const ValueKey('bs')));
+        final beRect = tester.getRect(find.byKey(const ValueKey('be')));
+        expect(teRect.top, closeTo(tileRect.top + 4, 4));
+        expect(bsRect.bottom, closeTo(tileRect.bottom - 4, 4));
+        expect(beRect.bottom, closeTo(tileRect.bottom - 4, 4));
+        if (dir == TextDirection.ltr) {
+          expect(teRect.right, closeTo(tileRect.right - 4, 4));
+          expect(bsRect.left, closeTo(tileRect.left + 4, 4));
+          expect(beRect.right, closeTo(tileRect.right - 4, 4));
+        } else {
+          expect(teRect.left, closeTo(tileRect.left + 4, 4));
+          expect(bsRect.right, closeTo(tileRect.right - 4, 4));
+          expect(beRect.left, closeTo(tileRect.left + 4, 4));
+        }
+
+        // Corner overlays are non-interactive: tapping over topEnd still triggers the tile tap.
+        await tester.tapAt(teRect.center);
+        await tester.pump();
+      }
+      expect(tapped, 2);
+    });
+
+    testWidgets('golden: corner overlays, order badge and dimmed tiles', (tester) async {
+      await expectThemedGolden(
+        tester,
+        'selectable_overlays',
+        height: 180,
+        (context) => Wrap(spacing: 8, runSpacing: 8, children: [
+          SizedBox(
+            width: 100,
+            height: 100,
+            child: UiSelectable(
+              selected: false,
+              selecting: false,
+              onTap: () {},
+              topEnd: const UiBadge.media(
+                leading: UiIcon(HugeIcons.strokeRoundedPlay),
+                label: '0:24',
+              ),
+              bottomStart: const UiLikeCount(count: 14, liked: true),
+              child: const ColoredBox(color: Color(0xFF335577)),
+            ),
+          ),
+          SizedBox(
+            width: 100,
+            height: 100,
+            child: UiSelectable(
+              selected: true,
+              selecting: true,
+              order: 1,
+              onTap: () {},
+              child: const ColoredBox(color: Color(0xFF2F6B55)),
+            ),
+          ),
+          SizedBox(
+            width: 100,
+            height: 100,
+            child: UiSelectable(
+              selected: false,
+              selecting: true,
+              dimmed: true,
+              onTap: () {},
+              child: const ColoredBox(color: Color(0xFF7A4B3A)),
+            ),
+          ),
+        ]),
+      );
+    });
   });
 
   group('UiSelectionBar', () {
@@ -388,6 +494,87 @@ void main() {
           UiSelectionBar(count: 12, total: 40, onSelectAll: () {}, onCancel: () {}, actions: _actions().take(1).toList(), onAction: (_) {}),
           SizedBox(width: 328, child: UiSelectionBar(count: 40, total: 40, onSelectAll: () {}, onClear: () {}, onCancel: () {}, actions: _actions(), onAction: (_) {})),
           SizedBox(width: 288, child: UiSelectionBar(count: 0, total: 40, onSelectAll: () {}, onCancel: () {}, actions: _actions(), onAction: (_) {})),
+        ]),
+      );
+    });
+
+    testWidgets('cancelLabel ("Done") renders ghost button, participates in labelledWidth, and docked + maxWidth style and constrain the bar', (tester) async {
+      var cancelled = 0;
+      await pumpUi(
+        tester,
+        MediaQuery(
+          data: const MediaQueryData(padding: EdgeInsets.only(bottom: 20)),
+          child: SizedBox(
+            width: 800,
+            child: UiSelectionBar(
+              count: 3,
+              total: 10,
+              cancelLabel: 'Done',
+              docked: true,
+              maxWidth: 340,
+              onSelectAll: () {},
+              onCancel: () => cancelled++,
+              actions: _actions(),
+              onAction: (_) {},
+            ),
+          ),
+        ),
+        size: const Size(800, 400),
+      );
+      expect(tester.takeException(), isNull);
+      final ctx = tester.element(find.byType(UiSelectionBar));
+      final withoutCancelLabel = UiSelectionBar.labelledWidth(ctx, countText: '3 selected', toggle: 'Select all', actions: _actions());
+      final withCancelLabel = UiSelectionBar.labelledWidth(ctx, countText: '3 selected', toggle: 'Select all', actions: _actions(), cancelLabel: 'Done');
+      expect(withCancelLabel, isNot(equals(withoutCancelLabel)));
+
+      // Renders ghost "Done" UiButton instead of Cancel01 UiIconButton, even when maxWidth forces compact mode.
+      expect(find.bySemanticsLabel('Cancel selection'), findsNothing);
+      final doneBtn = find.widgetWithText(UiButton, 'Done');
+      expect(doneBtn, findsOneWidget);
+      expect(tester.widget<UiButton>(doneBtn).variant, UiButtonVariant.ghost);
+      // maxWidth: 340 inside 800px parent puts the inner bar into compact mode (icon actions).
+      expect(find.byWidgetPredicate((w) => w is UiIconButton && w.label == 'Share'), findsOneWidget);
+
+      // Docked surface has top border and includes bottom safe-area inset (20 + space2).
+      final dockBox = tester.widget<DecoratedBox>(find.descendant(of: find.byType(UiSelectionBar), matching: find.byType(DecoratedBox)).first);
+      final dockDeco = dockBox.decoration as BoxDecoration;
+      expect(dockDeco.color, ctx.ui.surface);
+      expect((dockDeco.border! as Border).top.color, ctx.ui.border);
+      final dockPad = tester.widget<Padding>(find.descendant(of: find.byType(UiSelectionBar), matching: find.byType(Padding)).first);
+      expect(dockPad.padding, EdgeInsets.fromLTRB(ctx.ui.space3, ctx.ui.space2, ctx.ui.space3, ctx.ui.space2 + 20));
+
+      await tester.tap(doneBtn);
+      expect(cancelled, 1);
+    });
+
+    testWidgets('golden: docked selection bar with Done label', (tester) async {
+      await expectThemedGolden(
+        tester,
+        'selection_bar_docked_done',
+        width: 400,
+        height: 220,
+        (context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 12, children: [
+          UiSelectionBar(
+            count: 3,
+            total: 12,
+            cancelLabel: 'Done',
+            docked: true,
+            onSelectAll: () {},
+            onCancel: () {},
+            actions: _actions().take(1).toList(),
+            onAction: (_) {},
+          ),
+          UiSelectionBar(
+            count: 12,
+            total: 12,
+            cancelLabel: 'Done',
+            docked: true,
+            onSelectAll: () {},
+            onClear: () {},
+            onCancel: () {},
+            actions: _actions(),
+            onAction: (_) {},
+          ),
         ]),
       );
     });

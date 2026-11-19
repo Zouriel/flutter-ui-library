@@ -6,6 +6,9 @@ import '../theme/theme.dart';
 /// Text styles, the web `TextVariant`.
 enum UiTextVariant { h1, h2, h3, h4, h5, h6, body, caption, label, code, quote }
 
+/// Colour tone on [UiText] (the web `UiTextTone`): default, muted, or high-contrast light ink over media.
+enum UiTextTone { standard, muted, onMedia }
+
 /// `ui-text`: themed text in one of the library's variants.
 ///
 /// Heading variants are announced as headings (the web renders `<h1>`…`<h6>`); set [heading] to
@@ -23,6 +26,8 @@ class UiText extends StatelessWidget {
     this.textAlign,
     this.maxLines,
     this.overflow,
+    this.truncate = false,
+    this.tone = UiTextTone.standard,
   });
 
   final String text;
@@ -39,6 +44,12 @@ class UiText extends StatelessWidget {
   final TextAlign? textAlign;
   final int? maxLines;
   final TextOverflow? overflow;
+
+  /// Shorthand for single-line ellipsis truncation (`maxLines: 1, overflow: TextOverflow.ellipsis`).
+  final bool truncate;
+
+  /// Colour tone: standard, muted, or high-contrast light ink over photos/media.
+  final UiTextTone tone;
 
   static TextStyle styleOf(BuildContext context, UiTextVariant v) {
     final ty = context.uiText;
@@ -65,9 +76,21 @@ class UiText extends StatelessWidget {
     var style = styleOf(context, variant);
     // copyWith would keep the theme font's package prefix, so build the font afresh.
     if (fontFamily != null) style = uiApplyFont(style, TextStyle(fontFamily: fontFamily, package: fontPackage));
-    if (color != null) style = style.copyWith(color: color);
+    if (color != null) {
+      style = style.copyWith(color: color);
+    } else if (tone == UiTextTone.muted) {
+      style = style.copyWith(color: t.textMuted);
+    } else if (tone == UiTextTone.onMedia) {
+      final soft = variant == UiTextVariant.caption || variant == UiTextVariant.h6;
+      style = style.copyWith(
+        color: soft ? t.mediaOnScrim.withValues(alpha: 0.9) : t.mediaOnScrim,
+        shadows: [Shadow(color: t.mediaScrim.withValues(alpha: 0.55), offset: const Offset(0, 1), blurRadius: soft ? 3 : 4)],
+      );
+    }
     final shown = variant == UiTextVariant.h6 ? text.toUpperCase() : text;
-    Widget w = Text(shown, style: style, textAlign: textAlign, maxLines: maxLines, overflow: overflow);
+    final effectiveMaxLines = truncate ? (maxLines ?? 1) : maxLines;
+    final effectiveOverflow = truncate ? (overflow ?? TextOverflow.ellipsis) : overflow;
+    Widget w = Text(shown, style: style, textAlign: textAlign, maxLines: effectiveMaxLines, overflow: effectiveOverflow);
 
     if (variant == UiTextVariant.code) {
       w = DecoratedBox(

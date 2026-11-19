@@ -13,15 +13,43 @@ import '../theme/theme.dart';
 final RegExp _thaanaText = RegExp('[\u0780-\u07BF]');
 
 /// `ui-badge`: a small status or count label. [dot] draws an 8px dot with no text.
+/// Use [onMedia] (or [UiBadge.media]) for a translucent dark scrim pill over photos/video,
+/// and [leading] for a small icon before [label].
 class UiBadge extends StatelessWidget {
-  const UiBadge({super.key, this.label, this.tone = UiStatus.neutral, this.tier, this.dot = false, this.semanticLabel})
-      : assert(dot || label != null, 'A badge needs a label unless it is a dot.');
+  const UiBadge({
+    super.key,
+    this.label,
+    this.tone = UiStatus.neutral,
+    this.tier,
+    this.onMedia = false,
+    this.leading,
+    this.dot = false,
+    this.semanticLabel,
+  }) : assert(dot || label != null, 'A badge needs a label unless it is a dot.');
+
+  /// Shorthand for a translucent dark scrim pill readable over photos/video (web `tone="media"`).
+  const UiBadge.media({
+    super.key,
+    this.label,
+    this.leading,
+    this.dot = false,
+    this.semanticLabel,
+  })  : tone = UiStatus.neutral,
+        tier = null,
+        onMedia = true,
+        assert(dot || label != null, 'A badge needs a label unless it is a dot.');
 
   final String? label;
   final UiStatus tone;
 
-  /// A premium tier's metal: gold, platinum or premium, the same in every theme. Wins over [tone].
+  /// A premium tier's metal: gold, platinum or premium, the same in every theme. Wins over [tone] and [onMedia].
   final UiBadgeTier? tier;
+
+  /// Translucent dark scrim pill (`mediaScrim` 62% + `mediaOnScrim`), matching `ui-badge tone="media"`.
+  final bool onMedia;
+
+  /// Optional widget (typically a `UiIcon`) shown before [label] with a `space1` gap.
+  final Widget? leading;
   final bool dot;
 
   /// Accessible text for a dot badge (e.g. "Online").
@@ -30,10 +58,11 @@ class UiBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
-    final solid = tone != UiStatus.neutral;
-    final fill = solid ? tone.color(t) : t.surfaceRaised;
     final metal = tier;
-    final fg = metal != null ? metal.contrast(t) : (solid ? tone.contrast(t) : t.text);
+    final media = metal == null && onMedia;
+    final solid = !media && tone != UiStatus.neutral;
+    final fill = media ? t.mediaScrim.withValues(alpha: 0.62) : (solid ? tone.color(t) : t.surfaceRaised);
+    final fg = metal != null ? metal.contrast(t) : (media ? t.mediaOnScrim : (solid ? tone.contrast(t) : t.text));
     if (dot) {
       return Semantics(
         label: semanticLabel,
@@ -42,7 +71,7 @@ class UiBadge extends StatelessWidget {
           height: 8,
           decoration: metal != null
               ? BoxDecoration(gradient: metal.gradient(t).toGradient(), border: Border.all(color: metal.border(t)), shape: BoxShape.circle)
-              : BoxDecoration(color: solid ? fill : t.textMuted, shape: BoxShape.circle),
+              : BoxDecoration(color: media || solid ? fill : t.textMuted, shape: BoxShape.circle),
         ),
       );
     }
@@ -52,6 +81,27 @@ class UiBadge extends StatelessWidget {
     // more below, growing only as far as the text needs; Latin keeps 20px (compact 20, from 18). The web
     // does the same under :lang(dv) / :dir(rtl), with line-height: normal.
     final thaana = Directionality.of(context) == TextDirection.rtl || _thaanaText.hasMatch(label!);
+    final textWidget = Text(
+      label!,
+      maxLines: 1,
+      style: context.uiText.body.copyWith(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        height: thaana ? 1.45 : 16 / 11,
+        color: fg,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+    final content = leading == null
+        ? textWidget
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: t.space1,
+            children: [
+              IconTheme.merge(data: IconThemeData(size: 12, color: fg), child: leading!),
+              textWidget,
+            ],
+          );
     return Container(
       height: thaana ? null : 20 * t.densityScale,
       constraints: thaana ? BoxConstraints(minHeight: 20 * t.densityScale) : null,
@@ -60,23 +110,13 @@ class UiBadge extends StatelessWidget {
         color: metal != null ? null : fill,
         gradient: metal?.gradient(t).toGradient(),
         borderRadius: BorderRadius.circular(t.radiusPill),
-        border: Border.all(color: metal != null ? metal.border(t) : (solid ? const Color(0x00000000) : t.border)),
+        border: Border.all(color: metal != null ? metal.border(t) : (media || solid ? const Color(0x00000000) : t.border)),
       ),
       // Hug the text: Container(alignment:) would stretch to the full available width.
       child: Align(
         widthFactor: 1,
         heightFactor: thaana ? 1 : null,
-        child: Text(
-        label!,
-        maxLines: 1,
-        style: context.uiText.body.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          height: thaana ? 1.45 : 16 / 11,
-          color: fg,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
-      ),
+        child: content,
       ),
     );
   }

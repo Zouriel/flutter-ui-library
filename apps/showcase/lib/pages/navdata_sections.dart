@@ -151,21 +151,40 @@ class _ListSectionState extends State<_ListSection> {
       name: 'List',
       widget: 'UiList · UiListItem',
       summary: 'Rows with optional leading and trailing widgets (trailing in the muted colour), announced as a list. With onTap a row is a button, 48dp tall on touch, with an inset focus ring; selected tints it and is announced; enabled: false fades it. bordered draws a rounded border with rules between rows.',
-      demo: UiList(bordered: true, children: [
-        for (var i = 0; i < 3; i++)
+      demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: context.ui.space3, children: [
+        UiList(bordered: true, children: [
+          for (var i = 0; i < 3; i++)
+            UiListItem(
+              leading: const UiIcon(HugeIcons.strokeRoundedUserCircle),
+              trailing: Text(roles[i]),
+              selected: _sel == i,
+              enabled: i != 2,
+              onTap: () => setState(() => _sel = i),
+              child: Text(names[i]),
+            ),
+        ]),
+        UiList(bordered: true, children: [
           UiListItem(
-            leading: const UiIcon(HugeIcons.strokeRoundedUserCircle),
-            trailing: Text(roles[i]),
-            selected: _sel == i,
-            enabled: i != 2,
-            onTap: () => setState(() => _sel = i),
-            child: Text(names[i]),
+            title: 'Feed photos',
+            hint: '3 of 6 selected for the album feed',
+            leading: const UiIcon(HugeIcons.strokeRoundedImage01),
+            trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 16),
+            onTap: () {},
           ),
+          UiListItem(
+            title: 'Colours',
+            hint: 'Reply pages & QR table card — long hints ellipsize on one line',
+            leading: const UiIcon(HugeIcons.strokeRoundedPaintBoard),
+            trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01, size: 16),
+            onTap: () {},
+          ),
+        ]),
       ]),
-      code: "UiList(bordered: true, children: [\n  UiListItem(\n    leading: UiIcon(HugeIcons.strokeRoundedUserCircle),\n    trailing: Text('Owner'),\n    selected: true,\n    onTap: open,\n    child: Text('Aminath Shareef'),\n  ),\n])",
+      code: "UiList(bordered: true, children: [\n  UiListItem(\n    title: 'Feed photos',\n    hint: '3 of 6 selected',\n    leading: UiIcon(HugeIcons.strokeRoundedImage01),\n    onTap: open,\n  ),\n])",
       api: const [
         ApiRow('UiList.bordered', 'bool', 'Border and row rules.', def: 'false'),
-        ApiRow('child / leading / trailing', 'Widget', 'Row content.'),
+        ApiRow('title / hint', 'String?', 'Structured medium title and muted single-line ellipsized hint.'),
+        ApiRow('child / leading / trailing', 'Widget?', 'Row content (child optional when title is set).'),
         ApiRow('onTap', 'VoidCallback?', 'Makes the row a button.'),
         ApiRow('selected', 'bool', 'Tinted and announced.', def: 'false'),
         ApiRow('enabled', 'bool', 'Fades and ignores taps when false.', def: 'true'),

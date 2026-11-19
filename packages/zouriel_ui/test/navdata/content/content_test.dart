@@ -130,6 +130,202 @@ void main() {
       expect(widths.first, closeTo((300 - 8) / 3, 0.01));
       handle.dispose();
     });
+
+    testWidgets('align: center centres fitting tabs along a full-width rule in LTR and RTL', (tester) async {
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        await pumpUi(
+          tester,
+          Directionality(
+            textDirection: dir,
+            child: SizedBox(
+              width: 390,
+              child: UiTabs(
+                align: UiTabsAlignment.center,
+                selectedIndex: 0,
+                onChanged: (_) {},
+                tabs: const [UiTab(label: 'One'), UiTab(label: 'Two')],
+              ),
+            ),
+          ),
+        );
+        final stripRect = tester.getRect(find.byType(UiTabs));
+        final oneRect = tester.getRect(find.text('One'));
+        final twoRect = tester.getRect(find.text('Two'));
+        final groupCenter = (oneRect.left < twoRect.left ? (oneRect.left + twoRect.right) : (twoRect.left + oneRect.right)) / 2;
+        expect(stripRect.width, 390);
+        expect(groupCenter, closeTo(stripRect.center.dx, 1.5));
+      }
+    });
+
+    testWidgets('align: center still starts at tab 0 and scrolls when tabs overflow in LTR and RTL', (tester) async {
+      final tabs = [for (var i = 0; i < 10; i++) UiTab(label: 'Album number $i')];
+      for (final dir in [TextDirection.ltr, TextDirection.rtl]) {
+        await pumpUi(tester, Directionality(
+          textDirection: dir,
+          child: SizedBox(width: 320, child: UiTabs(align: UiTabsAlignment.center, tabs: tabs, selectedIndex: 0, onChanged: (_) {})),
+        ));
+        final first = tester.getRect(find.text('Album number 0'));
+        expect(first.left, greaterThanOrEqualTo(0));
+        expect(first.right, lessThanOrEqualTo(320));
+      }
+    });
+
+    testWidgets('strip-only tabs omit child, panel gap and tabPanel semantics', (tester) async {
+      final handle = tester.ensureSemantics();
+      var sel = 0;
+      await pumpUi(tester, StatefulBuilder(builder: (context, set) => SizedBox(
+        width: 390,
+        child: UiTabs(
+          align: UiTabsAlignment.center,
+          selectedIndex: sel,
+          onChanged: (i) => set(() => sel = i),
+          tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+        ),
+      )));
+      final stripSize = tester.getSize(find.byType(UiTabs));
+      final btnSize = tester.getSize(find.byType(UiInteractive).first);
+      // No t.space4 (16px) panel gap beneath the strip.
+      expect(stripSize.height, closeTo(btnSize.height, 1.0));
+      await tester.tap(find.text('Reception'));
+      await tester.pump();
+      expect(sel, 1);
+      handle.dispose();
+    });
+
+    testWidgets('golden: centered and strip-only tabs', (tester) async {
+      await expectThemedGolden(tester, 'tabs_centered_strip', height: 220, (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 20,
+        children: [
+          UiTabs(
+            align: UiTabsAlignment.center,
+            selectedIndex: 1,
+            onChanged: (_) {},
+            tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+          ),
+          UiTabs(
+            align: UiTabsAlignment.center,
+            selectedIndex: 0,
+            onChanged: (_) {},
+            tabs: const [
+              UiTab(label: 'Photos', child: UiText('Centered tabs with a panel below.')),
+              UiTab(label: 'Videos', child: UiText('Videos panel.')),
+            ],
+          ),
+        ],
+      ));
+    });
+
+    testWidgets('appearance: glow omits underline and rule, places glow under selected only, and moves it on selection', (tester) async {
+      var sel = 0;
+      var appearance = UiTabsAppearance.line;
+      late StateSetter set;
+      await pumpUi(tester, StatefulBuilder(builder: (context, s) {
+        set = s;
+        return SizedBox(
+          width: 390,
+          child: UiTabs(
+            appearance: appearance,
+            align: UiTabsAlignment.fill,
+            selectedIndex: sel,
+            onChanged: (i) => s(() => sel = i),
+            tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+          ),
+        );
+      }));
+
+      // Default line appearance: 1px rule ColoredBox present, no glow, selected tab has 2px non-transparent bottom border.
+      expect(find.byKey(const ValueKey('ui-tab-glow')), findsNothing);
+      expect(find.descendant(of: find.byType(UiTabs), matching: find.byType(ColoredBox)), findsOneWidget);
+      BoxDecoration selectedLineDeco() =>
+          (tester.widget<AnimatedContainer>(find.descendant(of: find.byType(UiInteractive).at(sel), matching: find.byType(AnimatedContainer))).decoration! as BoxDecoration);
+      expect((selectedLineDeco().border! as Border).bottom.color.a, greaterThan(0));
+
+      // Switch to glow appearance: no 1px rule ColoredBox, selected tab bottom border is transparent, one glow positioned under tab 0.
+      set(() => appearance = UiTabsAppearance.glow);
+      await tester.pumpAndSettle();
+      expect(find.descendant(of: find.byType(UiTabs), matching: find.byType(ColoredBox)), findsNothing);
+      expect((selectedLineDeco().border! as Border).bottom.color.a, 0);
+      expect(find.byKey(const ValueKey('ui-tab-glow')), findsOneWidget);
+
+      final tab0Rect = tester.getRect(find.byType(UiInteractive).at(0));
+      final tab1Rect = tester.getRect(find.byType(UiInteractive).at(1));
+      var glowPos = tester.widget<AnimatedPositioned>(find.byKey(const ValueKey('ui-tab-glow')));
+      expect(glowPos.left, closeTo(0, 0.5));
+      expect(glowPos.width, closeTo(tab0Rect.width, 0.5));
+
+      // Select tab 1: the single glow moves to tab 1.
+      await tester.tap(find.text('Reception'));
+      await tester.pumpAndSettle();
+      expect(sel, 1);
+      expect(find.byKey(const ValueKey('ui-tab-glow')), findsOneWidget);
+      glowPos = tester.widget<AnimatedPositioned>(find.byKey(const ValueKey('ui-tab-glow')));
+      expect(glowPos.left, closeTo(tab1Rect.left - tab0Rect.left, 0.5));
+      expect(glowPos.width, closeTo(tab1Rect.width, 0.5));
+    });
+
+    testWidgets('align: fill gives equal widths, centres labels, and truncates long labels with ellipsis', (tester) async {
+      await pumpUi(
+        tester,
+        SizedBox(
+          width: 300,
+          child: UiTabs(
+            align: UiTabsAlignment.fill,
+            appearance: UiTabsAppearance.glow,
+            selectedIndex: 0,
+            onChanged: (_) {},
+            tabs: const [
+              UiTab(label: 'One'),
+              UiTab(label: 'Two'),
+              UiTab(label: 'A very long portraits album label that cannot fit'),
+            ],
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      final interactives = find.byType(UiInteractive).evaluate().toList();
+      final widths = [for (final e in interactives) (e.renderObject! as RenderBox).size.width];
+      expect(widths.length, 3);
+      expect(widths[0], closeTo((300 - 8) / 3, 0.01));
+      expect(widths[1], closeTo(widths[0], 0.01));
+      expect(widths[2], closeTo(widths[0], 0.01));
+
+      // Short label is centred inside its tab share.
+      final tab0Rect = tester.getRect(find.byType(UiInteractive).at(0));
+      final text0Rect = tester.getRect(find.text('One'));
+      expect(text0Rect.center.dx, closeTo(tab0Rect.center.dx, 1.0));
+
+      // Long label uses TextOverflow.ellipsis and stays within its tab share.
+      final longText = tester.widget<Text>(find.text('A very long portraits album label that cannot fit'));
+      expect(longText.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('golden: glow and fill tabs', (tester) async {
+      await expectThemedGolden(tester, 'tabs_glow_fill', height: 220, (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 20,
+        children: [
+          UiTabs(
+            appearance: UiTabsAppearance.glow,
+            align: UiTabsAlignment.fill,
+            selectedIndex: 0,
+            onChanged: (_) {},
+            tabs: const [UiTab(label: 'Ceremony'), UiTab(label: 'Reception'), UiTab(label: 'Portraits')],
+          ),
+          UiTabs(
+            appearance: UiTabsAppearance.glow,
+            align: UiTabsAlignment.fill,
+            selectedIndex: 1,
+            onChanged: (_) {},
+            tabs: const [
+              UiTab(label: 'Ceremony'),
+              UiTab(label: 'Reception & dinner party'),
+              UiTab(label: 'Portraits'),
+            ],
+          ),
+        ],
+      ));
+    });
   });
 
   group('UiAccordion', () {
@@ -205,6 +401,50 @@ void main() {
       expect(tester.getSize(find.ancestor(of: find.text('Alpha'), matching: find.byType(AnimatedContainer)).first).height, 48);
       expect(tester.getSize(find.ancestor(of: find.text('Gamma'), matching: find.byType(AnimatedContainer)).first).height, lessThan(48));
       handle.dispose();
+    });
+
+    testWidgets('title and hint render medium title with muted single-line ellipsized hint', (tester) async {
+      var tapped = 0;
+      await pumpUi(tester, SizedBox(
+        width: 220,
+        child: UiList(bordered: true, children: [
+          UiListItem(
+            title: 'Feed photos',
+            hint: 'A very long muted description that should clip to one line with an ellipsis',
+            leading: const UiIcon(HugeIcons.strokeRoundedImage01),
+            trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01),
+            onTap: () => tapped++,
+          ),
+        ]),
+      ));
+      final t = tester.element(find.byType(UiListItem)).ui;
+      final titleWidget = tester.widget<Text>(find.text('Feed photos'));
+      expect(titleWidget.style!.fontWeight, FontWeight.w500);
+      final hintWidget = tester.widget<Text>(find.text('A very long muted description that should clip to one line with an ellipsis'));
+      expect(hintWidget.maxLines, 1);
+      expect(hintWidget.overflow, TextOverflow.ellipsis);
+      expect(hintWidget.style!.color, t.textMuted);
+      await tester.tap(find.text('Feed photos'));
+      expect(tapped, 1);
+    });
+
+    testWidgets('golden: list item title and hint', (tester) async {
+      await expectThemedGolden(tester, 'list_title_hint', height: 180, (context) => UiList(bordered: true, children: [
+        UiListItem(
+          title: 'Feed photos',
+          hint: '3 of 6 selected for the album feed',
+          leading: const UiIcon(HugeIcons.strokeRoundedImage01),
+          trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01),
+          onTap: () {},
+        ),
+        UiListItem(
+          title: 'Colours',
+          hint: 'Reply pages & QR table card — a very long hint that ellipsizes cleanly',
+          leading: const UiIcon(HugeIcons.strokeRoundedPaintBoard),
+          trailing: const UiIcon(HugeIcons.strokeRoundedArrowRight01),
+          onTap: () {},
+        ),
+      ]));
     });
   });
 

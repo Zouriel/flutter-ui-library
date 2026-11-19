@@ -46,8 +46,8 @@ File: `badge/src/avatar.ts`
 ### UiBadge (component, `ui-badge`)
 File: `badge/src/badge.ts`  
 `ui-badge` — small status/count label.  
-- Inputs: `tone`: UiStatus = 'neutral'; `dot` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- Inputs: `tone`: UiBadgeTone = 'neutral' (`UiStatus | 'media'`; Flutter `tone: UiStatus` + `onMedia` / `UiBadge.media(...)`); `tier`: UiBadgeTier | null = null; `dot` = false; Flutter `leading`: Widget?
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiChip (component, `ui-chip`)
 File: `badge/src/chip.ts`  
@@ -303,8 +303,9 @@ File: `canvas/src/image-editor.ts`
 ### UiCard (component, `ui-card`)
 File: `card/src/card.ts`  
 `ui-card` — surface container with optional header/footer slots. Project header content with `[card-header]` and footer with `[card-footer]`.  
-- Inputs: `padding`: 'sm' | 'md' | 'lg' = 'md'; `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius; `interactive` = false
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- Inputs: `padding`: 'sm' | 'md' | 'lg' = 'md'; `gap`: UiCardGap | null = null (Flutter `children` + `gap`); `align`: UiCardAlign | null = null (Flutter `UiStackAlign`); `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius; `interactive` = false (Flutter `onTap`); `ariaLabel`: string | null = null (Flutter `semanticLabel`); `disabled` = false (Flutter `enabled`)
+- Outputs: `activate`: void
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiStatCard (component, `ui-stat-card`)
 File: `card/src/stat-card.ts`  
@@ -1339,8 +1340,8 @@ File: `list/src/list.ts`
 
 ### UiListItem (component, `ui-list-item`)
 File: `list/src/list.ts`  
-`ui-list-item` — a row in `ui-list`. Optional `[item-leading]` / `[item-trailing]` slots.  
-- Inputs: `interactive` = false; `selected` = false; `disabled` = false
+`ui-list-item` — a row in `ui-list`. Optional `[item-leading]` / `[item-hint]` / `[item-trailing]` slots.  
+- Inputs: `title`: string | null = null; `hint`: string | null = null; `interactive` = false; `selected` = false; `disabled` = false
 - Outputs: `activate`: void
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1399,14 +1400,14 @@ File: `media/src/poster-view.ts`
 ### UiSelectable (component, `ui-selectable`)
 File: `media/src/selection.ts`  
 `ui-selectable` — wraps one grid tile for long-press multi-select like a phone gallery: tap / 500ms hold (cancelled by 10px or a scroll), a corner mark while selecting, a selected tile shrinks with a primary outline; button, or checkbox while selecting.  
-- Inputs: `selected` = false; `selecting` = false; `label`: string | null; `borderRadius`: string | null
+- Inputs: `selected` = false; `selecting` = false; `label`: string | null; `borderRadius`: string | null; `order`: number | null = null; `dimmed` = false; slots `[tile-top-end]`, `[tile-bottom-start]`, `[tile-bottom-end]` (Flutter `topEnd`, `bottomStart`, `bottomEnd`)
 - Outputs: `tap`: void; `longPress`: void
 - [x] Flutter port (`UiSelectable`, `UiSelectionMark`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiSelectionBar (component, `ui-selection-bar`)
 File: `media/src/selection.ts`  
-`ui-selection-bar` — the bar while selecting: Cancel, "N selected", Select all / Clear, actions; icon-only when the labels don't fit.  
-- Inputs: `count` = 0; `total`: number | null; `actions`: UiSelectionAction[] = []; `canSelectAll` = true; `canClear` = true
+`ui-selection-bar` — the bar while selecting: Cancel (or `cancelLabel` button), "N selected", Select all / Clear, actions; icon-only when the labels don't fit; optional `docked` surface and `maxWidth`.  
+- Inputs: `count` = 0; `total`: number | null; `actions`: UiSelectionAction[] = []; `canSelectAll` = true; `canClear` = true; `cancelLabel`: string | null = null; `docked` = false; `maxWidth`: number | null = null
 - Outputs: `selectAll`; `clear`; `cancel`; `action`: string
 - [x] Flutter port (`UiSelectionBar`, `UiSelectionAction`)  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1705,14 +1706,14 @@ File: `table/src/table.ts`
 
 ### UiTab (component, `ui-tab`)
 File: `tabs/src/tabs.ts`  
-`ui-tab` — a single tab + its panel. Provide a `label` and project the panel content. Inactive panels stay in the DOM but are hidden (`[hidden]`). An optional HugeIcons `icon` draws before the label. With `iconOnly` the label is not shown, but it is still the tab's accessible name and its tooltip, so a screen reader and a hovering mouse both get the words the icon stands for.  
+`ui-tab` — a single tab + its optional panel. Provide a `label`; omit panel content on every tab for strip-only mode. Inactive panels stay in the DOM but are hidden (`[hidden]`). An optional HugeIcons `icon` draws before the label. With `iconOnly` the label is not shown, but it is still the tab's accessible name and its tooltip, so a screen reader and a hovering mouse both get the words the icon stands for.
 - Inputs: `label`: string; `disabled` = false; `icon`: IconSvgObject | undefined = undefined; `iconOnly` = false; `badge`: string | number | null; `badgeLabel`: string (0.79; Flutter `badge` is a String?)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiTabs (component, `ui-tabs`)
 File: `tabs/src/tabs.ts`  
 `ui-tabs` — WAI-ARIA tabs. Wraps `ui-tab` children; renders a tablist with roving tabindex and Arrow/Home/End keyboard navigation.  
-- Inputs: `label`: string = 'Tabs'
+- Inputs: `label`: string = 'Tabs'; `align`: 'start' | 'center' | 'fill' = 'start' (Flutter `UiTabsAlignment`); `appearance`: 'line' | 'glow' = 'line' (Flutter `UiTabsAppearance`)
 - Two-way: `selectedIndex` = 0
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
@@ -1722,8 +1723,8 @@ File: `tabs/src/tabs.ts`
 ### UiText (component, `ui-text`)
 File: `text/src/text.ts`  
 `ui-text` — the typography primitive and the ONLY text element in the library. Renders the correct semantic tag per variant (keeps a11y/SEO intact) and applies an optional `font` that falls back to the token. `as` overrides the tag while keeping the variant's look, e.g. a heading style on a `<p>` that stays out of the document outline, or an `h2` that looks like an `h4`. Styles are keyed on the variant class, not the tag. Projected content lives in a single `<ng-content>` (captured in the `#content` template) and is stamped into the chosen tag via `ngTemplateOutlet`. A naive "one `<ng-content>` per `@case`" template does NOT work — Angular only fills the last default slot, leaving every other variant empty.  
-- Inputs: `variant`: TextVariant = 'body'; `as`: TextTag; `font`: string
-- [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
+- Inputs: `variant`: TextVariant = 'body'; `as`: TextTag; `font`: string; `truncate` = false; `align`: UiTextAlign | null = null (Flutter `textAlign`); `tone`: UiTextTone = 'default' (Flutter `UiTextTone.standard | muted | onMedia`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - type `TextVariant` (text.ts)
 - type `TextTag` (text.ts)

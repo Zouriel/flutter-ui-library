@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../badge/badge.dart';
 import '../button/button.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
@@ -41,6 +42,11 @@ class UiSelectable extends StatefulWidget {
     this.onDoubleTap,
     this.semanticLabel,
     this.borderRadius,
+    this.topEnd,
+    this.bottomStart,
+    this.bottomEnd,
+    this.order,
+    this.dimmed = false,
   });
 
   final Widget child;
@@ -62,6 +68,17 @@ class UiSelectable extends StatefulWidget {
 
   /// The tile's corners; the theme's radius when null.
   final BorderRadius? borderRadius;
+
+  /// Logical corner overlay slots (inset by `space1`, non-interactive).
+  final Widget? topEnd;
+  final Widget? bottomStart;
+  final Widget? bottomEnd;
+
+  /// Optional 1-based selection index rendered as a primary [UiBadge] in the top-end corner.
+  final int? order;
+
+  /// Dims unselected tiles (0.45 opacity) when a maximum selection count has been reached.
+  final bool dimmed;
 
   @override
   State<UiSelectable> createState() => _UiSelectableState();
@@ -228,32 +245,63 @@ class _UiSelectableState extends State<UiSelectable> {
       selected: selected,
       checked: selecting ? selected : null,
       excludeChildSemantics: semanticLabel != null,
-      builder: (context, s) => Stack(
-        fit: StackFit.passthrough,
-        children: [
-          AnimatedScale(
-            scale: on ? uiSelectableScale : 1,
-            duration: duration,
-            curve: t.easeStandard,
-            child: AnimatedContainer(
+      builder: (context, s) => Opacity(
+        opacity: widget.dimmed ? 0.45 : 1,
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            AnimatedScale(
+              scale: on ? uiSelectableScale : 1,
               duration: duration,
               curve: t.easeStandard,
-              foregroundDecoration: BoxDecoration(
-                borderRadius: r,
-                color: on ? t.primary.withValues(alpha: 0.18) : const Color(0x00000000),
-                border: Border.all(color: on ? t.primary : const Color(0x00000000), width: 3),
+              child: AnimatedContainer(
+                duration: duration,
+                curve: t.easeStandard,
+                foregroundDecoration: BoxDecoration(
+                  borderRadius: r,
+                  color: on ? t.primary.withValues(alpha: 0.18) : const Color(0x00000000),
+                  border: Border.all(color: on ? t.primary : const Color(0x00000000), width: 3),
+                ),
+                decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: r, boxShadow: s.focused ? t.focusRing : null),
+                child: ClipRRect(borderRadius: r, child: child),
               ),
-              decoration: BoxDecoration(borderRadius: r, boxShadow: s.focused ? t.focusRing : null),
-              child: ClipRRect(borderRadius: r, child: child),
             ),
-          ),
-          if (selecting)
-            PositionedDirectional(
-              top: t.space2,
-              start: t.space2,
-              child: UiSelectionMark(selected: selected),
-            ),
-        ],
+            if ((widget.order != null && widget.order! > 0) || widget.topEnd != null)
+              PositionedDirectional(
+                top: t.space1,
+                end: t.space1,
+                child: IgnorePointer(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: t.space1,
+                    children: [
+                      if (widget.order != null && widget.order! > 0)
+                        UiBadge(label: '${widget.order}', tone: UiStatus.primary),
+                      if (widget.topEnd != null) widget.topEnd!,
+                    ],
+                  ),
+                ),
+              ),
+            if (widget.bottomStart != null)
+              PositionedDirectional(
+                bottom: t.space1,
+                start: t.space1,
+                child: IgnorePointer(child: widget.bottomStart!),
+              ),
+            if (widget.bottomEnd != null)
+              PositionedDirectional(
+                bottom: t.space1,
+                end: t.space1,
+                child: IgnorePointer(child: widget.bottomEnd!),
+              ),
+            if (selecting)
+              PositionedDirectional(
+                top: t.space2,
+                start: t.space2,
+                child: UiSelectionMark(selected: selected),
+              ),
+          ],
+        ),
       ),
       ),
     );
@@ -335,6 +383,9 @@ class UiSelectionBar extends StatelessWidget {
     this.onSelectAll,
     this.onClear,
     required this.onCancel,
+    this.cancelLabel,
+    this.docked = false,
+    this.maxWidth,
     this.actions = const [],
     this.onAction,
   });
@@ -346,6 +397,15 @@ class UiSelectionBar extends StatelessWidget {
   final VoidCallback? onSelectAll;
   final VoidCallback? onClear;
   final VoidCallback onCancel;
+
+  /// Optional text for the cancel button (e.g. "Done"); renders a ghost [UiButton] instead of the X icon.
+  final String? cancelLabel;
+
+  /// Wraps the bar in a bottom-docked surface with a top border and bottom safe-area inset padding.
+  final bool docked;
+
+  /// Optional maximum width for the inner bar row (centred when wider).
+  final double? maxWidth;
   final List<UiSelectionAction> actions;
 
   /// Called with the [UiSelectionAction.id] of the action pressed.
@@ -355,7 +415,13 @@ class UiSelectionBar extends StatelessWidget {
   bool get allSelected => total != null && total! > 0 && count >= total!;
 
   /// The width the bar needs to show every label (button paddings from [UiButton] at [UiSize.sm]).
-  static double labelledWidth(BuildContext context, {required String countText, required String? toggle, required List<UiSelectionAction> actions}) {
+  static double labelledWidth(
+    BuildContext context, {
+    required String countText,
+    required String? toggle,
+    required List<UiSelectionAction> actions,
+    String? cancelLabel,
+  }) {
     final t = context.ui;
     final theme = context.uiTheme;
     final scaler = MediaQuery.textScalerOf(context);
@@ -372,8 +438,11 @@ class UiSelectionBar extends StatelessWidget {
     }
 
     double button(String label, {bool icon = false}) => t.space3 * 2 + 2 + (icon ? 14 + t.space2 : 0) + text(label, 13, FontWeight.w500);
-    final iconBox = uiTouchPlatform(context) ? uiMinTouchTarget : t.sizeSm;
-    var w = t.space1 * 2 + iconBox + text(countText, t.fontSizeSm, FontWeight.w600);
+    final trimmedCancel = cancelLabel?.trim();
+    final cancelW = (trimmedCancel != null && trimmedCancel.isNotEmpty)
+        ? button(trimmedCancel)
+        : (uiTouchPlatform(context) ? uiMinTouchTarget : t.sizeSm);
+    var w = t.space1 * 2 + cancelW + text(countText, t.fontSizeSm, FontWeight.w600);
     if (toggle != null) w += t.space1 + button(toggle);
     for (final a in actions) {
       w += t.space1 + button(a.label, icon: a.icon != null);
@@ -390,8 +459,10 @@ class UiSelectionBar extends StatelessWidget {
     final all = allSelected;
     final VoidCallback? toggleAction = all ? onClear : onSelectAll;
     final String? toggleLabel = toggleAction == null ? null : (all ? strings.clearSelection : strings.selectAll);
-    return LayoutBuilder(builder: (context, box) {
-      final compact = box.maxWidth.isFinite && labelledWidth(context, countText: countText, toggle: toggleLabel, actions: actions) > box.maxWidth;
+    final String? cancelText = (cancelLabel != null && cancelLabel!.trim().isNotEmpty) ? cancelLabel!.trim() : null;
+    Widget inner = LayoutBuilder(builder: (context, box) {
+      final compact = box.maxWidth.isFinite &&
+          labelledWidth(context, countText: countText, toggle: toggleLabel, actions: actions, cancelLabel: cancelText) > box.maxWidth;
       Widget labelled(String label, Widget? icon, VoidCallback? onPressed, UiButtonVariant variant) {
         if (compact && icon != null) {
           return UiTooltip(
@@ -411,12 +482,20 @@ class UiSelectionBar extends StatelessWidget {
           child: Row(
             spacing: t.space1,
             children: [
-              UiIconButton(
-                icon: const UiIcon(HugeIcons.strokeRoundedCancel01),
-                label: strings.cancelSelection,
-                size: UiSize.sm,
-                onPressed: onCancel,
-              ),
+              if (cancelText != null)
+                UiButton(
+                  label: cancelText,
+                  size: UiSize.sm,
+                  variant: UiButtonVariant.ghost,
+                  onPressed: onCancel,
+                )
+              else
+                UiIconButton(
+                  icon: const UiIcon(HugeIcons.strokeRoundedCancel01),
+                  label: strings.cancelSelection,
+                  size: UiSize.sm,
+                  onPressed: onCancel,
+                ),
               Expanded(
                 child: Semantics(
                   liveRegion: true,
@@ -449,5 +528,24 @@ class UiSelectionBar extends StatelessWidget {
         ),
       );
     });
+    if (maxWidth != null) {
+      inner = Align(
+        alignment: Alignment.topCenter,
+        heightFactor: 1,
+        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth!), child: inner),
+      );
+    }
+    if (!docked) return inner;
+    final bottomInset = MediaQuery.maybePaddingOf(context)?.bottom ?? 0;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.border)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(t.space3, t.space2, t.space3, t.space2 + bottomInset),
+        child: inner,
+      ),
+    );
   }
 }
