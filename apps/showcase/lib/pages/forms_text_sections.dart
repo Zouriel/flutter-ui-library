@@ -473,11 +473,20 @@ UiInput(leading: UiIcon(HugeIcons.strokeRoundedMail01), semanticLabel: 'Email')'
         widget: 'UiEditableText',
         summary: 'Tap-to-edit inline text. Value type: String. Shows as a button (the pencil is always visible on touch screens); tapping it, or Enter/Space, opens a field with the text selected. Enter or leaving the field commits, Escape cancels.',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
-          UiEditableText(value: _title, semanticLabel: 'Board name', style: context.uiText.h4, onChanged: (v) => setState(() => _title = v)),
+          UiEditableText(value: _title, semanticLabel: 'Board name', variant: UiTextVariant.h4, onChanged: (v) => setState(() => _title = v)),
           _caption('Value: $_title'),
           // flush: the text starts on the label's line.
           Text('Event name', style: context.uiText.body.copyWith(fontWeight: FontWeight.w600)),
           UiEditableText(value: _title, semanticLabel: 'Event name', flush: true, onChanged: (v) => setState(() => _title = v)),
+          Container(
+            width: 520,
+            padding: EdgeInsets.fromLTRB(t.space4, t.space8, t.space4, t.space4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(t.radius),
+              gradient: LinearGradient(colors: [t.primary, t.mediaScrim]),
+            ),
+            child: UiEditableText(value: _title, semanticLabel: 'Event title over cover', variant: UiTextVariant.h2, block: true, onMedia: true, onChanged: (v) => setState(() => _title = v)),
+          ),
         ]),
         code: "UiEditableText(value: title, semanticLabel: 'Board name', onChanged: setTitle)",
         api: const [
@@ -485,7 +494,10 @@ UiInput(leading: UiIcon(HugeIcons.strokeRoundedMail01), semanticLabel: 'Email')'
           ApiRow('placeholder', 'String', 'Shown while empty.', def: "'Empty'"),
           ApiRow('semanticLabel', 'String?', 'Accessible name, announced with the text.'),
           ApiRow('style', 'TextStyle?', 'Text style (e.g. a heading).'),
+          ApiRow('variant', 'UiTextVariant?', 'Typography shared with UiText; null uses body.'),
           ApiRow('flush', 'bool', 'The text starts on the same line as the label or heading above it; the hover outline and the field reach out past it instead of indenting the text.', def: 'false'),
+          ApiRow('block', 'bool', 'The view and edit field fill the available row.', def: 'false'),
+          ApiRow('onMedia', 'bool', 'Light, shadowed view text over a picture; also automatic inside UiCoverHero. The edit field stays opaque.', def: 'false'),
           _enabledRow,
         ],
       ),

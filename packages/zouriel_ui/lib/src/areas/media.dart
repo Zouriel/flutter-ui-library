@@ -16,6 +16,7 @@ export '../behaviors/pull_to_refresh.dart' show UiPullToRefresh;
 export '../behaviors/scrolling.dart';
 export '../behaviors/swipe.dart';
 export '../media/carousel.dart';
+export '../media/cover_hero.dart';
 export '../media/device_frame.dart';
 export '../media/gallery.dart';
 export '../media/image_picker.dart';

@@ -385,6 +385,22 @@ void main() {
       expect(find.byType(UiOverlayPanel), findsOneWidget);
       handle.dispose();
     });
+
+    testWidgets('openOnTap opens on a primary tap and exposes the tap semantics action', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _place(tester, Alignment.topLeft, UiContextMenu(
+        items: _items,
+        openOnTap: true,
+        onSelect: (_) {},
+        child: Semantics(label: 'Cover', child: const SizedBox(key: Key('area'), width: 300, height: 300)),
+      ));
+      final node = tester.getSemantics(find.bySemanticsLabel('Cover'));
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      await tester.tap(find.byType(UiContextMenu));
+      await tester.pumpAndSettle();
+      expect(find.byType(UiOverlayPanel), findsOneWidget);
+      handle.dispose();
+    });
   });
 
   group('UiBackdrop', () {

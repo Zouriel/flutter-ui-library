@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/interactive.dart';
 import '../core/link_scope.dart';
+import '../core/on_media.dart';
 import '../core/types.dart';
 import '../feedback/spinner.dart';
 import '../theme/glass_rim.dart';
@@ -309,6 +310,7 @@ class UiButton extends StatelessWidget {
     final link = _linkOf(context, href, onPressed, current);
     // The page that is open, on a button that sits on the page: the look of a selected item.
     final selectedLook = link.current && metal == null && _neutral(variant);
+    final onMedia = metal == null && !selectedLook && !(isLink && link.current) && UiOnMediaScope.active(context) && (variant == UiButtonVariant.ghost || variant == UiButtonVariant.link);
 
     return UiInteractive(
       onTap: loading ? null : link.onTap,
@@ -324,13 +326,20 @@ class UiButton extends StatelessWidget {
       // With a badge the name is built here, so the label isn't read twice.
       excludeChildSemantics: badge != null && (semanticLabel != null || label != null || loading),
       builder: (context, s) {
-        final look = metal != null
+        final normalLook = metal != null
             ? _tierLook(metal, t, s)
             : selectedLook
                 ? _Look(fill: t.selected, fg: t.primary, border: variant == UiButtonVariant.outline ? t.border : null)
                 : isLink && link.current
                     ? _Look(fg: t.text)
                     : _look(variant, t, s);
+        final look = onMedia
+            ? _Look(
+                fill: variant == UiButtonVariant.ghost && (s.hovered || s.pressed) ? t.mediaOnScrim.withValues(alpha: 0.16) : null,
+                fg: variant == UiButtonVariant.link && (s.hovered || s.pressed) ? t.mediaOnScrim.withValues(alpha: 0.82) : t.mediaOnScrim,
+              )
+            : normalLook;
+        final mediaShadow = onMedia ? [Shadow(color: t.mediaScrim.withValues(alpha: 0.55), offset: const Offset(0, 1), blurRadius: 4)] : const <Shadow>[];
         final style = theme.typography.body.copyWith(
           fontSize: fontSize,
           fontWeight: isBrand || metal != null || size == UiSize.xl || link.current ? FontWeight.w600 : FontWeight.w500,
@@ -340,6 +349,7 @@ class UiButton extends StatelessWidget {
           decoration: isLink ? TextDecoration.underline : TextDecoration.none,
           decorationColor: look.fg,
           decorationThickness: isLink && link.current ? 2 : null,
+          shadows: mediaShadow,
         );
         final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 22.0 };
         final content = <Widget>[
@@ -351,7 +361,7 @@ class UiButton extends StatelessWidget {
         final row = IconTheme.merge(
           // Icons follow the label on filled and link buttons; ghost and outline ones take the theme's
           // icon colour (the web's --ui-color-icon).
-          data: IconThemeData(color: metal == null && _neutral(variant) ? (t.icon ?? look.fg) : look.fg, size: iconSize),
+          data: IconThemeData(color: onMedia ? look.fg : metal == null && _neutral(variant) ? (t.icon ?? look.fg) : look.fg, size: iconSize, shadows: mediaShadow),
           child: DefaultTextStyle(
             style: style,
             child: Row(
@@ -480,6 +490,7 @@ class UiIconButton extends StatelessWidget {
     final iconSize = switch (size) { UiSize.sm => 14.0, UiSize.md => 16.0, UiSize.lg => 18.0, UiSize.xl => 24.0 };
     final link = _linkOf(context, href, onPressed, current);
     final onTap = link.onTap;
+    final onMedia = UiOnMediaScope.active(context) && (variant == UiButtonVariant.ghost || variant == UiButtonVariant.link);
     return UiInteractive(
       onTap: onTap,
       enabled: onTap != null,
@@ -494,7 +505,11 @@ class UiIconButton extends StatelessWidget {
         // Link has no fill of its own as an icon button; it behaves like ghost.
         final v = variant == UiButtonVariant.link ? UiButtonVariant.ghost : variant;
         final selectedLook = link.current && _neutral(v);
-        final look = selectedLook ? _Look(fill: t.selected, fg: t.primary) : _look(v, t, s);
+        final normalLook = selectedLook ? _Look(fill: t.selected, fg: t.primary) : _look(v, t, s);
+        final look = onMedia && !selectedLook
+            ? _Look(fill: s.hovered || s.pressed ? t.mediaOnScrim.withValues(alpha: 0.16) : null, fg: t.mediaOnScrim)
+            : normalLook;
+        final mediaShadow = onMedia ? [Shadow(color: t.mediaScrim.withValues(alpha: 0.55), offset: const Offset(0, 1), blurRadius: 4)] : const <Shadow>[];
         final transparentBorder = v == UiButtonVariant.ghost || look.fill != null && v != UiButtonVariant.outline;
         return _withBadge(AnimatedOpacity(
           opacity: s.disabled ? 0.5 : 1,
@@ -518,7 +533,7 @@ class UiIconButton extends StatelessWidget {
             foregroundDecoration: v == UiButtonVariant.brand && (s.hovered || s.pressed)
                 ? BoxDecoration(color: (t.gradientBrandContrast ?? t.primaryContrast).withValues(alpha: 0.12), borderRadius: shape)
                 : null,
-            child: Center(child: IconTheme.merge(data: IconThemeData(color: iconColor != null ? (s.hovered || s.pressed ? look.fg : iconColor!) : _neutral(v) ? (t.icon ?? look.fg) : look.fg, size: iconSize), child: icon)),
+            child: Center(child: IconTheme.merge(data: IconThemeData(color: iconColor != null ? (s.hovered || s.pressed ? look.fg : iconColor!) : onMedia ? look.fg : _neutral(v) ? (t.icon ?? look.fg) : look.fg, size: iconSize, shadows: mediaShadow), child: icon)),
           ),
           ),
         ), badge, badgeTone);

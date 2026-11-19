@@ -69,6 +69,7 @@ class _MediaPageState extends State<MediaPage> {
   String? _busy;
   String? _chosen;
   bool _loading = false;
+  String _coverChoice = 'none yet';
 
   @override
   void initState() {
@@ -216,6 +217,38 @@ class _MediaPageState extends State<MediaPage> {
           ),
           code: 'Stack(children: [Image(...), Positioned(left: 0, right: 0, bottom: 0, child: UiScrim(child: details))])',
           api: const [ApiRow('child', 'Widget', 'The words; text and icons take the on-scrim colour.')],
+        ),
+        DocSection(
+          name: 'Cover hero',
+          widget: 'UiCoverHero',
+          summary: 'A full-width cover picture with a bottom fade into the page, subtle top and logical start-side scrims, and slots for top controls, title/metadata and actions. Nested UiText, ghost/link buttons, icon buttons and UiEditableText automatically use light on-media ink and soft shadows. A non-empty coverMenu makes the bare cover open Change/Remove actions on tap, right-click, touch hold, Enter/Space or the context-menu key. Missing and failed pictures fall back to the page surface.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            UiCoverHero(
+              image: DemoArt.palette[3],
+              coverMenu: const [UiMenuItem(label: 'Change cover', value: 'change'), UiMenuItem(label: 'Remove cover', value: 'remove', danger: true)],
+              onCoverMenuSelected: (item) => setState(() => _coverChoice = item.label),
+              topStart: UiButton(label: 'Your events', variant: UiButtonVariant.ghost, size: UiSize.sm, onPressed: () {}),
+              topEnd: UiIconButton(icon: const UiIcon(HugeIcons.strokeRoundedMoreVertical), label: 'Options', size: UiSize.sm, onPressed: () {}),
+              actions: UiButton(label: 'Share with client', onPressed: () {}),
+              child: const Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, spacing: 4, children: [
+                UiText('Eid party', variant: UiTextVariant.h2),
+                UiText('Saturday 12 December · Malé', variant: UiTextVariant.caption),
+              ]),
+            ),
+            UiText('Cover action: $_coverChoice', variant: UiTextVariant.caption),
+          ]),
+          code: "UiCoverHero(\n  image: NetworkImage(url),\n  coverMenu: const [UiMenuItem(label: 'Change cover', value: 'change')],\n  onCoverMenuSelected: changeCover,\n  topStart: UiButton(label: 'Your events', variant: UiButtonVariant.ghost, onPressed: back),\n  topEnd: UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedMoreVertical), label: 'Options', onPressed: options),\n  child: Column(children: [UiText('Eid party', variant: UiTextVariant.h2), UiText(date, variant: UiTextVariant.caption)]),\n  actions: UiButton(label: 'Share with client', onPressed: share),\n)",
+          api: const [
+            ApiRow('image', 'ImageProvider?', 'Decorative cover; missing or broken uses the page surface.'),
+            ApiRow('minHeight', 'double', '272, or 320 at widths of 900 and above.', def: '272'),
+            ApiRow('fadeBottom / scrimTop / scrimStart', 'bool', 'Bottom-to-page fade and subtle contrast layers.', def: 'true'),
+            ApiRow('coverMenu', 'List<UiMenuItem>', 'Non-empty makes the cover an accessible menu trigger.', def: '[]'),
+            ApiRow('coverActionLabel', 'String', 'Accessible name of the editable cover.', def: "'Change cover image'"),
+            ApiRow('topStart / topEnd', 'Widget?', 'Controls at the logical top corners.'),
+            ApiRow('child', 'Widget?', 'Title and metadata, width-limited to 85% / 69%.'),
+            ApiRow('actions', 'Widget?', 'Primary actions above the bottom fade.'),
+          ],
+          callbacks: const [ApiRow('onCoverMenuSelected', 'ValueChanged<UiMenuItem>?', 'The selected cover action.')],
         ),
         DocSection(
           name: 'Selectable',

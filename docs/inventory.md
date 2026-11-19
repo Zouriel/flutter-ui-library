@@ -679,7 +679,7 @@ File: `form/src/color-picker.ts`
 ### UiEditableText (component, `ui-editable-text`)
 File: `form/src/editable-text.ts`  
 `ui-editable-text` — click-to-edit inline text (CVA). Enter commits, Escape cancels.  
-- Inputs: `placeholder` = 'Empty'
+- Inputs: `placeholder`; `flush` = false; `variant`: TextVariant = 'body'; `block` = false; `onMedia` = false (Flutter: `UiTextVariant? variant`, `UiOnMediaScope` auto-adoption; explicit style colour is preserved)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 ### UiFileUpload (component, `ui-file-upload`)
@@ -1356,6 +1356,13 @@ File: `media/src/carousel.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 
 - interface `UiCarouselSlide` (carousel.ts)
+### UiCoverHero (component, `ui-cover-hero`)
+File: `media/src/cover-hero.ts`  
+`ui-cover-hero` — cover image with bottom-to-page fade, light top/start scrims, inherited on-media chrome, editable cover menu, and four content slots.  
+- Inputs: `src`: string | null; `minHeight`; `fadeBottom`; `scrimTop`; `scrimStart`; `coverMenu`; `coverActionLabel`; `[hero-top-start]`; `[hero-top-end]`; default body; `[hero-actions]` (Flutter: `image`, `topStart`, `topEnd`, `child`, `actions`)
+- Outputs: `coverMenuSelect`: UiMenuItem (Flutter: `onCoverMenuSelected`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiDeviceFrame (component, `ui-device-frame`)
 File: `media/src/device-frame.ts`  
 `ui-device-frame` — a phone-shaped frame whose screen is exactly `width` × `height` CSS pixels, scaled to fit the space it's given. What you project renders at true phone size (so a 390px-wide page lays out as it would on a phone) and is scaled down only visually. `scale` is readable from a template reference, for overlays that have to line up with the screen.  
@@ -1522,8 +1529,8 @@ Internal panel rendered in the context-menu overlay.
 
 ### UiContextMenu (directive, `[uiContextMenu]`)
 File: `overlay/src/context-menu.ts`  
-`uiContextMenu` — opens a menu at the pointer on right-click (CDK Overlay). Bind the items and listen to `(contextSelect)`.  
-- Inputs: `uiContextMenu`: UiMenuItem[] = []
+`uiContextMenu` — opens at the pointer on right-click, touch long-press, keyboard context-menu keys, and optionally a primary click/tap.  
+- Inputs: `uiContextMenu`: readonly UiMenuItem[] = []; `openOnClick` = false (Flutter: `openOnTap`)
 - Outputs: `contextSelect`: UiMenuItem
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

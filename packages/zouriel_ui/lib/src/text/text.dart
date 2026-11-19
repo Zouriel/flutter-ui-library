@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/fonts.dart';
+import '../core/on_media.dart';
 import '../theme/theme.dart';
 
 /// Text styles, the web `TextVariant`.
@@ -80,7 +81,7 @@ class UiText extends StatelessWidget {
       style = style.copyWith(color: color);
     } else if (tone == UiTextTone.muted) {
       style = style.copyWith(color: t.textMuted);
-    } else if (tone == UiTextTone.onMedia) {
+    } else if (tone == UiTextTone.onMedia || tone == UiTextTone.standard && UiOnMediaScope.active(context)) {
       final soft = variant == UiTextVariant.caption || variant == UiTextVariant.h6;
       style = style.copyWith(
         color: soft ? t.mediaOnScrim.withValues(alpha: 0.9) : t.mediaOnScrim,
