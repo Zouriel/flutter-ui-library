@@ -8,9 +8,12 @@ import 'hold_button.dart';
 /// (topCenter / bottomCenter, 0.44.0).
 enum UiFabPosition { bottomEnd, bottomStart, topEnd, topStart, topCenter, bottomCenter }
 
-/// A [UiFab]'s colour (0.44.0): [primary], or [danger] for an emergency action such as SOS, drawn
-/// for high visibility (the danger fill, a ring in the raised surface colour and a soft danger halo).
-enum UiFabTone { primary, danger }
+/// A [UiFab]'s colour:
+/// - [primary] (default): primary fill with contrast ink.
+/// - [danger] (0.44.0): high-visibility SOS style with danger fill, raised-surface ring and halo.
+/// - [inverted]: high-contrast ink fill (`t.text`) with inverse ink (`t.bg`), 1 px hairline ring
+///   and shadow across both light and dark themes.
+enum UiFabTone { primary, danger, inverted }
 
 /// FAB diameters: 40 (sm, grown to 48 on phones) or 52 (md).
 enum UiFabSize { sm, md }
@@ -21,8 +24,11 @@ enum UiFabSize { sm, md }
 /// On its own it is just the button; [UiFabHost] pins it to a corner over your content, offset by the
 /// safe area (the web version is `position: fixed`).
 ///
-/// [tone] (0.44.0): [UiFabTone.danger] for SOS. [text] (0.44.0): an extended pill with the text after
-/// the icon ("SOS"); the accessible name is still [label].
+/// [tone]: [UiFabTone.danger] (0.44.0) for SOS; [UiFabTone.inverted] for a high-contrast fill with
+/// a 1 px hairline ring and shadow in both light and dark themes. [text] (0.44.0): an extended pill
+/// with the text after the icon ("SOS"); the accessible name is still [label].
+///
+/// [expanded]: optional disclosure state announced to assistive tech (used by [UiSpeedDial]).
 ///
 /// [hold] (0.44.0): press and hold that long to activate, as [UiHoldButton]: a fill grows across
 /// the button while it is held, and [onPressed] is called at the end. A tap, a quick Enter / Space
@@ -39,6 +45,7 @@ class UiFab extends StatelessWidget {
     this.focusNode,
     this.tone = UiFabTone.primary,
     this.text,
+    this.expanded,
     this.hold,
     this.holdHint,
     this.confirmTitle,
@@ -71,12 +78,19 @@ class UiFab extends StatelessWidget {
   /// Shown after the icon in an extended pill; null for the round button.
   final String? text;
 
+  /// Optional disclosure state for assistive tech (`aria-expanded`, used by [UiSpeedDial]).
+  final bool? expanded;
+
   @override
   Widget build(BuildContext context) {
     final hold = this.hold;
     if (hold == null) return _button(context, focusNode, onPressed, null);
     final t = context.ui;
-    final danger = tone == UiFabTone.danger;
+    final holdInk = switch (tone) {
+      UiFabTone.primary => t.primaryContrast,
+      UiFabTone.danger => t.dangerContrast,
+      UiFabTone.inverted => t.bg,
+    };
     return UiHoldActivator(
       onConfirmed: onPressed,
       hold: hold,
@@ -84,7 +98,7 @@ class UiFab extends StatelessWidget {
       confirmMessage: confirmMessage,
       confirmLabel: confirmLabel,
       destructive: destructive,
-      fillColor: (danger ? t.dangerContrast : t.primaryContrast).withValues(alpha: 0.22),
+      fillColor: holdInk.withValues(alpha: 0.22),
       borderRadius: BorderRadius.circular(100),
       builder: (context, node, activate) => _button(context, node, activate, holdHint ?? context.uiStrings.holdHint),
     );
@@ -96,12 +110,15 @@ class UiFab extends StatelessWidget {
     final dim = size == UiFabSize.md ? 52.0 : (touch ? uiMinTouchTarget : 40.0);
     final animate = context.uiAnimate;
     final danger = tone == UiFabTone.danger;
-    final fill = danger ? t.danger : t.primary;
-    final hover = danger ? t.dangerHover : t.primaryHover;
-    final ink = danger ? t.dangerContrast : t.primaryContrast;
+    final inverted = tone == UiFabTone.inverted;
+    final (fill, hover, ink) = switch (tone) {
+      UiFabTone.primary => (t.primary, t.primaryHover, t.primaryContrast),
+      UiFabTone.danger => (t.danger, t.dangerHover, t.dangerContrast),
+      UiFabTone.inverted => (t.text, Color.lerp(t.text, t.bg, 0.12)!, t.bg),
+    };
     final iconSize = size == UiFabSize.md ? 22.0 : 18.0;
     final text = this.text;
-    return UiInteractive(
+    final btn = UiInteractive(
       onTap: onPressed,
       enabled: onPressed != null,
       focusNode: focusNode,
@@ -130,24 +147,29 @@ class UiFab extends StatelessWidget {
                 // out on any page, map or photo.
                 if (danger) BoxShadow(color: t.danger.withValues(alpha: 0.30), spreadRadius: 9),
                 if (danger) BoxShadow(color: t.surfaceRaised, spreadRadius: 3),
+                if (inverted) UiRingShadow(color: Color.lerp(t.text, t.bg, 0.35)!, spread: 1),
                 if (s.focused) ...t.focusRing,
               ],
             ),
             // The round one centres its icon; the pill hugs its row (an alignment would stretch it).
             alignment: text == null ? Alignment.center : null,
-            child: IconTheme.merge(
-              data: IconThemeData(color: ink, size: iconSize),
-              child: text == null
-                  ? icon
-                  : Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
-                      icon,
-                      Text(text, maxLines: 1, style: context.uiText.label.copyWith(color: ink, fontSize: (size == UiFabSize.md ? 16 : 14) * context.ui.fontScale, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                    ]),
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: ink),
+              child: IconTheme.merge(
+                data: IconThemeData(color: ink, size: iconSize),
+                child: text == null
+                    ? icon
+                    : Row(mainAxisSize: MainAxisSize.min, spacing: t.space2, children: [
+                        icon,
+                        Text(text, maxLines: 1, style: context.uiText.label.copyWith(color: ink, fontSize: (size == UiFabSize.md ? 16 : 14) * context.ui.fontScale, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                      ]),
+              ),
             ),
           ),
         ),
       ),
     );
+    return expanded == null ? btn : MergeSemantics(child: Semantics(expanded: expanded, child: btn));
   }
 }
 

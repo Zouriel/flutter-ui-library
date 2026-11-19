@@ -11,6 +11,20 @@ class UiShutterLoaderController extends ChangeNotifier {
   void play() => notifyListeners();
 }
 
+/// Holds any descendant [UiShutterLoader] open and still at rest and drives one-shot bursts from
+/// [controller], used by [UiSpeedDial] so a projected shutter plays once on open and once on close.
+class UiShutterScope extends InheritedWidget {
+  const UiShutterScope({super.key, required this.controller, required super.child});
+
+  final UiShutterLoaderController controller;
+
+  static UiShutterLoaderController? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<UiShutterScope>()?.controller;
+
+  @override
+  bool updateShouldNotify(UiShutterScope oldWidget) => oldWidget.controller != controller;
+}
+
 /// `ui-shutter-loader` (0.72.0): a camera shutter whose six blades click shut three times, then rest
 /// open; the same size, colour and announcement as [UiSpinner]. With `UiConfig(spinner:
 /// UiSpinnerStyle.shutter)` every [UiSpinner] in the library draws this instead of the ring.
@@ -58,7 +72,11 @@ class UiShutterLoader extends StatefulWidget {
 
 class _UiShutterLoaderState extends State<UiShutterLoader> with SingleTickerProviderStateMixin {
   late final AnimationController _c;
+  UiShutterLoaderController? _scopeController;
   bool _oneShot = false;
+  bool _initialized = false;
+
+  bool get _isStill => widget.still || _scopeController != null;
 
   @override
   void initState() {
@@ -66,19 +84,42 @@ class _UiShutterLoaderState extends State<UiShutterLoader> with SingleTickerProv
     _c = AnimationController(vsync: this, duration: uiShutterCycle);
     _c.addStatusListener(_onStatus);
     widget.controller?.addListener(_onPlay);
-    if (!widget.still) _c.repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextScope = UiShutterScope.maybeOf(context);
+    final wasStill = _initialized ? _isStill : null;
+    if (_scopeController != nextScope) {
+      if (_scopeController != widget.controller) _scopeController?.removeListener(_onPlay);
+      _scopeController = nextScope;
+      if (_scopeController != widget.controller) _scopeController?.addListener(_onPlay);
+    }
+    if (!_initialized) {
+      _initialized = true;
+      if (!_isStill) _c.repeat();
+    } else if (wasStill != _isStill) {
+      _oneShot = false;
+      if (_isStill) {
+        _c.reset();
+      } else {
+        _c.repeat();
+      }
+    }
   }
 
   @override
   void didUpdateWidget(UiShutterLoader oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?.removeListener(_onPlay);
-      widget.controller?.addListener(_onPlay);
+      if (oldWidget.controller != _scopeController) oldWidget.controller?.removeListener(_onPlay);
+      if (widget.controller != _scopeController) widget.controller?.addListener(_onPlay);
     }
-    if (oldWidget.still != widget.still) {
+    final oldStill = oldWidget.still || _scopeController != null;
+    if (oldStill != _isStill) {
       _oneShot = false;
-      if (widget.still) {
+      if (_isStill) {
         _c.reset();
       } else {
         _c.repeat();
@@ -87,7 +128,7 @@ class _UiShutterLoaderState extends State<UiShutterLoader> with SingleTickerProv
   }
 
   void _onPlay() {
-    if (!widget.still) return;
+    if (!_isStill) return;
     _oneShot = true;
     _c.forward(from: 0);
   }
@@ -103,6 +144,7 @@ class _UiShutterLoaderState extends State<UiShutterLoader> with SingleTickerProv
   @override
   void dispose() {
     widget.controller?.removeListener(_onPlay);
+    if (_scopeController != widget.controller) _scopeController?.removeListener(_onPlay);
     _c.removeStatusListener(_onStatus);
     _c.dispose();
     super.dispose();

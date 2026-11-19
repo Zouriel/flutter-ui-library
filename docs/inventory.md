@@ -153,9 +153,19 @@ File: `button/src/dropdown-button.ts`
 - interface `UiDropdownItem` (dropdown-button.ts)
 ### UiFab (component, `ui-fab`)
 File: `button/src/fab.ts`  
-`ui-fab` — floating action button, fixed to a screen corner. `label` is required (a11y).  
-- Inputs: `label`: string; `position`: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' = 'bottom-right', plus (0.44) 'top-start' | 'top-center' | 'top-end' | 'bottom-start' | 'bottom-center' | 'bottom-end' (Flutter `UiFabPosition` on `UiFabHost`, with topCenter / bottomCenter); `size`: 'sm' | 'md' = 'md'; `disabled` = false; `tone`: 'primary' | 'danger' (0.44, Flutter `UiFabTone`); `text` (0.44, extended pill); `topOffset` (0.44; Flutter on `UiFabHost`); `bottomOffset` (0.47.1; Flutter on `UiFabHost`); `hold` / `holdHint` / `confirmTitle` / `confirmMessage` / `confirmLabel` / `destructive` (0.44, hold to activate; web output `confirmed`, Flutter `onPressed`); `aboveOverlays` (0.44, web only: in Flutter z-order is where the `UiFabHost` sits in the tree)
+`ui-fab` — floating action button, fixed to a screen corner (or inline with `position="static"`). `label` is required (a11y).
+- Inputs: `label`: string; `position`: `UiFabPlacement | 'static'` = `'bottom-right'` (Flutter `UiFabPosition` on `UiFabHost`, `UiFab` is inline); `size`: 'sm' | 'md' = 'md'; `disabled` = false; `tone`: `'primary' | 'danger' | 'inverted'` (Flutter `UiFabTone`); `text` (0.44, extended pill); `expanded` / `controls` (ARIA disclosure attrs, Flutter `expanded`); `topOffset` (0.44; Flutter on `UiFabHost`); `bottomOffset` (0.47.1; Flutter on `UiFabHost`); `hold` / `holdHint` / `confirmTitle` / `confirmMessage` / `confirmLabel` / `destructive` (0.44, hold to activate; web output `confirmed`, Flutter `onPressed`); `aboveOverlays` (0.44, web only: in Flutter z-order is where the `UiFabHost` sits in the tree)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+### UiSpeedDial (component, `ui-speed-dial`)
+File: `button/src/speed-dial.ts`
+`ui-speed-dial` — floating action button that expands into smaller round action FABs stacked above the trigger with inline-start label pills. Supports default rotating `+` or a projected `ui-shutter-loader` (held still and played once on open and on close), `[(open)]`, `(action)`, outside tap / Escape dismiss with focus restore, staggered animation, and reduced motion.
+- Inputs: `actions`: `readonly UiSpeedDialAction[]` = `[]`; `label`: string; `closeLabel`: string | null = null; `actionsLabel`: string | null = null; `position`: `UiFabPlacement | 'static'` = `'bottom-end'` (Flutter: placed in `UiFabHost`); `tone`: `UiFabTone` = `'primary'`; `size`: `'sm' | 'md'` = `'md'`; `disabled` = false; `rotateIcon`: boolean | null = null; `topOffset` = 0; `bottomOffset` = 0; `aboveOverlays` = false
+- Two-way: `open` = false (Flutter: `open` + `onOpenChanged`, uncontrolled when null)
+- Outputs: `action`: string (Flutter: `onAction`)
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
+- interface `UiSpeedDialAction` (speed-dial.ts)
 
 ### UiIconButton (component, `ui-icon-button`)
 File: `button/src/icon-button.ts`  

@@ -175,4 +175,56 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byType(UiFab)).top, 24);
   });
+
+  testWidgets('inverted tone: high-contrast fill, inverse ink, 1px hairline ring and shadow in dark and light', (tester) async {
+    for (final th in [UiThemeName.dark, UiThemeName.light]) {
+      await tester.pumpWidget(UiApp(
+        theme: th,
+        home: Center(
+          child: UiFab(
+            tone: UiFabTone.inverted,
+            icon: const UiShutterLoader(size: 32, decorative: true, still: true),
+            label: 'Add media',
+            onPressed: () {},
+          ),
+        ),
+      ));
+      await tester.pump();
+      final t = UiTheme.of(tester.element(find.byType(UiFab))).tokens;
+      final d = _decoration(tester);
+      expect(d.color, t.text);
+      expect(uiContrast(t.text, t.bg), greaterThanOrEqualTo(7));
+      expect(d.boxShadow!.whereType<UiRingShadow>().where((s) => s.spread == 1), hasLength(1));
+      expect(d.boxShadow!.length, greaterThanOrEqualTo(t.shadow2.length + 1));
+      final icon = tester.widget<IconTheme>(find.descendant(of: find.byType(UiFab), matching: find.byType(IconTheme)).last);
+      expect(icon.data.color, t.bg);
+      // DefaultTextStyle also carries t.bg so a nested UiShutterLoader draws in the contrast ink.
+      final shutterCtx = tester.element(find.byType(UiShutterLoader));
+      expect(DefaultTextStyle.of(shutterCtx).style.color, t.bg);
+    }
+  });
+
+  testWidgets('inverted tone meets Android tap-target, label and contrast guidelines', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final sem = tester.ensureSemantics();
+    await _host(tester, UiFabPosition.bottomEnd, tone: UiFabTone.inverted, text: 'Add');
+    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+    sem.dispose();
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('golden: inverted tone (md, sm, shutter) in dark and light', (tester) async {
+    await expectThemedGolden(
+      tester,
+      'fab_inverted',
+      (context) => Wrap(spacing: 24, runSpacing: 24, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        UiFab(icon: const UiIcon(HugeIcons.strokeRoundedAdd01), label: 'Add', tone: UiFabTone.inverted, onPressed: () {}),
+        UiFab(icon: const UiShutterLoader(size: 32, decorative: true, still: true), label: 'Shutter', tone: UiFabTone.inverted, onPressed: () {}),
+        UiFab(icon: const UiIcon(HugeIcons.strokeRoundedCamera01), label: 'Camera', tone: UiFabTone.inverted, size: UiFabSize.sm, onPressed: () {}),
+      ]),
+      height: 120,
+    );
+  });
 }

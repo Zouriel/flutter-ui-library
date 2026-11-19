@@ -57,6 +57,27 @@
   existing `UiStatus` switches stay intact.
 - `UiListItem`: optional `title` (medium weight) and `hint` (muted single-line ellipsized) with a
   2px vertical gap; `child` is optional when `title` is given.
+## UiFab inverted tone and UiSpeedDial
+
+- **`UiFabTone.inverted`** (web: `tone="inverted"`): uses `t.text` (`--ui-color-text`) as the fill,
+  `t.bg` (`--ui-color-bg`) as the contrast ink, `Color.lerp(t.text, t.bg, 0.12)` on hover, a 1 px
+  outer ring (`UiRingShadow(color: Color.lerp(t.text, t.bg, 0.35)!, spread: 1)` /
+  `0 0 0 1px color-mix(...)`), and `t.shadow2` — guaranteed >= 7:1 contrast in every light and dark
+  theme with no per-theme overrides. `UiFab` also wraps its child in `DefaultTextStyle.merge` so a
+  nested `UiShutterLoader` inherits `ink` (matching web `currentColor`), and accepts optional
+  `expanded` (`Semantics(expanded:)`). Web-only `position="static"` lays `ui-fab` out inline inside
+  containers such as `ui-speed-dial` (Flutter's `UiFab` is already inline by design).
+- **`UiSpeedDial`** (web: `ui-speed-dial`, in `@zouriel/ui/button` and `src/button/speed_dial.dart`):
+  sits inside `UiFabHost` (or any layout) and renders its open action stack above the trigger via
+  `OverlayPortal.overlayChildLayoutBuilder` with an outside barrier excluding the trigger rect (so
+  outside taps dismiss without activating underlying buttons, while tapping the trigger toggles it).
+  Actions stack bottom-up above the trigger (`actions[0]` closest), horizontally centred over the
+  trigger with pill labels (`surfaceRaised`, `border`, `shadow2`) on the inline-start side (flipping
+  only when pinned to the start edge). Default `+` rotates 45° (`0.125` turns); a projected
+  `UiShutterLoader` is automatically held still at rest (`UI_SHUTTER_STILL` on web, `UiShutterScope`
+  in Flutter), skips rotation, and plays one burst on open and on close. Staggered entrance/exit
+  uses `45 ms` open / `30 ms` close steps and jumps immediately under reduced motion (`uiAnimate`
+  false / `prefers-reduced-motion` / `.ui-no-anim`). Escape closes and restores focus to the trigger.
 
 ## Plan card add-on (0.76.0)
 
