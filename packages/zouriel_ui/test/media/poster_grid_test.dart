@@ -478,4 +478,136 @@ void main() {
           ), height: 640);
     });
   });
+
+  group('UiPosterGrid dragging a tile onto a tile', () {
+    List<UiPoster> dragPosters([int extra = 0]) => [
+          const UiPoster(label: 'Photographer event', draggable: true),
+          const UiPoster(label: 'My wedding'),
+          const UiPoster(label: 'Locked party'),
+          const UiPoster(label: 'Beach trip'),
+          for (var i = 0; i < extra; i++) UiPoster(label: 'More $i'),
+        ];
+    bool canDrop(UiPoster d, UiPoster t) => t.label != 'Locked party';
+    Finder tile(int i) => find.descendant(of: find.byType(UiPosterGrid), matching: find.byType(AspectRatio)).at(i);
+    void phoneSlop(WidgetTester tester) {
+      tester.view.gestureSettings = ui.GestureSettings(physicalTouchSlop: 8 * tester.view.devicePixelRatio);
+      addTearDown(tester.view.resetGestureSettings);
+    }
+
+    Future<void> pumpGrid(WidgetTester tester, List<UiPoster> ps, List<UiPosterDrop> drops, List<int> picked, {double? height, double extraH = 0}) async {
+      final grid = UiPosterGrid(posters: ps, onSelect: picked.add, canDrop: canDrop, onTileDrop: drops.add);
+      await pumpUi(tester, SizedBox(width: 390, height: height, child: height == null ? grid : SingleChildScrollView(child: grid)));
+    }
+
+    testWidgets('mouse: drags onto a valid tile (outlining valid tiles, dimming refused ones) and reports both', (tester) async {
+      final drops = <UiPosterDrop>[], picked = <int>[];
+      await pumpGrid(tester, dragPosters(), drops, picked);
+      final g = await tester.startGesture(tester.getCenter(tile(0)), kind: ui.PointerDeviceKind.mouse);
+      await g.moveBy(const Offset(20, 0));
+      await tester.pump();
+      double opacityOf(int i) => tester.widget<AnimatedOpacity>(find.descendant(of: tile(i), matching: find.byType(AnimatedOpacity)).first).opacity;
+      expect(opacityOf(2), 0.45);
+      expect(opacityOf(1), 1);
+      await g.moveTo(tester.getCenter(tile(1)));
+      await tester.pump();
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(drops.length, 1);
+      expect(drops.single.dragged.label, 'Photographer event');
+      expect(drops.single.target.label, 'My wedding');
+      expect([drops.single.draggedIndex, drops.single.targetIndex], [0, 1]);
+      expect(picked, isEmpty);
+      expect(opacityOf(2), 1);
+    });
+
+    testWidgets('refuses an invalid target and its own tile; dropping outside cancels with no call', (tester) async {
+      final drops = <UiPosterDrop>[], picked = <int>[];
+      await pumpGrid(tester, dragPosters(), drops, picked);
+      for (final to in [tester.getCenter(tile(2)), tester.getCenter(tile(0)) + const Offset(30, 0), const Offset(380, 800)]) {
+        final g = await tester.startGesture(tester.getCenter(tile(0)), kind: ui.PointerDeviceKind.mouse);
+        await g.moveBy(const Offset(20, 0));
+        await g.moveTo(to);
+        await tester.pump();
+        await g.up();
+        await tester.pumpAndSettle();
+      }
+      expect(drops, isEmpty);
+      expect(find.byKey(const ValueKey('ui-drag-ghost')), findsNothing);
+    });
+
+    testWidgets('a tap on a draggable tile still opens it', (tester) async {
+      final drops = <UiPosterDrop>[], picked = <int>[];
+      await pumpGrid(tester, dragPosters(), drops, picked);
+      await tester.tap(tile(0));
+      await tester.tap(tile(1));
+      expect(picked, [0, 1]);
+      expect(drops, isEmpty);
+    });
+
+    testWidgets('touch in a scroll view: a swipe scrolls, a long press then drag drops', (tester) async {
+      phoneSlop(tester);
+      final drops = <UiPosterDrop>[], picked = <int>[];
+      await pumpGrid(tester, dragPosters(8), drops, picked, height: 300);
+      final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+      await tester.drag(tile(0), const Offset(0, -120), kind: ui.PointerDeviceKind.touch);
+      await tester.pumpAndSettle();
+      expect(scroll.position.pixels, greaterThan(0));
+      expect(drops, isEmpty);
+      expect(picked, isEmpty);
+      scroll.position.jumpTo(0);
+      await tester.pumpAndSettle();
+      final g = await tester.startGesture(tester.getCenter(tile(0)), kind: ui.PointerDeviceKind.touch);
+      await tester.pump(uiLongPressDuration + const Duration(milliseconds: 50));
+      expect(find.byKey(const ValueKey('ui-drag-ghost')), findsOneWidget);
+      await g.moveTo(tester.getCenter(tile(3)));
+      await tester.pump();
+      await g.up();
+      await tester.pumpAndSettle();
+      expect(drops.map((d) => d.target.label), ['Beach trip']);
+      expect(picked, isEmpty);
+    });
+
+    testWidgets('keyboard: Space picks up, arrows choose, Enter drops, Escape cancels; Enter on a tile opens it', (tester) async {
+      final drops = <UiPosterDrop>[], picked = <int>[];
+      await pumpGrid(tester, dragPosters(), drops, picked);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      expect(picked, isEmpty, reason: 'Space picks up, it does not open');
+      final coordinator = UiDragCoordinator.of(tester.element(tile(0)));
+      expect(coordinator.isKeyboardActive, isTrue);
+      expect(coordinator.lastAnnouncement, startsWith('Picked up Photographer event'));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(drops.map((d) => d.target.label), ['Beach trip']);
+      expect(coordinator.lastAnnouncement, 'Dropped Photographer event on Beach trip');
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(drops.length, 1);
+      expect(coordinator.isActive, isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(picked, [0]);
+    });
+
+    testWidgets('a tile that is not draggable does nothing on drag or Space, and Space still opens it', (tester) async {
+      final drops = <UiPosterDrop>[], picked = <int>[];
+      await pumpGrid(tester, dragPosters(), drops, picked);
+      final g = await tester.startGesture(tester.getCenter(tile(1)), kind: ui.PointerDeviceKind.mouse);
+      await g.moveBy(const Offset(20, 0));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('ui-drag-ghost')), findsNothing);
+      await g.up();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      expect(picked, [1]);
+    });
+  });
 }

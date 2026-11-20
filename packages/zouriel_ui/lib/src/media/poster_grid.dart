@@ -8,6 +8,9 @@ import 'package:hugeicons/hugeicons.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
+import '../drag/drag_coordinator.dart';
+import '../drag/drag_item.dart';
+import '../drag/drop_target.dart';
 import '../theme/theme.dart';
 
 /// A small dot over a poster's corner: something the grid must say without words (unread,
@@ -25,7 +28,7 @@ class UiPosterMark {
 /// One tile of a [UiPosterGrid] (the web `UiPoster`).
 @immutable
 class UiPoster {
-  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner, this.action});
+  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner, this.action, this.draggable = false});
 
   /// The picture. Without one (or when it fails to load) the tile shows [colors] as a gradient.
   final ImageProvider? image;
@@ -55,6 +58,27 @@ class UiPoster {
   /// readable on any picture (ghost buttons inside draw in the on-scrim colour). Keep it to one small
   /// icon button (size sm or md). The [mark]'s dot moves beside it. 0.77.0.
   final Widget? action;
+
+  /// Opts the tile in to being dragged onto another tile (see [UiPosterGrid.onTileDrop]). Off by default.
+  final bool draggable;
+}
+
+/// What [UiPosterGrid.onTileDrop] carries: the dragged tile and the one it was dropped on.
+@immutable
+class UiPosterDrop {
+  const UiPosterDrop({required this.dragged, required this.target, required this.draggedIndex, required this.targetIndex});
+  final UiPoster dragged;
+  final UiPoster target;
+  final int draggedIndex;
+  final int targetIndex;
+}
+
+/// The payload a dragged tile carries between the grid's drag items and drop targets.
+class _PosterDrag {
+  const _PosterDrag(this.grid, this.poster, this.index);
+  final Object grid;
+  final UiPoster poster;
+  final int index;
 }
 
 /// Which part of a picture survives a poster's crop.
@@ -81,10 +105,18 @@ Gradient uiPosterFallback(BuildContext context, List<Color>? colors) {
 /// ([UiPoster.mark]) can flag it, named for screen readers. [UiPoster.corner] draws something small
 /// (a [UiAvatarTag]) over the picture's top-start corner and [UiPoster.action] one small action (an
 /// icon button) at its top-end corner, outside the tile's tap handling; a mark's dot then sits beside
-/// the action. Tapping a tile calls [onSelect] with its index. It doesn't scroll: put it in a scroll view. (The web's `href` link tiles have no meaning
+/// the action. Tapping a tile calls [onSelect] with its index.
+///
+/// Tiles with [UiPoster.draggable] can be dragged onto another tile ([onTileDrop], and [canDrop] to
+/// refuse some targets; a tile never accepts itself), built on [UiDragItem] and [UiDropTarget]: a long
+/// press then drag on a phone (scrolling and tapping are unchanged), a drag with a mouse, or Space to
+/// pick up (Enter still opens), arrows to choose, Enter to drop, Escape to cancel, announced to screen
+/// readers. While dragging, valid tiles get an accent outline, the others dim and the one under the
+/// pointer gets a clear ring; dropping anywhere else cancels with no call. A grid with no draggable
+/// tile behaves as before and needs no overlay. It doesn't scroll: put it in a scroll view. (The web's `href` link tiles have no meaning
 /// here: a tap is the only way to open a tile.)
 class UiPosterGrid extends StatelessWidget {
-  const UiPosterGrid({super.key, required this.posters, required this.onSelect, this.ratio = 0.75, this.focus = UiPosterFocus.center});
+  const UiPosterGrid({super.key, required this.posters, required this.onSelect, this.ratio = 0.75, this.focus = UiPosterFocus.center, this.canDrop, this.onTileDrop});
 
   final List<UiPoster> posters;
   final ValueChanged<int> onSelect;
@@ -95,12 +127,22 @@ class UiPosterGrid extends StatelessWidget {
   /// [UiPosterFocus.top] keeps a poster's heading.
   final UiPosterFocus focus;
 
+  /// Whether a dragged tile may be dropped on [target] (default: any other tile).
+  final bool Function(UiPoster dragged, UiPoster target)? canDrop;
+
+  /// A draggable tile was dropped on a valid one. Dropping anywhere else cancels without a call.
+  final ValueChanged<UiPosterDrop>? onTileDrop;
+
+  bool _accepts(_PosterDrag d, int targetIndex) =>
+      identical(d.grid, this) && d.index != targetIndex && (canDrop?.call(d.poster, posters[targetIndex]) ?? true);
+
   /// How many columns a grid [width] wide shows.
   static int columnsFor(double width) => width >= 1280 ? 5 : width >= 992 ? 4 : width >= 544 ? 3 : 2;
 
   @override
   Widget build(BuildContext context) {
     final t = context.ui;
+    final dragging = posters.any((p) => p.draggable);
     return LayoutBuilder(builder: (context, box) {
       final columns = columnsFor(box.maxWidth);
       final gap = box.maxWidth >= 544 ? t.space3 : t.space2;
@@ -109,18 +151,88 @@ class UiPosterGrid extends StatelessWidget {
         for (var i = 0; i < posters.length; i++)
           SizedBox(
             width: width,
-            child: AspectRatio(aspectRatio: ratio, child: _Tile(poster: posters[i], focus: focus, onTap: () => onSelect(i))),
+            child: AspectRatio(
+              aspectRatio: ratio,
+              child: dragging
+                  ? _DragTile(
+                      grid: this,
+                      index: i,
+                      accepts: (d) => _accepts(d, i),
+                      onDrop: (d) => onTileDrop?.call(UiPosterDrop(dragged: d.poster, target: posters[i], draggedIndex: d.index, targetIndex: i)),
+                      childBuilder: (keyboardDrag) => _Tile(poster: posters[i], focus: focus, onTap: () => onSelect(i), draggable: posters[i].draggable, keyboardDrag: keyboardDrag),
+                    )
+                  : _Tile(poster: posters[i], focus: focus, onTap: () => onSelect(i)),
+            ),
           ),
       ]);
     });
   }
 }
 
+/// Bound to a key that no Action handles, so the shortcut reports the key as not handled and it
+/// travels on up to the drag item.
+class _PassKeyIntent extends Intent {
+  const _PassKeyIntent();
+}
+
+/// One tile of a grid with draggable tiles: a drop target around a drag item around the tile, dressed
+/// for the drag in progress (valid targets outlined, the rest dimmed).
+class _DragTile extends StatelessWidget {
+  const _DragTile({required this.grid, required this.index, required this.accepts, required this.onDrop, required this.childBuilder});
+  final UiPosterGrid grid;
+  final int index;
+  final bool Function(_PosterDrag) accepts;
+  final ValueChanged<_PosterDrag> onDrop;
+
+  /// Builds the tile; told when a keyboard drag is in progress, so Enter and Space reach the drag.
+  final Widget Function(bool keyboardDrag) childBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    final poster = grid.posters[index];
+    final coordinator = UiDragCoordinator.of(context);
+    final r = BorderRadius.circular(context.uiTheme.radius());
+    return ListenableBuilder(
+      listenable: coordinator,
+      builder: (context, _) {
+        final payload = coordinator.activePayload;
+        final mine = payload is _PosterDrag && identical(payload.grid, grid);
+        final valid = mine && accepts(payload);
+        final source = mine && payload.index == index;
+        return AnimatedOpacity(
+          duration: context.uiAnimate ? t.motionBase : Duration.zero,
+          opacity: mine && !valid && !source ? 0.45 : 1,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(borderRadius: r, border: valid ? Border.all(color: t.accent.withValues(alpha: 0.55), width: 2) : null),
+            child: UiDropTarget<_PosterDrag>(
+              label: poster.label,
+              accepts: accepts,
+              onDropped: onDrop,
+              child: UiDragItem<_PosterDrag>(
+                data: _PosterDrag(grid, poster, index),
+                label: poster.label,
+                enabled: poster.draggable,
+                focusable: false,
+                description: 'Press Space to pick up and drag onto another tile; Enter opens it.',
+                child: childBuilder(coordinator.isKeyboardActive),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _Tile extends StatelessWidget {
-  const _Tile({required this.poster, required this.focus, required this.onTap});
+  const _Tile({required this.poster, required this.focus, required this.onTap, this.draggable = false, this.keyboardDrag = false});
   final UiPoster poster;
   final UiPosterFocus focus;
   final VoidCallback onTap;
+  final bool draggable;
+  final bool keyboardDrag;
 
   @override
   Widget build(BuildContext context) {
@@ -136,6 +248,18 @@ class _Tile extends StatelessWidget {
     final tile = UiInteractive(
       onTap: onTap,
       padTouchTarget: false,
+      // Space picks a draggable tile up (Enter still opens it): leave it unhandled so it reaches the drag item.
+      shortcuts: !draggable && !keyboardDrag
+          ? null
+          : {
+              if (draggable) const SingleActivator(LogicalKeyboardKey.space): const _PassKeyIntent(),
+              // While a keyboard drag runs, Enter and Space drop it rather than open the focused tile.
+              if (keyboardDrag) ...{
+                const SingleActivator(LogicalKeyboardKey.space): const _PassKeyIntent(),
+                const SingleActivator(LogicalKeyboardKey.enter): const _PassKeyIntent(),
+                const SingleActivator(LogicalKeyboardKey.numpadEnter): const _PassKeyIntent(),
+              },
+            },
       // With details the words name the tile (and the dot's meaning is read after them).
       semanticLabel: poster.details != null ? null : mark == null ? poster.label : '${poster.label}, ${mark.label}',
       excludeChildSemantics: poster.details == null,

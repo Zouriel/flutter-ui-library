@@ -168,18 +168,23 @@ class _MediaPageState extends State<MediaPage> {
           name: 'Poster grid',
           widget: 'UiPosterGrid',
           summary: "One grid of same-shape picture tiles (ratio): 2 columns on a phone, 3 from 544 wide, 4 from 992 and 5 from 1280 of the grid's own width. A poster's details are drawn on its tile over the bottom of the picture on a compact UiScrim that fades from clear to dark, so the words stay readable on any picture; keep them short and non-interactive, since the whole tile is the target. Without details a tile is the picture alone, named by its label. No picture, or one that fails to load, shows a gradient of its colors (or the theme's primary and accent). A small dot (mark) can flag a tile; screen readers hear its label. A poster's corner draws something small, such as a venue's UiAvatarTag at size xs, over its picture's top-start corner (top-left in a left-to-right app): inset by space2, above the picture, never wider than it (nor over the dot), and it takes no taps, so the whole tile stays the target. The Avatar tag demo shows it. A poster's action gives its tile one small action of its own, such as a ghost UiIconButton to view the invitation (the eye below), at the picture's top-end corner on a round scrim backdrop: it is laid over the tile but outside its tap handling, so tapping it never selects the tile, and a mark's dot moves beside it. It doesn't scroll, so put it in a scroll view.",
-          demo: const PosterDemo(),
+          demo: const Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [PosterDemo(), SizedBox(height: 24), PosterDragDemo()]),
           code: "UiPosterGrid(\n  focus: UiPosterFocus.top,\n  posters: [UiPoster(label: 'Aisha and Ali', image: NetworkImage(url), mark: UiPosterMark(tone: UiStatus.primary, label: 'New'),\n    details: Text('Aisha and Ali', maxLines: 1, overflow: TextOverflow.ellipsis),\n    // Top-end corner, outside the tile's tap: never calls onSelect\n    action: UiIconButton(icon: UiIcon(HugeIcons.strokeRoundedView), label: 'View Aisha and Ali', size: UiSize.sm, onPressed: () => viewInvite(0)))],\n  onSelect: (i) => openEvent(i),\n)",
           api: const [
             ApiRow('posters', 'List<UiPoster>', 'The tiles: picture, semantic label, fallback colours, optional dot.'),
             ApiRow('ratio', 'double', 'Width / height of every tile.', def: '0.75'),
             ApiRow('focus', 'UiPosterFocus', "Which part of a picture survives the crop; top keeps a poster's heading.", def: 'center'),
+            ApiRow('canDrop', 'bool Function(UiPoster dragged, UiPoster target)?', 'Whether a dragged tile may be dropped on this one (a tile never accepts itself); default any other tile. Only tiles with draggable: true can be dragged; a grid with none behaves as before. While dragging, valid tiles get an accent outline, the rest dim, and the one under the pointer gets a clear ring. Touch: long press then drag (scrolling and tapping are unchanged); mouse: drag; keyboard: Space picks up (Enter still opens), arrows choose, Enter drops, Escape cancels, announced to screen readers. Built on UiDragItem and UiDropTarget.'),
+            ApiRow('UiPoster.draggable', 'bool', 'Opts the tile in to being dragged onto another tile.', def: 'false'),
             ApiRow('UiPoster.details', 'Widget?', 'Drawn over the bottom of the picture on a compact scrim.'),
             ApiRow('UiPoster.corner', 'Widget?', "Something small (a UiAvatarTag, size xs) over the picture's top-start corner, inside it with a space2 inset; no taps of its own. 0.74.0."),
             ApiRow('UiPoster.action', 'Widget?', "One small action (a UiIconButton, size sm or md) at the picture's top-end corner on a round scrim backdrop, outside the tile's tap handling: tapping it never calls onSelect. A mark's dot moves beside it. 0.77.0."),
           ],
-          callbacks: const [ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.')],
-          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details, Widget? corner, Widget? action})\nUiPosterMark({required UiStatus tone, required String label})',
+          callbacks: const [
+            ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.'),
+            ApiRow('onTileDrop', 'ValueChanged<UiPosterDrop>?', 'A draggable tile was dropped on a valid one: dragged, target, draggedIndex, targetIndex. Dropping anywhere else cancels with no call.'),
+          ],
+          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details, Widget? corner, Widget? action, bool draggable = false})\nUiPosterDrop({required UiPoster dragged, required UiPoster target, required int draggedIndex, required int targetIndex})\nUiPosterMark({required UiStatus tone, required String label})',
         ),
         DocSection(
           name: 'Poster view',
@@ -617,6 +622,46 @@ class PosterDemoState extends State<PosterDemo> {
       ),
       SizedBox(height: t.space2),
       Text('Last picked: ${_posters[_picked].label} · Last viewed: ${_viewed == null ? 'none' : _posters[_viewed!].label}', style: context.uiText.caption),
+    ]);
+  }
+}
+
+/// The poster grid's drag demo: drop the photographer's tile on one of your own to merge them.
+class PosterDragDemo extends StatefulWidget {
+  const PosterDragDemo({super.key});
+
+  @override
+  State<PosterDragDemo> createState() => PosterDragDemoState();
+}
+
+class PosterDragDemoState extends State<PosterDragDemo> {
+  UiPosterDrop? _merged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.ui;
+    Widget title(String s) => Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.uiText.label.copyWith(color: t.mediaOnScrim));
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      UiPosterGrid(
+        key: const ValueKey('poster-drag-demo'),
+        focus: UiPosterFocus.top,
+        posters: [
+          UiPoster(label: 'From the photographer', image: DemoArt.palette[0], draggable: true, details: title('From the photographer')),
+          UiPoster(label: 'Aisha and Ali', image: DemoArt.palette[1], details: title('Aisha and Ali')),
+          UiPoster(label: 'Office dinner', colors: const [Color(0xFF5B2A86), Color(0xFFE5484D)], details: title('Office dinner')),
+          UiPoster(label: 'Housewarming', image: DemoArt.palette[4], details: title('Housewarming')),
+        ],
+        canDrop: (dragged, target) => target.label != 'Office dinner',
+        onSelect: (_) {},
+        onTileDrop: (d) => setState(() => _merged = d),
+      ),
+      SizedBox(height: t.space2),
+      Text(
+        _merged == null
+            ? 'Drag "From the photographer" onto one of your own events (long press on a phone; Space, arrows, Enter from the keyboard). "Office dinner" is locked.'
+            : '${_merged!.dragged.label} merged into ${_merged!.target.label}',
+        style: context.uiText.caption,
+      ),
     ]);
   }
 }

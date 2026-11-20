@@ -25,6 +25,7 @@ class UiDragItem<T extends Object> extends StatefulWidget {
     this.onDragCancel,
     this.onDragEnd,
     this.focusNode,
+    this.focusable = true,
   });
 
   /// Payload carried to the receiving [UiDropTarget].
@@ -53,6 +54,11 @@ class UiDragItem<T extends Object> extends StatefulWidget {
 
   /// Optional focus node for keyboard drag support.
   final FocusNode? focusNode;
+
+  /// Whether the item takes keyboard focus itself. Turn it off when [child] is already a focus stop
+  /// (a tile, a button): key presses it leaves unhandled still reach this item, so Space or Enter
+  /// can pick it up without a second tab stop.
+  final bool focusable;
 
   final Widget child;
 
@@ -187,7 +193,7 @@ class _UiDragItemState<T extends Object> extends State<UiDragItem<T>> implements
       hint: widget.enabled ? widget.description : null,
       child: Focus(
         focusNode: _focusNode,
-        canRequestFocus: widget.enabled,
+        canRequestFocus: widget.enabled && widget.focusable,
         onKeyEvent: _onKeyEvent,
         child: RawGestureDetector(
           gestures: gestures,
