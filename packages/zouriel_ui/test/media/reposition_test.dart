@@ -135,6 +135,22 @@ void main() {
     expect(tester.getTopLeft(find.byKey(const ValueKey('below'))), const Offset(100, 136));
   });
 
+  testWidgets('the editor lives in the root overlay: a page widget painted last over the bar cannot cover it', (tester) async {
+    final image = await _image(tester, 200, 100);
+    var saved = 0;
+    await pumpUi(tester, Stack(children: [
+      Align(alignment: Alignment.topLeft, child: Padding(
+        padding: const EdgeInsets.only(left: 20, top: 100),
+        child: SizedBox.square(dimension: 100, child: UiReposition(image: image, imageSize: const Size(200, 100), active: true, onSave: (_) => saved++)),
+      )),
+      // Painted after (above) the frame in page order, covering the whole screen.
+      Positioned.fill(child: Container(key: const ValueKey('page-cover'), color: const Color(0x66FF0000))),
+    ]));
+    expect(find.text('Save').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    expect(saved, 1);
+  });
+
   testWidgets('Save/Cancel bar stays inside the viewport with a 16px gutter for a frame at the left edge', (tester) async {
     final image = await _image(tester, 200, 100);
     await pumpUi(tester, Align(alignment: Alignment.topLeft, child: Padding(
