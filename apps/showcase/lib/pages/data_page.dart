@@ -203,6 +203,7 @@ class _DataPageState extends State<DataPage> {
             ApiRow('dimension', 'double?', 'Any size in dp (a profile photo: 96, 128); overrides size, initials scale with it.'),
             ApiRow('crop', 'UiAvatarCrop?', 'A box of the image as fractions of its width and height (UiAvatarCrop(x:, y:, w:, h:), or UiAvatarCrop.fromRect of a Rect.fromLTWH) that fills the avatar, centred; a box that is not square in pixels is covered by its larger side. Null shows the whole image. The image is read first to keep it undistorted and nothing is drawn until it has loaded.', def: 'null'),
             ApiRow('cropPadding', 'double', 'Room added around the crop box on every side, as a fraction of its size, kept inside the image; 0 fits the box exactly.', def: '0.25'),
+            ApiRow('position / repositionable', 'UiRepositionPosition / bool', 'Saved cover focal point and shared in-place editing state; use onPositionSave and onRepositionCancel.', def: 'center / false'),
             ApiRow('square', 'bool', 'Rounded square instead of a circle.', def: 'false'),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/glass_rim.dart';
 import '../theme/theme.dart';
+import '../media/reposition.dart';
 
 /// Where a [UiAvatarTag] sits: [overlay] on a photo (a dark see-through pill), [plain] on an
 /// ordinary surface.
@@ -37,6 +38,7 @@ class UiAvatarTag extends StatelessWidget {
     this.variant = UiAvatarTagVariant.overlay,
     this.size = UiAvatarTagSize.sm,
     this.glass,
+    this.position = const UiRepositionPosition(),
   });
 
   /// The name shown; also the source of the fallback letter.
@@ -44,6 +46,7 @@ class UiAvatarTag extends StatelessWidget {
 
   /// The picture, usually a `NetworkImage` (the web's `src`). Decorative.
   final ImageProvider? image;
+  final UiRepositionPosition position;
 
   /// Words read before the name, e.g. 'At' for "At Coco Palm". Not shown.
   final String? prefix;
@@ -80,6 +83,7 @@ class UiAvatarTag extends StatelessWidget {
               : Image(
                   image: image!,
                   fit: BoxFit.cover,
+                  alignment: Alignment(position.x / 50 - 1, position.y / 50 - 1),
                   width: pic,
                   height: pic,
                   excludeFromSemantics: true,

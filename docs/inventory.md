@@ -40,7 +40,7 @@ File: `badge/src/avatar-group.ts`
 ### UiAvatar (component, `ui-avatar`)
 File: `badge/src/avatar.ts`  
 `ui-avatar` — user/entity image with graceful initials fallback. Provide `src`+`alt`, or `name` to render initials. Initials also replace an image that fails to load.  
-- Inputs: `src`: string; `alt`: string; `name`: string; `size`: UiSize = 'md'; `square` = false
+- Inputs: `src`: string; `alt`: string; `name`: string; `size`: UiSize = 'md'; `square` = false; `position`; `repositionable`
 - [ ] Flutter port  - [ ] widget tests  - [ ] golden/visual check  - [ ] showcase
 
 ### UiBadge (component, `ui-badge`)
@@ -1358,6 +1358,13 @@ File: `list/src/list.ts`
 
 ## media
 
+### UiReposition (component, `ui-reposition`)
+File: `reposition/src/reposition.ts`
+In-place focal-point editor for rectangular and circle cover-cropped photos, with a cut-out page scrim, overflow preview, pointer/keyboard editing, and save/cancel actions.
+- Inputs: `image/src`; `position`; `active`; `circle`
+- Outputs: `onSave/save`; `onCancel/cancel`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
+
 ### UiCarousel (component, `ui-carousel`)
 File: `media/src/carousel.ts`  
 `ui-carousel` — image slideshow with arrows, dots, a finger-following swipe and optional autoplay. Anything projected into it is laid over the slides (a title on a gradient, a counter), and a swipe that starts on it still turns the slide. A swipe here is the carousel's own: touches that start inside it don't reach gesture handlers further up the page, so a page-level swipe between screens never fires from a photo.  
@@ -1368,8 +1375,8 @@ File: `media/src/carousel.ts`
 - interface `UiCarouselSlide` (carousel.ts)
 ### UiCoverHero (component, `ui-cover-hero`)
 File: `media/src/cover-hero.ts`  
-`ui-cover-hero` — cover image with bottom-to-page fade, light top/start scrims, inherited on-media chrome, editable cover menu, and four content slots.  
-- Inputs: `src`: string | null; `minHeight`; `fadeBottom`; `scrimTop`; `scrimStart`; `coverMenu`; `coverActionLabel`; `[hero-top-start]`; `[hero-top-end]`; default body; `[hero-actions]` (Flutter: `image`, `topStart`, `topEnd`, `child`, `actions`)
+`ui-cover-hero` — cover image with bottom-to-page fade, light top/start scrims, inherited on-media chrome, editable cover menu, four content slots, and shared in-place repositioning.
+- Inputs: `src`: string | null; `position`; `repositionable`; `minHeight`; `fadeBottom`; `scrimTop`; `scrimStart`; `coverMenu`; `coverActionLabel`; `[hero-top-start]`; `[hero-top-end]`; default body; `[hero-actions]` (Flutter: `image`, `topStart`, `topEnd`, `child`, `actions`)
 - Outputs: `coverMenuSelect`: UiMenuItem (Flutter: `onCoverMenuSelected`)
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

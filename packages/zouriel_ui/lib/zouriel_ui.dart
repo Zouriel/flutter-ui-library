@@ -23,6 +23,7 @@ export 'src/feedback/alert.dart';
 export 'src/feedback/spinner.dart';
 export 'src/feedback/shutter_loader.dart' show UiShutterLoader, UiShutterLoaderController, uiShutterCycle;
 export 'src/filter/filter.dart';
+export 'src/media/reposition.dart';
 export 'src/feedback/starter_card.dart';
 export 'src/guidance/checklist.dart';
 export 'src/guidance/guidance.dart';

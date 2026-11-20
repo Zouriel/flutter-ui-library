@@ -70,6 +70,8 @@ class _MediaPageState extends State<MediaPage> {
   String? _chosen;
   bool _loading = false;
   String _coverChoice = 'none yet';
+  bool _repositioning = false;
+  UiRepositionPosition _photoPosition = const UiRepositionPosition();
 
   @override
   void initState() {
@@ -219,6 +221,34 @@ class _MediaPageState extends State<MediaPage> {
           api: const [ApiRow('child', 'Widget', 'The words; text and icons take the on-scrim colour.')],
         ),
         DocSection(
+          name: 'Reposition',
+          widget: 'UiReposition',
+          summary: 'Edits the focal point of any cover-cropped photo in place. Active mode dims the page around the frame, shows the overflow photo faintly, and keeps the frame bright. Drag with mouse, touch or pen; use arrow keys, Enter to save, or Escape to cancel. It opens no modal or route.',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: t.space2, children: [
+            SizedBox(width: 420, height: 180, child: UiReposition(
+              image: DemoArt.palette[3],
+              imageSize: const Size(600, 340),
+              position: _photoPosition,
+              active: _repositioning,
+              onSave: (position) => setState(() { _photoPosition = position; _repositioning = false; }),
+              onCancel: () => setState(() => _repositioning = false),
+            )),
+            UiButton(label: 'Reposition photo', size: UiSize.sm, onPressed: () => setState(() => _repositioning = true)),
+            UiText('Saved focal point: ${_photoPosition.x.round()}, ${_photoPosition.y.round()}', variant: UiTextVariant.caption),
+          ]),
+          code: 'UiReposition(\n  image: photo,\n  position: position,\n  active: editing,\n  onSave: savePosition,\n  onCancel: cancel,\n)',
+          api: const [
+            ApiRow('image', 'ImageProvider', 'The photo.'),
+            ApiRow('position', 'UiRepositionPosition', 'Saved focal point, in 0–100 percentages.', def: 'center'),
+            ApiRow('active', 'bool', 'Shows the in-place editor.', def: 'false'),
+            ApiRow('circle', 'bool', 'Uses a round frame and scrim cutout.', def: 'false'),
+          ],
+          callbacks: const [
+            ApiRow('onSave', 'ValueChanged<UiRepositionPosition>?', 'The new focal point.'),
+            ApiRow('onCancel', 'VoidCallback?', 'Discard the draft and retain position.'),
+          ],
+        ),
+        DocSection(
           name: 'Cover hero',
           widget: 'UiCoverHero',
           summary: 'A full-width cover picture with a bottom fade into the page, subtle top and logical start-side scrims, and slots for top controls, title/metadata and actions. Nested UiText, ghost/link buttons, icon buttons and UiEditableText automatically use light on-media ink and soft shadows. A non-empty coverMenu makes the bare cover open Change/Remove actions on tap, right-click, touch hold, Enter/Space or the context-menu key. Missing and failed pictures fall back to the page surface.',
@@ -244,11 +274,15 @@ class _MediaPageState extends State<MediaPage> {
             ApiRow('fadeBottom / scrimTop / scrimStart', 'bool', 'Bottom-to-page fade and subtle contrast layers.', def: 'true'),
             ApiRow('coverMenu', 'List<UiMenuItem>', 'Non-empty makes the cover an accessible menu trigger.', def: '[]'),
             ApiRow('coverActionLabel', 'String', 'Accessible name of the editable cover.', def: "'Change cover image'"),
+            ApiRow('position / repositionable', 'UiRepositionPosition / bool', 'Saved focal point and in-place editing state.', def: 'center / false'),
             ApiRow('topStart / topEnd', 'Widget?', 'Controls at the logical top corners.'),
             ApiRow('child', 'Widget?', 'Title and metadata, width-limited to 85% / 69%.'),
             ApiRow('actions', 'Widget?', 'Primary actions above the bottom fade.'),
           ],
-          callbacks: const [ApiRow('onCoverMenuSelected', 'ValueChanged<UiMenuItem>?', 'The selected cover action.')],
+          callbacks: const [
+            ApiRow('onCoverMenuSelected', 'ValueChanged<UiMenuItem>?', 'The selected cover action.'),
+            ApiRow('onPositionSave / onRepositionCancel', 'ValueChanged<UiRepositionPosition>? / VoidCallback?', 'Save or discard the reposition draft.'),
+          ],
         ),
         DocSection(
           name: 'Selectable',

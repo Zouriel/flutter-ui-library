@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../core/on_media.dart';
 import '../overlay/menu.dart';
 import '../theme/theme.dart';
+import 'reposition.dart';
 
 /// `ui-cover-hero`: a full-width cover picture with on-media chrome and a bottom fade into the page.
 ///
@@ -24,6 +25,10 @@ class UiCoverHero extends StatefulWidget {
     this.topEnd,
     this.child,
     this.actions,
+    this.position = const UiRepositionPosition(),
+    this.repositionable = false,
+    this.onPositionSave,
+    this.onRepositionCancel,
   });
 
   final ImageProvider? image;
@@ -40,6 +45,10 @@ class UiCoverHero extends StatefulWidget {
   final Widget? topEnd;
   final Widget? child;
   final Widget? actions;
+  final UiRepositionPosition position;
+  final bool repositionable;
+  final ValueChanged<UiRepositionPosition>? onPositionSave;
+  final VoidCallback? onRepositionCancel;
 
   @override
   State<UiCoverHero> createState() => _UiCoverHeroState();
@@ -66,15 +75,13 @@ class _UiCoverHeroState extends State<UiCoverHero> {
     Widget cover = ColoredBox(
       color: t.bg,
       child: hasImage
-          ? Image(
+          ? UiReposition(
               image: widget.image!,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              errorBuilder: (context, error, stack) {
-                _imageFailed();
-                return const SizedBox.expand();
-              },
+              position: widget.position,
+              active: widget.repositionable,
+              onSave: widget.onPositionSave,
+              onCancel: widget.onRepositionCancel,
+              onImageError: _imageFailed,
             )
           : const SizedBox.expand(),
     );

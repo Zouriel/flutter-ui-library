@@ -7,6 +7,7 @@ import '../core/interactive.dart';
 import '../core/types.dart';
 import '../overlay/tooltip.dart';
 import '../theme/theme.dart';
+import '../media/reposition.dart';
 
 /// `ui-sidebar-account`: the signed-in person at the bottom of a sidebar ([UiSidebarLayout]'s
 /// `sidebarFooter`): avatar, name, a [subtitle] (job title · section), an optional [badge]
@@ -42,6 +43,7 @@ class UiSidebarAccount extends StatelessWidget {
     this.collapsed = false,
     this.expanded,
     this.focusNode,
+    this.position = const UiRepositionPosition(),
   });
 
   /// The person's name; also the avatar's initials when there is no [image].
@@ -52,6 +54,7 @@ class UiSidebarAccount extends StatelessWidget {
 
   /// Profile photo (the web `src`); without one, or if it fails to load, the avatar shows initials.
   final ImageProvider? image;
+  final UiRepositionPosition position;
 
   /// A short label after the name, e.g. "Read-only".
   final String? badge;
@@ -124,7 +127,7 @@ class UiSidebarAccount extends StatelessWidget {
     return Align(widthFactor: 1, child: UiTooltip(message: label, position: UiTooltipPosition.right, child: annotated));
   }
 
-  Widget _avatar() => UiAvatar(image: image, name: name, alt: '');
+  Widget _avatar() => UiAvatar(image: image, name: name, alt: '', position: position);
 
   Widget _row(BuildContext context) {
     final t = context.ui;

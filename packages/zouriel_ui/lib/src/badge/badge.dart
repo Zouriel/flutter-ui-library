@@ -8,6 +8,7 @@ import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../core/types.dart';
 import '../theme/theme.dart';
+import '../media/reposition.dart';
 
 /// Thaana letters and marks.
 final RegExp _thaanaText = RegExp('[\u0780-\u07BF]');
@@ -268,7 +269,7 @@ UiAvatarCropLayout? uiAvatarCropLayout(UiAvatarCrop? crop, {double padding = 0.2
 /// [crop] shows just a box of the image (a face from a photo) filling the avatar, so no cropped file
 /// is needed.
 class UiAvatar extends StatefulWidget {
-  const UiAvatar({super.key, this.image, this.name, this.alt, this.size = UiSize.md, this.square = false, this.dimension, this.crop, this.cropPadding = 0.25});
+  const UiAvatar({super.key, this.image, this.name, this.alt, this.size = UiSize.md, this.square = false, this.dimension, this.crop, this.cropPadding = 0.25, this.position = const UiRepositionPosition(), this.repositionable = false, this.onPositionSave, this.onRepositionCancel});
 
   /// A box of the image, as fractions, to fill the avatar (e.g. a face); null shows the whole image.
   /// A box that is not square in pixels is covered by its larger side. The image is read first to
@@ -291,6 +292,10 @@ class UiAvatar extends StatefulWidget {
   final String? alt;
   final UiSize size;
   final bool square;
+  final UiRepositionPosition position;
+  final bool repositionable;
+  final ValueChanged<UiRepositionPosition>? onPositionSave;
+  final VoidCallback? onRepositionCancel;
 
   @override
   State<UiAvatar> createState() => _UiAvatarState();
@@ -396,7 +401,7 @@ class _UiAvatarState extends State<UiAvatar> {
               ? initials
               : widget.crop != null && uiAvatarCropLayout(widget.crop) != null
                   ? _cropped(initials)
-                  : Image(image: widget.image!, fit: BoxFit.cover, errorBuilder: (context, error, stack) => _fail(initials)),
+                  : UiReposition(image: widget.image!, semanticLabel: widget.alt ?? widget.name ?? 'avatar', position: widget.position, active: widget.repositionable, circle: !widget.square, onSave: widget.onPositionSave, onCancel: widget.onRepositionCancel, onImageError: () => _fail(initials)),
         ),
       ),
     );

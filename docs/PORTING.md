@@ -1,5 +1,10 @@
 # Porting @zouriel/ui to Flutter
 
+## In-place photo repositioning
+
+- `UiReposition` mirrors Angular `ui-reposition`: an `ImageProvider`, `UiRepositionPosition` focal point, active flag, circle option, and save/cancel callbacks. It inserts an `OverlayEntry` only for painting above the page; it never pushes a route. The overlay cuts the frame out of the theme overlay colour, paints the cover-scale photo faintly outside and fully inside, and keeps controls above or below the frame inside the viewport.
+- Dragging uses raw pointer events so touch never scrolls an enclosing view while active. Cover geometry clamps both axes and locks any axis without overflow; arrows move one percentage point (ten with Shift), Enter saves, and Escape restores/cancels. `UiCoverHero` and `UiAvatar` forward the same position/edit callbacks.
+
 ## File upload camera capture
 
 - **`UiFileUpload.cameraPicker` / `cameraLabel`** (web: `cameraAction` / `cameraLabel`) adds a primary full-width camera button above the dropzone. It asks the plugin-agnostic picker for one `image/*` file and sends it through `onFilesSelected`; `enabled: false` disables both camera and ordinary picker. The web also exposes `capture` for the ordinary native file input.
