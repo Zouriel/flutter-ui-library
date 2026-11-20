@@ -36,6 +36,11 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('avatar initials skip leading marks in a handle', (tester) async {
+    await pumpUi(tester, const UiAvatar(name: '@lensqa'));
+    expect(find.text('L'), findsOneWidget);
+  });
+
   testWidgets('avatar group caps at max and announces the rest', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpUi(tester, const UiAvatarGroup(max: 2, children: [

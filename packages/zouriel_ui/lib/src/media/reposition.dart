@@ -73,6 +73,8 @@ class UiRepositionState extends State<UiReposition> {
   @visibleForTesting
   bool get editorOpen => _entry != null;
   @visibleForTesting
+  Rect? get editorFrame => _layout()?.frame;
+  @visibleForTesting
   bool get layoutReady => _layout() != null;
   @visibleForTesting
   bool get frameReady => _frameRect() != null;
@@ -151,8 +153,23 @@ class UiRepositionState extends State<UiReposition> {
     return found;
   }
 
+  /// A frame smaller than [_minFrame] is shown enlarged around its centre, as an overlay (the host never resizes).
+  static const _minFrame = 120.0;
+  static const _gutter = 16.0;
+
+  Rect _enlarged(Rect rect) {
+    final grow = math.max(1.0, _minFrame / math.min(rect.width, rect.height));
+    if (grow == 1.0) return rect;
+    final view = MediaQuery.maybeSizeOf(context) ?? Size.infinite;
+    final w = rect.width * grow, h = rect.height * grow;
+    final left = (rect.center.dx - w / 2).clamp(8.0, math.max(8.0, view.width - 8 - w)).toDouble();
+    final top = (rect.center.dy - h / 2).clamp(8.0, math.max(8.0, view.height - 8 - h)).toDouble();
+    return Rect.fromLTWH(left, top, w, h);
+  }
+
   ({Rect frame, Rect photo})? _layout() {
-    final frame = _frameRect();
+    final host = _frameRect();
+    final frame = host == null || host.isEmpty ? host : _enlarged(host);
     final image = _resolved ?? _renderImage()?.image;
     final intrinsic = widget.imageSize ?? (image == null ? null : Size(image.width.toDouble(), image.height.toDouble()));
     if (frame == null || intrinsic == null || frame.isEmpty) return null;
@@ -220,7 +237,7 @@ class UiRepositionState extends State<UiReposition> {
             Opacity(opacity: .28, child: Stack(children: [image(l.photo)])),
             Positioned.fromRect(
               rect: l.frame,
-              child: clip(
+              child: _Grow(enabled: l.frame.size != _frameRect()?.size, child: clip(
                 child: Stack(clipBehavior: Clip.hardEdge, children: [
                   Positioned.fromRect(rect: l.photo.shift(-l.frame.topLeft), child: Image(image: widget.image, fit: BoxFit.fill, excludeFromSemantics: true, errorBuilder: (context, error, stack) => const SizedBox.expand())),
                   Positioned.fill(child: Listener(
@@ -231,13 +248,12 @@ class UiRepositionState extends State<UiReposition> {
                     onPointerCancel: (e) { if (_pointer == e.pointer) _pointer = null; },
                   )),
                 ]),
-              ),
+              )),
             ),
-            Positioned(
-              top: actionsTop,
-              left: 0,
-              right: 0,
-              child: Center(child: DecoratedBox(
+            Positioned.fill(
+              child: CustomSingleChildLayout(
+              delegate: _BarLayout(centerX: l.frame.center.dx, top: actionsTop, gutter: _gutter),
+              child: DecoratedBox(
                 decoration: BoxDecoration(color: t.surfaceRaised, borderRadius: BorderRadius.circular(t.radius), boxShadow: t.shadow2),
                 child: Padding(
                   padding: EdgeInsets.all(t.space2),
@@ -270,6 +286,41 @@ class UiRepositionState extends State<UiReposition> {
     _focusNode.dispose();
     super.dispose();
   }
+}
+
+/// Scales the enlarged editing frame in (instant with reduced motion).
+class _Grow extends StatelessWidget {
+  const _Grow({required this.enabled, required this.child});
+  final bool enabled;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled || MediaQuery.maybeDisableAnimationsOf(context) == true) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.7, end: 1),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      builder: (context, v, c) => Opacity(opacity: ((v - 0.7) / 0.3).clamp(0.0, 1.0).toDouble(), child: Transform.scale(scale: v, child: c)),
+      child: child,
+    );
+  }
+}
+
+/// Centres the Save/Cancel bar under the frame but keeps it fully inside the viewport with a gutter.
+class _BarLayout extends SingleChildLayoutDelegate {
+  const _BarLayout({required this.centerX, required this.top, required this.gutter});
+  final double centerX;
+  final double top;
+  final double gutter;
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints(maxWidth: math.max(0, constraints.maxWidth - 2 * gutter));
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final maxLeft = math.max(gutter, size.width - gutter - childSize.width);
+    return Offset((centerX - childSize.width / 2).clamp(gutter, maxLeft).toDouble(), top);
+  }
+  @override
+  bool shouldRelayout(_BarLayout old) => old.centerX != centerX || old.top != top || old.gutter != gutter;
 }
 
 class _RepositionScrim extends CustomPainter {

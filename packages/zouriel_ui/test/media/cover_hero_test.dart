@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
@@ -74,6 +75,38 @@ void main() {
     space4 = tester.element(find.byType(UiCoverHero)).ui.space4;
     expect(tester.getTopLeft(find.byKey(const Key('start'))).dx, greaterThan(tester.getTopLeft(find.byKey(const Key('end'))).dx));
     expect(tester.getSize(find.byKey(const Key('body'))).width, closeTo((700 - space4 * 2) * 0.69, 0.01));
+  });
+
+  testWidgets('while repositioning the hero chrome fades out and takes no touches; a drag from the title moves the photo', (tester) async {
+    final image = await testImage(tester);
+    tester.view.gestureSettings = ui.GestureSettings(physicalTouchSlop: 8 * tester.view.devicePixelRatio);
+    addTearDown(tester.view.reset);
+    Future<void> pump(bool repo) => pumpUi(tester, UiCoverHero(
+      image: image, minHeight: 300, repositionable: repo,
+      topStart: const UiText('Back'),
+      child: const UiText('Eid party', variant: UiTextVariant.h2),
+    ));
+    double opacity() => tester.widget<AnimatedOpacity>(find.ancestor(of: find.text('Eid party'), matching: find.byType(AnimatedOpacity)).first).opacity;
+    bool ignoring() => tester.widget<IgnorePointer>(find.ancestor(of: find.text('Eid party'), matching: find.byType(IgnorePointer)).first).ignoring;
+    await pump(false);
+    expect(opacity(), 1);
+    expect(ignoring(), isFalse);
+    await pump(true);
+    await tester.pumpAndSettle();
+    expect(opacity(), 0);
+    expect(ignoring(), isTrue);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await tester.pump();
+    final state = tester.state<UiRepositionState>(find.byType(UiReposition));
+    expect(state.layoutReady, isTrue);
+    final before = state.draftPosition;
+    await tester.dragFrom(tester.getCenter(find.text('Eid party')), const Offset(-40, -20), kind: PointerDeviceKind.touch);
+    await tester.pump();
+    expect(state.draftPosition, isNot(before));
+    await pump(false);
+    await tester.pumpAndSettle();
+    expect(opacity(), 1);
+    expect(ignoring(), isFalse);
   });
 
   testWidgets('golden: cover hero in dark and light themes', (tester) async {

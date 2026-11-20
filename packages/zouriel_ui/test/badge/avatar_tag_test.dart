@@ -26,6 +26,9 @@ RenderParagraph _name(WidgetTester tester) => tester.renderObject<RenderParagrap
 void main() {
   test('uiAvatarTagLetter takes the first letter, upper case, and ? for no name', () {
     expect(uiAvatarTagLetter('coco Palm'), 'C');
+    expect(uiAvatarTagLetter('@lensqa'), 'L');
+    expect(uiAvatarTagLetter('#1 Studio'), '1');
+    expect(uiAvatarTagLetter('@@ '), '?');
     expect(uiAvatarTagLetter('  étoile'), 'É');
     expect(uiAvatarTagLetter(''), '?');
     expect(uiAvatarTagLetter(null), '?');

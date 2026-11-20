@@ -32,7 +32,7 @@ void main() {
 
     await tester.dragFrom(const Offset(50, 50), const Offset(30, 30), kind: PointerDeviceKind.touch);
     await tester.pump();
-    expect(state.draftPosition.x, closeTo(20, 1));
+    expect(state.draftPosition.x, closeTo(25, 1)); // the 100px frame is edited at the 120px minimum
     expect(state.draftPosition.y, 50);
     expect(tester.getTopLeft(find.byType(SingleChildScrollView)), Offset.zero);
 
@@ -116,12 +116,45 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(UiApp), matchesGoldenFile('goldens/reposition_active.png'));
   });
+
+  testWidgets('a tiny frame is edited at 120px as an overlay: host size and page layout stay put', (tester) async {
+    final image = await _image(tester, 200, 100);
+    await pumpUi(tester, Align(alignment: Alignment.topLeft, child: Padding(
+      padding: const EdgeInsets.only(left: 100, top: 100),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox.square(dimension: 36, child: UiReposition(image: image, imageSize: const Size(200, 100), circle: true, active: true)),
+        const SizedBox(key: ValueKey('below'), width: 10, height: 10),
+      ]),
+    )));
+    final state = tester.state<UiRepositionState>(find.byType(UiReposition));
+    final frame = state.editorFrame!;
+    expect(frame.width, greaterThanOrEqualTo(120));
+    expect(frame.height, greaterThanOrEqualTo(120));
+    expect(frame.center.dx, closeTo(118, 0.01));
+    expect(tester.getSize(find.byType(UiReposition)), const Size(36, 36));
+    expect(tester.getTopLeft(find.byKey(const ValueKey('below'))), const Offset(100, 136));
+  });
+
+  testWidgets('Save/Cancel bar stays inside the viewport with a 16px gutter for a frame at the left edge', (tester) async {
+    final image = await _image(tester, 200, 100);
+    await pumpUi(tester, Align(alignment: Alignment.topLeft, child: Padding(
+      padding: const EdgeInsets.only(left: 4, top: 100),
+      child: SizedBox.square(dimension: 100, child: UiReposition(image: image, imageSize: const Size(200, 100), active: true)),
+    )));
+    final view = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final bar = tester.getRect(find.ancestor(of: find.text('Cancel'), matching: find.byType(Padding)).first);
+    final save = tester.getRect(find.text('Save'));
+    expect(tester.getTopLeft(find.text('Cancel')).dx, greaterThanOrEqualTo(16));
+    expect(save.right, lessThanOrEqualTo(view.width - 16));
+    expect(bar.left, greaterThanOrEqualTo(16 - 0.01));
+  });
 }
 
 class _RouteObserver extends NavigatorObserver {
   int pushes = 0;
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) { pushes++; }
+
 }
 
 Future<_TestImage> _image(WidgetTester tester, int width, int height) async {

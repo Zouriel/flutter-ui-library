@@ -113,6 +113,11 @@ class _UiCoverHeroState extends State<UiCoverHero> {
         child: ClipRect(
           child: Stack(children: [
             Positioned.fill(child: _cover(context, hasImage)),
+            // While repositioning, the hero chrome fades out and takes no touches, so the whole photo shows
+            // and a drag works anywhere on the cover.
+            _RepositionChrome(
+              hidden: widget.repositionable && hasImage,
+              child: Stack(children: [
             if (hasImage && widget.scrimStart)
               Positioned.fill(
                 child: IgnorePointer(child: DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(
@@ -194,9 +199,32 @@ class _UiCoverHeroState extends State<UiCoverHero> {
                 ],
               ),
             ),
+              ]),
+            ),
           ]),
         ),
       );
     });
+  }
+}
+
+class _RepositionChrome extends StatelessWidget {
+  const _RepositionChrome({required this.hidden, required this.child});
+  final bool hidden;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.maybeDisableAnimationsOf(context) == true;
+    return IgnorePointer(
+      ignoring: hidden,
+      child: ExcludeSemantics(
+        excluding: hidden,
+        child: AnimatedOpacity(
+          opacity: hidden ? 0 : 1,
+          duration: still ? Duration.zero : const Duration(milliseconds: 200),
+          child: child,
+        ),
+      ),
+    );
   }
 }

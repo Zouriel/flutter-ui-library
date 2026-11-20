@@ -345,7 +345,8 @@ class _UiAvatarState extends State<UiAvatar> {
   }
 
   String get _initials {
-    final parts = (widget.name ?? '').trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final lead = RegExp(r'^[^\p{L}\p{N}]+', unicode: true);
+    final parts = (widget.name ?? '').trim().split(RegExp(r'\s+')).map((p) => p.replaceFirst(lead, '')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     final first = parts.first.characters.first;
     final last = parts.length > 1 ? parts.last.characters.first : '';

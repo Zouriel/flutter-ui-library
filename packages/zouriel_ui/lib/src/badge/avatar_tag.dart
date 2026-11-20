@@ -13,9 +13,9 @@ enum UiAvatarTagVariant { overlay, plain }
 /// [sm] (a 20dp picture) for a feed post, [xs] (16dp) for the corner of a small tile.
 enum UiAvatarTagSize { sm, xs }
 
-/// The first letter of a name, upper case, for the round fallback; '?' for no name.
+/// The first letter or digit of a name (leading marks like '@' or '#' skipped), upper case, for the round fallback; '?' for none.
 String uiAvatarTagLetter(String? name) {
-  final n = (name ?? '').trim();
+  final n = (name ?? '').trim().replaceFirst(RegExp(r'^[^\p{L}\p{N}]+', unicode: true), '');
   if (n.isEmpty) return '?';
   return n.characters.first.toUpperCase();
 }
