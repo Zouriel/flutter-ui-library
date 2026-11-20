@@ -1802,3 +1802,16 @@ remove a key instead of writing `null`, `{}` or `[]`). The contract is `WF-ADDU-
 Angular moved `UiSpeedDial` from `@zouriel/ui/button` to its own `@zouriel/ui/speed-dial` entry point so apps that
 import buttons don't ship it on first load. Dart has no entry points and tree-shakes unused widgets, so the Flutter
 side has no code change; the version is bumped to keep both libraries on the same number.
+
+## Drag onto target (`UiDragItem<T>`, `UiDropTarget<T>`)
+
+- Named `UiDragItem` (`[uiDragItem]` on Angular, `UiDragItem<T>` on Flutter) + `UiDropTarget` (`[uiDropTarget]` on
+  Angular, `UiDropTarget<T>` on Flutter) rather than `UiDraggable`, because `UiDraggable` already exists in
+  `@zouriel/ui/window` and `package:zouriel_ui/zouriel_ui.dart` for free-position window dragging.
+- `UiDragCoordinator` is scoped per root `OverlayState` via an `Expando`, so apps and tests need no wrapper widget.
+- Touch uses `LongPressGestureRecognizer` (`uiLongPressDuration` = 500 ms, matching `UI_LONG_PRESS_MS`) with
+  `MediaQuery.maybeGestureSettingsOf(context)` so swiping a `Scrollable` scrolls cleanly; mouse/trackpad/stylus uses
+  `PanGestureRecognizer` so desktop drags start immediately after a small movement.
+- Auto-scroll uses `EdgeDraggingAutoScroller` on the nearest `Scrollable`; Escape cancels via `HardwareKeyboard`;
+  announcements use `SemanticsService.sendAnnouncement`. Reduced motion (`!context.uiAnimate`) skips the ghost lift
+  scale animation.

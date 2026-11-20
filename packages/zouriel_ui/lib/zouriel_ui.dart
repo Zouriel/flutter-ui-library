@@ -41,6 +41,9 @@ export 'src/theme/theme.dart';
 export 'src/theme/theme_swatch.dart';
 export 'src/sortable/section_list.dart' hide uiSortableMove;
 export 'src/sortable/reorder_grid.dart';
+export 'src/drag/drag_coordinator.dart' show uiLongPressDuration, uiDragMouseSlop, UiDragCoordinator;
+export 'src/drag/drag_item.dart';
+export 'src/drag/drop_target.dart';
 
 // Areas ported in parallel; each file exports its area's widgets.
 export 'src/areas/forms_text.dart';

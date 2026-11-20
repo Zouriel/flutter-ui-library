@@ -2083,3 +2083,11 @@ File: `chart/src/bar-chart.ts`
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 - [x] Flutter port: interface `UiFbRevisionStore`, class `UiFbRevision`, `UiFbRevisionMeta`, `UiFbMemoryRevisionStore`, functions `fbRevisionSummary`, `fbCreateRevision`, `rollbackDefinition` (revisions.ts, `engine/revisions.dart`, tests in `test/form_engine/revisions_test.dart`)
 - [x] Flutter port: interface/class `UiFbStrings` (88 keys), tables `uiFbStringsEn` / `uiFbStringsDv` / `uiFbStrings`, typedef `UiFbStringOverrides`, functions `fbStrings`, `fbFormat`, `mergeFbStringOverrides`, `validatorMessage` (form-strings.ts, `engine/form_strings.dart`), widget `UiFormStringsScope` (the web `provideUiFormStrings`; `renderer/form_strings_scope.dart`); tests in `test/form_engine/form_strings_test.dart`, `test/form_renderer/strings_test.dart` and the `form-strings.json` fixture in `shared_fixtures_test.dart`
+
+## drag
+
+### UiDragItem & UiDropTarget (`[uiDragItem]`, `[uiDropTarget]`)
+Files: `drag/src/draggable.ts`, `drag/src/drop-target.ts`, `drag/src/drag.service.ts`  
+Drag an item with a typed payload onto a matching target (mouse after slop, touch after `UI_LONG_PRESS_MS`, keyboard Space/Enter + arrows + Escape, edge auto-scroll, ghost lift, accent ring, reduced motion, live-region announcements).
+- Flutter: `UiDragItem<T>(data, label, enabled, description, feedbackBuilder, onDragStart, onDragCancel, onDragEnd, focusNode, child)`, `UiDropTarget<T>(label, accepts, enabled, onDropped, onHoverChanged, child)`, `UiDragCoordinator`
+- [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
