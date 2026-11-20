@@ -144,7 +144,7 @@ class _MediaPageState extends State<MediaPage> {
             ApiRow('aspectRatio / maxHeight', 'double', 'Slide shape, capped in height.', def: '16/9, 360'),
             ApiRow('label', 'String', 'Accessible name.', def: "'Carousel'"),
           ],
-          shapes: 'UiCarouselSlide({required ImageProvider image, String? alt, String? caption})',
+          shapes: 'UiCarouselSlide({required ImageProvider image, String? alt, String? caption, UiRepositionPosition? position})\nposition: the focal point of the cropped image in percent (like CSS object-position), default centre',
         ),
         DocSection(
           name: 'Gallery',
@@ -173,6 +173,7 @@ class _MediaPageState extends State<MediaPage> {
           api: const [
             ApiRow('posters', 'List<UiPoster>', 'The tiles: picture, semantic label, fallback colours, optional dot.'),
             ApiRow('ratio', 'double', 'Width / height of every tile.', def: '0.75'),
+            ApiRow('UiPoster.position', 'UiRepositionPosition?', "A poster's own focal point for its cropped picture (percent, like CSS object-position; what UiReposition saves). Without it the grid's focus applies, so nothing changes by default."),
             ApiRow('focus', 'UiPosterFocus', "Which part of a picture survives the crop; top keeps a poster's heading.", def: 'center'),
             ApiRow('canDrop', 'bool Function(UiPoster dragged, UiPoster target)?', 'Whether a dragged tile may be dropped on this one (a tile never accepts itself); default any other tile. Only tiles with draggable: true can be dragged; a grid with none behaves as before. While dragging, valid tiles get an accent outline, the rest dim, and the one under the pointer gets a clear ring. Touch: long press then drag (scrolling and tapping are unchanged); mouse: drag; keyboard: Space picks up (Enter still opens), arrows choose, Enter drops, Escape cancels, announced to screen readers. Built on UiDragItem and UiDropTarget.'),
             ApiRow('UiPoster.draggable', 'bool', 'Opts the tile in to being dragged onto another tile.', def: 'false'),
@@ -184,7 +185,7 @@ class _MediaPageState extends State<MediaPage> {
             ApiRow('onSelect', 'ValueChanged<int>', 'The index of the tile that was tapped.'),
             ApiRow('onTileDrop', 'ValueChanged<UiPosterDrop>?', 'A draggable tile was dropped on a valid one: dragged, target, draggedIndex, targetIndex. Dropping anywhere else cancels with no call.'),
           ],
-          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details, Widget? corner, Widget? action, bool draggable = false})\nUiPosterDrop({required UiPoster dragged, required UiPoster target, required int draggedIndex, required int targetIndex})\nUiPosterMark({required UiStatus tone, required String label})',
+          shapes: 'UiPoster({required String label, ImageProvider? image, List<Color>? colors, UiPosterMark? mark, Widget? details, Widget? corner, Widget? action, bool draggable = false, UiRepositionPosition? position})\nUiPosterDrop({required UiPoster dragged, required UiPoster target, required int draggedIndex, required int targetIndex})\nUiPosterMark({required UiStatus tone, required String label})',
         ),
         DocSection(
           name: 'Poster view',

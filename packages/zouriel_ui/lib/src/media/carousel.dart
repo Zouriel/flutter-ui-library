@@ -9,11 +9,12 @@ import '../behaviors/swipe.dart';
 import '../core/icon.dart';
 import '../core/interactive.dart';
 import '../theme/theme.dart';
+import 'reposition.dart';
 
 /// One slide of a [UiCarousel].
 @immutable
 class UiCarouselSlide {
-  const UiCarouselSlide({required this.image, this.alt, this.caption});
+  const UiCarouselSlide({required this.image, this.alt, this.caption, this.position});
 
   final ImageProvider image;
 
@@ -22,6 +23,9 @@ class UiCarouselSlide {
 
   /// A line laid over the bottom of the slide on a dark gradient.
   final String? caption;
+
+  /// Focal point of the cropped image (percent, like CSS object-position). Default centre.
+  final UiRepositionPosition? position;
 }
 
 /// A share of the width the finger must travel before letting go turns the slide.
@@ -280,6 +284,7 @@ class _Slide extends StatelessWidget {
       Image(
         image: slide.image,
         fit: BoxFit.cover,
+        alignment: slide.position?.alignment ?? Alignment.center,
         semanticLabel: slide.alt,
         excludeFromSemantics: slide.alt == null,
         gaplessPlayback: true,

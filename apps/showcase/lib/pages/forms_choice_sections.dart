@@ -276,6 +276,7 @@ UiSwitch(value: wifi, label: 'Wi-Fi', onChanged: (v) => setState(() => wifi = v)
           ApiRow('preview', 'ImageProvider?', 'A picture already uploaded: the same box shows it and tapping it picks a replacement (0.79).'),
           ApiRow('previewSemanticLabel', 'String?', 'What the picture shows; starts the box\'s label.'),
           ApiRow('previewFit', 'BoxFit', 'cover fills the box; contain shows all of it (logos).', def: 'BoxFit.cover'),
+          ApiRow('previewPosition', 'UiRepositionPosition?', 'Focal point of the cropped (cover) preview, percent like CSS object-position (what UiReposition saves). Default centre.'),
           ApiRow('previewAspectRatio', 'double', 'The box\'s shape while it shows a picture.', def: '16 / 9'),
           ApiRow('replaceLabel', 'String?', 'The label on the picture.', def: 'strings.uploadReplace (Tap to change)'),
           ApiRow('onRemove', 'VoidCallback?', 'Shows a Remove button under the picture.'),

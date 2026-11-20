@@ -7,6 +7,7 @@ import '../../button/button.dart';
 import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
+import '../../media/reposition.dart';
 import '../../theme/theme.dart';
 
 /// A file handed to [UiFileUpload] by a picker or a drop. Only [name] and [size] are needed by the
@@ -81,6 +82,7 @@ class UiFileUpload extends StatefulWidget {
     this.previewSemanticLabel,
     this.previewFit = BoxFit.cover,
     this.previewAspectRatio = 16 / 9,
+    this.previewPosition,
     this.replaceLabel,
     this.onRemove,
     this.removeLabel,
@@ -104,6 +106,9 @@ class UiFileUpload extends StatefulWidget {
 
   /// The box's shape while it shows a picture (the web `previewAspect`, '16 / 9' there).
   final double previewAspectRatio;
+
+  /// Focal point of the cropped (cover) preview, percent like CSS object-position (the web `previewPosition`). Default centre.
+  final UiRepositionPosition? previewPosition;
 
   /// The label on the picture; defaults to [UiStrings.uploadReplace].
   final String? replaceLabel;
@@ -358,7 +363,7 @@ extension on UiFileUploadState {
                       Padding(
                         // A contained picture (a logo) keeps clear of the label at the bottom.
                         padding: contain ? EdgeInsets.fromLTRB(t.space3, t.space3, t.space3, t.space3 + 32) : EdgeInsets.zero,
-                        child: Image(image: image, fit: widget.previewFit, excludeFromSemantics: true,
+                        child: Image(image: image, fit: widget.previewFit, alignment: widget.previewPosition?.alignment ?? Alignment.center, excludeFromSemantics: true,
                             errorBuilder: (context, _, _) => const SizedBox.shrink()),
                       ),
                       Positioned(

@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
+import '../drag/drag_coordinator.dart';
 import 'gestures.dart';
 
 /// How close to the screen edge a gesture may begin before it is left to the system back gesture.
@@ -12,7 +13,7 @@ const double _edgeGuard = 24;
 /// It listens to raw pointers rather than joining the gesture arena, so it never takes a drag from
 /// anything: the page still scrolls under the same finger. It fires while the finger is still
 /// moving, as soon as the drag qualifies ([UiGestures.isSwipe]), and declines:
-/// mostly vertical drags; a second finger; gestures starting within 24px of the screen edge (the
+/// a drag-and-drop in progress (see [UiDragCoordinator]); mostly vertical drags; a second finger; gestures starting within 24px of the screen edge (the
 /// system back gesture); anything under the finger that scrolls sideways (a tab strip, a carousel);
 /// any subtree wrapped in [UiNoSwipe]; and the mouse unless [mouse] is set.
 class UiSwipe extends StatefulWidget {
@@ -61,6 +62,11 @@ class _UiSwipeState extends State<UiSwipe> {
 
   void _onMove(PointerMoveEvent e) {
     if (e.pointer != _id) return;
+    // A library drag (a poster tile, a sortable row) owns this finger: never also turn the page.
+    if (Overlay.maybeOf(context, rootOverlay: true) != null && UiDragCoordinator.of(context).isActive) {
+      _clear();
+      return;
+    }
     final d = e.position - _from;
     final width = context.size?.width ?? 0;
     if (!UiGestures.isSwipe(d.dx, d.dy, (e.timeStamp - _at).inMicroseconds / 1000, width)) return;

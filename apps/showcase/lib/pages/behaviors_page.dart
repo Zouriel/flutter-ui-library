@@ -54,7 +54,7 @@ class _BehaviorsPageState extends State<BehaviorsPage> {
         DocSection(
           name: 'Swipe',
           widget: 'UiSwipe · UiNoSwipe',
-          summary: 'Reports a sideways swipe, e.g. to move between tabs. It reads raw pointers and never takes the drag from anything, so the page still scrolls under the same finger. It fires while the finger is moving, as soon as the drag qualifies, and declines mostly vertical drags, a second finger, starts within 24px of the screen edge (the system back gesture), anything under the finger that scrolls sideways, and the mouse unless mouse is set. Wrap any subtree in UiNoSwipe to opt it out.',
+          summary: 'Reports a sideways swipe, e.g. It also ignores a finger that is dragging a drag-and-drop item (a poster tile, a sortable row), so a sideways tile drag never switches tabs. to move between tabs. It reads raw pointers and never takes the drag from anything, so the page still scrolls under the same finger. It fires while the finger is moving, as soon as the drag qualifies, and declines mostly vertical drags, a second finger, starts within 24px of the screen edge (the system back gesture), anything under the finger that scrolls sideways, and the mouse unless mouse is set. Wrap any subtree in UiNoSwipe to opt it out.',
           demo: UiSwipe(
             onSwipeLeft: () => setState(() => _tab = (_tab + 1).clamp(0, 2)),
             onSwipeRight: () => setState(() => _tab = (_tab - 1).clamp(0, 2)),

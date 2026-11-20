@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../button/button.dart';
@@ -13,6 +14,9 @@ class UiRepositionPosition {
   const UiRepositionPosition({this.x = 50, this.y = 50});
   final double x;
   final double y;
+
+  /// The Image alignment for this focal point (the web's `object-position: x% y%`).
+  Alignment get alignment => Alignment(x / 50 - 1, y / 50 - 1);
 
   UiRepositionPosition clamped() => UiRepositionPosition(x: x.clamp(0, 100), y: y.clamp(0, 100));
 
@@ -103,10 +107,21 @@ class UiRepositionState extends State<UiReposition> {
     final listener = ImageStreamListener((info, _) {
       _resolved = info.image;
       _entry?.markNeedsBuild();
-    }, onError: (error, stack) => widget.onImageError?.call());
+    }, onError: (error, stack) => _reportImageError(stream));
     _stream = stream;
     _listener = listener;
     stream.addListener(listener);
+  }
+
+  // A stream that already failed reports its error synchronously on listen, and Image's errorBuilder
+  // runs during build; an onImageError that calls setState there would throw, so report after the frame.
+  void _reportImageError(ImageStream? stream) {
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) { if (mounted && (stream == null || _stream == stream)) widget.onImageError?.call(); });
+      SchedulerBinding.instance.ensureVisualUpdate();
+    } else {
+      widget.onImageError?.call();
+    }
   }
 
   void _open() {
@@ -244,7 +259,7 @@ class UiRepositionState extends State<UiReposition> {
     final alignment = Alignment(_draft.x / 50 - 1, _draft.y / 50 - 1);
     final image = Image(key: _frameKey, image: widget.image, fit: BoxFit.cover, alignment: alignment, width: double.infinity, height: double.infinity, semanticLabel: widget.semanticLabel,
       frameBuilder: (context, child, frame, synchronous) { if (frame != null) WidgetsBinding.instance.addPostFrameCallback((_) => _entry?.markNeedsBuild()); return child; },
-      errorBuilder: (context, error, stack) { widget.onImageError?.call(); return const SizedBox.expand(); });
+      errorBuilder: (context, error, stack) { _reportImageError(null); return const SizedBox.expand(); });
     return widget.circle ? ClipOval(child: image) : ClipRect(child: image);
   }
 

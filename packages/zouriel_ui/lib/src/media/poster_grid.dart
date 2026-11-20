@@ -12,6 +12,7 @@ import '../drag/drag_coordinator.dart';
 import '../drag/drag_item.dart';
 import '../drag/drop_target.dart';
 import '../theme/theme.dart';
+import 'reposition.dart';
 
 /// A small dot over a poster's corner: something the grid must say without words (unread,
 /// unfinished). Only [UiStatus.primary], [UiStatus.warning] and [UiStatus.neutral] are drawn, as on
@@ -28,7 +29,7 @@ class UiPosterMark {
 /// One tile of a [UiPosterGrid] (the web `UiPoster`).
 @immutable
 class UiPoster {
-  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner, this.action, this.draggable = false});
+  const UiPoster({required this.label, this.image, this.colors, this.mark, this.details, this.corner, this.action, this.draggable = false, this.position});
 
   /// The picture. Without one (or when it fails to load) the tile shows [colors] as a gradient.
   final ImageProvider? image;
@@ -58,6 +59,10 @@ class UiPoster {
   /// readable on any picture (ghost buttons inside draw in the on-scrim colour). Keep it to one small
   /// icon button (size sm or md). The [mark]'s dot moves beside it. 0.77.0.
   final Widget? action;
+
+  /// Focal point of the cropped picture (percent, like CSS object-position; what [UiReposition] saves).
+  /// Without it the grid's focus is used, so nothing changes by default. The web `position`.
+  final UiRepositionPosition? position;
 
   /// Opts the tile in to being dragged onto another tile (see [UiPosterGrid.onTileDrop]). Off by default.
   final bool draggable;
@@ -277,7 +282,7 @@ class _Tile extends StatelessWidget {
               Image(
                 image: image,
                 fit: BoxFit.cover,
-                alignment: focus == UiPosterFocus.top ? Alignment.topCenter : Alignment.center,
+                alignment: poster.position?.alignment ?? (focus == UiPosterFocus.top ? Alignment.topCenter : Alignment.center),
                 excludeFromSemantics: true,
                 // A stored URL can outlive its file: the gradient, never a broken-image icon.
                 errorBuilder: (_, _, _) => fallback,
