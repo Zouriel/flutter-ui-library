@@ -249,7 +249,14 @@ class UiBottomSheet extends StatefulWidget {
     this.glassStrength = UiGlassStrength.clear,
     this.footer,
     this.footerLeading,
+    this.resetScroll = true,
   }) : assert(child != null || builder != null, 'Give the sheet a child or a builder.');
+
+  /// Scroll the body back to the top (no animation) when the sheet opens, when [title] changes and when
+  /// [child] is swapped for a different widget (another type or key; a [builder] is the app's own scroll
+  /// view, so it should reset its [ScrollController] itself, or use a key). Applies while the body scrolls
+  /// on its own, i.e. without [bodyExpands]. Turn off to keep the scroll position.
+  final bool resetScroll;
 
   /// A sticky bar at the bottom of the visible sheet (0.44.0): the primary action.
   final Widget? footer;
@@ -439,6 +446,14 @@ class UiBottomSheetState extends State<UiBottomSheet> {
   @override
   void didUpdateWidget(UiBottomSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.resetScroll && !widget.bodyExpands && _bodyScroll.hasClients) {
+      final opened = widget.snap != oldWidget.snap &&
+          (oldWidget.snaps[oldWidget.snap.clamp(0, oldWidget.snaps.length - 1)]) <= 0 &&
+          (widget.snaps[widget.snap.clamp(0, widget.snaps.length - 1)]) > 0;
+      if (opened || widget.title != oldWidget.title || (widget.child != null && !Widget.canUpdate(oldWidget.child ?? widget.child!, widget.child!))) {
+        _bodyScroll.jumpTo(0);
+      }
+    }
     if (widget.snap != oldWidget.snap && widget.snap != _snap) {
       _goTo(widget.snap, notify: false);
     } else if (!listEquals(widget.snaps, oldWidget.snaps)) {

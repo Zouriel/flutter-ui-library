@@ -93,7 +93,7 @@ Widget uiScaleTransition(BuildContext context, Animation<double> animation, Widg
 /// dialog named by [title]. Without a title there is no header or close button, so give the
 /// dialog a way out in its content. [UiModalSize.full] fills the screen with no padding and no
 /// rounding, for editors.
-class UiModal extends StatelessWidget {
+class UiModal extends StatefulWidget {
   const UiModal({
     super.key,
     required this.child,
@@ -105,6 +105,7 @@ class UiModal extends StatelessWidget {
     this.glass,
     this.radius,
     this.onClose,
+    this.resetScroll = true,
   });
 
   final Widget child;
@@ -121,14 +122,45 @@ class UiModal extends StatelessWidget {
   /// The close button and Escape. Defaults to `Navigator.maybePop`.
   final VoidCallback? onClose;
 
+  /// Scroll the body back to the top (no jump animation) when [title] changes or [child] is swapped for a
+  /// different widget (another type or key), so a reused modal never shows new content part-way down.
+  /// Turn off to keep the scroll position.
+  final bool resetScroll;
+
+  @override
+  State<UiModal> createState() => _UiModalState();
+}
+
+class _UiModalState extends State<UiModal> {
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void didUpdateWidget(UiModal old) {
+    super.didUpdateWidget(old);
+    if (widget.resetScroll && (widget.title != old.title || !Widget.canUpdate(old.child, widget.child)) && _scroll.hasClients) {
+      _scroll.jumpTo(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final title = widget.title;
+    final footer = widget.footer;
+    final footerLeading = widget.footerLeading;
+    final size = widget.size;
+    final child = widget.child;
     final theme = context.uiTheme;
     final t = theme.tokens;
     final full = size == UiModalSize.full;
-    final isGlass = glass ?? theme.config.glass;
-    final r = full || !(radius ?? theme.config.radius) ? 0.0 : t.radiusLg;
-    final close = onClose ?? () => Navigator.maybePop(context);
+    final isGlass = widget.glass ?? theme.config.glass;
+    final r = full || !(widget.radius ?? theme.config.radius) ? 0.0 : t.radiusLg;
+    final close = widget.onClose ?? () => Navigator.maybePop(context);
     final mq = MediaQuery.of(context);
     final footerPad = uiTouchPlatform(context) ? t.space1 : t.space3;
 
@@ -139,6 +171,7 @@ class UiModal extends StatelessWidget {
         ? Expanded(child: child)
         : Flexible(
             child: SingleChildScrollView(
+              controller: _scroll,
               padding: EdgeInsets.symmetric(horizontal: t.space4, vertical: t.space3),
               child: child,
             ),
@@ -187,7 +220,7 @@ class UiModal extends StatelessWidget {
         child: BackdropFilter(filter: ImageFilter.blur(sigmaX: t.glassBlur, sigmaY: t.glassBlur), child: panel),
       );
     }
-    panel = UiDialogScope(label: title, closeOnEscape: closeOnEscape, onClose: close, child: panel);
+    panel = UiDialogScope(label: title, closeOnEscape: widget.closeOnEscape, onClose: close, child: panel);
 
     if (full) return panel;
     final maxWidth = switch (size) { UiModalSize.sm => 360.0, UiModalSize.lg => 720.0, _ => 480.0 };
