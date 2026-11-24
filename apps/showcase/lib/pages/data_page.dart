@@ -37,6 +37,7 @@ class _DataPageState extends State<DataPage> {
   UiFeatureTone _ftTone = UiFeatureTone.primary;
   UiChatBubbleSide _bubbleSide = UiChatBubbleSide.right;
   TextDirection _bubbleDir = TextDirection.rtl;
+  bool _showTyping = false;
   UiFeatureLayout _ftLayout = UiFeatureLayout.vertical;
   UiSize _ftSize = UiSize.md;
   int _ftTaps = 0;
@@ -163,6 +164,39 @@ class _DataPageState extends State<DataPage> {
             ApiRow('mineSide', 'UiChatBubbleSide?', 'Where your own messages sit. end: the inline end, so the left in RTL. right: always the right, theirs always the left, in LTR and RTL; the tucked corners and meta line follow, laid out as in LTR, and a Text child takes its own direction (Thaana right to left, Latin left to right). Null follows UiConfig.chatMineSide.', def: 'UiConfig.chatMineSide (end)'),
             ApiRow('meta', 'String?', 'A small line under the text.'),
             ApiRow('semanticLabel', 'String?', 'Names the message ("You, 09:41").'),
+          ],
+        ),
+        DocSection(
+          name: 'Chat widget',
+          widget: 'UiChatWidget · UiChatComposer · UiChatTyping · UiChatActions · UiChatSource',
+          summary: 'Corner launcher (floating, hover pill, or draggable head) that opens a chat panel with header, optional notice line, auto-scrolling message log, quick-actions slot (UiChatActions), typing indicator (UiChatTyping), citation chips (UiChatSource), and multiline composer (UiChatComposer).',
+          demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
+            const UiChatBubble(child: Text('You can apply online before 1 December 2026.')),
+            const Wrap(spacing: 6, children: [
+              UiChatSource(label: 'HR-REQ-2026-0014', href: 'https://example.com'),
+              UiChatSource(label: 'Application guide'),
+            ]),
+            UiChatActions(
+              actions: const [
+                UiChatAction(id: 'fill', label: 'Fill It In for Me'),
+                UiChatAction(id: 'open', label: 'Open the Vacancy'),
+              ],
+              onPick: (_) {},
+            ),
+            Row(spacing: t.space2, children: [
+              UiButton(size: UiSize.sm, variant: UiButtonVariant.outline, onPressed: () => setState(() => _showTyping = !_showTyping), child: Text(_showTyping ? 'Hide typing' : 'Show typing')),
+              if (_showTyping) const UiChatTyping(),
+            ]),
+            UiChatComposer(attach: true, onSend: (_) {}),
+          ]),
+          code: "UiChatWidget(\n  open: open,\n  onOpenChanged: (v) => setState(() => open = v),\n  title: 'Addu Assistant',\n  notice: 'Answers come from an AI and cite their source.',\n  quickActions: UiChatActions(actions: actions, onPick: onPick),\n  footer: UiChatComposer(attach: true, onSend: onSend),\n  child: Column(children: messages),\n)",
+          api: const [
+            ApiRow('open / onOpenChanged', 'bool / ValueChanged<bool>?', 'Two-way open state of the chat panel.', def: 'false'),
+            ApiRow('launcher', 'UiChatLauncher', 'floating, hover, or draggable.', def: 'floating'),
+            ApiRow('position', 'UiChatPosition', 'Logical corner (start or end; mirrors in RTL).', def: 'end'),
+            ApiRow('unread', 'int', 'Unread count badge on the launcher.', def: '0'),
+            ApiRow('title / subtitle / notice', 'String / String? / String?', 'Header title, subtitle, and optional notice strip.'),
+            ApiRow('teaser / label / hint', 'String? / String / String', 'One-time teaser above floating launcher; two-line copy in hover pill.'),
           ],
         ),
         DocSection(

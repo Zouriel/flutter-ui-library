@@ -87,6 +87,10 @@ class UiFormBuilder extends StatefulWidget {
     this.showTitle = true,
     this.revisionStore,
     this.onRestored,
+    this.agentInteractable = false,
+    this.onAgentInteractableChanged,
+    this.agentInteractableLabel = 'Available to the assistant',
+    this.agentInteractableHint = 'Lets the AI assistant read this form and fill it in field by field for a signed-in person, who confirms before it is submitted.',
   });
 
   /// The form being built: a [UiFormDefinition] or its stored JSON (migrated on load). Handing back
@@ -132,6 +136,12 @@ class UiFormBuilder extends StatefulWidget {
   /// A past version was loaded as the new draft. It is already in the builder (and was handed to
   /// [onChanged]); nothing is published.
   final ValueChanged<UiFormDefinition>? onRestored;
+
+  /// Whether the AI assistant can read and fill this form for a signed-in person (not stored in definition JSON).
+  final bool agentInteractable;
+  final ValueChanged<bool>? onAgentInteractableChanged;
+  final String agentInteractableLabel;
+  final String agentInteractableHint;
 
   @override
   State<UiFormBuilder> createState() => UiFormBuilderState();
@@ -445,7 +455,16 @@ class UiFormBuilderState extends State<UiFormBuilder> {
                   onSnapChanged: (s) => setState(() => _sheetSnap = s),
                   title: controller.selected != null ? controller.name(controller.selectedId!) : 'Form settings',
                   // The sheet's builder content pads itself: 16 at the sides, like the sheet's title.
-                  builder: (context, scroll) => UiFbInspector(showHead: false, sidePadding: t.space4, scrollController: scroll, onDeleteRequest: _requestDelete),
+                  builder: (context, scroll) => UiFbInspector(
+                    showHead: false,
+                    sidePadding: t.space4,
+                    scrollController: scroll,
+                    onDeleteRequest: _requestDelete,
+                    agentInteractable: widget.agentInteractable,
+                    onAgentInteractableChanged: widget.onAgentInteractableChanged,
+                    agentInteractableLabel: widget.agentInteractableLabel,
+                    agentInteractableHint: widget.agentInteractableHint,
+                  ),
                 ),
               if (narrow)
                 UiBottomSheet(
@@ -521,7 +540,17 @@ class UiFormBuilderState extends State<UiFormBuilder> {
           Container(
             width: _layout == UiFormBuilderLayout.wide ? 340 : 316,
             decoration: side(false),
-            child: Semantics(container: true, label: 'Settings', child: UiFbInspector(onDeleteRequest: _requestDelete)),
+            child: Semantics(
+              container: true,
+              label: 'Settings',
+              child: UiFbInspector(
+                onDeleteRequest: _requestDelete,
+                agentInteractable: widget.agentInteractable,
+                onAgentInteractableChanged: widget.onAgentInteractableChanged,
+                agentInteractableLabel: widget.agentInteractableLabel,
+                agentInteractableHint: widget.agentInteractableHint,
+              ),
+            ),
           ),
         ]);
     }

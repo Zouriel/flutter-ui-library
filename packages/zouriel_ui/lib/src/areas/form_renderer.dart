@@ -5,6 +5,7 @@
 library;
 
 export '../form_builder/renderer/form_renderer.dart' show UiFormRenderer, UiFormRendererState;
+export '../form_builder/renderer/form_summary.dart' show UiFormSummary, UiFormSummaryRow, UiFormSummarySection;
 export '../form_builder/renderer/renderer_field.dart' show UiFbFieldView, UiFbFieldViewState, UiFbUploader;
 export '../form_builder/renderer/form_strings_scope.dart';
 export '../form_builder/sources/source_picker.dart' show UiFbSourcePicker, UiFbSourcePickerState;

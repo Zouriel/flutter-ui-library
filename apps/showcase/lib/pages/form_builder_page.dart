@@ -114,6 +114,33 @@ key.currentState!.engine.dirty;      // and values, changes, pageIndex...''',
             ApiRow('engine.strings / engine.setStrings(overrides)', 'UiFbStrings / void', 'The engine’s and renderer’s own words in the language in use (built-in table plus the strings option). Messages are worded again when the language or the overrides change. UiFormEngine(strings: …) sets them up front.'),
           ],
         ),
+        DocSection(
+          name: 'Form summary',
+          widget: 'UiFormSummary',
+          summary: 'Compact review card of answered, visible fields in definition order, keeping section headings and skipping fields hidden by conditions. Reuses UiFormEngine and formatValue.',
+          demo: SizedBox(
+            width: 380,
+            child: UiFormSummary(
+              definition: UiFormDefinition.fromJson(sampleForm),
+              answers: sampleAnswers,
+              marked: const ['full_name'],
+              subtitle: 'Check every answer before you confirm.',
+              footer: Row(spacing: t.space2, children: [
+                Expanded(child: UiButton(variant: UiButtonVariant.outline, onPressed: () {}, child: const Text('Edit Answers'))),
+                Expanded(child: UiButton(onPressed: () {}, child: const Text('Confirm & Submit'))),
+              ]),
+            ),
+          ),
+          code: "UiFormSummary(\n  definition: form,\n  answers: answers,\n  marked: ['full_name'],\n  footer: UiButton(onPressed: submit, child: Text('Confirm & Submit')),\n)",
+          api: const [
+            ApiRow('definition', 'UiFormDefinition', 'Form definition.'),
+            ApiRow('answers', 'UiJson', 'Submitted or draft answers map.', def: '{}'),
+            ApiRow('language', 'String?', 'Language code (en, dv, …); defaults to form default.'),
+            ApiRow('marked', 'List<String>', 'Field paths to mark as assistant-filled.', def: '[]'),
+            ApiRow('markedLabel', 'String', 'Legend label for marked fields.', def: 'Filled in by the assistant'),
+            ApiRow('footer', 'Widget?', 'Optional footer slot (e.g. Edit / Confirm buttons).'),
+          ],
+        ),
         const DocSection(
           name: 'Starting answers and server errors',
           widget: 'UiFormRenderer(prefill:, serverErrors:)',

@@ -66,7 +66,17 @@ enum _Tab { settings, logic, checks }
 /// It scrolls itself; give [scrollController] when it sits in a [UiBottomSheet] so dragging the
 /// content also moves the sheet.
 class UiFbInspector extends StatefulWidget {
-  const UiFbInspector({super.key, this.showHead = true, this.onDeleteRequest, this.scrollController, this.sidePadding});
+  const UiFbInspector({
+    super.key,
+    this.showHead = true,
+    this.onDeleteRequest,
+    this.scrollController,
+    this.sidePadding,
+    this.agentInteractable = false,
+    this.onAgentInteractableChanged,
+    this.agentInteractableLabel = 'Available to the assistant',
+    this.agentInteractableHint = 'Lets the AI assistant read this form and fill it in field by field for a signed-in person, who confirms before it is submitted.',
+  });
 
   /// Hide the header when something around it already names the selection (the phone sheet).
   final bool showHead;
@@ -78,6 +88,11 @@ class UiFbInspector extends StatefulWidget {
   /// Delete was pressed for an element or page (the builder asks first when answers or rules
   /// would be lost).
   final ValueChanged<String>? onDeleteRequest;
+
+  final bool agentInteractable;
+  final ValueChanged<bool>? onAgentInteractableChanged;
+  final String agentInteractableLabel;
+  final String agentInteractableHint;
   final ScrollController? scrollController;
 
   @override
@@ -114,7 +129,13 @@ class _UiFbInspectorState extends State<UiFbInspector> {
 
     Widget body;
     if (sel == null) {
-      body = _FormSettings(store: store);
+      body = _FormSettings(
+        store: store,
+        agentInteractable: widget.agentInteractable,
+        onAgentInteractableChanged: widget.onAgentInteractableChanged,
+        agentInteractableLabel: widget.agentInteractableLabel,
+        agentInteractableHint: widget.agentInteractableHint,
+      );
     } else {
       final el = sel.element;
       body = switch (el) {
@@ -1162,8 +1183,18 @@ class _PagePanel extends StatelessWidget {
 // ── Form ─────────────────────────────────────────────────────────────────────────────────────
 
 class _FormSettings extends StatelessWidget {
-  const _FormSettings({required this.store});
+  const _FormSettings({
+    required this.store,
+    required this.agentInteractable,
+    required this.onAgentInteractableChanged,
+    required this.agentInteractableLabel,
+    required this.agentInteractableHint,
+  });
   final UiFormBuilderController store;
+  final bool agentInteractable;
+  final ValueChanged<bool>? onAgentInteractableChanged;
+  final String agentInteractableLabel;
+  final String agentInteractableHint;
 
   @override
   Widget build(BuildContext context) {
@@ -1192,6 +1223,17 @@ class _FormSettings extends StatelessWidget {
         ),
       ),
       UiFbSettingsFields(settings: def.settings ?? UiFbSettings(), onPatch: (edit, {mergeKey}) => store.updateSettings(edit, mergeKey: mergeKey)),
+      FbSection(title: 'Assistant', children: [
+        FbHinted(
+          hints: [if (agentInteractableHint.isNotEmpty) agentInteractableHint],
+          child: FbSwitch(
+            size: UiSize.sm,
+            value: agentInteractable,
+            label: agentInteractableLabel,
+            onChanged: (v) => onAgentInteractableChanged?.call(v),
+          ),
+        ),
+      ]),
     ]);
   }
 }
