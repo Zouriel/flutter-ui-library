@@ -28,6 +28,7 @@ class _FormsChoiceSectionsState extends State<FormsChoiceSections> {
   String _coverNote = '';
   String? _effect = 'fade';
   String _lastPicked = '';
+  String? _satisfaction = '4';
   UiAnchor _anchor = UiAnchor.centre;
   final _tokenKey = GlobalKey<UiTokenInputState>();
   List<UiTokenRun> _message = const [UiTokenRun.text('Dear '), UiTokenRun.token('guest.name'), UiTokenRun.text(', see you on '), UiTokenRun.token('event.date'), UiTokenRun.text('.')];
@@ -294,7 +295,7 @@ typedef UiFilePicker = Future<List<UiPickedFile>?> Function({required bool multi
       DocSection(
         name: 'Choice grid',
         widget: 'UiChoiceGrid<T>',
-        summary: 'One of many options shown as tiles, grouped under headings: presets, templates, effects. A radio group underneath: arrow keys (and Home/End) move through the enabled tiles in reading order and choose as they go, only the chosen tile is in the tab order, Enter/Space choose. tileBuilder draws a picture above each label. onPicked fires on every choice, even the selected tile again, for pickers where choosing is an action.',
+        summary: 'One of many options shown as tiles, grouped under headings: presets, templates, effects. A radio group underneath: arrow keys (and Home/End) move through the enabled tiles in reading order and choose as they go, only the chosen tile is in the tab order, Enter/Space choose. tileBuilder draws a picture above each label. align: UiChoiceAlign.center centres the words of compact tiles; a tone on an item colours its tile (a rating scale from success to danger). onPicked fires on every choice, even the selected tile again, for pickers where choosing is an action.',
         demo: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: t.space2, children: [
           UiChoiceGrid<String>(
             label: 'Entrance effect',
@@ -318,12 +319,47 @@ typedef UiFilePicker = Future<List<UiPickedFile>?> Function({required bool multi
             ],
           ),
           Text('Chosen: $_effect · last picked: ${_lastPicked.isEmpty ? 'none yet' : _lastPicked}', style: caption),
+          Padding(
+            padding: EdgeInsets.only(top: t.space4),
+            child: Text('Toned and centred: a satisfaction scale', style: caption),
+          ),
+          UiChoiceGrid<String>(
+            label: 'How satisfied are you?',
+            value: _satisfaction,
+            enabled: enabled,
+            align: UiChoiceAlign.center,
+            minTile: 104,
+            onChanged: (v) => setState(() => _satisfaction = v),
+            options: const [
+              UiChoice(value: '5', label: 'Very satisfied', tone: UiChoiceTone.success),
+              UiChoice(value: '4', label: 'Satisfied', tone: UiChoiceTone.info),
+              UiChoice(value: '3', label: 'Neutral', tone: UiChoiceTone.neutral),
+              UiChoice(value: '2', label: 'Dissatisfied', tone: UiChoiceTone.warning),
+              UiChoice(value: '1', label: 'Very dissatisfied', tone: UiChoiceTone.danger),
+            ],
+          ),
+          Text('Rating: $_satisfaction', style: caption),
         ]),
         code: '''UiChoiceGrid<String>(
   value: effect,
   options: const [UiChoice(value: 'fade', label: 'Fade', group: 'Entrances'), ...],
   tileBuilder: (context, item, selected) => Preview(item.value),
   onChanged: (v) => setState(() => effect = v),
+)
+
+// Toned and centred: a satisfaction scale.
+UiChoiceGrid<String>(
+  label: 'How satisfied are you?',
+  value: rating,
+  align: UiChoiceAlign.center,
+  options: const [
+    UiChoice(value: '5', label: 'Very satisfied', tone: UiChoiceTone.success),
+    UiChoice(value: '4', label: 'Satisfied', tone: UiChoiceTone.info),
+    UiChoice(value: '3', label: 'Neutral', tone: UiChoiceTone.neutral),
+    UiChoice(value: '2', label: 'Dissatisfied', tone: UiChoiceTone.warning),
+    UiChoice(value: '1', label: 'Very dissatisfied', tone: UiChoiceTone.danger),
+  ],
+  onChanged: (v) => setState(() => rating = v),
 )''',
         api: const [
           ApiRow('options', 'List<UiChoice<T>>', 'The tiles; group puts them under headings.'),
@@ -334,8 +370,10 @@ typedef UiFilePicker = Future<List<UiPickedFile>?> Function({required bool multi
           ApiRow('label', 'String', 'Accessible name of the group.', def: "'Choices'"),
           ApiRow('minTile', 'double', 'Narrowest a tile may get; columns fill the width.', def: '88'),
           ApiRow('tileBuilder', 'Widget Function(context, item, selected)?', 'Art above the label, in a 1.4:1 box.'),
+          ApiRow('align', 'UiChoiceAlign', 'center centres the label and description of compact tiles across and down, so tiles with different line counts in a row look even. Tiles with art are always centred.', def: 'UiChoiceAlign.start'),
+          ApiRow('UiChoice.tone', 'UiChoiceTone?', "Colours one tile (primary, success, info, warning, danger, neutral): a light wash and tinted edge at rest, stronger on hover; chosen, the tone's border, its subtle fill and a tick. Text stays AA in every theme. Null looks as before."),
         ],
-        shapes: 'class UiChoice<T> { T value; String label; String? description; String? group; bool disabled = false; }',
+        shapes: 'class UiChoice<T> { T value; String label; String? description; String? group; bool disabled = false; UiChoiceTone? tone; }\nenum UiChoiceTone { primary, success, info, warning, danger, neutral }\nenum UiChoiceAlign { start, center }',
       ),
       DocSection(
         name: 'Anchor picker',

@@ -673,7 +673,8 @@ File: `form/src/chip-input.ts`
 ### UiChoiceGrid (component, `ui-choice-grid`)
 File: `form/src/choice-grid.ts`  
 `ui-choice-grid` — pick one of many options shown as tiles: presets, templates, effects. A radio group underneath (CVA or `[(value)]`): arrow keys move through the tiles in reading order, only the chosen one is in the tab order, and Enter/Space choose. Each tile shows its label (and description); project `<ng-template #tile let-item let-selected="selected">` to draw a picture above it. `(picked)` fires on every choice, including choosing the selected tile again — for pickers where a choice is an action (add this) rather than a setting.  
-- Inputs: `options`: readonly UiChoice[] = []; `label` = 'Choices'; `minTile` = '88px'
+- Inputs: `options`: readonly UiChoice[] = []; `label` = 'Choices'; `minTile` = '88px'; `align`: 'start' | 'center' = 'start'
+- `UiChoice.tone`: 'primary' | 'success' | 'info' | 'warning' | 'danger' | 'neutral' (optional)
 - Two-way: `value`: string | null = null
 - Outputs: `picked`: UiChoice
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase

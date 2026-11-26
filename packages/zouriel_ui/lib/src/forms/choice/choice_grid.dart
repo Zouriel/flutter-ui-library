@@ -3,16 +3,26 @@ import 'dart:math' as math;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hugeicons/hugeicons.dart';
 
+import '../../core/icon.dart';
 import '../../core/interactive.dart';
 import '../../core/types.dart';
 import '../../theme/theme.dart';
 import 'roving.dart';
 
+/// How a compact tile (no [UiChoiceGrid.tileBuilder]) lays out its words: from the start edge, or
+/// centred both ways (web `align`).
+enum UiChoiceAlign { start, center }
+
+/// A colour for one tile (web `UiChoiceTone`): tinted at rest, stronger on hover, the tone's border,
+/// subtle fill and a tick when chosen.
+enum UiChoiceTone { primary, success, info, warning, danger, neutral }
+
 /// One tile of a [UiChoiceGrid].
 @immutable
 class UiChoice<T> {
-  const UiChoice({required this.value, required this.label, this.description, this.group, this.disabled = false});
+  const UiChoice({required this.value, required this.label, this.description, this.group, this.disabled = false, this.tone});
   final T value;
   final String label;
 
@@ -22,6 +32,9 @@ class UiChoice<T> {
   /// Tiles with the same group sit under that heading, in the order groups first appear.
   final String? group;
   final bool disabled;
+
+  /// Colours the tile (see [UiChoiceTone]). Left null, the tile looks as it always has.
+  final UiChoiceTone? tone;
 }
 
 /// `ui-choice-grid`: one of many options shown as tiles (presets, templates, effects). A radio group
@@ -31,6 +44,9 @@ class UiChoice<T> {
 /// Each tile shows its label (and description); [tileBuilder] draws a picture above it. [onPicked]
 /// fires on every choice, including the selected tile again, for pickers where choosing is an action
 /// ("add this") rather than a setting. Columns fill the width, each at least [minTile] wide.
+///
+/// [align] `center` centres the words of compact tiles across and down; a [UiChoice.tone] colours its
+/// tile (a rating scale from success to danger, say).
 class UiChoiceGrid<T> extends StatefulWidget {
   const UiChoiceGrid({
     super.key,
@@ -42,6 +58,7 @@ class UiChoiceGrid<T> extends StatefulWidget {
     this.label = 'Choices',
     this.minTile = 88,
     this.tileBuilder,
+    this.align = UiChoiceAlign.start,
   });
 
   final List<UiChoice<T>> options;
@@ -58,6 +75,10 @@ class UiChoiceGrid<T> extends StatefulWidget {
 
   /// Draws the art above a tile's label, in a 1.4:1 box.
   final Widget Function(BuildContext context, UiChoice<T> item, bool selected)? tileBuilder;
+
+  /// [UiChoiceAlign.center] centres a compact tile's label and description, across and down (tiles
+  /// with a [tileBuilder] are always centred).
+  final UiChoiceAlign align;
 
   @override
   State<UiChoiceGrid<T>> createState() => _UiChoiceGridState<T>();
@@ -172,56 +193,119 @@ class _UiChoiceGridState<T> extends State<UiChoiceGrid<T>> with UiRovingFocus<Ui
       padTouchTarget: false,
       builder: (context, s) {
         final hover = (s.hovered || s.pressed) && !on;
+        final tone = item.tone == null ? null : _tone(t, item.tone!);
+        final center = art != null || widget.align == UiChoiceAlign.center;
+        final textAlign = center ? TextAlign.center : TextAlign.start;
+        // Tones: a 5% wash and a 50% edge at rest, 8% / 80% on hover; chosen, the tone's border at
+        // 2px (the padding gives back the extra pixel, so nothing shifts), its subtle fill and a tick.
+        final Color fill;
+        final Color edge;
+        if (tone == null) {
+          fill = on ? t.selected : hover ? t.surfaceHover : t.surface;
+          edge = on ? t.primary : hover ? uiMix(t.primary, 0.5, t.border) : t.border;
+        } else {
+          fill = on ? tone.subtle : uiMix(tone.color, hover ? 0.08 : 0.05, t.surface);
+          edge = on ? tone.color : uiMix(tone.color, hover ? 0.8 : 0.5, t.border);
+        }
+        final duration = context.uiAnimate ? t.motionBase : Duration.zero;
+        final tile = AnimatedContainer(
+          duration: duration,
+          curve: t.easeStandard,
+          constraints: BoxConstraints(minHeight: uiTouchPlatform(context) ? uiMinTouchTarget : 0),
+          padding: tone == null
+              ? EdgeInsets.all(t.space2)
+              : EdgeInsets.symmetric(vertical: t.space4 - (on ? 1 : 0), horizontal: t.space3 - (on ? 1 : 0)),
+          decoration: BoxDecoration(
+            color: fill,
+            border: Border.all(color: edge, width: tone != null && on ? 2 : 1),
+            borderRadius: BorderRadius.circular(r),
+            boxShadow: s.focused ? t.focusRing : const [],
+          ),
+          child: Column(
+            crossAxisAlignment: art != null ? CrossAxisAlignment.stretch : center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            mainAxisAlignment: center && art == null ? MainAxisAlignment.center : MainAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            spacing: t.space1,
+            children: [
+              if (art != null)
+                AspectRatio(
+                  aspectRatio: 1.4,
+                  child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(color: t.surfaceSubtle, borderRadius: BorderRadius.circular(math.max(0, r - 2))),
+                    alignment: Alignment.center,
+                    child: art(context, item, on),
+                  ),
+                ),
+              Text(
+                item.label,
+                textAlign: textAlign,
+                style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.25, color: t.text),
+              ),
+              if (item.description != null)
+                Text(
+                  item.description!,
+                  textAlign: textAlign,
+                  // On a toned wash the description leans a quarter toward the ink, so it holds 4.5:1.
+                  style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.3, color: tone == null ? t.textMuted : uiMix(t.textMuted, 0.75, t.text)),
+                ),
+            ],
+          ),
+        );
         return Semantics(
           inMutuallyExclusiveGroup: true,
           child: AnimatedOpacity(
             opacity: s.disabled ? 0.5 : 1,
             duration: t.motionBase,
-            child: AnimatedContainer(
-              duration: context.uiAnimate ? t.motionBase : Duration.zero,
-              curve: t.easeStandard,
-              constraints: BoxConstraints(minHeight: uiTouchPlatform(context) ? uiMinTouchTarget : 0),
-              padding: EdgeInsets.all(t.space2),
-              decoration: BoxDecoration(
-                color: on ? t.selected : hover ? t.surfaceHover : t.surface,
-                border: Border.all(color: on ? t.primary : hover ? uiMix(t.primary, 0.5, t.border) : t.border),
-                borderRadius: BorderRadius.circular(r),
-                boxShadow: s.focused ? t.focusRing : const [],
-              ),
-              child: Column(
-                crossAxisAlignment: art == null ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                spacing: t.space1,
-                children: [
-                  if (art != null)
-                    AspectRatio(
-                      aspectRatio: 1.4,
-                      child: Container(
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(color: t.surfaceSubtle, borderRadius: BorderRadius.circular(math.max(0, r - 2))),
-                        alignment: Alignment.center,
-                        child: art(context, item, on),
+            child: tone == null
+                ? tile
+                : Stack(
+                    fit: StackFit.passthrough,
+                    children: [
+                      tile,
+                      PositionedDirectional(
+                        top: 6,
+                        end: 6,
+                        child: ExcludeSemantics(
+                          child: AnimatedOpacity(
+                            key: const ValueKey('ui-choice-tick'),
+                            opacity: on ? 1 : 0,
+                            duration: context.uiAnimate ? t.motionFast : Duration.zero,
+                            curve: t.easeStandard,
+                            child: AnimatedScale(
+                              scale: on || !context.uiAnimate || MediaQuery.maybeDisableAnimationsOf(context) == true ? 1 : 0.5,
+                              duration: duration,
+                              curve: t.easeSpring,
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(color: tone.color, shape: BoxShape.circle),
+                                child: UiIcon(HugeIcons.strokeRoundedTick02, size: 10, strokeWidth: 2.5, color: tone.ink),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: art == null ? TextAlign.start : TextAlign.center,
-                    style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.25, color: t.text),
+                    ],
                   ),
-                  if (item.description != null)
-                    Text(
-                      item.description!,
-                      textAlign: art == null ? TextAlign.start : TextAlign.center,
-                      style: context.uiText.body.copyWith(fontSize: t.fontSizeSm, height: 1.3, color: t.textMuted),
-                    ),
-                ],
-              ),
-            ),
           ),
         );
       },
     );
   }
+}
+
+/// A tile tone's colour, the ink drawn on it (the tick) and its subtle chosen fill (the web
+/// `--ui-color-<tone>-subtle`: 10% of the tone over the surface).
+({Color color, Color ink, Color subtle}) _tone(UiTokens t, UiChoiceTone tone) {
+  final (color, ink) = switch (tone) {
+    UiChoiceTone.primary => (t.primary, t.primaryContrast),
+    UiChoiceTone.success => (t.success, t.successContrast),
+    UiChoiceTone.info => (t.info, t.infoContrast),
+    UiChoiceTone.warning => (t.warning, t.warningContrast),
+    UiChoiceTone.danger => (t.danger, t.dangerContrast),
+    UiChoiceTone.neutral => (t.textMuted, t.surface),
+  };
+  return (color: color, ink: ink, subtle: uiMix(color, 0.1, t.surface));
 }

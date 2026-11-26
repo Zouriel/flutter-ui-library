@@ -1808,6 +1808,22 @@ Angular moved `UiSpeedDial` from `@zouriel/ui/button` to its own `@zouriel/ui/sp
 import buttons don't ship it on first load. Dart has no entry points and tree-shakes unused widgets, so the Flutter
 side has no code change; the version is bumped to keep both libraries on the same number.
 
+## 0.100.0: choice grid `align` and tile tones
+
+- `UiChoiceGrid.align` (`UiChoiceAlign.start` / `.center`, web `align: 'start' | 'center'`) centres a compact tile's
+  label and description across and down; tiles with a `tileBuilder` stay centred as before.
+- `UiChoice.tone` (`UiChoiceTone.primary/success/info/warning/danger/neutral`, web `tone`): a 5% wash of the tone over
+  the surface and a 50% tone edge at rest, 8% / 80% on hover; chosen, the tone's border, its subtle fill and a 14px tick
+  badge (the tone with its `*Contrast` ink; neutral is `textMuted` with `surface` ink) in the top-end corner. Toned
+  tiles pad 16 x 12 so the badge never sits on the words, and their description leans 25% toward `text` so it holds
+  4.5:1 on every wash (the web style contract and `grid_test.dart` check every theme).
+- The web doubles the chosen edge with a 1px inset ring; Flutter has no inset shadow, so it draws a 2px border and
+  gives the extra pixel back from the padding (nothing shifts). The subtle fill is `uiMix(tone, 0.1, surface)`, the
+  web's default `--ui-color-<tone>-subtle`; Flutter has no per-theme subtle tokens (only the Addu theme overrides them
+  on the web).
+- The tile label now wraps instead of truncating to one line, as it always did on the web (needed for "Very
+  dissatisfied" in a narrow tile).
+
 ## Drag onto target (`UiDragItem<T>`, `UiDropTarget<T>`)
 
 - Named `UiDragItem` (`[uiDragItem]` on Angular, `UiDragItem<T>` on Flutter) + `UiDropTarget` (`[uiDropTarget]` on
