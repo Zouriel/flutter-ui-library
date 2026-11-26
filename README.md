@@ -1,11 +1,12 @@
-# zouriel_ui (Flutter) — 0.108.0
+# zouriel_ui (Flutter) — 0.108.1
 
 The [@zouriel/ui](https://github.com/Zouriel/angular-ui-library) design system for Flutter: the same
 tokens, 15 themes and components as the Angular library, built on Flutter's widgets layer (no
 Material), accessible, and tested component by component. Web docs for the Angular version:
 <https://zouriel.com/uilib/>.
 
-The 0.108.0 Flutter release adds `UiCard.glassStrength` (`frosted`, `clear`, or Apple-style `liquid`)
+0.108.1 fixes the liquid glass edge shader so only the rim band refracts (it displaced the whole
+interior of cards whose refraction band is wider than their corner radius). The 0.108.0 Flutter release adds `UiCard.glassStrength` (`frosted`, `clear`, or Apple-style `liquid`)
 and `UiApp(background:)` for transparent host-window backgrounds. The Angular twin already contains the
 card API; the app-background option is Flutter-only.
 

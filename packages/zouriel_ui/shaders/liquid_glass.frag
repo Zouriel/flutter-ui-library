@@ -19,7 +19,9 @@ void main() {
   vec2 p = coordinate - halfSize;
   vec2 inner = halfSize - vec2(u_radius);
   vec2 q = abs(p) - inner;
-  float roundedEdge = length(max(q, vec2(0.0))) - u_radius;
+  // Signed distance to the rounded box; the min() term keeps it growing inside the
+  // straight part of the card, so only the rim band refracts, not the whole interior.
+  float roundedEdge = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - u_radius;
   float distanceIn = -roundedEdge;
   float edge = 1.0 - smoothstep(0.0, u_band, distanceIn);
   vec2 normal = p - clamp(p, -inner, inner);

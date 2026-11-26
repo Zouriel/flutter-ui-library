@@ -1824,6 +1824,14 @@ side has no code change; the version is bumped to keep both libraries on the sam
 - The tile label now wraps instead of truncating to one line, as it always did on the web (needed for "Very
   dissatisfied" in a narrow tile).
 
+## 0.108.1: liquid glass refraction only at the rim
+
+- `shaders/liquid_glass.frag` computed the distance to the card edge without the interior term of the
+  rounded-box distance (`min(max(q.x, q.y), 0)`), so inside the straight part of a card the distance stayed
+  at the corner radius. With the 24px refraction band wider than the radius, the whole interior was displaced
+  radially (a slight lens over the card's content). Now only the rim band bends the backdrop, as on the web.
+  Flutter-only: the Angular twin refracts with an SVG displacement map that has no such term.
+
 ## 0.108.0: card glass strengths and transparent app background
 
 - `UiCard.glassStrength` (`UiCardGlassStrength.frosted`, `.clear`, `.liquid`) mirrors Angular `glassStrength`.
