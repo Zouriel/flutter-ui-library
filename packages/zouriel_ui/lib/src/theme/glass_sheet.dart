@@ -1,4 +1,4 @@
-import 'dart:ui' show ImageFilter, TileMode;
+import 'dart:ui' show ColorFilter, ImageFilter, TileMode;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -61,6 +61,25 @@ ImageFilter uiGlassSheetFilter(UiTokens t, {UiGlassStrength strength = UiGlassSt
     inner: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.clamp),
   );
 }
+
+/// The clear card's backdrop matrix: the card has its own AA range, wider than a sheet's.
+List<double> uiGlassCardMatrix(UiTokens t) {
+  final k = t.glassCardCeiling - t.glassCardFloor;
+  final o = t.glassCardFloor * 255;
+  final s = t.glassCardClearSaturate;
+  final m = <List<double>>[
+    [0.213 + 0.787 * s, 0.715 - 0.715 * s, 0.072 - 0.072 * s],
+    [0.213 - 0.213 * s, 0.715 + 0.285 * s, 0.072 - 0.072 * s],
+    [0.213 - 0.213 * s, 0.715 - 0.715 * s, 0.072 + 0.928 * s],
+  ];
+  return <double>[for (final row in m) ...[k * row[0], k * row[1], k * row[2], 0, o], 0, 0, 0, 1, 0];
+}
+
+/// Blur and squeeze a card backdrop into its theme's AA range.
+ImageFilter uiGlassCardFilter(UiTokens t) => ImageFilter.compose(
+      outer: ColorFilter.matrix(uiGlassCardMatrix(t)),
+      inner: ImageFilter.blur(sigmaX: t.glassCardClearBlur / 2, sigmaY: t.glassCardClearBlur / 2, tileMode: TileMode.clamp),
+    );
 
 /// The translucent surface tint drawn over the filtered backdrop ([UiTokens.glassClearBg] or
 /// [UiTokens.glassSheetBg]).

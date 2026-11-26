@@ -1824,6 +1824,19 @@ side has no code change; the version is bumped to keep both libraries on the sam
 - The tile label now wraps instead of truncating to one line, as it always did on the web (needed for "Very
   dissatisfied" in a narrow tile).
 
+## 0.108.0: card glass strengths and transparent app background
+
+- `UiCard.glassStrength` (`UiCardGlassStrength.frosted`, `.clear`, `.liquid`) mirrors Angular `glassStrength`.
+  Frosted keeps the original blur and AA-preserving tint. Clear applies the card's 24px blur, saturation and
+  per-theme floor/ceiling squeeze. Liquid uses a maximum 20% surface tint, light blur, saturation, a specular
+  rim, sheen and a page-colour text halo; a runtime fragment shader in `ImageFilter.shader` bends the backdrop
+  at the rounded edge when supported, and the same surface falls back to blur/saturation/rim/sheen when it is not.
+  High contrast maps reduced transparency to frosted for liquid and solid surface for clear, matching the web's
+  reduced-transparency/contrast rules. The Angular twin already shipped this API, so the release is Flutter-only.
+- `UiApp.background` overrides the root and page-route `ColoredBox` colour. Null keeps the theme `bg` token;
+  `Color(0x00000000)` leaves a host window or wallpaper visible. This is Flutter-only because the web app's
+  page background is CSS-owned.
+
 ## Drag onto target (`UiDragItem<T>`, `UiDropTarget<T>`)
 
 - Named `UiDragItem` (`[uiDragItem]` on Angular, `UiDragItem<T>` on Flutter) + `UiDropTarget` (`[uiDropTarget]` on

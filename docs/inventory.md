@@ -313,7 +313,7 @@ File: `canvas/src/image-editor.ts`
 ### UiCard (component, `ui-card`)
 File: `card/src/card.ts`  
 `ui-card` — surface container with optional header/footer slots. Project header content with `[card-header]` and footer with `[card-footer]`.  
-- Inputs: `padding`: 'sm' | 'md' | 'lg' = 'md'; `gap`: UiCardGap | null = null (Flutter `children` + `gap`); `align`: UiCardAlign | null = null (Flutter `UiStackAlign`); `glass`: boolean = this.config.glass; `radius`: boolean = this.config.radius; `interactive` = false (Flutter `onTap`); `ariaLabel`: string | null = null (Flutter `semanticLabel`); `disabled` = false (Flutter `enabled`)
+- Inputs: `padding`: 'sm' | 'md' | 'lg' = 'md'; `gap`: UiCardGap | null = null (Flutter `children` + `gap`); `align`: UiCardAlign | null = null (Flutter `UiStackAlign`); `glass`: boolean = this.config.glass; `glassStrength`: 'frosted' | 'clear' | 'liquid'; `radius`: boolean = this.config.radius; `interactive` = false (Flutter `onTap`); `ariaLabel`: string | null = null (Flutter `semanticLabel`); `disabled` = false (Flutter `enabled`)
 - Outputs: `activate`: void
 - [x] Flutter port  - [x] widget tests  - [x] golden/visual check  - [x] showcase
 

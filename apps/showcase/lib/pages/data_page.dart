@@ -244,7 +244,7 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Card',
           widget: 'UiCard',
-          summary: 'A surface with optional header and footer. With onTap the whole card is the target: it lifts on press and gets the focus ring.',
+          summary: 'A surface with optional header and footer. With onTap the whole card is the target: it lifts on press and gets the focus ring. Glass cards support frosted, AA-preserving clear, and transparent liquid strengths.',
           demo: Column(spacing: t.space3, children: [
             UiCard(
               header: const UiText('Monthly report', variant: UiTextVariant.h4, heading: true),
@@ -294,6 +294,39 @@ class _DataPageState extends State<DataPage> {
                 ),
               ),
             ]),
+            RepaintBoundary(
+              key: const ValueKey('card-glass-demo'),
+              child: SizedBox(
+                height: 260,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(t.radiusLg),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset('assets/demo/poster.jpg', fit: BoxFit.cover),
+                      ColoredBox(color: t.overlay.withValues(alpha: 0.08)),
+                      Padding(
+                        padding: EdgeInsets.all(t.space3),
+                        child: Row(spacing: t.space3, children: [
+                          for (final strength in UiCardGlassStrength.values)
+                            Expanded(
+                              child: UiCard(
+                                glass: true,
+                                glassStrength: strength,
+                                padding: UiSize.sm,
+                                children: [
+                                  UiText(strength.name, variant: UiTextVariant.h5),
+                                  const UiText('See the busy image through the surface.', variant: UiTextVariant.caption),
+                                ],
+                              ),
+                            ),
+                        ]),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ]),
           code: "UiCard(\n  padding: UiSize.sm,\n  gap: 1,\n  align: UiStackAlign.center,\n  semanticLabel: 'Aisha Ibrahim, 24 photos',\n  onTap: open,\n  children: [\n    UiAvatar(name: 'Aisha Ibrahim', dimension: 64),\n    UiText('Aisha Ibrahim', variant: UiTextVariant.label, truncate: true),\n    UiText('24 photos', variant: UiTextVariant.caption),\n  ],\n)",
           api: const [
@@ -305,6 +338,7 @@ class _DataPageState extends State<DataPage> {
             ApiRow('onTap', 'VoidCallback?', 'Makes the whole card a button.'),
             ApiRow('enabled', 'bool', 'false dims and disables taps on an interactive card.', def: 'true'),
             ApiRow('glass', 'bool?', 'Frosted surface; defaults to UiConfig.glass.'),
+            ApiRow('glassStrength', 'UiCardGlassStrength', 'frosted is the original surface, clear keeps the backdrop recognisable while squeezing it into the theme AA range, and liquid is at least 80% transparent with light blur, saturation, rim, sheen and optional edge refraction.', def: 'frosted'),
           ],
         ),
         DocSection(

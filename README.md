@@ -1,9 +1,13 @@
-# zouriel_ui (Flutter)
+# zouriel_ui (Flutter) — 0.108.0
 
 The [@zouriel/ui](https://github.com/Zouriel/angular-ui-library) design system for Flutter: the same
 tokens, 15 themes and components as the Angular library, built on Flutter's widgets layer (no
 Material), accessible, and tested component by component. Web docs for the Angular version:
 <https://zouriel.com/uilib/>.
+
+The 0.108.0 Flutter release adds `UiCard.glassStrength` (`frosted`, `clear`, or Apple-style `liquid`)
+and `UiApp(background:)` for transparent host-window backgrounds. The Angular twin already contains the
+card API; the app-background option is Flutter-only.
 
 - **Flutter 3.47** / Dart 3.13. Android first (48dp touch targets, back button, TalkBack), also web.
 - **Tokens generated from the web CSS** (`tool/gen_tokens.mjs` resolves every theme in a real

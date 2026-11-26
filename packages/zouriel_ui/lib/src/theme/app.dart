@@ -32,6 +32,7 @@ class UiApp extends StatefulWidget {
     this.builder,
     this.locale,
     this.textDirection,
+    this.background,
     this.debugShowCheckedModeBanner = false,
   });
 
@@ -47,6 +48,9 @@ class UiApp extends StatefulWidget {
   final List<NavigatorObserver> navigatorObservers;
   final TransitionBuilder? builder;
   final Locale? locale;
+
+  /// The window/page background. Null keeps the theme's `bg` token; transparent lets a host window show through.
+  final Color? background;
 
   /// The app's text direction (0.46.0). Null follows [locale]: right to left for Dhivehi (`dv`),
   /// Arabic, Hebrew, Persian, Urdu and the other [uiRtlLanguages], else what the localizations say
@@ -119,10 +123,10 @@ class _UiAppState extends State<UiApp> with WidgetsBindingObserver {
           debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
           textStyle: t.typography.body,
           pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) =>
-              UiPageRoute<T>(settings: settings, builder: builder),
+              UiPageRoute<T>(settings: settings, builder: builder, background: widget.background),
           builder: (context, child) {
             Widget content = ColoredBox(
-              color: t.tokens.bg,
+              color: widget.background ?? t.tokens.bg,
               // Icons default to the theme's icon colour (maldives: Lagoon), else its text colour (black
               // would vanish on dark themes). Filled and active controls set their own.
               child: IconTheme(
@@ -198,10 +202,11 @@ enum UiPageTransition {
 /// from, and pops past half way or on a fling. Under reduced motion the slides become a plain fade;
 /// with the library's animations off pages change at once.
 class UiPageRoute<T> extends PageRoute<T> {
-  UiPageRoute({required this.builder, this.transition = UiPageTransition.fade, super.settings, super.fullscreenDialog});
+  UiPageRoute({required this.builder, this.transition = UiPageTransition.fade, this.background, super.settings, super.fullscreenDialog});
 
   final WidgetBuilder builder;
   final UiPageTransition transition;
+  final Color? background;
 
   bool get _slides => transition != UiPageTransition.fade;
 
@@ -230,7 +235,7 @@ class UiPageRoute<T> extends PageRoute<T> {
 
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
-    final page = ColoredBox(color: context.ui.bg, child: child);
+    final page = ColoredBox(color: background ?? context.ui.bg, child: child);
     if (!context.uiTheme.config.animations) return page;
     final reduced = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (!_slides) {
