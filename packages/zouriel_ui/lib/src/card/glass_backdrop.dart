@@ -73,13 +73,6 @@ class _UiGlassBackdropState extends State<UiGlassBackdrop> {
     }
   }
 
-  bool _onScroll(ScrollNotification _) {
-    // A scroll can move a repaint boundary at composite time. Repaint slices, but never rebuild
-    // or regenerate the cached image for a scroll-only movement.
-    _model.invalidateSlices();
-    return false;
-  }
-
   @override
   void dispose() {
     _stream?.removeListener(_listener);
@@ -91,9 +84,9 @@ class _UiGlassBackdropState extends State<UiGlassBackdrop> {
   Widget build(BuildContext context) {
     _model.setTokens(context.ui);
     _model.setStyle(widget.color, widget.dim);
-    return NotificationListener<ScrollNotification>(
-      onNotification: _onScroll,
-      child: UiGlassBackdropScope(
+    // Slices follow the backdrop through a LayerLink, resolved when the frame is composited, so a
+    // scroll or a moved repaint boundary needs no rebuild or repaint here.
+    return UiGlassBackdropScope(
         model: _model,
         child: CompositedTransformTarget(
           link: _model.link,
@@ -105,7 +98,6 @@ class _UiGlassBackdropState extends State<UiGlassBackdrop> {
             ),
           ),
         ),
-      ),
     );
   }
 }
@@ -214,10 +206,6 @@ class UiGlassBackdropModel extends ChangeNotifier {
     _blurred?.dispose();
     _blurred = null;
     _scheduleBuild();
-  }
-
-  void invalidateSlices() {
-    if (hasBlur) notifyListeners();
   }
 
   void _scheduleBuild() {
