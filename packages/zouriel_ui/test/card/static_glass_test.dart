@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zouriel_ui/zouriel_ui.dart';
 import 'package:zouriel_ui/src/card/glass_backdrop.dart'
-    show UiGlassBackdropSlice, uiGlassBackdropDebugBuildCount;
+    show UiGlassBackdropSlice, uiGlassBackdropDebugBuildCount, uiGlassBackdropDebugDisposeCount;
 
 import '../helpers.dart';
 
@@ -76,6 +76,167 @@ void main() {
     );
     expect(find.byType(BackdropFilter), findsOneWidget);
     expect(find.byType(UiGlassBackdropSlice), findsNothing);
+  });
+
+  testWidgets('cross-fades the background and card slice, then idles and disposes the old pair', (
+    tester,
+  ) async {
+    final red = (await tester.runAsync(() => _solid(const Color(0xffff0000))))!;
+    final blue = (await tester.runAsync(() => _solid(const Color(0xff0000ff))))!;
+    var provider = _TestImage(red);
+    late StateSetter change;
+    final shot = GlobalKey();
+    final disposedBefore = uiGlassBackdropDebugDisposeCount;
+    await pumpUi(
+      tester,
+      RepaintBoundary(
+        key: shot,
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            change = setState;
+            return SizedBox(
+              width: 200,
+              height: 120,
+              child: UiGlassBackdrop(
+                image: provider,
+                transition: const Duration(milliseconds: 400),
+                child: const SizedBox.expand(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    change(() => provider = _TestImage(blue));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    final middle = await _pixel(tester, shot, const Offset(100, 60));
+    expect(middle[0], greaterThan(20));
+    expect(middle[2], greaterThan(20));
+    expect((middle[0] - middle[2]).abs(), lessThan(180));
+    await tester.pump(const Duration(milliseconds: 250));
+    final end = await _pixel(tester, shot, const Offset(100, 60));
+    expect(end[2], greaterThan(end[0] + 100));
+    expect(uiGlassBackdropDebugDisposeCount, greaterThan(disposedBefore));
+    expect(tester.binding.transientCallbackCount, 0);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    red.dispose();
+    blue.dispose();
+  });
+
+  testWidgets('zero transition and reduced motion swap immediately', (tester) async {
+    final red = (await tester.runAsync(() => _solid(const Color(0xffff0000))))!;
+    final blue = (await tester.runAsync(() => _solid(const Color(0xff0000ff))))!;
+    var provider = _TestImage(red);
+    late StateSetter change;
+    final shot = GlobalKey();
+    await pumpUi(
+      tester,
+      RepaintBoundary(
+        key: shot,
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            change = setState;
+            return SizedBox(
+              width: 200,
+              height: 120,
+              child: UiGlassBackdrop(
+                image: provider,
+                transition: Duration.zero,
+                child: const SizedBox.expand(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    change(() => provider = _TestImage(blue));
+    await tester.pumpAndSettle();
+    final pixel = await _pixel(tester, shot, const Offset(100, 60));
+    expect(pixel[2], greaterThan(pixel[0] + 100));
+    expect(tester.binding.transientCallbackCount, 0);
+    red.dispose();
+    blue.dispose();
+  });
+
+  testWidgets('a newer image replaces a pending target instead of queueing it', (tester) async {
+    final red = (await tester.runAsync(() => _solid(const Color(0xffff0000))))!;
+    final blue = (await tester.runAsync(() => _solid(const Color(0xff0000ff))))!;
+    final green = (await tester.runAsync(() => _solid(const Color(0xff00ff00))))!;
+    var provider = _TestImage(red);
+    late StateSetter change;
+    final shot = GlobalKey();
+    await pumpUi(
+      tester,
+      RepaintBoundary(
+        key: shot,
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            change = setState;
+            return SizedBox(
+              width: 200,
+              height: 120,
+              child: UiGlassBackdrop(
+                image: provider,
+                transition: const Duration(milliseconds: 400),
+                child: const SizedBox.expand(),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    change(() => provider = _TestImage(blue));
+    await tester.pump();
+    change(() => provider = _TestImage(green));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 450));
+    final pixel = await _pixel(tester, shot, const Offset(100, 60));
+    expect(pixel[1], greaterThan(pixel[0] + 100));
+    expect(pixel[1], greaterThan(pixel[2] + 100));
+    red.dispose();
+    blue.dispose();
+    green.dispose();
+  });
+
+  testWidgets('reduced motion swaps a non-zero transition without scheduling a fade', (tester) async {
+    final red = (await tester.runAsync(() => _solid(const Color(0xffff0000))))!;
+    final blue = (await tester.runAsync(() => _solid(const Color(0xff0000ff))))!;
+    var provider = _TestImage(red);
+    late StateSetter change;
+    final shot = GlobalKey();
+    await pumpUi(
+      tester,
+      MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: RepaintBoundary(
+          key: shot,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              change = setState;
+              return SizedBox(
+                width: 200,
+                height: 120,
+                child: UiGlassBackdrop(
+                  image: provider,
+                  transition: const Duration(milliseconds: 400),
+                  child: const SizedBox.expand(),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    change(() => provider = _TestImage(blue));
+    await tester.pumpAndSettle();
+    final pixel = await _pixel(tester, shot, const Offset(100, 60));
+    expect(pixel[2], greaterThan(pixel[0] + 100));
+    expect(tester.binding.transientCallbackCount, 0);
+    red.dispose();
+    blue.dispose();
   });
 
   // The backdrop is red on its left half and blue on its right half, so a card shows which part
@@ -192,6 +353,25 @@ Future<ui.Image> _halves() {
   canvas.drawRect(const Rect.fromLTWH(0, 0, 200, 200), Paint()..color = const Color(0xffff0000));
   canvas.drawRect(const Rect.fromLTWH(200, 0, 200, 200), Paint()..color = const Color(0xff0000ff));
   return recorder.endRecording().toImage(400, 200);
+}
+
+Future<ui.Image> _solid(Color color) {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawRect(const Rect.fromLTWH(0, 0, 400, 200), Paint()..color = color);
+  return recorder.endRecording().toImage(400, 200);
+}
+
+Future<List<int>> _pixel(WidgetTester tester, GlobalKey key, Offset at) async {
+  final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+  return (await tester.runAsync(() async {
+    final image = await boundary.toImage();
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    final width = image.width;
+    image.dispose();
+    final i = ((at.dy.round() * width) + at.dx.round()) * 4;
+    return [bytes!.getUint8(i), bytes.getUint8(i + 1), bytes.getUint8(i + 2)];
+  }))!;
 }
 
 /// 'red' or 'blue' for the pixel at [at] in the captured boundary, whichever channel wins clearly.

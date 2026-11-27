@@ -11,6 +11,9 @@ import '../theme/theme.dart';
 @visibleForTesting
 int uiGlassBackdropDebugBuildCount = 0;
 
+@visibleForTesting
+int uiGlassBackdropDebugDisposeCount = 0;
+
 /// The three glass surfaces supported by the web `ui-card`.
 enum UiCardGlassStrength { frosted, clear, liquid }
 
@@ -22,6 +25,7 @@ class UiGlassBackdrop extends StatefulWidget {
     this.image,
     this.dim = 0,
     this.color = const Color(0x00000000),
+    this.transition,
     required this.child,
   });
 
@@ -33,19 +37,30 @@ class UiGlassBackdrop extends StatefulWidget {
 
   /// The background colour, painted below [image].
   final Color color;
+
+  /// The cross-fade duration when [image] changes. Defaults to [UiTokens.motionSlow].
+  /// A zero duration swaps as soon as the image and its blurred copy are ready.
+  final Duration? transition;
   final Widget child;
 
   @override
   State<UiGlassBackdrop> createState() => _UiGlassBackdropState();
 }
 
-class _UiGlassBackdropState extends State<UiGlassBackdrop> {
-  late final UiGlassBackdropModel _model = UiGlassBackdropModel();
+class _UiGlassBackdropState extends State<UiGlassBackdrop>
+    with SingleTickerProviderStateMixin {
+  late final UiGlassBackdropModel _model = UiGlassBackdropModel(
+    onReady: _startReadyLayer,
+  );
+  late final AnimationController _fade = AnimationController(
+    vsync: this,
+    duration: Duration.zero,
+  )..addListener(() => _model._setFadeProgress(_fade.value));
   ImageStream? _stream;
   late final ImageStreamListener _listener = ImageStreamListener((info, _) {
-    _model.setImage(info.image.clone());
+    _model.setImage(info.image.clone(), animate: true);
     info.dispose();
-  }, onError: (_, _) => _model.setImage(null));
+  }, onError: (_, _) => _model.setImage(null, animate: true));
 
   @override
   void didChangeDependencies() {
@@ -61,13 +76,33 @@ class _UiGlassBackdropState extends State<UiGlassBackdrop> {
     _model.setStyle(widget.color, widget.dim);
   }
 
+  Duration get _transition => widget.transition ?? context.ui.motionSlow;
+
+  void _startReadyLayer() {
+    if (!mounted) return;
+    final layer = _model._takeReadyLayer();
+    if (!_model.readyLayerWasRequested) return;
+    final animate = _model.readyShouldAnimate &&
+        _transition > Duration.zero &&
+        context.uiAnimate;
+    if (!animate || !_model.hasShownLayer) {
+      _fade.stop();
+      _model._commitReadyLayer(layer);
+      return;
+    }
+    _model._beginFade(layer);
+    _fade
+      ..duration = _transition
+      ..forward(from: 0);
+  }
+
   void _resolveImage() {
     final next = widget.image?.resolve(createLocalImageConfiguration(context));
     if (next?.key == _stream?.key && next != null) return;
     _stream?.removeListener(_listener);
     _stream = next;
     if (next == null) {
-      _model.setImage(null);
+      _model.setImage(null, animate: true);
     } else {
       next.addListener(_listener);
     }
@@ -76,6 +111,7 @@ class _UiGlassBackdropState extends State<UiGlassBackdrop> {
   @override
   void dispose() {
     _stream?.removeListener(_listener);
+    _fade.dispose();
     _model.dispose();
     super.dispose();
   }
@@ -161,23 +197,63 @@ class _GlassBackdropRenderBox extends RenderProxyBox {
 }
 
 class UiGlassBackdropModel extends ChangeNotifier {
+  UiGlassBackdropModel({required this.onReady});
+
+  final VoidCallback onReady;
   final LayerLink link = LayerLink();
-  ui.Image? _image;
-  ui.Image? _blurred;
   UiTokens? _tokens;
   Color _color = const Color(0x00000000);
   double _dim = 0;
   Size _size = Size.zero;
   int _generation = 0;
   bool _building = false;
+  bool _disposed = false;
+  ui.Image? _pendingImage;
+  ui.Image? _buildingImage;
+  bool _pendingAnimate = true;
+  _BackdropLayer? _readyLayer;
+  bool _readyLayerWasRequested = false;
+  bool _readyShouldAnimate = true;
+  _BackdropLayer? _current;
+  List<_VisibleBackdropLayer> _from = <_VisibleBackdropLayer>[];
+  _BackdropLayer? _target;
+  bool _fading = false;
+  double _fadeProgress = 1;
+  final Set<_BackdropLayer> _owned = <_BackdropLayer>{};
   RenderBox? host;
 
-  bool get hasBlur => _blurred != null && _size.width > 0 && _size.height > 0;
+  bool get hasBlur => _visibleLayers.isNotEmpty &&
+      _size.width > 0 &&
+      _size.height > 0;
   Size get size => _size;
+  bool get hasShownLayer => _current != null || _from.isNotEmpty;
+  bool get readyLayerWasRequested => _readyLayerWasRequested;
+  bool get readyShouldAnimate => _readyShouldAnimate;
+
+  List<_VisibleBackdropLayer> get _visibleLayers {
+    final target = _target;
+    if (!_fading) {
+      return _current == null
+          ? _from
+          : <_VisibleBackdropLayer>[_VisibleBackdropLayer(_current!, 1)];
+    }
+    final fromOpacity = 1 - _fadeProgress;
+    final visible = <_VisibleBackdropLayer>[];
+    for (final layer in _from) {
+      if (layer.opacity * fromOpacity > 0) {
+        visible.add(_VisibleBackdropLayer(layer.layer, layer.opacity * fromOpacity));
+      }
+    }
+    if (target != null && _fadeProgress > 0) {
+      visible.add(_VisibleBackdropLayer(target, _fadeProgress));
+    }
+    return visible;
+  }
 
   void setTokens(UiTokens value) {
     if (_tokens == value) return;
     _tokens = value;
+    _rebuildCurrent();
     _scheduleBuild();
   }
 
@@ -186,46 +262,62 @@ class UiGlassBackdropModel extends ChangeNotifier {
     if (_color == color && _dim == nextDim) return;
     _color = color;
     _dim = nextDim;
+    _rebuildCurrent();
     _scheduleBuild();
     notifyListeners();
   }
 
-  void setImage(ui.Image? value) {
-    if (identical(value, _image)) return;
-    _image?.dispose();
-    _image = value;
-    _blurred?.dispose();
-    _blurred = null;
+  void setImage(ui.Image? value, {required bool animate}) {
+    _generation++;
+    if (_pendingImage != null && !identical(_pendingImage, _buildingImage)) {
+      _pendingImage!.dispose();
+    }
+    _pendingImage = value;
+    _pendingAnimate = animate;
+    _discardReadyLayer();
+    _readyLayerWasRequested = true;
+    _readyShouldAnimate = animate;
+    if (value == null) {
+      _pendingImage = null;
+      onReady();
+      return;
+    }
     _scheduleBuild();
-    notifyListeners();
   }
 
   void setSize(Size value) {
     if (_size == value) return;
     _size = value;
-    _blurred?.dispose();
-    _blurred = null;
+    _rebuildCurrent();
     _scheduleBuild();
   }
 
-  void _scheduleBuild() {
-    if (_image == null || _tokens == null || _size.isEmpty) return;
-    final generation = ++_generation;
-    if (_building) return;
-    _building = true;
-    unawaited(_build(generation));
+  void _rebuildCurrent() {
+    final image = _current?.image;
+    if (image == null || _pendingImage != null) return;
+    _generation++;
+    _pendingImage = image.clone();
+    _pendingAnimate = false;
   }
 
-  Future<void> _build(int generation) async {
+  void _scheduleBuild() {
+    if (_pendingImage == null || _tokens == null || _size.isEmpty) return;
+    final generation = _generation;
+    if (_building) return;
+    _building = true;
+    _buildingImage = _pendingImage!;
+    unawaited(_build(generation, _buildingImage!));
+  }
+
+  Future<void> _build(int generation, ui.Image source) async {
     try {
       uiGlassBackdropDebugBuildCount++;
       // A quarter-size cache is enough for a frosted surface and makes the expensive blur cheap.
       final scale = 0.25;
       final width = math.max(1, (_size.width * scale).ceil());
       final height = math.max(1, (_size.height * scale).ceil());
-      final source = _image;
       final tokens = _tokens;
-      if (source == null || tokens == null || _size.isEmpty) return;
+      if (tokens == null || _size.isEmpty) return;
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -261,28 +353,125 @@ class UiGlassBackdropModel extends ChangeNotifier {
       final result = await picture.toImage(width, height);
       picture.dispose();
 
-      if (generation != _generation || source != _image || _size.isEmpty) {
+      if (generation != _generation || !identical(source, _pendingImage) || _size.isEmpty) {
         result.dispose();
+        if (!identical(source, _pendingImage) && !_disposed) source.dispose();
         return;
       }
-      _blurred?.dispose();
-      _blurred = result;
-      notifyListeners();
+      _pendingImage = null;
+      final layer = _BackdropLayer(source, result);
+      _owned.add(layer);
+      _discardReadyLayer();
+      _readyLayer = layer;
+      _readyShouldAnimate = _pendingAnimate;
+      onReady();
     } finally {
       _building = false;
-      if (_image != null && _blurred == null && generation != _generation) {
+      _buildingImage = null;
+      if (_pendingImage != null && generation != _generation) {
         _scheduleBuild();
       }
     }
   }
 
+  _BackdropLayer? _takeReadyLayer() {
+    final layer = _readyLayer;
+    _readyLayer = null;
+    return layer;
+  }
+
+  void _discardReadyLayer() {
+    final layer = _readyLayer;
+    if (layer == null) return;
+    _readyLayer = null;
+    _owned.remove(layer);
+    layer.dispose();
+  }
+
+  void _commitReadyLayer(_BackdropLayer? layer) {
+    if (layer == null) {
+      _disposeExcept(null);
+      _current = null;
+      _from = <_VisibleBackdropLayer>[];
+      _target = null;
+      _fading = false;
+    } else {
+      _disposeExcept(layer);
+      _current = layer;
+      _from = <_VisibleBackdropLayer>[];
+      _target = null;
+      _fading = false;
+    }
+    _fadeProgress = 1;
+    _readyLayerWasRequested = false;
+    _readyShouldAnimate = true;
+    notifyListeners();
+  }
+
+  void _beginFade(_BackdropLayer? layer) {
+    _from = _visibleLayers;
+    _target = layer;
+    _fading = true;
+    _fadeProgress = 0;
+    _current = null;
+    _readyLayerWasRequested = false;
+    _readyShouldAnimate = true;
+    notifyListeners();
+  }
+
+  void _setFadeProgress(double value) {
+    if (!_fading || _fadeProgress == value) return;
+    _fadeProgress = value.clamp(0.0, 1.0).toDouble();
+    notifyListeners();
+    if (_fadeProgress >= 1) {
+      _commitReadyLayer(_target);
+    }
+  }
+
+  void _disposeExcept(_BackdropLayer? keep) {
+    for (final layer in _owned.toList()) {
+      if (layer != keep) {
+        layer.dispose();
+        _owned.remove(layer);
+      }
+    }
+    if (keep != null) {
+      _owned.add(keep);
+    }
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     _generation++;
-    _image?.dispose();
-    _blurred?.dispose();
+    _pendingImage?.dispose();
+    _readyLayer = null;
+    for (final layer in _owned) {
+      layer.dispose();
+    }
+    _owned.clear();
     super.dispose();
   }
+}
+
+class _BackdropLayer {
+  _BackdropLayer(this.image, this.blurred);
+
+  final ui.Image image;
+  final ui.Image blurred;
+
+  void dispose() {
+    uiGlassBackdropDebugDisposeCount++;
+    image.dispose();
+    blurred.dispose();
+  }
+}
+
+class _VisibleBackdropLayer {
+  const _VisibleBackdropLayer(this.layer, this.opacity);
+
+  final _BackdropLayer layer;
+  final double opacity;
 }
 
 class _GlassBackgroundPainter extends CustomPainter {
@@ -290,8 +479,19 @@ class _GlassBackgroundPainter extends CustomPainter {
   final UiGlassBackdropModel model;
 
   @override
-  void paint(Canvas canvas, Size size) =>
-      _paintBackground(canvas, size, model._image, model._color, model._dim);
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    canvas.drawRect(bounds, Paint()..color = model._color);
+    for (final visible in model._visibleLayers) {
+      _paintImage(canvas, size, visible.layer.image, visible.opacity);
+    }
+    if (model._dim > 0) {
+      canvas.drawRect(
+        bounds,
+        Paint()..color = ui.Color.fromARGB(255, 0, 0, 0).withValues(alpha: model._dim),
+      );
+    }
+  }
 
   @override
   bool shouldRepaint(_GlassBackgroundPainter oldDelegate) =>
@@ -307,7 +507,18 @@ void _paintBackground(
 ) {
   final bounds = Offset.zero & size;
   canvas.drawRect(bounds, Paint()..color = color);
-  if (image != null && size.isFinite && !size.isEmpty) {
+  _paintImage(canvas, size, image, 1);
+  if (dim > 0) {
+    canvas.drawRect(
+      bounds,
+      Paint()..color = ui.Color.fromARGB(255, 0, 0, 0).withValues(alpha: dim),
+    );
+  }
+}
+
+void _paintImage(Canvas canvas, Size size, ui.Image? image, double opacity) {
+  if (image != null && opacity > 0 && size.isFinite && !size.isEmpty) {
+    final bounds = Offset.zero & size;
     final fitted = applyBoxFit(
       BoxFit.cover,
       Size(image.width.toDouble(), image.height.toDouble()),
@@ -322,13 +533,9 @@ void _paintBackground(
       image,
       input,
       output,
-      Paint()..filterQuality = FilterQuality.high,
-    );
-  }
-  if (dim > 0) {
-    canvas.drawRect(
-      bounds,
-      Paint()..color = ui.Color.fromARGB(255, 0, 0, 0).withValues(alpha: dim),
+      Paint()
+        ..filterQuality = FilterQuality.high
+        ..color = ui.Color.fromARGB(255, 255, 255, 255).withValues(alpha: opacity),
     );
   }
 }
@@ -411,23 +618,27 @@ class _StaticBlurPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final image = model._blurred;
     final tokens = model._tokens;
-    if (image == null || tokens == null) return;
-    final paint = Paint()..filterQuality = FilterQuality.high;
-    if (strength == UiCardGlassStrength.clear) {
-      paint.colorFilter = ui.ColorFilter.matrix(uiGlassCardMatrix(tokens));
-    } else if (strength == UiCardGlassStrength.liquid) {
-      paint.colorFilter = ui.ColorFilter.matrix(
-        _saturationMatrix(tokens.glassLiquidSaturate),
+    if (tokens == null) return;
+    for (final visible in model._visibleLayers) {
+      final image = visible.layer.blurred;
+      final paint = Paint()
+        ..filterQuality = FilterQuality.high
+        ..color = ui.Color.fromARGB(255, 255, 255, 255).withValues(alpha: visible.opacity);
+      if (strength == UiCardGlassStrength.clear) {
+        paint.colorFilter = ui.ColorFilter.matrix(uiGlassCardMatrix(tokens));
+      } else if (strength == UiCardGlassStrength.liquid) {
+        paint.colorFilter = ui.ColorFilter.matrix(
+          _saturationMatrix(tokens.glassLiquidSaturate),
+        );
+      }
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Offset.zero & size,
+        paint,
       );
     }
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Offset.zero & size,
-      paint,
-    );
   }
 
   @override

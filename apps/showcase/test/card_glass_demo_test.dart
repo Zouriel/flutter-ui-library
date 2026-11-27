@@ -14,6 +14,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.runAsync(() => precacheImage(const AssetImage('assets/demo/poster.jpg'), tester.element(demo)));
     await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('frosted'), findsOneWidget);
     expect(find.text('clear'), findsOneWidget);
     expect(find.text('liquid'), findsOneWidget);

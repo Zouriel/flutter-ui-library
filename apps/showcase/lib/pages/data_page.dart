@@ -44,6 +44,12 @@ class _DataPageState extends State<DataPage> {
   bool _ftRtl = false;
   String _ftOpened = '';
   int _ftRun = 0;
+  int _glassWallpaperIndex = 0;
+  static const _glassWallpapers = [
+    'assets/demo/poster.jpg',
+    'assets/demo/sunset.jpg',
+    'assets/demo/slip.jpg',
+  ];
   static final _mint = UiFeatureCardColors.tryParse(surface: '#E1F4EF', accent: '#4B8791');
   static final _blue = UiFeatureCardColors.tryParse(surface: '#E5F0FA', accent: '#4B8791');
 
@@ -301,8 +307,9 @@ class _DataPageState extends State<DataPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(t.radiusLg),
                   child: UiGlassBackdrop(
-                    image: const AssetImage('assets/demo/poster.jpg'),
+                    image: AssetImage(_glassWallpapers[_glassWallpaperIndex]),
                     dim: 0.08,
+                    transition: t.motionSlow,
                     child: Padding(
                       padding: EdgeInsets.all(t.space3),
                       child: Row(spacing: t.space3, children: [
@@ -324,10 +331,16 @@ class _DataPageState extends State<DataPage> {
                 ),
               ),
             ),
+            UiButton(
+              label: 'Cycle wallpaper',
+              size: UiSize.sm,
+              variant: UiButtonVariant.outline,
+              onPressed: () => setState(() => _glassWallpaperIndex = (_glassWallpaperIndex + 1) % _glassWallpapers.length),
+            ),
           ]),
           code: "UiCard(\n  padding: UiSize.sm,\n  gap: 1,\n  align: UiStackAlign.center,\n  semanticLabel: 'Aisha Ibrahim, 24 photos',\n  onTap: open,\n  children: [\n    UiAvatar(name: 'Aisha Ibrahim', dimension: 64),\n    UiText('Aisha Ibrahim', variant: UiTextVariant.label, truncate: true),\n    UiText('24 photos', variant: UiTextVariant.caption),\n  ],\n)",
           api: const [
-            ApiRow('UiGlassBackdrop', 'Widget', 'Wrap a fixed image and these cards in UiGlassBackdrop to cache one downscaled blur. Cards paint aligned slices while relayout and scrolling; liquid refraction is skipped in this mode. With image null, cards keep tint/rim/sheen without a blur layer.'),
+            ApiRow('UiGlassBackdrop', 'Widget', 'Wrap a fixed image and these cards in UiGlassBackdrop to cache one downscaled blur. When image changes, the new image and blur are ready before the background and every card slice cross-fade together. Cards paint aligned slices while relayout and scrolling; liquid refraction is skipped in this mode. With image null, cards keep tint/rim/sheen without a blur layer.'),
             ApiRow('child / children', 'Widget? / List<Widget>?', 'Body widget, or vertical children laid out with gap and align.'),
             ApiRow('gap', 'int', 'Spacing step between children (0, 1, 2, 3, 4, 6, 8).', def: '0'),
             ApiRow('align', 'UiStackAlign', 'Cross-axis body alignment.', def: 'stretch'),
@@ -335,6 +348,7 @@ class _DataPageState extends State<DataPage> {
             ApiRow('padding', 'UiSize', '12 / 16 / 24.', def: 'md'),
             ApiRow('onTap', 'VoidCallback?', 'Makes the whole card a button.'),
             ApiRow('enabled', 'bool', 'false dims and disables taps on an interactive card.', def: 'true'),
+            ApiRow('transition', 'Duration?', 'Cross-fade duration after the new image and blur are ready. Null follows t.motionSlow; zero is instant and reduced motion is always instant.', def: 'motionSlow'),
             ApiRow('glass', 'bool?', 'Frosted surface; defaults to UiConfig.glass.'),
             ApiRow('glassStrength', 'UiCardGlassStrength', 'frosted is the original surface, clear keeps the backdrop recognisable while squeezing it into the theme AA range, and liquid is at least 80% transparent with light blur, saturation, rim, sheen and optional edge refraction.', def: 'frosted'),
           ],

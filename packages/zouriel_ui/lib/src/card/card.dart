@@ -11,7 +11,7 @@ import '../theme/glass_sheet.dart';
 import '../theme/theme.dart';
 import 'glass_backdrop.dart';
 
-export 'glass_backdrop.dart' hide UiGlassBackdropModel, UiGlassBackdropScope, UiGlassBackdropSlice, uiGlassBackdropDebugBuildCount;
+export 'glass_backdrop.dart' hide UiGlassBackdropModel, UiGlassBackdropScope, UiGlassBackdropSlice, uiGlassBackdropDebugBuildCount, uiGlassBackdropDebugDisposeCount;
 
 /// `ui-card`: a surface with optional [header] and [footer] (the web `[card-header]` /
 /// `[card-footer]` slots). Pass either [child] or [children] (laid out in a vertical column with

@@ -311,13 +311,14 @@ File: `canvas/src/image-editor.ts`
 ## card
 
 ### UiGlassBackdrop (component, `ui-glass-backdrop`)
-`UiGlassBackdrop(image, dim, color, child)` paints a cover-fit image once, caches one downscaled
-blurred copy of it, and lets nested glass `UiCard`s paint aligned slices without a live
-`BackdropFilter`. Scroll and relayout invalidate slice paint only; the cached image is rebuilt only
-when the image, dim, colour, theme tokens, or backdrop size changes. Liquid refraction is skipped in
-this mode because it would reintroduce per-card shader work. With no image, nested cards retain tint,
-rim and sheen but have no blur layer.
-- [x] Flutter port (`UiGlassBackdrop`)
+`UiGlassBackdrop(image, dim, color, transition, child)` paints a cover-fit image once, caches one
+downscaled blurred copy of it, and lets nested glass `UiCard`s paint aligned slices without a live
+`BackdropFilter`. When image changes, the new image and blur are ready before the full background and
+all slices cross-fade together; `transition` defaults to `context.ui.motionSlow`, zero is instant,
+and reduced motion is instant. Scroll and relayout invalidate slice paint only; liquid refraction is
+skipped in this mode because it would reintroduce per-card shader work. With no image, nested cards
+retain tint, rim and sheen but have no blur layer.
+- [x] Flutter port (`UiGlassBackdrop`), image cross-fade / reduced motion / idle-frame tests
 - [x] widget tests
 - [x] golden/visual check (showcase demo)
 - [x] showcase

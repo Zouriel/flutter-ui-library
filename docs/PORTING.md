@@ -69,7 +69,7 @@
   `align`, `activate`, `ariaLabel`, `disabled`, and keyboard Enter/Space activation on `interactive`
   cards.
 
-## Static glass backdrop (0.109.0)
+## Static glass backdrop (0.109.0, cross-fade update)
 
 - `UiGlassBackdrop(image:, dim:, color:, child:)` is the Flutter twin of `ui-glass-backdrop`. It
   paints the cover-fit background and a single quarter-resolution cached blur. Glass `UiCard`s below
@@ -79,6 +79,12 @@
   aligned. Relayout and size animation use the same render-coordinate mapping. The cached image is
   disposed when the image changes or the backdrop is disposed; a quiet backdrop has no ticker or
   frame source after the cache is ready.
+- `transition` is an optional `Duration`; null follows `context.ui.motionSlow`, zero swaps instantly,
+  and `context.uiAnimate == false` also swaps instantly. A new image is decoded and blurred before
+  it is added as a second source/blur pair. The full backdrop and every card slice use the same
+  opacity progress. An update during a fade starts the next fade from the currently visible blend
+  and drops any older pending target; after the fade the old `ui.Image`s are disposed. The one
+  `AnimationController` exists only for that fade and stops at completion.
 - `UiCardGlassStrength.liquid` keeps its static saturation matrix but skips liquid refraction in this
   mode. With `image: null`, nested cards have no blur layer. Cards outside the scope keep their live
   glass filters.
