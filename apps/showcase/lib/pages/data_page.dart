@@ -244,7 +244,7 @@ class _DataPageState extends State<DataPage> {
         DocSection(
           name: 'Card',
           widget: 'UiCard',
-          summary: 'A surface with optional header and footer. With onTap the whole card is the target: it lifts on press and gets the focus ring. Glass cards support frosted, AA-preserving clear, and transparent liquid strengths.',
+          summary: 'A surface with optional header and footer. With onTap the whole card is the target: it lifts on press and gets the focus ring. Glass cards support frosted, AA-preserving clear, and transparent liquid strengths. Put cards over a fixed wallpaper in UiGlassBackdrop to blur that wallpaper once and keep slices aligned while the cards move.',
           demo: Column(spacing: t.space3, children: [
             UiCard(
               header: const UiText('Monthly report', variant: UiTextVariant.h4, heading: true),
@@ -300,29 +300,26 @@ class _DataPageState extends State<DataPage> {
                 height: 260,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(t.radiusLg),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset('assets/demo/poster.jpg', fit: BoxFit.cover),
-                      ColoredBox(color: t.overlay.withValues(alpha: 0.08)),
-                      Padding(
-                        padding: EdgeInsets.all(t.space3),
-                        child: Row(spacing: t.space3, children: [
-                          for (final strength in UiCardGlassStrength.values)
-                            Expanded(
-                              child: UiCard(
-                                glass: true,
-                                glassStrength: strength,
-                                padding: UiSize.sm,
-                                children: [
-                                  UiText(strength.name, variant: UiTextVariant.h5),
-                                  const UiText('See the busy image through the surface.', variant: UiTextVariant.caption),
-                                ],
-                              ),
+                  child: UiGlassBackdrop(
+                    image: const AssetImage('assets/demo/poster.jpg'),
+                    dim: 0.08,
+                    child: Padding(
+                      padding: EdgeInsets.all(t.space3),
+                      child: Row(spacing: t.space3, children: [
+                        for (final strength in UiCardGlassStrength.values)
+                          Expanded(
+                            child: UiCard(
+                              glass: true,
+                              glassStrength: strength,
+                              padding: UiSize.sm,
+                              children: [
+                                UiText(strength.name, variant: UiTextVariant.h5),
+                                const UiText('See the busy image through the static copy.', variant: UiTextVariant.caption),
+                              ],
                             ),
-                        ]),
-                      ),
-                    ],
+                          ),
+                      ]),
+                    ),
                   ),
                 ),
               ),
@@ -330,6 +327,7 @@ class _DataPageState extends State<DataPage> {
           ]),
           code: "UiCard(\n  padding: UiSize.sm,\n  gap: 1,\n  align: UiStackAlign.center,\n  semanticLabel: 'Aisha Ibrahim, 24 photos',\n  onTap: open,\n  children: [\n    UiAvatar(name: 'Aisha Ibrahim', dimension: 64),\n    UiText('Aisha Ibrahim', variant: UiTextVariant.label, truncate: true),\n    UiText('24 photos', variant: UiTextVariant.caption),\n  ],\n)",
           api: const [
+            ApiRow('UiGlassBackdrop', 'Widget', 'Wrap a fixed image and these cards in UiGlassBackdrop to cache one downscaled blur. Cards paint aligned slices while relayout and scrolling; liquid refraction is skipped in this mode. With image null, cards keep tint/rim/sheen without a blur layer.'),
             ApiRow('child / children', 'Widget? / List<Widget>?', 'Body widget, or vertical children laid out with gap and align.'),
             ApiRow('gap', 'int', 'Spacing step between children (0, 1, 2, 3, 4, 6, 8).', def: '0'),
             ApiRow('align', 'UiStackAlign', 'Cross-axis body alignment.', def: 'stretch'),

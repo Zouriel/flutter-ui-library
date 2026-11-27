@@ -9,9 +9,9 @@ import '../layout/layout.dart';
 import '../theme/glass_rim.dart';
 import '../theme/glass_sheet.dart';
 import '../theme/theme.dart';
+import 'glass_backdrop.dart';
 
-/// The three glass surfaces supported by the web `ui-card`.
-enum UiCardGlassStrength { frosted, clear, liquid }
+export 'glass_backdrop.dart' hide UiGlassBackdropModel, UiGlassBackdropScope, UiGlassBackdropSlice, uiGlassBackdropDebugBuildCount;
 
 /// `ui-card`: a surface with optional [header] and [footer] (the web `[card-header]` /
 /// `[card-footer]` slots). Pass either [child] or [children] (laid out in a vertical column with
@@ -103,6 +103,7 @@ class UiCard extends StatelessWidget {
     }
 
     Widget body(UiStates s) {
+      final staticBackdrop = UiGlassBackdropScope.maybeOf(context);
       final lifted = active && (s.hovered || s.pressed);
       final fill = !filteredGlass
           ? t.surface
@@ -158,15 +159,23 @@ class UiCard extends StatelessWidget {
         ),
       );
       if (filteredGlass) {
-        final filter = strength == UiCardGlassStrength.clear
-            ? uiGlassCardFilter(t)
-            : strength == UiCardGlassStrength.liquid
-                ? _liquidFilter(t)
-                : ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2, tileMode: TileMode.clamp);
-        card = ClipRRect(
-          borderRadius: BorderRadius.circular(r),
-          child: liquid ? _LiquidBackdropFilter(filter: filter, child: card) : BackdropFilter(filter: filter, child: card),
-        );
+        if (staticBackdrop != null) {
+          if (staticBackdrop.hasBlur) {
+            // Static glass deliberately skips the liquid refraction shader: the backdrop copy is
+            // already rasterized and aligned, so a live shader would put the per-card work back.
+            card = UiGlassBackdropSlice(model: staticBackdrop, radius: BorderRadius.circular(r), strength: strength, child: card);
+          }
+        } else {
+          final filter = strength == UiCardGlassStrength.clear
+              ? uiGlassCardFilter(t)
+              : strength == UiCardGlassStrength.liquid
+                  ? _liquidFilter(t)
+                  : ImageFilter.blur(sigmaX: t.glassBlur / 2, sigmaY: t.glassBlur / 2, tileMode: TileMode.clamp);
+          card = ClipRRect(
+            borderRadius: BorderRadius.circular(r),
+            child: liquid ? _LiquidBackdropFilter(filter: filter, child: card) : BackdropFilter(filter: filter, child: card),
+          );
+        }
       }
       if (onTap != null && !enabled) {
         card = Opacity(opacity: 0.5, child: card);

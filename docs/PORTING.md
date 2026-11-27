@@ -69,6 +69,20 @@
   `align`, `activate`, `ariaLabel`, `disabled`, and keyboard Enter/Space activation on `interactive`
   cards.
 
+## Static glass backdrop (0.109.0)
+
+- `UiGlassBackdrop(image:, dim:, color:, child:)` is the Flutter twin of `ui-glass-backdrop`. It
+  paints the cover-fit background and a single quarter-resolution cached blur. Glass `UiCard`s below
+  it paint a source slice mapped from the backdrop's render coordinates; they retain their tint,
+  rim and sheen and do not create a `BackdropFilter`.
+- A scroll notification repaints the slices so repaint boundaries that move at composite time stay
+  aligned. Relayout and size animation use the same render-coordinate mapping. The cached image is
+  disposed when the image changes or the backdrop is disposed; a quiet backdrop has no ticker or
+  frame source after the cache is ready.
+- `UiCardGlassStrength.liquid` keeps its static saturation matrix but skips liquid refraction in this
+  mode. With `image: null`, nested cards have no blur layer. Cards outside the scope keep their live
+  glass filters.
+
 ## Text tones/truncate, media badge & list title/hint
 
 - `UiText`: `truncate` (shorthand for `maxLines: 1, overflow: TextOverflow.ellipsis`) and `tone`

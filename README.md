@@ -10,6 +10,12 @@ interior of cards whose refraction band is wider than their corner radius). The 
 and `UiApp(background:)` for transparent host-window backgrounds. The Angular twin already contains the
 card API; the app-background option is Flutter-only.
 
+**Static glass backdrop:** wrap a fixed wallpaper in `UiGlassBackdrop(image: wallpaper, dim: 0.12,
+child: ...)` and put glass `UiCard`s inside it. The image is downscaled and blurred once; cards paint
+aligned slices, including while scrolling, so they do not run a live `BackdropFilter`. Liquid
+refraction is skipped in this mode. Use `image: null` for a coloured backdrop without any blur layer;
+cards outside the wrapper behave as before.
+
 - **Flutter 3.47** / Dart 3.13. Android first (48dp touch targets, back button, TalkBack), also web.
 - **Tokens generated from the web CSS** (`tool/gen_tokens.mjs` resolves every theme in a real
   browser), so colours, spacing, sizes, radii and motion match the Angular library exactly.

@@ -310,6 +310,18 @@ File: `canvas/src/image-editor.ts`
 
 ## card
 
+### UiGlassBackdrop (component, `ui-glass-backdrop`)
+`UiGlassBackdrop(image, dim, color, child)` paints a cover-fit image once, caches one downscaled
+blurred copy of it, and lets nested glass `UiCard`s paint aligned slices without a live
+`BackdropFilter`. Scroll and relayout invalidate slice paint only; the cached image is rebuilt only
+when the image, dim, colour, theme tokens, or backdrop size changes. Liquid refraction is skipped in
+this mode because it would reintroduce per-card shader work. With no image, nested cards retain tint,
+rim and sheen but have no blur layer.
+- [x] Flutter port (`UiGlassBackdrop`)
+- [x] widget tests
+- [x] golden/visual check (showcase demo)
+- [x] showcase
+
 ### UiCard (component, `ui-card`)
 File: `card/src/card.ts`  
 `ui-card` — surface container with optional header/footer slots. Project header content with `[card-header]` and footer with `[card-footer]`.  
